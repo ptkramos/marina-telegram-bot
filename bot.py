@@ -140,8 +140,11 @@ def build_messages_payload(quoted_context: str = "", web_search_context: str = "
 
 def split_into_human_bubbles(text: str) -> list[str]:
     """
-    Divide a resposta de forma orgânica e realista (1 a 3 balões).
-    Funciona perfeitamente tanto com quebras de linha quanto com frases pontuadas no Llama 3.3.
+    Divide a resposta de forma verdadeiramente orgânica e dinâmica:
+    1. Se a Marina usou quebras de linha intencionais (\n) para separar balões, respeita a decisão dela (1 a 3 balões).
+    2. Se for um bloco contínuo de até 160 caracteres, mantém como 1 ÚNICO BALÃO natural.
+    3. Só divide frases contínuas se for realmente muito longo (> 160 chars) em 2 metades harmoniosas.
+    NUNCA força fórmulas rígidas arbitrárias de 3 balões.
     """
     text = text.strip()
     if not text:
@@ -149,29 +152,27 @@ def split_into_human_bubbles(text: str) -> list[str]:
 
     if "\\n" in text:
         text = text.replace("\\n", "\n")
-    
-    # 1. Se o modelo separou explicitamente com quebras de linha reais
+
+    # Limpa linhas vazias
     lines = [line.strip() for line in text.splitlines() if line.strip()]
+
+    # 1. Respeita quebras de linha intencionais da Marina
     if len(lines) > 1:
         if len(lines) <= 3:
             return lines
         return [lines[0], lines[1], " ".join(lines[2:])]
 
-    # 2. Se o modelo mandou tudo num parágrafo contínuo (comum no Llama 3.3):
-    # Divide por frases completas terminadas em pontuação (. ! ? ou reticências)
+    # 2. Se ela mandou tudo em um parágrafo contínuo:
+    if len(text) <= 160:
+        return [text]
+
+    # Se for parágrafo muito longo (> 160 caracteres), divide em 2 metades por frase
     sentences = re.split(r'(?<=[.!?…])\s+', text)
     sentences = [s.strip() for s in sentences if s.strip()]
+    if len(sentences) >= 2:
+        mid = len(sentences) // 2
+        return [" ".join(sentences[:mid]), " ".join(sentences[mid:])]
 
-    # Se tiver 2 ou 3 frases naturais:
-    if 2 <= len(sentences) <= 3:
-        # Garante que não divide frases microscópicas (ex: se tiver pelo menos 15 caracteres no total)
-        if sum(len(s) for s in sentences) >= 25:
-            return sentences
-    elif len(sentences) > 3:
-        # Se tiver mais de 3 frases, distribui em 3 balões harmoniosos
-        return [sentences[0], " ".join(sentences[1:3]), " ".join(sentences[3:])]
-
-    # Padrão: 1 único balão para falas rápidas de 1 frase
     return [text]
 
 ULTIMAS_MENSAGENS_MARINA: dict[int, list[dict]] = {}
@@ -846,7 +847,7 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
         completion = llm_client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=messages,
-            max_tokens=100,
+            max_tokens=160,
             temperature=0.80,
             frequency_penalty=0.30,
             presence_penalty=0.25
