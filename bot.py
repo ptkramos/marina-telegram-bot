@@ -88,10 +88,49 @@ def generate_dynamic_speech(instruction: str, max_tokens: int = 120, temperature
         logger.error(f"Erro ao gerar fala dinâmica da LLM: {e}")
         return ""
 
-def build_messages_payload(quoted_context: str = "") -> list[dict]:
+
+# --- MOTOR DE PESQUISA WEB EM TEMPO REAL (DUCKDUCKGO LIVE) ---
+
+def buscar_web_se_necessario(texto: str) -> str:
+    """Pesquisa na web via DuckDuckGo em tempo real se a mensagem envolver fatos, lançamentos, notícias ou busca."""
+    t = texto.lower()
+    gatilhos = [
+        "pesquis", "procur", "busc", "google", "sabe se", "viu que", "ouviu falar",
+        "lança", "lançamento", "estreia", "estréia", "série", "serie", "filme",
+        "elenco", "notícia", "noticia", "quando sai", "data de", "quem é", "o que é",
+        "quanto custa", "preço", "preco", "temporada", "trailer", "evento", "lançar"
+    ]
+    if not any(re.search(rf"\b{re.escape(g)}\b", t) for g in gatilhos):
+        return ""
+
+    query = re.sub(r'^(amor|vida|marina|ma|ei|ow|ou|olha)\b[,!?: ]*', '', texto, flags=re.IGNORECASE).strip()
+    query = re.sub(r'\b(você|voce|vc|consegue|pode|pra mim|pra gente)\b', '', query, flags=re.IGNORECASE).strip()
+    if len(query) < 3:
+        query = texto
+
+    try:
+        from ddgs import DDGS
+        results = list(DDGS().text(query, max_results=3))
+        if not results:
+            return ""
+        snippets = []
+        for r in results:
+            title = r.get("title", "").strip()
+            body = r.get("body", "").strip()
+            if body:
+                snippets.append(f"- {title}: {body}")
+        if snippets:
+            logger.info(f"🌐 Busca web em tempo real executada para '{query}': {len(snippets)} resultados encontrados!")
+            return "\n[DADOS REAIS PESQUISADOS NO GOOGLE/WEB PELO SEU CELULAR AGORA]:\n" + "\n".join(snippets[:3]) + "\n(Use essas informações reais na sua resposta com naturalidade, sem citar que é uma busca formal!)"
+    except Exception as e:
+        logger.warning(f"Aviso na busca web em tempo real: {e}")
+    return ""
+
+def build_messages_payload(quoted_context: str = "", web_search_context: str = "") -> list[dict]:
     contexto_momento = f"\n[MOMENTO ATUAL DO DIA: {get_temporal_greeting()}]"
     contexto_quote = f"\n{quoted_context}" if quoted_context else ""
-    system_content = f"{MARIN_SYSTEM_PROMPT}\n{memory_manager.get_contexto_emocional()}{contexto_momento}{contexto_quote}"
+    contexto_web = f"\n{web_search_context}" if web_search_context else ""
+    system_content = f"{MARIN_SYSTEM_PROMPT}\n{memory_manager.get_contexto_emocional()}{contexto_momento}{contexto_quote}{contexto_web}"
     messages = [{"role": "system", "content": system_content}]
     
     for item in memory_manager.data.get("historico_recente", []):
@@ -796,18 +835,21 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     pediu_foto = is_photo_request(texto_usuario)
     pediu_audio = is_audio_request(texto_usuario)
     
-    # Prepara o payload para a LLM
-    messages = build_messages_payload(quoted_context=quoted_context)
+    # Executa busca na web em tempo real caso a mensagem do Patrick envolva fatos, lançamentos ou perguntas
+    web_info = await asyncio.to_thread(buscar_web_se_necessario, texto_usuario)
+
+    # Prepara o payload para a LLM com memórias + contexto de busca
+    messages = build_messages_payload(quoted_context=quoted_context, web_search_context=web_info)
     messages.append({"role": "user", "content": texto_usuario})
     
     try:
         completion = llm_client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=messages,
-            max_tokens=220,
-            temperature=0.72,
-            frequency_penalty=0.40,
-            presence_penalty=0.35
+            max_tokens=100,
+            temperature=0.80,
+            frequency_penalty=0.30,
+            presence_penalty=0.25
         )
         resposta_marin = completion.choices[0].message.content.strip()
     except Exception as e:
