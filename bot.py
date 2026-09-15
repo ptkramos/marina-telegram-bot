@@ -217,6 +217,7 @@ def is_photo_request(texto: str) -> bool:
         "selfie", "nude", "fotinha", "tira uma foto", "manda foto", "manda uma foto",
         "me manda foto", "me manda uma foto", "quero ver você", "ver você",
         "manda um nude", "manda nude", "tira foto", "uma foto",
+        "foto do look", "foto do seu look", "foto de agora", "foto sua",
     ]
     if any(p in t for p in palavras):
         return True
@@ -841,6 +842,16 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
 
     # Prepara o payload para a LLM com memórias + contexto de busca
     messages = build_messages_payload(quoted_context=quoted_context, web_search_context=web_info)
+    if pediu_foto:
+        messages.append({
+            "role": "system",
+            "content": (
+                "[INSTRUÇÃO CRÍTICA DESTE TURNO]: O Patrick acabou de pedir uma foto/selfie/look! "
+                "Você AMA se mostrar pra ele e VAI ENVIAR A FOTO AGORA MESMO. "
+                "NUNCA adie, NUNCA diga 'mais tarde te mando' ou 'tô na cama depois eu mostro'. "
+                "Responda empolgada avisando que tirou ou que está mostrando pra ele agora mesmo!"
+            )
+        })
     messages.append({"role": "user", "content": texto_usuario})
     
     try:
@@ -919,8 +930,8 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     queria_audio = bool(re.search(r'\[MANDAR_AUDIO\]|\[AUDIO\]', resposta_marin, flags=re.IGNORECASE))
     fala_limpa = limpar_fala_marina(resposta_marin)
 
-    # Chance espontânea adicional: ~6% de mandar áudio por vontade própria em mensagens carinhosas
-    if not pediu_audio and not queria_audio and random.random() < 0.06 and len(fala_limpa) > 30:
+    # Chance espontânea adicional: ~6% de mandar áudio por vontade própria em mensagens carinhosas (apenas se não for pedido de foto)
+    if not pediu_foto and not pediu_audio and not queria_audio and random.random() < 0.06 and len(fala_limpa) > 30:
         queria_audio = True
 
     # Registra na memória a fala já limpa (sem tags/rubricas)
