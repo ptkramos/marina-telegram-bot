@@ -1,5 +1,5 @@
 """
-Bot Telegram de Marina Seltin (v1.4.0 Oficial Blindada).
+Bot Telegram de Marina Seltin (v3.0.0 Oficial Blindada).
 Jovem de 19 anos, modelo em início de carreira, namorada EXCLUSIVA de Patrick Ramos.
 Totalmente desinibida, carinhosa, com ciclo menstrual real, pausas humanas de digitação,
 envio REAL de balões separados sucessivos (multi-bubble), comandos /feedback e /edit com Auto-Patcher autônomo,
@@ -386,23 +386,36 @@ debouncer = MessageDebouncer(delay_seconds=3.8)
 # --- ROTINA DE ESCOLHA DE AVATAR ---
 
 async def iniciar_escolha_avatar(bot, chat_id: int):
-    prompt_intro = (
-        "O Patrick pediu para você trocar a sua foto de perfil (ou você decidiu atualizar). "
-        "Mande uma mensagem curtinha, fofa e espontânea de namorada dizendo que vai tirar uma foto linda e elegante agora pro perfil e já coloca!"
-    )
-    msg_espera_texto = generate_dynamic_speech(prompt_intro, max_tokens=100) or "Ai amor, ótima ideia! Vou tirar uma selfie bem linda agora pro perfil, espera só um segundinho... 🥰📸"
+    # Constrói o histórico da conversa recente para que a resposta faça 100% parte do diálogo
+    messages_intro = build_messages_payload()
+    messages_intro.append({
+        "role": "user",
+        "content": (
+            "[O Patrick acabou de pedir pra você trocar a sua foto de perfil do Telegram ou atualizar o avatar]. "
+            "Responda a ele de forma 100% espontânea, fofa e conectada com a conversa de vocês agora, "
+            "dizendo animada que vai colocar uma linda e estilosa agora mesmo no perfil e já mostra pra ele!"
+        )
+    })
+    
+    try:
+        completion = llm_client.chat.completions.create(
+            model=settings.LLM_MODEL,
+            messages=messages_intro,
+            max_tokens=120,
+            temperature=0.78
+        )
+        msg_espera_texto = completion.choices[0].message.content.strip().strip('"').strip("'")
+    except Exception as e:
+        logger.warning(f"Aviso ao gerar intro dinâmica de avatar: {e}")
+        msg_espera_texto = "Ai amor, com certeza! Vou escolher e tirar uma selfie bem linda agora pro perfil, espera só um segundinho... 🥰📸"
 
-    await bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
-    msg_espera = await bot.send_message(chat_id=chat_id, text=msg_espera_texto)
+    fala_intro_limpa = limpar_fala_marina(msg_espera_texto)
+    await send_human_messages(chat_id, bot, fala_intro_limpa)
+    memory_manager.registrar_interacao("[Pediu pra trocar foto de perfil]", fala_intro_limpa)
 
-    # Gera 1 avatar único com visual casual elegante (100% SFW e vestida)
+    # Gera avatar único com visual casual elegante (100% SFW e vestida)
     style = random.choice(["fofa", "estilosa"])
     jpg, raw = await sd_client.generate_avatar(look_style=style)
-
-    try:
-        await msg_espera.delete()
-    except Exception:
-        pass
 
     if jpg and raw:
         try:
@@ -418,12 +431,29 @@ async def iniciar_escolha_avatar(bot, chat_id: int):
         if hasattr(raw, "seek"):
             raw.seek(0)
 
-        prompt_legenda = (
-            "Você acabou de atualizar a sua foto de perfil do Telegram e mandou a foto completa pro Patrick. "
-            "Escreva UMA frase curta e fofa mostrando a foto nova, perguntando se ele achou linda e dizendo que se ele quiser que mude de novo é só pedir."
-        )
-        legenda = generate_dynamic_speech(prompt_legenda, max_tokens=90) or "Prontinho amor! Acabei de atualizar meu perfil com essa aqui! Ficou linda? Se quiser outra depois é só me pedir 💕✨"
+        # Gera a legenda da foto fazendo parte natural da conversa contínua
+        messages_legenda = build_messages_payload()
+        messages_legenda.append({
+            "role": "user",
+            "content": (
+                "[Você acabou de colocar a nova foto no seu perfil do Telegram e agora está mandando a foto completa no chat pro Patrick ver]. "
+                "Fale de forma totalmente natural e espontânea como namorada, mostrando como ficou a foto nova, "
+                "perguntando com carinho o que ele achou do look/rosto no perfil e se ele gostou da escolha!"
+            )
+        })
+        try:
+            comp_legenda = llm_client.chat.completions.create(
+                model=settings.LLM_MODEL,
+                messages=messages_legenda,
+                max_tokens=100,
+                temperature=0.78
+            )
+            legenda = comp_legenda.choices[0].message.content.strip().strip('"').strip("'")
+        except Exception as e:
+            logger.warning(f"Aviso ao gerar legenda dinâmica de avatar: {e}")
+            legenda = "Prontinho amor! Acabei de atualizar meu perfil com essa aqui! Ficou linda? Amei o resultado, o que achou? 💕✨"
 
+        legenda_limpa = limpar_fala_marina(legenda)
         try:
             await bot.send_chat_action(chat_id=chat_id, action=ChatAction.UPLOAD_PHOTO)
         except Exception:
@@ -431,12 +461,13 @@ async def iniciar_escolha_avatar(bot, chat_id: int):
         await bot.send_photo(
             chat_id=chat_id,
             photo=raw,
-            caption=legenda
+            caption=legenda_limpa
         )
+        memory_manager.registrar_interacao("[Enviou nova foto de perfil atualizada]", legenda_limpa)
     else:
         prompt_falha = "Sua câmera travou na hora de tirar a foto pro perfil. Diga algo fofo e dengoso pedindo pro Patrick tentar de novo daqui a pouco."
         msg_falha = generate_dynamic_speech(prompt_falha, max_tokens=70) or "Amor, minha câmera deu uma travadinha aqui no apê! Me pede de novo daqui a pouco que eu troco de verdade? 🥺"
-        await bot.send_message(chat_id=chat_id, text=msg_falha)
+        await send_human_messages(chat_id, bot, msg_falha)
 
 # --- COMANDOS DO TELEGRAM (100% EFÊMEROS / CHAT LIMPO) ---
 
@@ -481,7 +512,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     risada = estilo.get("risada", {}).get("valor", "kkkk")
     
     status_msg = (
-        "🌹 **Status de Marina Seltin (v1.4.0 Oficial - SQLite & Reações):**\n\n"
+        "🌹 **Status de Marina Seltin (v3.0.0 Oficial - SQLite & Reações):**\n\n"
         f"• **Namorado Exclusivo**: Patrick Ramos (Chat ID: `{settings.TARGET_CHAT_ID}`) 💕\n"
         f"• **Fase Biológica**: Dia {ciclo_info['day']} de 28 ({ciclo_info['name']}) 🌸\n"
         f"• **Cérebro (LLM)**: `{settings.LLM_MODEL}` (Temp: 0.72 - Anti-Glitch) ✅\n"
@@ -580,7 +611,7 @@ async def edit_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ajuda = await context.bot.send_message(
             chat_id=chat_id,
             text=(
-                "🛠️ **Auto-Patcher da Marina (v1.4.0)**\n\n"
+                "🛠️ **Auto-Patcher da Marina (v3.0.0)**\n\n"
                 "Peça melhorias diretas no código sem precisar ligar o PC!\n"
                 "📌 **Exemplo:**\n"
                 "`/edit adicione uma regra no prompt para você me chamar de meu bem com mais frequência`\n"
@@ -1174,7 +1205,7 @@ def main():
     # Conversa textual com Debouncer
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    logger.info("Bot de Marina Seltin (v1.4.0 Oficial Blindada) iniciado com sucesso!")
+    logger.info("Bot de Marina Seltin (v3.0.0 Oficial Blindada) iniciado com sucesso!")
     # allowed_updates=Update.ALL_TYPES garante recebimento de MESSAGE_REACTION
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 

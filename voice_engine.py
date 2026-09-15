@@ -1,5 +1,5 @@
 """
-Módulo de Síntese de Voz e Clonagem da Marina Seltin (v3.5.0 - Novita MiniMax Oficial).
+Módulo de Síntese de Voz e Clonagem da Marina Seltin (v3.0.0 Oficial - Novita MiniMax).
 Gera mensagens de voz nativas do Telegram (.ogg Opus com waveform):
 1. Modo Principal: Novita MiniMax Voice Cloning (speech-2.8-hd) com a voz oficial clonada da Marina,
    suporte a Português com language_boost e reações orgânicas (laughs, chuckle, sighs, breath, pant).
@@ -58,6 +58,29 @@ class VoiceEngine:
         clean = re.sub(r'\[Ps:[^\]]*\]', '', clean, flags=re.IGNORECASE)
         clean = re.sub(r'\(Ps:[^)]*\)', '', clean, flags=re.IGNORECASE)
         clean = re.sub(r'\(\s*(No áudio|No audio|Na voz|Com voz|voz manhosa)[^)]*\)', '', clean, flags=re.IGNORECASE)
+
+        # Expande gírias e abreviações da internet para fonética falada natural antes do TTS
+        abreviacoes = {
+            r'\bmds\b': 'meu Deus',
+            r'\bvc\b': 'você',
+            r'\bvcs\b': 'vocês',
+            r'\btbm?\b': 'também',
+            r'\bpq\b': 'porque',
+            r'\bobg\b': 'obrigada',
+            r'\bpvf?\b': 'por favor',
+            r'\bblz\b': 'beleza',
+            r'\bqto\b': 'quanto',
+            r'\bmsg\b': 'mensagem',
+            r'\bcmg\b': 'comigo',
+            r'\bctg\b': 'contigo',
+            r'\bpprt\b': 'papo reto',
+            r'\bn\b': 'não',
+        }
+        for padrao, extensao in abreviacoes.items():
+            clean = re.sub(padrao, extensao, clean, flags=re.IGNORECASE)
+
+        # Substitui kkkk/hahaha solto no texto por risada fonética e tag acústica
+        clean = re.sub(r'\b(?:k{2,}|ha(?:ha)+|rs(?:rs)+|ks(?:ks)+)\b', ' (chuckle) haha ', clean, flags=re.IGNORECASE)
 
         # Mapeia ações humanas para interjeições auditivas nativas do MiniMax
         clean = re.sub(r'\*(?:risos?|risinho|risadinha|rindo|haha|kkk)\*', ' (chuckle) ', clean, flags=re.IGNORECASE)
