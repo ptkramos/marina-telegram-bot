@@ -28,7 +28,7 @@ TEMP_AUDIO_DIR.mkdir(exist_ok=True)
 class VoiceEngine:
     def __init__(self):
         self.novita_api_key = os.getenv("NOVITA_API_KEY", "").strip()
-        self.novita_voice_id = os.getenv("NOVITA_VOICE_ID", "voice_73e73b73-65be-4cf9-9ab6-35d84f1946a3").strip()
+        self.novita_voice_id = os.getenv("NOVITA_VOICE_ID", "voice_d91c415d-f6a2-4d6f-b32c-aacfd5ad2e39").strip()
         self.novita_voice_model = os.getenv("NOVITA_VOICE_MODEL", "speech-2.8-hd").strip()
 
         self.eleven_api_key = os.getenv("ELEVENLABS_API_KEY", "").strip()
