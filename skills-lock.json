@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "novita-ai": {
+      "source": "novitalabs/novita-skills",
+      "sourceType": "github",
+      "skillPath": "skills/novita-ai/SKILL.md",
+      "computedHash": "ef5ac564af126ac0de07b06538be7db7825e1ef8a54ee0deea4e2080c7321125"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+[Unit]
+Description=Marin Kitagawa Telegram AI Bot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/marin-telegram-bot
+ExecStart=/root/marin-telegram-bot/venv/bin/python bot.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
