@@ -604,7 +604,7 @@ class DatabaseManager:
                 FROM eventos_pendentes
                 WHERE status = 'pending' AND (
                     (follow_up_after IS NOT NULL AND follow_up_after <= ?) OR
-                    (event_at IS NOT NULL AND event_at <= ?)
+                    (follow_up_after IS NULL AND event_at IS NOT NULL AND event_at <= ?)
                 )
                 ORDER BY importance DESC, id ASC
                 """,

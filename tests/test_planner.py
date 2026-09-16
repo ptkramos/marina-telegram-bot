@@ -139,6 +139,32 @@ class TestInternalPlanner(unittest.TestCase):
         self.assertEqual(f_dt.day, ev_dt.day)
         self.assertEqual(f_dt.hour, 16)
 
+    def test_query_eventos_prioriza_follow_up_after(self):
+        """Valida que a query SQL do banco não dispara follow-up no início do evento."""
+        self.db.adicionar_evento_pendente(
+            event_type="trabalho",
+            description="Apresentação importante",
+            event_at="2026-09-16T14:00:00",
+            follow_up_after="2026-09-16T16:00:00"
+        )
+
+        # 1. Antes do evento (13:59) -> 0 eventos
+        res_1359 = self.db.get_eventos_pendentes_para_followup(now_iso="2026-09-16T13:59:00")
+        self.assertEqual(len(res_1359), 0)
+
+        # 2. No início do evento (14:01) -> 0 eventos (ainda não é hora do follow-up!)
+        res_1401 = self.db.get_eventos_pendentes_para_followup(now_iso="2026-09-16T14:01:00")
+        self.assertEqual(len(res_1401), 0)
+
+        # 3. Pouco antes do follow-up (15:59) -> 0 eventos
+        res_1559 = self.db.get_eventos_pendentes_para_followup(now_iso="2026-09-16T15:59:00")
+        self.assertEqual(len(res_1559), 0)
+
+        # 4. No horário do follow-up (16:01) -> 1 evento retornado
+        res_1601 = self.db.get_eventos_pendentes_para_followup(now_iso="2026-09-16T16:01:00")
+        self.assertEqual(len(res_1601), 1)
+        self.assertEqual(res_1601[0]["description"], "Apresentação importante")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

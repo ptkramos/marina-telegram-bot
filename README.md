@@ -1,4 +1,4 @@
-# 🌹 Marina Seltin — Telegram AI Bot Autônomo & Humanoide (v3.4.2)
+# 🌹 Marina Seltin — Telegram AI Bot Autônomo & Humanoide (v3.4.3)
 
 Bot interativo e exclusivo para Telegram com a personalidade autêntica, humana e desinibida de **Marina Seltin** (jovem de 19 anos, modelo em início de carreira, namorada dedicada de Patrick Ramos).
 
@@ -78,7 +78,7 @@ python bot.py
 
 ## 🧪 Testes Automatizados
 
-O projeto conta com uma suíte abrangente de **55 testes unitários e de integração offline**:
+O projeto conta com uma suíte abrangente de **56 testes unitários e de integração offline**:
 
 ```powershell
 python -W error::ResourceWarning -m unittest discover tests -v

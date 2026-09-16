@@ -1,5 +1,5 @@
 """
-Bot Telegram de Marina Seltin (v3.4.1 Oficial Blindada).
+Bot Telegram de Marina Seltin (v3.4.3 Oficial Blindada - Reliability Final Fixes).
 Jovem de 19 anos, modelo em início de carreira, namorada EXCLUSIVA de Patrick Ramos.
 Totalmente desinibida, carinhosa, com ciclo menstrual real, pausas humanas de digitação,
 envio REAL de balões separados sucessivos (multi-bubble), comandos /feedback e /edit com Auto-Patcher autônomo,
@@ -164,6 +164,7 @@ def build_messages_payload(
 
 # Lock de concorrência global para consolidação de memória
 MEMORY_CONSOLIDATION_LOCK = asyncio.Lock()
+_IS_CONSOLIDATING = False
 
 
 async def check_and_trigger_memory_consolidation():
@@ -171,31 +172,41 @@ async def check_and_trigger_memory_consolidation():
     Verifica se há novas conversas registradas desde o último cursor persistente no SQLite.
     Se a contagem atingir settings.MEMORY_CONSOLIDATION_BATCH_SIZE, consolida o lote assincronamente
     passando os IDs de início e fim, atualizando o cursor persistente com segurança anti-falhas.
-    Protegido contra concorrência por MEMORY_CONSOLIDATION_LOCK.
+    Toda a leitura, cálculo de lote e avanço de cursor ocorrem DENTRO de MEMORY_CONSOLIDATION_LOCK,
+    garantindo que chamadas concorrentes nunca processem o mesmo intervalo.
     """
+    global _IS_CONSOLIDATING
     if not getattr(settings, "MEMORY_CONSOLIDATION_ENABLED", False):
         return
 
-    if MEMORY_CONSOLIDATION_LOCK.locked():
+    if _IS_CONSOLIDATING or MEMORY_CONSOLIDATION_LOCK.locked():
         logger.debug("Consolidação de memória já está em execução. Pulando disparo concorrente.")
         return
 
-    try:
-        last_id = memory_manager.db.get_last_consolidated_conversation_id()
-        novas_count = memory_manager.db.contar_conversas_desde(last_id)
-        batch_size = getattr(settings, "MEMORY_CONSOLIDATION_BATCH_SIZE", 8)
+    _IS_CONSOLIDATING = True
 
-        if novas_count >= batch_size:
-            novas_mensagens = memory_manager.db.get_conversas_desde(last_id, limit=50)
-            if not novas_mensagens:
-                return
+    async def _run_consolidation():
+        global _IS_CONSOLIDATING
+        try:
+            async with MEMORY_CONSOLIDATION_LOCK:
+                batch_size = getattr(settings, "MEMORY_CONSOLIDATION_BATCH_SIZE", 8)
+                # Drena chunks pendentes (máximo 3 por execução para não reter o lock indefinidamente)
+                chunks_processed = 0
+                while chunks_processed < 3:
+                    last_id = memory_manager.db.get_last_consolidated_conversation_id()
+                    novas_count = memory_manager.db.contar_conversas_desde(last_id)
 
-            start_id = novas_mensagens[0]["id"]
-            end_id = novas_mensagens[-1]["id"]
-            lote = [{"role": m["role"], "content": m["content"]} for m in novas_mensagens]
+                    if novas_count < batch_size:
+                        break
 
-            async def _run_consolidation():
-                async with MEMORY_CONSOLIDATION_LOCK:
+                    novas_mensagens = memory_manager.db.get_conversas_desde(last_id, limit=50)
+                    if not novas_mensagens:
+                        break
+
+                    start_id = novas_mensagens[0]["id"]
+                    end_id = novas_mensagens[-1]["id"]
+                    lote = [{"role": m["role"], "content": m["content"]} for m in novas_mensagens]
+
                     try:
                         res = await memory_consolidator.consolidate_and_apply_async(
                             lote,
@@ -205,14 +216,17 @@ async def check_and_trigger_memory_consolidation():
                         if res.get("success", True) and not res.get("error"):
                             memory_manager.db.set_last_consolidated_conversation_id(end_id)
                             logger.info(f"Consolidação de memória persistente concluída (IDs {start_id}..{end_id}): {res}")
+                            chunks_processed += 1
                         else:
                             logger.warning(f"Consolidação retornou status não-positivo. Cursor NÃO avançado: {res}")
+                            break
                     except Exception as ex:
                         logger.error(f"Falha na consolidação assíncrona de memória (cursor NÃO avançado): {ex}")
+                        break
+        finally:
+            _IS_CONSOLIDATING = False
 
-            asyncio.create_task(_run_consolidation())
-    except Exception as e:
-        logger.warning(f"Aviso ao checar consolidação de memória: {e}")
+    asyncio.create_task(_run_consolidation())
 
 def split_into_human_bubbles(text: str) -> list[str]:
     """

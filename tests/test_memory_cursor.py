@@ -94,18 +94,58 @@ class TestMemoryPersistentCursor(unittest.TestCase):
         # Cursor continua estritamente em 10
         self.assertEqual(self.db.get_last_consolidated_conversation_id(), 10)
 
-    def test_memory_consolidation_lock(self):
-        """Valida que o lock global de consolidação impede execuções concorrentes."""
+    def test_concurrent_consolidation_triggers_process_only_once(self):
+        """Valida que chamadas simultâneas de consolidação processam o lote exatamente UMA vez."""
         import asyncio
-        from bot import MEMORY_CONSOLIDATION_LOCK
+        import bot
+        from memory_consolidator import memory_consolidator
 
-        async def _test_lock():
-            self.assertFalse(MEMORY_CONSOLIDATION_LOCK.locked())
-            async with MEMORY_CONSOLIDATION_LOCK:
-                self.assertTrue(MEMORY_CONSOLIDATION_LOCK.locked())
-            self.assertFalse(MEMORY_CONSOLIDATION_LOCK.locked())
+        orig_db = bot.memory_manager.db
+        orig_enabled = getattr(bot.settings, "MEMORY_CONSOLIDATION_ENABLED", False)
+        orig_batch = getattr(bot.settings, "MEMORY_CONSOLIDATION_BATCH_SIZE", 8)
+        orig_method = memory_consolidator.consolidate_and_apply_async
 
-        asyncio.run(_test_lock())
+        # Aponta para o banco limpo e temporário do teste
+        bot.memory_manager.db = self.db
+
+        # Cria exatamente 8 mensagens no banco isolado
+        for i in range(8):
+            self.db.adicionar_mensagem("user" if i % 2 == 0 else "assistant", f"Mensagem concorrente {i+1}")
+
+        initial_cursor = self.db.get_last_consolidated_conversation_id()
+        calls = []
+
+        async def mock_apply(messages, start_conv_id=None, end_conv_id=None):
+            calls.append((start_conv_id, end_conv_id))
+            await asyncio.sleep(0.05)
+            return {"created": 1, "deactivated": 0, "moments": 0, "summary_saved": True, "success": True}
+
+        memory_consolidator.consolidate_and_apply_async = mock_apply
+
+        async def _run_concurrent():
+            # Ativa feature flag
+            bot.settings.MEMORY_CONSOLIDATION_ENABLED = True
+            bot.settings.MEMORY_CONSOLIDATION_BATCH_SIZE = 8
+
+            # Dispara simultaneamente duas chamadas no mesmo tick
+            await asyncio.gather(
+                bot.check_and_trigger_memory_consolidation(),
+                bot.check_and_trigger_memory_consolidation()
+            )
+            # Aguarda tarefas assíncronas do lock terminarem
+            await asyncio.sleep(0.25)
+
+        try:
+            asyncio.run(_run_concurrent())
+            # Deve ter sido processado exatamente 1 lote (sem duplicação!)
+            self.assertEqual(len(calls), 1)
+            # Cursor deve ter avançado para o final do lote
+            self.assertGreater(self.db.get_last_consolidated_conversation_id(), initial_cursor)
+        finally:
+            memory_consolidator.consolidate_and_apply_async = orig_method
+            bot.memory_manager.db = orig_db
+            bot.settings.MEMORY_CONSOLIDATION_ENABLED = orig_enabled
+            bot.settings.MEMORY_CONSOLIDATION_BATCH_SIZE = orig_batch
 
 
 if __name__ == "__main__":

@@ -70,6 +70,21 @@ def parse_iso_or_relative_datetime(
         except (ValueError, TypeError):
             pass
 
+    # Períodos do dia se horário não foi explícito
+    if not has_explicit_time:
+        if "de manhã" in s_lower or "pela manhã" in s_lower or "de manha" in s_lower:
+            target_hour = 10
+            target_minute = 0
+            has_explicit_time = True
+        elif "à tarde" in s_lower or "a tarde" in s_lower or "pela tarde" in s_lower:
+            target_hour = 15
+            target_minute = 0
+            has_explicit_time = True
+        elif "à noite" in s_lower or "a noite" in s_lower or "de noite" in s_lower:
+            target_hour = 20
+            target_minute = 0
+            has_explicit_time = True
+
     # Relativo por dias/palavras-chave
     if "depois de amanhã" in s_lower or "depois de amanha" in s_lower:
         target_date = (now + timedelta(days=2)).date()
@@ -77,6 +92,15 @@ def parse_iso_or_relative_datetime(
         target_date = (now + timedelta(days=1)).date()
     elif "hoje" in s_lower:
         target_date = now.date()
+    elif "semana que vem" in s_lower or "próxima semana" in s_lower or "proxima semana" in s_lower:
+        target_date = (now + timedelta(days=7)).date()
+    elif "mês que vem" in s_lower or "mes que vem" in s_lower or "próximo mês" in s_lower:
+        target_date = (now + timedelta(days=30)).date()
+    elif "fim de semana" in s_lower or "final de semana" in s_lower:
+        dias_ate_sab = (5 - now.weekday()) % 7
+        if dias_ate_sab == 0:
+            dias_ate_sab = 7
+        target_date = (now + timedelta(days=dias_ate_sab)).date()
     else:
         # Dias da semana
         dias_semana = {
@@ -270,7 +294,7 @@ class InternalPlanner:
                 raw_follow_up = ed.get("follow_up_hint") or ed.get("follow_up_at_iso")
                 follow_prompt = ed.get("follow_up_prompt")
 
-                event_at_iso = parse_iso_or_relative_datetime(raw_event_at, default_offset_hours=4)
+                event_at_iso = parse_iso_or_relative_datetime(raw_event_at, default_offset_hours=None)
                 follow_up_iso = parse_iso_or_relative_datetime(raw_follow_up, default_offset_hours=None)
 
                 # Se não tiver follow-up explícito ou se o follow-up ficou agendado antes do evento:

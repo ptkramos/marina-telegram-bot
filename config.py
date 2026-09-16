@@ -12,9 +12,9 @@ load_dotenv(ENV_FILE)
 
 class Settings:
     APP_NAME: str = "Marina Seltin"
-    APP_VERSION: str = "3.4.2"
+    APP_VERSION: str = "3.4.3"
     VERSION: str = APP_VERSION
-    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Memory Reliability)"
+    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Final Reliability Fixes)"
 
 
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
