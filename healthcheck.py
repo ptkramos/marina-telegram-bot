@@ -127,6 +127,8 @@ class HealthChecker:
             "feedback_manager",
             "prompts",
             "memory",
+            "memory_retriever",
+            "memory_consolidator",
             "sd_client",
             "voice_engine",
             "context_builder",

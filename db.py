@@ -266,7 +266,10 @@ class DatabaseManager:
         importance: float = 0.5,
         confidence: float = 1.0,
         source_conversation_id: int = None,
-        supersedes_id: int = None
+        supersedes_id: int = None,
+        memory_tier: str = "standard",
+        volatility: str = "medium",
+        canonical_key: str = None
     ) -> int:
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
@@ -274,10 +277,10 @@ class DatabaseManager:
             cursor.execute(
                 """
                 INSERT OR IGNORE INTO fatos_patrick
-                (fato, created_at, category, importance, confidence, active, source_conversation_id, supersedes_id)
-                VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+                (fato, created_at, category, importance, confidence, active, source_conversation_id, supersedes_id, memory_tier, volatility, canonical_key, last_confirmed_at, confirmation_count)
+                VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 0)
                 """,
-                (fato, now_iso, category, importance, confidence, source_conversation_id, supersedes_id)
+                (fato, now_iso, category, importance, confidence, source_conversation_id, supersedes_id, memory_tier, volatility, canonical_key, now_iso)
             )
             conn.commit()
             return cursor.lastrowid
@@ -295,12 +298,52 @@ class DatabaseManager:
     def get_fatos_patrick_detalhados(self, active_only: bool = True) -> list[dict]:
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            query = "SELECT id, fato, category, importance, confidence, created_at, updated_at, access_count, active, supersedes_id FROM fatos_patrick"
+            query = """
+            SELECT id, fato, category, importance, confidence, created_at, updated_at,
+                   access_count, active, supersedes_id, memory_tier, volatility,
+                   canonical_key, last_confirmed_at, confirmation_count
+            FROM fatos_patrick
+            """
             if active_only:
                 query += " WHERE active = 1"
             query += " ORDER BY importance DESC, id ASC"
             cursor.execute(query)
             return [dict(r) for r in cursor.fetchall()]
+
+    def get_core_memories(self, limit: int = 5) -> list[dict]:
+        """Retorna memórias centrais e estáveis (tier 'core') para o Context Builder."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, fato, category, importance, confidence, memory_tier, volatility, canonical_key, last_confirmed_at
+                FROM fatos_patrick
+                WHERE active = 1 AND memory_tier = 'core'
+                ORDER BY importance DESC, confidence DESC, id ASC
+                LIMIT ?
+                """,
+                (limit,)
+            )
+            return [dict(r) for r in cursor.fetchall()]
+
+    def confirmar_fato(self, fato_id: int) -> bool:
+        """Incrementa confirmação e confiança de um fato reafirmado pelo Patrick."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE fatos_patrick
+                SET confirmation_count = confirmation_count + 1,
+                    confidence = MIN(1.0, confidence + 0.1),
+                    last_confirmed_at = ?,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (now_iso, now_iso, fato_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
 
     def desativar_fato(self, fato_id: int):
         """Desativa um fato antigo contradito ou substituído."""
@@ -312,6 +355,32 @@ class DatabaseManager:
                 (now_iso, fato_id)
             )
             conn.commit()
+
+    def desativar_fato_por_chave(self, canonical_key: str) -> int:
+        """Desativa fatos ativos associados a uma chave canônica específica (ex: revogação explícita)."""
+        if not canonical_key:
+            return 0
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE fatos_patrick SET active = 0, updated_at = ? WHERE canonical_key = ? AND active = 1",
+                (now_iso, canonical_key)
+            )
+            conn.commit()
+            return cursor.rowcount
+
+    def get_fatos_por_chave(self, canonical_key: str, active_only: bool = True) -> list[dict]:
+        """Recupera fatos por chave canônica."""
+        if not canonical_key:
+            return []
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            q = "SELECT * FROM fatos_patrick WHERE canonical_key = ?"
+            if active_only:
+                q += " AND active = 1"
+            cursor.execute(q, (canonical_key,))
+            return [dict(r) for r in cursor.fetchall()]
 
     def registrar_acesso_fato(self, fato_id: int):
         """Atualiza contador de acesso e data do último uso da memória."""
@@ -403,7 +472,9 @@ class DatabaseManager:
             try:
                 cursor.execute(
                     """
-                    SELECT f.id, f.fato, f.category, f.importance, f.confidence
+                    SELECT f.id, f.fato, f.category, f.importance, f.confidence,
+                           f.memory_tier, f.volatility, f.canonical_key, f.last_confirmed_at,
+                           f.confirmation_count, f.access_count, fts.rank
                     FROM fatos_fts fts
                     JOIN fatos_patrick f ON f.id = fts.rowid
                     WHERE fatos_fts MATCH ? AND f.active = 1
@@ -415,6 +486,54 @@ class DatabaseManager:
                 return [dict(r) for r in cursor.fetchall()]
             except Exception as e:
                 logger.warning(f"Aviso na busca FTS de fatos para '{termo}': {e}")
+                return []
+
+    def buscar_momentos_fts(self, termo: str, limit: int = 3) -> list[dict]:
+        """Busca por palavras-chave em momentos marcantes com SQLite FTS5."""
+        if not termo or not termo.strip():
+            return []
+        termo_limpo = termo.strip().replace('"', '""')
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    """
+                    SELECT m.id, m.momento, m.importance, fts.rank
+                    FROM momentos_fts fts
+                    JOIN momentos_marcantes m ON m.id = fts.rowid
+                    WHERE momentos_fts MATCH ? AND m.active = 1
+                    ORDER BY rank, m.importance DESC
+                    LIMIT ?
+                    """,
+                    (f'"{termo_limpo}"', limit)
+                )
+                return [dict(r) for r in cursor.fetchall()]
+            except Exception as e:
+                logger.warning(f"Aviso na busca FTS de momentos para '{termo}': {e}")
+                return []
+
+    def buscar_resumos_fts(self, termo: str, limit: int = 2) -> list[dict]:
+        """Busca por palavras-chave em tópicos e resumos de conversas anteriores com SQLite FTS5."""
+        if not termo or not termo.strip():
+            return []
+        termo_limpo = termo.strip().replace('"', '""')
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    """
+                    SELECT r.id, r.topic, r.summary, r.importance, fts.rank
+                    FROM resumos_fts fts
+                    JOIN resumos_conversa r ON r.id = fts.rowid
+                    WHERE resumos_fts MATCH ?
+                    ORDER BY rank, r.importance DESC
+                    LIMIT ?
+                    """,
+                    (f'"{termo_limpo}"', limit)
+                )
+                return [dict(r) for r in cursor.fetchall()]
+            except Exception as e:
+                logger.warning(f"Aviso na busca FTS de resumos para '{termo}': {e}")
                 return []
 
     def get_gostos(self) -> dict[str, list[str]]:

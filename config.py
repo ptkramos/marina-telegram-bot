@@ -12,9 +12,9 @@ load_dotenv(ENV_FILE)
 
 class Settings:
     APP_NAME: str = "Marina Seltin"
-    APP_VERSION: str = "3.4.3"
+    APP_VERSION: str = "3.5.0"
     VERSION: str = APP_VERSION
-    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Final Reliability Fixes)"
+    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Memory Intelligence)"
 
 
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
@@ -57,9 +57,13 @@ class Settings:
     NOVITA_VOICE_ID: str = os.getenv("NOVITA_VOICE_ID", "voice_d91c415d-f6a2-4d6f-b32c-aacfd5ad2e39").strip()
     NOVITA_VOICE_MODEL: str = os.getenv("NOVITA_VOICE_MODEL", "speech-2.8-hd").strip()
 
-    # Feature Flags para evolução arquitetural incremental (3.2.0)
+    # Feature Flags para evolução arquitetural incremental (3.2.0 - 3.5.0)
     SMART_MEMORY_ENABLED: bool = os.getenv("SMART_MEMORY_ENABLED", "true").lower() in ("true", "1", "yes")
     MEMORY_CONSOLIDATION_ENABLED: bool = os.getenv("MEMORY_CONSOLIDATION_ENABLED", "true").lower() in ("true", "1", "yes")
+    MEMORY_INTELLIGENCE_ENABLED: bool = os.getenv("MEMORY_INTELLIGENCE_ENABLED", "true").lower() in ("true", "1", "yes")
+    MEMORY_MAX_FACTS: int = int(os.getenv("MEMORY_MAX_FACTS", "5"))
+    MEMORY_MAX_MOMENTS: int = int(os.getenv("MEMORY_MAX_MOMENTS", "3"))
+    MEMORY_MAX_SUMMARIES: int = int(os.getenv("MEMORY_MAX_SUMMARIES", "2"))
     PLANNER_ENABLED: bool = os.getenv("PLANNER_ENABLED", "true").lower() in ("true", "1", "yes")
     EMOTIONAL_STATE_ENABLED: bool = os.getenv("EMOTIONAL_STATE_ENABLED", "true").lower() in ("true", "1", "yes")
     PENDING_EVENTS_ENABLED: bool = os.getenv("PENDING_EVENTS_ENABLED", "true").lower() in ("true", "1", "yes")

@@ -10,6 +10,7 @@ from prompts import MARIN_SYSTEM_PROMPT, get_temporal_greeting
 from memory_retriever import memory_retriever, MemoryRetriever
 from memory import memory_manager, MemoryManager
 from style_engine import style_engine
+from config import settings
 
 logger = logging.getLogger("ContextBuilder")
 
@@ -37,14 +38,23 @@ class ContextBuilder:
         planner_goal: Optional[str] = None
     ) -> str:
         """Monta o system prompt completo com injeção contextual seletiva, estado emocional e diretrizes do planner."""
-        # 1. Recuperação seletiva de fatos, momentos e resumos
-        mem_data = self.retriever.retrieve_context(user_message=user_message, max_facts=5, max_moments=2)
+        # 1. Recuperação seletiva de fatos, momentos e resumos (Memory Intelligence 3.5.0)
+        max_f = getattr(settings, "MEMORY_MAX_FACTS", 5)
+        max_m = getattr(settings, "MEMORY_MAX_MOMENTS", 3)
+        max_s = getattr(settings, "MEMORY_MAX_SUMMARIES", 2)
+        mem_data = self.retriever.retrieve_context(
+            user_message=user_message,
+            max_facts=max_f,
+            max_moments=max_m,
+            max_summaries=max_s
+        )
         fatos_lines = "\n".join([f"- {f}" for f in mem_data["fatos"]]) if mem_data["fatos"] else "- Nenhum detalhe específico necessário."
         momentos_lines = "\n".join([f"- {m}" for m in mem_data["momentos"]]) if mem_data["momentos"] else "- Momentos cotidianos naturais."
 
         bloco_resumo = ""
         if mem_data.get("resumos"):
-            bloco_resumo = f"\n[CONTINUIDADE DE CONVERSAS ANTERIORES]: {mem_data['resumos'][0]}\n"
+            resumos_formatados = " | ".join(mem_data["resumos"])
+            bloco_resumo = f"\n[CONTINUIDADE DE CONVERSAS ANTERIORES]: {resumos_formatados}\n"
 
         # 2. Gostos e preferências da Marina
         gostos = self.memory_mgr.db.get_gostos()

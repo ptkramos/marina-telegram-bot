@@ -1,10 +1,10 @@
 """
-Bot Telegram de Marina Seltin (v3.4.3 Oficial Blindada - Reliability Final Fixes).
+Bot Telegram de Marina Seltin (v3.5.0 Oficial - Memory Intelligence).
 Jovem de 19 anos, modelo em início de carreira, namorada EXCLUSIVA de Patrick Ramos.
 Totalmente desinibida, carinhosa, com ciclo menstrual real, pausas humanas de digitação,
 envio REAL de balões separados sucessivos (multi-bubble), comandos /feedback e /edit com Auto-Patcher autônomo,
 espelhamento dinâmico de estilo linguístico (style_engine), CHAT 100% LIMPO (auto-limpeza imediata de comandos),
-BUFFER INTELIGENTE DE DIGITAÇÃO (Debounce anti-atropelo) e REAÇÕES DE MENSAGEM EM VIA DE MÃO DUPLA.
+BUFFER INTELIGENTE DE DIGITAÇÃO (Debounce anti-atropelo) e MEMORY INTELLIGENCE 2.0.
 """
 import logging
 import random
@@ -41,6 +41,7 @@ from memory_consolidator import memory_consolidator
 from proactivity_service import proactivity_service
 from vision_service import vision_service
 from planner import planner
+from memory_retriever import memory_retriever
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -866,7 +867,7 @@ async def patches_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def memorias_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Exibe o que a Marina guarda na memória sobre o Patrick direto pelo Telegram (auto-limpeza em 15s)."""
+    """Exibe o que a Marina guarda na memória sobre o Patrick direto pelo Telegram (auto-limpeza em 15-20s)."""
     if not is_authorized(update):
         return
 
@@ -875,6 +876,32 @@ async def memorias_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
     except Exception:
         pass
+
+    # Modo busca e debug privado de memória (/memoria <termo> ou /memorydebug <termo>)
+    if context.args:
+        termo = " ".join(context.args).strip()
+        retrieval = memory_retriever.retrieve_context(termo, max_facts=6)
+        detalhes = retrieval.get("fatos_detalhados", [])
+        if not detalhes:
+            msg_texto = f"🔍 **Busca de Memória por '{termo}':**\nNenhum fato relevante encontrado no SQLite."
+        else:
+            linhas = [f"🔍 **Debug de Memória para '{termo}':**\n"]
+            for f in detalhes:
+                score = f.get("hybrid_score", 0.0)
+                conf = f.get("confidence", 1.0)
+                tier = f.get("memory_tier", "standard")
+                ck = f.get("canonical_key") or "none"
+                cat = f.get("category", "geral")
+                linhas.append(
+                    f"• **{f['fato']}**\n"
+                    f"  📊 Score: `{score:.2f}` | Conf: `{conf:.2f}` | Tier: `{tier}` | Key: `{ck}` | Cat: `{cat}`"
+                )
+            linhas.append("\n*(Esta mensagem sumirá em 20s)*")
+            msg_texto = "\n".join(linhas)
+
+        msg = await context.bot.send_message(chat_id=chat_id, text=msg_texto, parse_mode="Markdown")
+        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=20.0))
+        return
 
     fatos = memory_manager.db.get_fatos_patrick()
     total_msgs = memory_manager.db.get_total_conversas()
@@ -1546,8 +1573,8 @@ def main():
     app.add_handler(CommandHandler("rollback", rollback_command))
     app.add_handler(CommandHandler("patches", patches_command))
     app.add_handler(CommandHandler("memorias", memorias_command))
-
     app.add_handler(CommandHandler("memoria", memorias_command))
+    app.add_handler(CommandHandler("memorydebug", memorias_command))
     app.add_handler(CommandHandler("restart", restart_command))
     app.add_handler(CommandHandler("reset", restart_command))
     app.add_handler(CommandHandler("limpar", limpar_command))
