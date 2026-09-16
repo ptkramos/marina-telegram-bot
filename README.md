@@ -1,77 +1,72 @@
-# 🎀 Marin Kitagawa - Telegram AI Bot Híbrido
+# 🌹 Marina Seltin — Telegram AI Bot Autônomo & Humanoide (v3.4.2)
 
-Bot interativo para Telegram com a personalidade gyaru e energética da **Marin Kitagawa** (*My Dress-Up Darling*), unindo a inteligência conversacional da OpenAI com geração de fotos locais na sua GPU AMD Radeon RX 570 via Stable Diffusion (Automatic1111).
+Bot interativo e exclusivo para Telegram com a personalidade autêntica, humana e desinibida de **Marina Seltin** (jovem de 19 anos, modelo em início de carreira, namorada dedicada de Patrick Ramos).
 
----
-
-## 📂 Estrutura dos Arquivos
-
-- `bot.py`: Código principal do bot Telegram, comandos (`/start`, `/status`, `/foto`), respostas e agendador de iniciativa própria.
-- `prompts.py`: Definições da personalidade gyaru da Marin e construtor de prompts fotográficos com tags da Marin Kitagawa.
-- `sd_client.py`: Cliente assíncrono para a API do Stable Diffusion com semáforo de GPU (evita sobrecarga de VRAM).
-- `config.py`: Gerenciador de configurações e variáveis de ambiente.
-- `requirements.txt`: Dependências Python necessárias.
-- `.env.example`: Modelo de configuração das credenciais.
+O ecossistema integra LLM contextual avançada, geração visual ultra-realista via **FLUX.1 Dev** com pipeline de LoRAs de iPhone, síntese de voz clonada via **Novita MiniMax Speech 2.8 HD**, Smart Memory relacional persistente com **FTS5 e Consolidator assíncrono anti-falha**, ciclo biológico calculado em tempo real, espelhamento linguístico dinâmico e proatividade autônoma com agenda de rotina.
 
 ---
 
-## 🚀 Passo a Passo de Configuração
+## 🏗️ Arquitetura do Sistema
 
-### 1. Preparando o Ambiente Python
+### 🧠 Cérebro & Orquestração Conversacional
+- **`bot.py`**: Orquestrador central do Telegram (PTB v21+), gerenciamento de comandos, envio em múltiplos balões orgânicos (`split_into_human_bubbles`), buffer inteligente de digitação (`MessageDebouncer`), reações emoji bidirecionais e lock de consolidação.
+- **`planner.py`**: Planejador cognitivo interno que analisa previamente a mensagem, define intenção, tom, objetivo da fala, reações de emoji e agenda compromissos/follow-ups com normalização ISO rigorosa.
+- **`context_builder.py`**: Montador estruturado de prompts que combina identidade nuclear, estado emocional com multiplicadores hormonais do ciclo, diretrizes do planner, preferências, sincronia de estilo e histórico dentro de um orçamento rígido de contexto (`MAX_TOTAL_CONTEXT_CHARS = 64000`).
+
+### 💾 Smart Memory & Persistência (SQLite Relacional)
+- **`db.py`**: Camada persistente exclusiva em SQLite (`marin_memory.db`) com WAL mode, busy timeout, foreign keys e framework de migrações (`migrations/`). Gerencia conexões seguras sem vazamentos de recursos.
+- **`memory_retriever.py`**: Mecanismo de busca híbrida por Full-Text Search (FTS5) para recuperação seletiva de fatos, momentos marcantes e resumos temáticos de conversas passadas.
+- **`memory_consolidator.py`**: Processador em segundo plano que extrai fatos permanentes sobre Patrick, resolve contradições, detecta momentos afetivos e sintetiza tópicos. Possui proteção contra falhas com retenção de cursor persistente e blindagem contra concorrência via `MEMORY_CONSOLIDATION_LOCK`.
+
+### 📸 Câmera & Visão Computacional
+- **`sd_client.py`**: Câmera fotográfica integrada à **Novita AI GPU (FLUX.1 Dev 4090/L40S)** com ComfyUI dedicado, acionamento sob demanda (`PUT start/stop`) para economia de créditos e suporte completo a fotos SFW e NSFW explícitas.
+- **`visual_profile.py`**: DNA visual da Marina (rosto, corpo atlético proporcional, marquinha de biquíni sutil bronzeada, cabelo castanho ondulado com mechas douradas) e cadeia de LoRAs calibrada (Identidade Marina, iPhone Photo Realism Booster, Mirror Selfie Coherence e iPhone 16 Pro Preto).
+- **`vision_service.py`**: Módulo multimodal que analisa imagens enviadas pelo usuário e gera comentários contextuais e afetuosos da Marina.
+
+### 🎙️ Voz, Estilo & Biologia
+- **`voice_engine.py`**: Síntese de áudio nativa (.ogg Opus com waveform) via **Novita MiniMax (speech-2.8-hd)** com clonagem de voz oficial, além de fallbacks configuráveis (ElevenLabs e Gemini TTS).
+- **`style_engine.py`**: Motor de sincronia linguística que espelha padrões de risada (`kkkk`, `haha`), gírias do casal e cadência de digitação.
+- **`cycle.py`**: Ciclo biológico autônomo calculado diariamente (28 dias, 4 fases: folicular, ovulatória, lútea e menstrual), modulando o afeto, a energia e a libido da Marina.
+- **`proactivity_service.py`**: Motor autônomo que monitora a rotina, feriados, sono e eventos pendentes para iniciar conversas espontâneas e carinhosas no Telegram.
+- **`auto_patcher.py`**: Auto-refinamento e patch remoto de código via `/edit` com staging seguro, proteção LIFO de rollback e feature flag `SAFE_PATCHER_ENABLED`.
+
+---
+
+## ⚡ Instalação e Execução
+
+### 1. Clonar o Repositório e Criar Ambiente Virtual
 
 ```powershell
-cd C:\Users\conta\.gemini\antigravity-ide\scratch\marin-telegram-bot
+git clone https://github.com/ptkramos/marina-telegram-bot.git
+cd marina-telegram-bot
 python -m venv venv
 .\venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Copie o arquivo `.env.example` para `.env` e preencha suas chaves:
-- `TELEGRAM_BOT_TOKEN`: Pegue com o [@BotFather](https://t.me/BotFather) no Telegram.
-- `OPENAI_API_KEY`: Sua chave de API da OpenAI.
-- `TARGET_CHAT_ID`: Seu ID de usuário no Telegram (consulte enviando `/start` para [@userinfobot](https://t.me/userinfobot)).
-- `SD_API_URL`: A URL do túnel público (ex: Ngrok) que aponta para o seu Stable Diffusion.
+### 2. Configurar Variáveis de Ambiente (`.env`)
 
----
+Copie o arquivo `.env.example` para `.env` e preencha com suas credenciais:
 
-### 2. Configurando o PC Local (RX 570 com Automatic1111 DirectML)
-
-Na sua placa de vídeo AMD RX 570 (8GB), o Automatic1111 deve ser executado com a versão **DirectML**:
-
-1. **Ativar o modo API**:
-   No diretório do seu Stable Diffusion WebUI, edite o arquivo `webui-user.bat`:
-   ```bat
-   set COMMANDLINE_ARGS=--api --medvram --opt-sub-quad-attention --no-half
-   ```
-   *(A flag `--api` é obrigatória para liberar a porta para o bot).*
-
-2. **Modelos Recomendados (SD 1.5 no Civitai)**:
-   - **Checkpoint Base**: [CyberRealistic](https://civitai.com/models/15003/cyberrealistic) ou [Realistic Vision V5.1](https://civitai.com/models/4201/realistic-vision-v51) (coloque em `models/Stable-diffusion/`).
-   - **LoRA da Marin Kitagawa**: Procure por *"Marin Kitagawa"* no Civitai compatível com SD 1.5 (coloque o arquivo `.safetensors` na pasta `models/Lora/`).
-   *(O prompt base no `prompts.py` já usa o nome canônico e tags da Marin!)*
-
-3. **Iniciar o WebUI**:
-   Dê dois cliques em `webui-user.bat`. O servidor ficará disponível localmente em:
-   `http://127.0.0.1:7860`
-
----
-
-### 3. Expondo a Porta para a Nuvem / VPS (Túnel)
-
-Para que o bot (rodando na VPS ou em outro local) converse com a sua RX 570:
-
-#### Opção A: Ngrok (Muito Simples)
 ```powershell
-ngrok http 7860
-```
-Copie a URL HTTPS gerada (ex: `https://abc1-23.ngrok-free.app/`) e coloque na variável `SD_API_URL` do `.env`.
-
-#### Opção B: Pinggy (Não requer instalação)
-```powershell
-ssh -p 443 -R0:localhost:7860 a.pinggy.io
+Copy-Item .env.example .env
 ```
 
----
+Principais variáveis:
+- `TELEGRAM_BOT_TOKEN`: Token gerado pelo @BotFather.
+- `TARGET_CHAT_ID`: Seu ID numérico no Telegram (segurança de acesso restrito).
+- `LLM_API_KEY` & `LLM_MODEL`: Chave do OpenRouter ou OpenAI (ex: `meta-llama/llama-3.3-70b-instruct`).
+- `NOVITA_API_KEY`: Chave da Novita AI para a câmera ComfyUI e voz MiniMax.
+- `NOVITA_VOICE_ID`: Identificador da voz clonada da Marina.
+- `NOVITA_INSTANCE_ID`: ID da instância GPU na Novita.
+
+### 3. Diagnóstico de Saúde do Sistema
+
+Antes de iniciar, execute o diagnósticador autônomo para validar sintaxe, banco SQLite, ciclo biológico e dependências:
+
+```powershell
+python healthcheck.py
+```
 
 ### 4. Rodando o Bot
 
@@ -79,7 +74,44 @@ ssh -p 443 -R0:localhost:7860 a.pinggy.io
 python bot.py
 ```
 
-No Telegram:
-1. Envie `/start` para a Marin.
-2. Envie `/status` para checar se a sua GPU e o bot estão conectados.
-3. Peça fotos naturalmente na conversa (*"Marin, manda uma selfie!"*) ou use o comando `/foto`.
+---
+
+## 🧪 Testes Automatizados
+
+O projeto conta com uma suíte abrangente de **55 testes unitários e de integração offline**:
+
+```powershell
+python -W error::ResourceWarning -m unittest discover tests -v
+```
+
+Módulos testados:
+- `test_auto_patcher.py`: Staging, aplicação transacional e proteção LIFO de rollback.
+- `test_context_builder.py`: Limites de contexto, injeção de emoções e diretrizes do planner.
+- `test_memory_cursor.py`: Persistência de cursor no SQLite, anti-falha e lock de concorrência.
+- `test_planner.py`: Planejamento heurístico, parser temporal e ordenação cronológica de eventos.
+- `test_proactivity_service.py`: Disparos espontâneos, checagem de rotina e eventos pendentes.
+- `test_style_engine.py`: Espelhamento de risadas, gírias e pontuação.
+- `test_vision_service.py`: Redimensionamento de fotos e análise afetiva.
+- `test_visual_profile.py`: Prompts SFW/NSFW, continuidade de look/ambiente e LoRAs.
+- `test_wiring_auditoria.py`: Integração completa do pipeline de texto, fotos e banco de dados.
+
+---
+
+## 💬 Comandos Principais no Telegram
+
+| Comando | Descrição |
+| :--- | :--- |
+| `/status` | Exibe status em tempo real (versão, dia do ciclo biológico, LLM, câmera, memória e histórico). Auto-limpeza em 15s. |
+| `/foto [tema]` | Marina gera e envia uma foto em alta definição renderizada no FLUX.1 Dev com LoRAs de iPhone. |
+| `/avatar` | Marina gera e atualiza sua foto de perfil oficial no Telegram de forma autônoma. |
+| `/audio` ou `/voz` | Recebe uma mensagem de voz com síntese ultra-realista via Novita MiniMax. |
+| `/memorias` | Visualiza os fatos, preferências e lembranças que a Marina registrou sobre você. |
+| `/feedback [nota]` | Registra instruções, correções de comportamento e alinhamentos no SQLite. |
+| `/edit [instrução]` | Aprimoramento assistido de código com staging seguro e reinício controlado. |
+| `/rollback` | Reverte o último patch aplicado de forma segura (ordem LIFO). |
+
+---
+
+## 📄 Licença & Privacidade
+
+Projeto privado e de uso pessoal desenvolvido exclusivamente para o casal Patrick Ramos & Marina Seltin. Todos os dados de conversas, memórias e credenciais permanecem protegidos localmente em SQLite e variáveis de ambiente isoladas.

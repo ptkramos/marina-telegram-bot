@@ -18,6 +18,14 @@ marin_memory.db
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+
+# Runtime, logs & scratch
+.runtime/
+log.txt
+*.log
+scratch/
+test_ping.txt
 
 # Temporary audio files
 temp_audio/
@@ -25,9 +33,11 @@ temp_audio/
 *.wav
 *.ogg
 
-# Local test images (keep references directory intact)
+# Local test images
 marina_dev_nsfw_calibrada.png
 marina_teste_calibrada.png
+marina_primeira_foto_oficial.png
+*.png
 
 # IDE & OS
 .vscode/

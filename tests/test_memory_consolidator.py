@@ -1,0 +1,184 @@
+"""
+Suite de Testes Automatizados Offline para o Memory Consolidator da Marina Seltin.
+Testa lógica de banco de dados isolada (sem afetar dados de produção)
+e testes de inteligência de extração/filtragem com LLM real.
+"""
+import sys
+import unittest
+import tempfile
+from pathlib import Path
+
+# Adiciona o diretório raiz ao path
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_DIR))
+
+from db import DatabaseManager
+from memory_consolidator import MemoryConsolidator
+
+
+class TestMemoryConsolidatorDatabase(unittest.TestCase):
+    """Testa a integridade do banco SQLite com o consolidator em banco temporário isolado."""
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.temp_db_path = Path(self.temp_dir.name) / "test_memory.db"
+        self.db = DatabaseManager(db_path=self.temp_db_path)
+        self.consolidator = MemoryConsolidator(db=self.db)
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def test_database_migrations_applied(self):
+        """Verifica se todas as migrações (incluindo FTS5 e Smart Memory) foram aplicadas."""
+        self.assertGreaterEqual(self.db.get_schema_version(), 2)
+
+    def test_apply_consolidation_and_fts_sync(self):
+        """Testa inserção de fatos, momentos, resumos e sincronização FTS."""
+        payload = {
+            "facts_to_create": [
+                {
+                    "fato": "Patrick prefere energético Monster Ultra White",
+                    "category": "preferencia",
+                    "importance": 0.7,
+                    "confidence": 1.0,
+                    "supersedes_id": None
+                }
+            ],
+            "facts_to_deactivate": [],
+            "important_moments": [
+                {
+                    "momento": "Primeiro jantar que cozinhamos juntos no apê",
+                    "importance": 0.9
+                }
+            ],
+            "topic_summary": "Conversa sobre bebidas favoritas e culinária"
+        }
+
+        result = self.consolidator.apply_consolidation(payload)
+        self.assertEqual(result["created"], 1)
+        self.assertEqual(result["moments"], 1)
+        self.assertTrue(result["summary_saved"])
+
+        # Verifica dados no SQLite
+        fatos = self.db.get_fatos_patrick_detalhados()
+        self.assertTrue(any("Monster Ultra White" in f["fato"] for f in fatos))
+
+        # Verifica busca FTS5 em tempo real
+        busca = self.db.buscar_fatos_fts("Monster")
+        self.assertEqual(len(busca), 1)
+        self.assertIn("Monster", busca[0]["fato"])
+
+    def test_contradiction_handling(self):
+        """Testa desativação de fato antigo contradito."""
+        # 1. Cria fato inicial
+        fato_antigo_id = self.db.adicionar_fato_patrick(
+            fato="Patrick adora tomar café expresso forte",
+            category="preferencia"
+        )
+
+        # 2. Consolidação que contradiz o fato
+        payload = {
+            "facts_to_create": [
+                {
+                    "fato": "Patrick parou de tomar café e agora bebe chá verde",
+                    "category": "preferencia",
+                    "importance": 0.8,
+                    "confidence": 1.0,
+                    "supersedes_id": fato_antigo_id
+                }
+            ],
+            "facts_to_deactivate": [
+                {
+                    "existing_fact_id": fato_antigo_id,
+                    "reason": "Parou de tomar café"
+                }
+            ],
+            "important_moments": [],
+            "topic_summary": "Mudança de hábitos matinais"
+        }
+
+        self.consolidator.apply_consolidation(payload)
+
+        # Fato ativo deve conter o novo, e o antigo deve estar desativado
+        fatos_ativos = self.db.get_fatos_patrick(active_only=True)
+        self.assertTrue(any("chá verde" in f for f in fatos_ativos))
+        self.assertFalse(any("café expresso forte" in f for f in fatos_ativos))
+
+        # Fato antigo ainda existe no histórico completo (active=0)
+        fatos_todos = self.db.get_fatos_patrick(active_only=False)
+        self.assertTrue(any("café expresso forte" in f for f in fatos_todos))
+
+
+class TestMemoryConsolidatorLLM(unittest.TestCase):
+    """Testa a inteligência de extração e descarte com chamadas reais ao modelo LLM configurado."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.consolidator = MemoryConsolidator()
+
+    def setUp(self):
+        import time
+        time.sleep(2.0)
+
+    def test_casual_chitchat_is_ignored(self):
+        """Conversas casuais banais não devem gerar fatos permanentes."""
+        dialogue = [
+            {"role": "user", "content": "Oi amor! Tudo bem por aí?"},
+            {"role": "assistant", "content": "Oii vida! Tudo ótimo aqui no apê e com você? 🥰"},
+            {"role": "user", "content": "Tudo certinho também, só passei pra te dar um cheiro"},
+            {"role": "assistant", "content": "Ai que delícia amor, adorei! kkkk te amo"},
+            {"role": "user", "content": "Te amo também vida, beijo!"}
+        ]
+
+        result = self.consolidator.consolidate_dialogue(dialogue, existing_facts=[])
+        if result.get("error") and "402" in result.get("error"):
+            self.skipTest("OpenRouter sem créditos suficientes (HTTP 402).")
+        self.assertEqual(len(result.get("facts_to_create", [])), 0, "Chitchat casual não deve criar fatos!")
+
+    def test_real_fact_extraction(self):
+        """Informação relevante deve ser extraída com categoria e resumo adequados."""
+        dialogue = [
+            {"role": "user", "content": "Amor, novidade: voltei a jogar Final Fantasy XIV ontem no PC, escolhi a classe Black Mage!"},
+            {"role": "assistant", "content": "Mentira amor! Que legal! Quero ver você jogando depois hein"},
+            {"role": "user", "content": "Sim! Vou tentar jogar um pouquinho todo fim de semana"}
+        ]
+
+        result = self.consolidator.consolidate_dialogue(dialogue, existing_facts=[])
+        if result.get("error") and "402" in result.get("error"):
+            self.skipTest("OpenRouter sem créditos suficientes (HTTP 402).")
+        fatos = result.get("facts_to_create", [])
+        self.assertGreaterEqual(len(fatos), 1, "Deveria ter extraído ao menos um fato sobre FFXIV")
+        fato_texto = fatos[0]["fato"].lower()
+        self.assertTrue("final fantasy" in fato_texto or "ffxiv" in fato_texto)
+
+    def test_contradiction_detection(self):
+        """Deve detectar contradição com fato previamente conhecido."""
+        existing_facts = [
+            {
+                "id": 42,
+                "fato": "Patrick adora tomar café todos os dias",
+                "category": "preferencia"
+            }
+        ]
+        dialogue = [
+            {"role": "user", "content": "Amor, lembra daquele meu costume de tomar café? Cortei 100%, me fazia mal pro estômago. Agora só tomo suco de laranja natural de manhã."},
+            {"role": "assistant", "content": "Sério amor? Que bom que você cuidou disso! Vai fazer bem pra você"}
+        ]
+
+        result = self.consolidator.consolidate_dialogue(dialogue, existing_facts=existing_facts)
+        if result.get("error") and "402" in result.get("error"):
+            self.skipTest("OpenRouter sem créditos suficientes (HTTP 402).")
+        deactivations = result.get("facts_to_deactivate", [])
+        self.assertTrue(
+            any(d.get("existing_fact_id") == 42 for d in deactivations),
+            "O fato ID 42 (café) deveria ter sido marcado para desativação!"
+        )
+        fatos_novos = result.get("facts_to_create", [])
+        self.assertTrue(
+            any("suco" in f["fato"].lower() for f in fatos_novos),
+            "Deveria ter criado fato sobre suco de laranja"
+        )
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

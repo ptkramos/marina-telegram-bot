@@ -12,115 +12,110 @@ Sistema 100% autônomo sem dependência de arquivos JSON.
 import sqlite3
 import json
 import logging
+from contextlib import closing
 from datetime import datetime, date, timedelta
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger("MarinaDB")
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_FILE = BASE_DIR / "marin_memory.db"
+MIGRATIONS_DIR = BASE_DIR / "migrations"
+
+class _ManagedConnection:
+    """Wrapper para sqlite3.Connection que garante commit/rollback e fecha a conexão no __exit__."""
+    def __init__(self, conn: sqlite3.Connection):
+        self._conn = conn
+
+    def __enter__(self):
+        self._conn.__enter__()
+        return self._conn
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            self._conn.__exit__(exc_type, exc_val, exc_tb)
+        finally:
+            try:
+                self._conn.close()
+            except Exception:
+                pass
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
 
 class DatabaseManager:
     def __init__(self, db_path: Path = DB_FILE):
         self.db_path = db_path
         self._init_db()
 
-    def get_connection(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
+    def get_connection(self):
+        conn = sqlite3.connect(self.db_path, timeout=5.0)
         conn.row_factory = sqlite3.Row
-        return conn
+        conn.execute("PRAGMA busy_timeout=5000;")
+        conn.execute("PRAGMA foreign_keys=ON;")
+        return _ManagedConnection(conn)
 
     def _init_db(self):
         is_new = not self.db_path.exists()
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            # 1. Tabela de Conversas (Histórico Permanente)
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS conversas (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT NOT NULL,
-                role TEXT NOT NULL,
-                content TEXT NOT NULL,
-                is_initiative INTEGER DEFAULT 0,
-                media_type TEXT DEFAULT 'text'
-            );
-            """)
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_conversas_timestamp ON conversas(timestamp);")
+        
+        # Configura WAL mode persistente
+        with closing(sqlite3.connect(self.db_path, timeout=5.0)) as raw_conn:
+            raw_conn.execute("PRAGMA journal_mode=WAL;")
 
-            # 2. Tabela de Fatos sobre o Patrick
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS fatos_patrick (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                fato TEXT UNIQUE NOT NULL,
-                created_at TEXT NOT NULL,
-                relevance INTEGER DEFAULT 1
-            );
-            """)
-
-            # 3. Tabela de Gostos e Descobertas da Marina
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS gostos_marina (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                categoria TEXT NOT NULL,
-                item TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                UNIQUE(categoria, item)
-            );
-            """)
-
-            # 4. Tabela de Perfil da Marina
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS perfil (
-                chave TEXT PRIMARY KEY,
-                valor TEXT NOT NULL
-            );
-            """)
-
-            # 5. Tabela de Feedbacks & Auto-Correções
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS feedbacks (
-                id TEXT PRIMARY KEY,
-                timestamp TEXT NOT NULL,
-                autor TEXT NOT NULL,
-                feedback TEXT NOT NULL,
-                contexto_recente TEXT,
-                status TEXT DEFAULT 'pendente'
-            );
-            """)
-
-            # 6. Tabela do Ciclo Biológico
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS ciclo_biologico (
-                id INTEGER PRIMARY KEY,
-                data_inicio_ciclo TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            );
-            """)
-
-            # 7. Tabela de Momentos Marcantes
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS momentos_marcantes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                momento TEXT UNIQUE NOT NULL,
-                created_at TEXT NOT NULL
-            );
-            """)
-
-            # 8. Tabela de Estilo Linguístico do Casal
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS estilo_linguagem (
-                chave TEXT PRIMARY KEY,
-                valor TEXT NOT NULL,
-                exemplos TEXT,
-                updated_at TEXT NOT NULL
-            );
-            """)
-            conn.commit()
+        # Executa migrações estruturadas
+        self._run_migrations()
 
         if is_new:
             logger.info("Banco SQLite criado com sucesso! Inicializando dados padrão...")
             self._seed_default_profile()
+
+    def _run_migrations(self):
+        """Aplica migrações pendentes em ordem sequencial com registro em schema_version."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS schema_version (
+                version INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                applied_at TEXT NOT NULL
+            );
+            """)
+            conn.commit()
+
+            cursor.execute("SELECT version FROM schema_version;")
+            applied_versions = {row["version"] for row in cursor.fetchall()}
+
+            if not MIGRATIONS_DIR.exists():
+                return
+
+            migration_files = sorted(MIGRATIONS_DIR.glob("*.sql"))
+            for mig_file in migration_files:
+                parts = mig_file.stem.split("_", 1)
+                try:
+                    version_num = int(parts[0])
+                    mig_name = parts[1] if len(parts) > 1 else mig_file.stem
+                except ValueError:
+                    continue
+
+                if version_num not in applied_versions:
+                    logger.info(f"Aplicando migration {version_num}: {mig_name}...")
+                    sql_content = mig_file.read_text(encoding="utf-8")
+                    cursor.executescript(sql_content)
+                    now_iso = datetime.now().isoformat()
+                    cursor.execute(
+                        "INSERT INTO schema_version (version, name, applied_at) VALUES (?, ?, ?);",
+                        (version_num, mig_name, now_iso)
+                    )
+                    conn.commit()
+                    logger.info(f"Migration {version_num} aplicada com sucesso.")
+
+    def get_schema_version(self) -> int:
+        """Retorna a versão mais recente do schema aplicada no banco."""
+        with self.get_connection() as conn:
+            row = conn.execute("SELECT MAX(version) AS max_v FROM schema_version;").fetchone()
+            return row["max_v"] if row and row["max_v"] is not None else 0
 
     def _seed_default_profile(self):
         """Inicializa os dados padrão da Marina caso o banco seja criado do zero."""
@@ -166,10 +161,10 @@ class DatabaseManager:
                     
             conn.commit()
 
-    # --- MÉTODOS DE CONVERSAS ---
+    # --- MÉTODOS DE CONVERSAS & CURSOR DE CONSOLIDAÇÃO ---
 
-    def adicionar_mensagem(self, role: str, content: str, is_initiative: bool = False, media_type: str = "text"):
-        now_iso = datetime.now().isoformat()
+    def adicionar_mensagem(self, role: str, content: str, is_initiative: bool = False, media_type: str = "text", timestamp: Optional[str] = None) -> int:
+        now_iso = timestamp or datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -180,19 +175,70 @@ class DatabaseManager:
                 (now_iso, role, content, 1 if is_initiative else 0, media_type)
             )
             conn.commit()
+            return cursor.lastrowid
+
+    def registrar_iniciativa_marina(self, texto: str, media_type: str = "text") -> int:
+        """Registra mensagem autônoma da Marina sem criar balão falso de usuário."""
+        return self.adicionar_mensagem(
+            role="assistant",
+            content=texto,
+            is_initiative=True,
+            media_type=media_type
+        )
 
     def get_mensagens_recentes(self, limit: int = 12) -> list[dict]:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT role, content FROM conversas
+                SELECT id, role, content FROM conversas
                 ORDER BY id DESC LIMIT ?
                 """,
                 (limit,)
             )
             rows = cursor.fetchall()
-            return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
+            return [{"id": r["id"], "role": r["role"], "content": r["content"]} for r in reversed(rows)]
+
+    def get_conversas_desde(self, since_id: int = 0, limit: int = 50) -> list[dict]:
+        """Retorna todas as conversas registradas após um ID para consolidação contínua em lote."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, timestamp, role, content, is_initiative, media_type
+                FROM conversas
+                WHERE id > ?
+                ORDER BY id ASC
+                LIMIT ?
+                """,
+                (since_id, limit)
+            )
+            return [dict(r) for r in cursor.fetchall()]
+
+    def contar_conversas_desde(self, since_id: int = 0) -> int:
+        """Retorna a quantidade de novas mensagens ainda não consolidadas desde o cursor."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) as total FROM conversas WHERE id > ?", (since_id,))
+            row = cursor.fetchone()
+            return row["total"] if row else 0
+
+    def get_last_consolidated_conversation_id(self) -> int:
+        """Retorna o cursor da última conversa consolidada pelo Memory Consolidator."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT valor FROM estado_relacional WHERE chave = 'last_consolidated_conversation_id'")
+            row = cursor.fetchone()
+            if row and row["valor"]:
+                try:
+                    return int(row["valor"])
+                except ValueError:
+                    return 0
+            return 0
+
+    def set_last_consolidated_conversation_id(self, last_id: int):
+        """Atualiza persistentemente o cursor da última conversa consolidada."""
+        self.set_estado_relacional("last_consolidated_conversation_id", str(last_id))
 
     def get_total_conversas(self) -> int:
         with self.get_connection() as conn:
@@ -213,27 +259,163 @@ class DatabaseManager:
 
     # --- MÉTODOS DE FATOS & MEMÓRIA AFETIVA ---
 
-    def adicionar_fato_patrick(self, fato: str):
+    def adicionar_fato_patrick(
+        self,
+        fato: str,
+        category: str = "geral",
+        importance: float = 0.5,
+        confidence: float = 1.0,
+        source_conversation_id: int = None,
+        supersedes_id: int = None
+    ) -> int:
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "INSERT OR IGNORE INTO fatos_patrick (fato, created_at) VALUES (?, ?)",
-                (fato, now_iso)
+                """
+                INSERT OR IGNORE INTO fatos_patrick
+                (fato, created_at, category, importance, confidence, active, source_conversation_id, supersedes_id)
+                VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+                """,
+                (fato, now_iso, category, importance, confidence, source_conversation_id, supersedes_id)
+            )
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_fatos_patrick(self, active_only: bool = True) -> list[str]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT fato FROM fatos_patrick"
+            if active_only:
+                query += " WHERE active = 1"
+            query += " ORDER BY id ASC"
+            cursor.execute(query)
+            return [r["fato"] for r in cursor.fetchall()]
+
+    def get_fatos_patrick_detalhados(self, active_only: bool = True) -> list[dict]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT id, fato, category, importance, confidence, created_at, updated_at, access_count, active, supersedes_id FROM fatos_patrick"
+            if active_only:
+                query += " WHERE active = 1"
+            query += " ORDER BY importance DESC, id ASC"
+            cursor.execute(query)
+            return [dict(r) for r in cursor.fetchall()]
+
+    def desativar_fato(self, fato_id: int):
+        """Desativa um fato antigo contradito ou substituído."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE fatos_patrick SET active = 0, updated_at = ? WHERE id = ?",
+                (now_iso, fato_id)
             )
             conn.commit()
 
-    def get_fatos_patrick(self) -> list[str]:
+    def registrar_acesso_fato(self, fato_id: int):
+        """Atualiza contador de acesso e data do último uso da memória."""
+        now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT fato FROM fatos_patrick ORDER BY id ASC")
-            return [r["fato"] for r in cursor.fetchall()]
+            cursor.execute(
+                "UPDATE fatos_patrick SET access_count = access_count + 1, last_accessed_at = ? WHERE id = ?",
+                (now_iso, fato_id)
+            )
+            conn.commit()
 
-    def get_momentos_marcantes(self) -> list[str]:
+    def adicionar_momento_marcante(
+        self,
+        momento: str,
+        importance: float = 0.8,
+        source_conversation_id: int = None
+    ) -> int:
+        now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT momento FROM momentos_marcantes ORDER BY id ASC")
+            cursor.execute(
+                """
+                INSERT OR IGNORE INTO momentos_marcantes
+                (momento, created_at, importance, active, source_conversation_id)
+                VALUES (?, ?, ?, 1, ?)
+                """,
+                (momento, now_iso, importance, source_conversation_id)
+            )
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_momentos_marcantes(self, active_only: bool = True) -> list[str]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT momento FROM momentos_marcantes"
+            if active_only:
+                query += " WHERE active = 1"
+            query += " ORDER BY id ASC"
+            cursor.execute(query)
             return [r["momento"] for r in cursor.fetchall()]
+
+    # --- MÉTODOS DE RESUMOS DE CONVERSA ---
+
+    def salvar_resumo_conversa(
+        self,
+        topic: str,
+        summary: str,
+        start_conversation_id: int = None,
+        end_conversation_id: int = None,
+        importance: float = 0.5
+    ) -> int:
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO resumos_conversa
+                (topic, summary, start_conversation_id, end_conversation_id, importance, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (topic, summary, start_conversation_id, end_conversation_id, importance, now_iso, now_iso)
+            )
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_resumos_conversa(self, limit: int = 5) -> list[dict]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, topic, summary, start_conversation_id, end_conversation_id, importance, created_at
+                FROM resumos_conversa
+                ORDER BY id DESC LIMIT ?
+                """,
+                (limit,)
+            )
+            return [dict(r) for r in cursor.fetchall()]
+
+    # --- MÉTODOS DE BUSCA TEXTUAL FTS5 (SMART RETRIEVAL) ---
+
+    def buscar_fatos_fts(self, termo: str, limit: int = 5) -> list[dict]:
+        """Busca rápida por palavras-chave em fatos com SQLite FTS5."""
+        if not termo or not termo.strip():
+            return []
+        termo_limpo = termo.strip().replace('"', '""')
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    """
+                    SELECT f.id, f.fato, f.category, f.importance, f.confidence
+                    FROM fatos_fts fts
+                    JOIN fatos_patrick f ON f.id = fts.rowid
+                    WHERE fatos_fts MATCH ? AND f.active = 1
+                    ORDER BY rank, f.importance DESC
+                    LIMIT ?
+                    """,
+                    (f'"{termo_limpo}"', limit)
+                )
+                return [dict(r) for r in cursor.fetchall()]
+            except Exception as e:
+                logger.warning(f"Aviso na busca FTS de fatos para '{termo}': {e}")
+                return []
 
     def get_gostos(self) -> dict[str, list[str]]:
         gostos = {}
@@ -280,6 +462,16 @@ class DatabaseManager:
             )
             conn.commit()
             return default_date
+
+    def set_data_inicio_ciclo(self, data_str: str):
+        """Define e persiste com segurança a data de início do ciclo menstrual."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR REPLACE INTO ciclo_biologico (id, data_inicio_ciclo, updated_at) VALUES (1, ?, ?)",
+                (data_str, datetime.now().isoformat())
+            )
+            conn.commit()
 
     # --- MÉTODOS DE FEEDBACK ---
 
@@ -335,9 +527,10 @@ class DatabaseManager:
 
     # --- MÉTODOS DE ESTILO LINGUÍSTICO & ESPELHAMENTO ---
 
-    def salvar_estilo(self, chave: str, valor: str, exemplos: list = None):
+    def salvar_estilo(self, chave: str, valor: str, exemplos: any = None):
         now_iso = datetime.now().isoformat()
-        ex_str = json.dumps(exemplos or [], ensure_ascii=False)
+        payload = [] if exemplos is None else exemplos
+        ex_str = json.dumps(payload, ensure_ascii=False)
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -375,4 +568,255 @@ class DatabaseManager:
         estilo = self.get_estilo()
         return estilo.get("licoes_aprendidas", {}).get("exemplos", [])
 
+    # --- MÉTODOS DE EVENTOS PENDENTES (FOLLOW-UPS) ---
+
+    def adicionar_evento_pendente(
+        self,
+        event_type: str,
+        description: str,
+        event_at: Optional[str] = None,
+        follow_up_after: Optional[str] = None,
+        importance: float = 0.5,
+        source_conversation_id: Optional[int] = None
+    ) -> int:
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO eventos_pendentes
+                (event_type, description, event_at, follow_up_after, status, importance, source_conversation_id, created_at)
+                VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)
+                """,
+                (event_type, description, event_at, follow_up_after, importance, source_conversation_id, now_iso)
+            )
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_eventos_pendentes_para_followup(self, now_iso: Optional[str] = None) -> list[dict]:
+        """Retorna eventos cujo horário de follow-up ou do evento já venceu."""
+        check_time = now_iso or datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, event_type, description, event_at, follow_up_after, importance, source_conversation_id, created_at
+                FROM eventos_pendentes
+                WHERE status = 'pending' AND (
+                    (follow_up_after IS NOT NULL AND follow_up_after <= ?) OR
+                    (event_at IS NOT NULL AND event_at <= ?)
+                )
+                ORDER BY importance DESC, id ASC
+                """,
+                (check_time, check_time)
+            )
+            return [dict(r) for r in cursor.fetchall()]
+
+    def concluir_evento_pendente(self, event_id: int):
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE eventos_pendentes SET status = 'completed', completed_at = ? WHERE id = ?",
+                (now_iso, event_id)
+            )
+            conn.commit()
+
+    def listar_eventos_pendentes(self, status: str = "pending", limit: int = 10) -> list[dict]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM eventos_pendentes WHERE status = ? ORDER BY id DESC LIMIT ?",
+                (status, limit)
+            )
+            return [dict(r) for r in cursor.fetchall()]
+
+    # --- MÉTODOS DE ESTADO RELACIONAL ---
+
+    def get_estado_relacional(self) -> dict[str, str]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT chave, valor FROM estado_relacional")
+            return {r["chave"]: r["valor"] for r in cursor.fetchall()}
+
+    def set_estado_relacional(self, chave: str, valor: str):
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR REPLACE INTO estado_relacional (chave, valor, updated_at) VALUES (?, ?, ?)",
+                (chave, valor, now_iso)
+            )
+            conn.commit()
+
+    # --- MÉTODOS DE ESTADO EMOCIONAL COM CLAMP & DECAY ---
+
+    def get_estado_emocional(self) -> dict[str, dict]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT chave, valor, baseline, updated_at FROM estado_emocional")
+            return {
+                r["chave"]: {
+                    "valor": float(r["valor"]),
+                    "baseline": float(r["baseline"]),
+                    "updated_at": r["updated_at"]
+                }
+                for r in cursor.fetchall()
+            }
+
+    def ajustar_emocao(self, chave: str, delta: float):
+        """Ajusta uma dimensão emocional com limite rigoroso entre 0.0 e 1.0 (clamp)."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT valor, baseline FROM estado_emocional WHERE chave = ?", (chave,))
+            row = cursor.fetchone()
+            if row:
+                novo_valor = max(0.0, min(1.0, float(row["valor"]) + delta))
+                cursor.execute(
+                    "UPDATE estado_emocional SET valor = ?, updated_at = ? WHERE chave = ?",
+                    (round(novo_valor, 3), now_iso, chave)
+                )
+            else:
+                novo_valor = max(0.0, min(1.0, 0.75 + delta))
+                cursor.execute(
+                    "INSERT INTO estado_emocional (chave, valor, baseline, updated_at) VALUES (?, ?, 0.75, ?)",
+                    (chave, round(novo_valor, 3), now_iso)
+                )
+            conn.commit()
+
+    def aplicar_decay_emocional(self, taxa: float = 0.10):
+        """Aproxima gradualmente os estados emocionais em direção aos seus baselines naturais."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT chave, valor, baseline FROM estado_emocional")
+            rows = cursor.fetchall()
+            for r in rows:
+                val = float(r["valor"])
+                base = float(r["baseline"])
+                novo_val = max(0.0, min(1.0, val + (base - val) * taxa))
+                cursor.execute(
+                    "UPDATE estado_emocional SET valor = ?, updated_at = ? WHERE chave = ?",
+                    (round(novo_val, 3), now_iso, r["chave"])
+                )
+    # --- MÉTODOS DE HISTÓRICO DE PATCHES (AUTO-PATCHER v3.4) ---
+
+    def registrar_patch(
+        self,
+        patch_id: str,
+        autor: str,
+        instruction: str,
+        target_files: list[str],
+        diff_content: str,
+        status: str = "applied"
+    ) -> int:
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO patch_history (
+                    patch_id, autor, instruction, target_files, diff_content, status, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                patch_id,
+                autor,
+                instruction,
+                json.dumps(target_files, ensure_ascii=False),
+                diff_content,
+                status,
+                now_iso
+            ))
+            conn.commit()
+            return cursor.lastrowid
+
+    def atualizar_status_patch(self, patch_id: str, status: str, reverted_at: Optional[str] = None):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if reverted_at:
+                cursor.execute(
+                    "UPDATE patch_history SET status = ?, reverted_at = ? WHERE patch_id = ?",
+                    (status, reverted_at, patch_id)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE patch_history SET status = ? WHERE patch_id = ?",
+                    (status, patch_id)
+                )
+            conn.commit()
+
+    def get_patch_history(self, limit: int = 10) -> list[dict]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, patch_id, autor, instruction, target_files, diff_content, status, created_at, reverted_at
+                FROM patch_history
+                ORDER BY id DESC
+                LIMIT ?
+            """, (limit,))
+            rows = cursor.fetchall()
+            return [
+                {
+                    "id": r["id"],
+                    "patch_id": r["patch_id"],
+                    "autor": r["autor"],
+                    "instruction": r["instruction"],
+                    "target_files": json.loads(r["target_files"]) if r["target_files"] else [],
+                    "diff_content": r["diff_content"],
+                    "status": r["status"],
+                    "created_at": r["created_at"],
+                    "reverted_at": r["reverted_at"]
+                }
+                for r in rows
+            ]
+
+    def get_patch_by_id(self, patch_id: str) -> Optional[dict]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, patch_id, autor, instruction, target_files, diff_content, status, created_at, reverted_at
+                FROM patch_history
+                WHERE patch_id = ?
+            """, (patch_id,))
+            r = cursor.fetchone()
+            if not r:
+                return None
+            return {
+                "id": r["id"],
+                "patch_id": r["patch_id"],
+                "autor": r["autor"],
+                "instruction": r["instruction"],
+                "target_files": json.loads(r["target_files"]) if r["target_files"] else [],
+                "diff_content": r["diff_content"],
+                "status": r["status"],
+                "created_at": r["created_at"],
+                "reverted_at": r["reverted_at"]
+            }
+
+    def get_last_applied_patch(self) -> Optional[dict]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, patch_id, autor, instruction, target_files, diff_content, status, created_at, reverted_at
+                FROM patch_history
+                WHERE status = 'applied'
+                ORDER BY id DESC
+                LIMIT 1
+            """)
+            r = cursor.fetchone()
+            if not r:
+                return None
+            return {
+                "id": r["id"],
+                "patch_id": r["patch_id"],
+                "autor": r["autor"],
+                "instruction": r["instruction"],
+                "target_files": json.loads(r["target_files"]) if r["target_files"] else [],
+                "diff_content": r["diff_content"],
+                "status": r["status"],
+                "created_at": r["created_at"],
+                "reverted_at": r["reverted_at"]
+            }
+
 db_manager = DatabaseManager()
+

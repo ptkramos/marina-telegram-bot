@@ -16,6 +16,7 @@ import aiohttp
 from PIL import Image
 from config import settings
 from prompts import build_flux_prompt
+from visual_profile import visual_profile, MARINA_VISUAL_DNA_BASE
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,8 @@ NSFW_KEYWORDS = [
 
 ROUNDASS_KEYWORDS = ["ass", "bunda", "costas", "behind", "from behind", "back view", "calcinha de costas"]
 SIDEBOOB_KEYWORDS = ["sideboob", "side view", "lateral", "decote lateral", "de lado"]
+MIRROR_SELFIE_KEYWORDS = ["espelho", "mirror", "selfie no espelho", "mirror selfie", "segurando celular", "na frente do espelho", "candid mirror"]
+
 
 # Resolução padrão calibrada para FLUX.1 Dev vertical
 PHOTO_WIDTH = 832
@@ -65,12 +68,8 @@ class ImageGeneratorClient:
             return False
 
     def is_nsfw_request(self, text: str) -> bool:
-        text_lower = text.lower()
-        # Se pedir expressamente vestida / roupa / look / pijama, NUNCA é NSFW!
-        if any(re.search(rf"\b{re.escape(kw)}\b", text_lower) for kw in CLOTHED_KEYWORDS):
-            return False
-        # Caso contrário, verifica se pediu nudez ou lingerie explícita
-        return any(re.search(rf"\b{re.escape(kw)}\b", text_lower) for kw in NSFW_KEYWORDS)
+        return visual_profile.is_nsfw_text(text)
+
 
     async def _ensure_instance_running(self, session: aiohttp.ClientSession) -> bool:
         """Verifica se a GPU está online. Se pausada, liga via API PUT e aguarda o ComfyUI."""
@@ -146,11 +145,18 @@ class ImageGeneratorClient:
         except Exception as e:
             logger.error(f"Erro ao pausar instância GPU: {e}")
 
-    def _build_comfyui_workflow(self, prompt_text: str, is_nsfw: bool = False, focus_angle: str = "frontal") -> tuple[dict, str]:
+    def _build_comfyui_workflow(
+        self,
+        prompt_text: str,
+        is_nsfw: bool = False,
+        focus_angle: str = "frontal",
+        is_mirror_selfie: bool = False
+    ) -> tuple[dict, str]:
         """
         Monta workflow ComfyUI FLUX.1 Dev FP8 oficial (UNET + DualCLIP + Cadeia de LoRAs calibrada).
-        NUNCA utiliza Schnell. Respeita identidade, anatomia explícita e micro-texturas naturais.
+        NUNCA utiliza Schnell. Respeita identidade, anatomia explícita, realismo de iPhone e micro-texturas naturais.
         """
+
         seed = random.randint(1, 999999999)
         workflow = {}
         n = 1
@@ -194,7 +200,24 @@ class ImageGeneratorClient:
         current_clip = [marina_id, 1]
         n += 1
 
-        # 4. LoRA 2: NSFW Master (Anatomia sem censura - mamilos eretos, aréolas, genitália)
+        # 4. LoRA 2: iPhone Photo Booster (Realismo de Smartphone para todas as fotos)
+        if settings.IPHONE_LORAS_ENABLED and settings.IPHONE_PHOTO_LORA_NAME:
+            lora_iphone_boost_id = str(n)
+            workflow[lora_iphone_boost_id] = {
+                "class_type": "LoraLoader",
+                "inputs": {
+                    "model": current_model,
+                    "clip": current_clip,
+                    "lora_name": settings.IPHONE_PHOTO_LORA_NAME,
+                    "strength_model": 0.60,
+                    "strength_clip": 0.60
+                }
+            }
+            current_model = [lora_iphone_boost_id, 0]
+            current_clip = [lora_iphone_boost_id, 1]
+            n += 1
+
+        # 5. LoRA 3: NSFW Master (Anatomia sem censura - mamilos eretos, aréolas, genitália)
         if is_nsfw:
             lora_nsfw_id = str(n)
             workflow[lora_nsfw_id] = {
@@ -211,7 +234,7 @@ class ImageGeneratorClient:
             current_clip = [lora_nsfw_id, 1]
             n += 1
 
-        # 5. LoRA 3: Ângulo / Curvas (Roundass de costas ou Sideboob de lado)
+        # 6. LoRA 4: Ângulo / Curvas (Roundass de costas ou Sideboob de lado)
         if focus_angle == "behind":
             lora_angle_id = str(n)
             workflow[lora_angle_id] = {
@@ -243,28 +266,63 @@ class ImageGeneratorClient:
             current_clip = [lora_side_id, 1]
             n += 1
 
-        # 6. LoRA 4: Mãos Anatômicas (Hand_v2) para dedos perfeitos
-        lora_hand_id = str(n)
-        workflow[lora_hand_id] = {
-            "class_type": "LoraLoader",
-            "inputs": {
-                "model": current_model,
-                "clip": current_clip,
-                "lora_name": "Hand_v2.safetensors",
-                "strength_model": 0.50,
-                "strength_clip": 0.50
+        # 7. LoRA 5: Mãos / Mirror Selfie / Aparelho iPhone 16 Pro
+        if settings.IPHONE_LORAS_ENABLED and is_mirror_selfie:
+            # 7.1 LoRA Mirror Selfie (Coerência anatômica da mão segurando o celular no espelho)
+            lora_mirror_id = str(n)
+            workflow[lora_mirror_id] = {
+                "class_type": "LoraLoader",
+                "inputs": {
+                    "model": current_model,
+                    "clip": current_clip,
+                    "lora_name": settings.MIRROR_SELFIE_LORA_NAME,
+                    "strength_model": 0.65,
+                    "strength_clip": 0.65
+                }
             }
-        }
-        current_model = [lora_hand_id, 0]
-        current_clip = [lora_hand_id, 1]
-        n += 1
+            current_model = [lora_mirror_id, 0]
+            current_clip = [lora_mirror_id, 1]
+            n += 1
 
-        # 7. Prompt Positivo
+            # 7.2 LoRA iPhone 16 Pro (Aparelho preto realista com 3 lentes de safira)
+            lora_device_id = str(n)
+            workflow[lora_device_id] = {
+                "class_type": "LoraLoader",
+                "inputs": {
+                    "model": current_model,
+                    "clip": current_clip,
+                    "lora_name": settings.IPHONE_DEVICE_LORA_NAME,
+                    "strength_model": 0.65,
+                    "strength_clip": 0.65
+                }
+            }
+            current_model = [lora_device_id, 0]
+            current_clip = [lora_device_id, 1]
+            n += 1
+        else:
+            # Mãos anatômicas padrão Hand_v2
+            lora_hand_id = str(n)
+            workflow[lora_hand_id] = {
+                "class_type": "LoraLoader",
+                "inputs": {
+                    "model": current_model,
+                    "clip": current_clip,
+                    "lora_name": "Hand_v2.safetensors",
+                    "strength_model": 0.50,
+                    "strength_clip": 0.50
+                }
+            }
+            current_model = [lora_hand_id, 0]
+            current_clip = [lora_hand_id, 1]
+            n += 1
+
+        # 8. Prompt Positivo
         clip_id = str(n)
         workflow[clip_id] = {
             "class_type": "CLIPTextEncode",
             "inputs": {"clip": current_clip, "text": prompt_text}
         }
+
         n += 1
 
         # 8. Flux Guidance (calibrado para 3.5 em FLUX Dev)
@@ -327,16 +385,16 @@ class ImageGeneratorClient:
 
         return workflow, save_id
 
-    async def generate_photo(self, scene_description: str) -> io.BytesIO | None:
-        """Gera a foto oficial da Marina Seltin com ciclo de ligar e pausar GPU 100% automático."""
+    async def generate_photo(self, scene_description: str, user_intent: str = "") -> io.BytesIO | None:
+        """Gera a foto oficial da Marina Seltin com ciclo de ligar e pausar GPU 100% automático e continuidade de cena."""
         async with self._lock:
-            is_nsfw = self.is_nsfw_request(scene_description)
-            focus_angle = "behind" if any(kw in scene_description.lower() for kw in ROUNDASS_KEYWORDS) else (
-                "side" if any(kw in scene_description.lower() for kw in SIDEBOOB_KEYWORDS) else "frontal"
+            full_prompt, is_nsfw, focus_angle = visual_profile.build_scene_prompt(
+                scene_description=scene_description,
+                user_intent=user_intent
             )
-            full_prompt = build_flux_prompt(scene_description, is_nsfw=is_nsfw, focus_angle=focus_angle)
             logger.info(f"📸 Gerando foto da Marina (FLUX.1 Dev): is_nsfw={is_nsfw} angle={focus_angle} | prompt='{full_prompt[:80]}...'")
 
+            img = None
             if settings.IMAGE_ENGINE == "novita" and self.novita_key:
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=300)) as session:
                     try:
@@ -347,26 +405,48 @@ class ImageGeneratorClient:
                             return None
 
                         # 2. Renderiza a foto no ComfyUI com FLUX Dev + LoRAs
-                        img = await self._generate_novita_comfyui(session, full_prompt, is_nsfw=is_nsfw, focus_angle=focus_angle)
-                        if img:
-                            return img
+                        is_mirror = any(kw in scene_description.lower() or kw in user_intent.lower() for kw in MIRROR_SELFIE_KEYWORDS)
+                        img = await self._generate_novita_comfyui(
+                            session,
+                            full_prompt,
+                            is_nsfw=is_nsfw,
+                            focus_angle=focus_angle,
+                            is_mirror_selfie=is_mirror
+                        )
                     except Exception as e:
                         logger.error(f"Falha na geração ComfyUI Novita: {e}", exc_info=True)
                     finally:
                         # 3. SEMPRE desliga a instância para economizar créditos
                         await self._stop_instance(session)
 
-            logger.warning("Tentando fallback para SD local...")
-            return await self._generate_local_sd(full_prompt)
+            if not img:
+                logger.warning("Tentando fallback para SD local...")
+                img = await self._generate_local_sd(full_prompt)
+
+            if img:
+                visual_profile.record_photo_generation(
+                    scene_tags=scene_description,
+                    full_prompt=full_prompt,
+                    is_nsfw=is_nsfw,
+                    focus_angle=focus_angle
+                )
+            return img
 
     async def _generate_novita_comfyui(
         self,
         session: aiohttp.ClientSession,
         prompt_text: str,
         is_nsfw: bool = False,
-        focus_angle: str = "frontal"
+        focus_angle: str = "frontal",
+        is_mirror_selfie: bool = False
     ) -> io.BytesIO | None:
-        workflow, save_id = self._build_comfyui_workflow(prompt_text, is_nsfw=is_nsfw, focus_angle=focus_angle)
+        workflow, save_id = self._build_comfyui_workflow(
+            prompt_text,
+            is_nsfw=is_nsfw,
+            focus_angle=focus_angle,
+            is_mirror_selfie=is_mirror_selfie
+        )
+
         headers = {
             "Authorization": f"Bearer {self.novita_key}",
             "Content-Type": "application/json"
@@ -440,12 +520,11 @@ class ImageGeneratorClient:
             clothing_tag = "wearing a chic classic white fitted crewneck top, fashionable necklace, fresh radiant smile"
 
         avatar_prompt = (
-            f"candid close-up portrait of marina_reference, 19yo woman, fully clothed, {clothing_tag}, "
-            "gorgeous face, expressive luminous honey-amber eyes, delicate nose, full plump lips, "
-            "voluminous wavy chocolate brown hair with golden blonde tips, "
+            f"candid close-up portrait of {MARINA_VISUAL_DNA_BASE}, fully clothed, {clothing_tag}, "
             "looking directly into camera, soft flattering natural apartment lighting, shallow depth of field, "
             "professional model portrait, modest covered neckline, zero nudity, perfectly clothed"
         )
+
 
         raw_img = await self.generate_photo(avatar_prompt)
         if not raw_img:

@@ -1,5 +1,5 @@
 """
-Módulo de configurações e variáveis de ambiente do Bot da Marin Kitagawa.
+Módulo de configurações e variáveis de ambiente do Bot de Marina Seltin.
 Compatível com OpenAI, OpenRouter e outros provedores sem censura.
 """
 import os
@@ -11,8 +11,11 @@ ENV_FILE = BASE_DIR / ".env"
 load_dotenv(ENV_FILE)
 
 class Settings:
-    VERSION: str = "2.5.0"
-    VERSION_NAME: str = "Marina Seltin - Ultra-Humanoid & Autonomous"
+    APP_NAME: str = "Marina Seltin"
+    APP_VERSION: str = "3.4.2"
+    VERSION: str = APP_VERSION
+    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Memory Reliability)"
+
 
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     
@@ -21,28 +24,56 @@ class Settings:
     LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "https://openrouter.ai/api/v1").strip()
     LLM_MODEL: str = os.getenv("LLM_MODEL", "mistralai/mistral-nemo").strip()
     
-    # URL da API do Stable Diffusion na RX 570
+    # URL da API do Stable Diffusion na RX 570 (legado/local)
     _raw_sd_url = os.getenv("SD_API_URL", "http://127.0.0.1:7860/").strip()
     SD_API_URL: str = _raw_sd_url if _raw_sd_url.endswith("/") else f"{_raw_sd_url}/"
     
-    # Chat ID alvo do namorado
+    # Chat ID alvo do namorado (exclusividade total)
     TARGET_CHAT_ID: int = int(os.getenv("TARGET_CHAT_ID", "0"))
+
+    # Buffer Inteligente de Digitação (Debounce)
+    MESSAGE_DEBOUNCE_SECONDS: float = float(os.getenv("MESSAGE_DEBOUNCE_SECONDS", "3.8"))
     
+    # Consolidação Periódica de Memória
+    MEMORY_CONSOLIDATION_BATCH_SIZE: int = int(os.getenv("MEMORY_CONSOLIDATION_BATCH_SIZE", "8"))
+
     # Motor de Geração de Imagem (novita ou local)
     IMAGE_ENGINE: str = os.getenv("IMAGE_ENGINE", "novita").strip().lower()
     NOVITA_API_KEY: str = os.getenv("NOVITA_API_KEY", "").strip()
 
-    # Ciclo de vontade própria e iniciativa
+    # Ciclo de vontade própria e iniciativa autônoma
     AUTONOMOUS_CHECK_INTERVAL_MINUTES: int = int(os.getenv("AUTONOMOUS_CHECK_INTERVAL_MINUTES", "30"))
     AUTONOMOUS_TRIGGER_CHANCE: float = float(os.getenv("AUTONOMOUS_TRIGGER_CHANCE", "0.30"))
+    MAX_AUTONOMOUS_MESSAGES_PER_DAY: int = int(os.getenv("MAX_AUTONOMOUS_MESSAGES_PER_DAY", "4"))
+    AUTONOMOUS_COOLDOWN_MINUTES: int = int(os.getenv("AUTONOMOUS_COOLDOWN_MINUTES", "120"))
+    USER_IDLE_MINUTES_BEFORE_PROACTIVE: int = int(os.getenv("USER_IDLE_MINUTES_BEFORE_PROACTIVE", "45"))
+    PROACTIVITY_ENABLED: bool = os.getenv("PROACTIVITY_ENABLED", "true").lower() in ("true", "1", "yes")
 
-    # Síntese de Voz (ElevenLabs & Google Gemini TTS)
+    # Síntese de Voz (ElevenLabs, Google Gemini TTS e Novita Voice)
     ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "").strip()
     ELEVENLABS_VOICE_ID: str = os.getenv("ELEVENLABS_VOICE_ID", "").strip()
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
     GEMINI_VOICE_NAME: str = os.getenv("GEMINI_VOICE_NAME", "Leda").strip()
     NOVITA_VOICE_ID: str = os.getenv("NOVITA_VOICE_ID", "voice_d91c415d-f6a2-4d6f-b32c-aacfd5ad2e39").strip()
     NOVITA_VOICE_MODEL: str = os.getenv("NOVITA_VOICE_MODEL", "speech-2.8-hd").strip()
+
+    # Feature Flags para evolução arquitetural incremental (3.2.0)
+    SMART_MEMORY_ENABLED: bool = os.getenv("SMART_MEMORY_ENABLED", "true").lower() in ("true", "1", "yes")
+    MEMORY_CONSOLIDATION_ENABLED: bool = os.getenv("MEMORY_CONSOLIDATION_ENABLED", "true").lower() in ("true", "1", "yes")
+    PLANNER_ENABLED: bool = os.getenv("PLANNER_ENABLED", "true").lower() in ("true", "1", "yes")
+    EMOTIONAL_STATE_ENABLED: bool = os.getenv("EMOTIONAL_STATE_ENABLED", "true").lower() in ("true", "1", "yes")
+    PENDING_EVENTS_ENABLED: bool = os.getenv("PENDING_EVENTS_ENABLED", "true").lower() in ("true", "1", "yes")
+    VISION_MODEL: str = os.getenv("VISION_MODEL", "google/gemini-2.0-flash-001").strip()
+    VISION_ENABLED: bool = os.getenv("VISION_ENABLED", "true").lower() in ("true", "1", "yes")
+    STYLE_ENGINE_V2_ENABLED: bool = os.getenv("STYLE_ENGINE_V2_ENABLED", "true").lower() in ("true", "1", "yes")
+    SAFE_PATCHER_ENABLED: bool = os.getenv("SAFE_PATCHER_ENABLED", "false").lower() in ("true", "1", "yes")
+    
+    # LoRAs de Estética iPhone e Mirror Selfie (FLUX.1 Dev)
+    IPHONE_LORAS_ENABLED: bool = os.getenv("IPHONE_LORAS_ENABLED", "false").lower() in ("true", "1", "yes")
+    IPHONE_PHOTO_LORA_NAME: str = os.getenv("IPHONE_PHOTO_LORA_NAME", "iphone_photo_flux.safetensors").strip()
+    MIRROR_SELFIE_LORA_NAME: str = os.getenv("MIRROR_SELFIE_LORA_NAME", "mirror_selfie_flux.safetensors").strip()
+    IPHONE_DEVICE_LORA_NAME: str = os.getenv("IPHONE_DEVICE_LORA_NAME", "iphone16pro_flux.safetensors").strip()
+
 
     @classmethod
     def validate(cls) -> list[str]:
@@ -51,6 +82,8 @@ class Settings:
             errors.append("TELEGRAM_BOT_TOKEN não configurado no .env")
         if not cls.LLM_API_KEY or cls.LLM_API_KEY.startswith("sk-..."):
             errors.append("LLM_API_KEY não configurada no .env")
+        if not cls.TARGET_CHAT_ID or cls.TARGET_CHAT_ID <= 0:
+            errors.append("TARGET_CHAT_ID não configurado ou inválido no .env (deve ser > 0)")
         return errors
 
 settings = Settings()

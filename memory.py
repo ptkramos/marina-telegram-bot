@@ -31,11 +31,12 @@ class MemoryManager:
             "historico_recente": self.get_historico_recente(limit=10)
         }
 
-    def registrar_interacao(self, user_msg: str, bot_msg: str):
-        """Registra a interação na tabela 'conversas' do SQLite permanentemente."""
-        is_init = 1 if user_msg == "[Iniciativa da Marina]" else 0
-        self.db.adicionar_mensagem(role="user", content=user_msg, is_initiative=bool(is_init))
-        self.db.adicionar_mensagem(role="assistant", content=bot_msg, is_initiative=False)
+    def registrar_interacao(self, user_msg: str, bot_msg: str) -> tuple[int, int]:
+        """Registra a interação na tabela 'conversas' do SQLite permanentemente e retorna os IDs."""
+        is_init = 1 if user_msg.startswith("[Iniciativa da Marina") else 0
+        u_id = self.db.adicionar_mensagem(role="user", content=user_msg, is_initiative=bool(is_init))
+        b_id = self.db.adicionar_mensagem(role="assistant", content=bot_msg, is_initiative=bool(is_init))
+        return u_id, b_id
 
     def get_historico_recente(self, limit: int = 10) -> list[dict]:
         """Retorna as últimas N mensagens do banco para alimentar o chat ativo."""
@@ -48,6 +49,11 @@ class MemoryManager:
     def registrar_descoberta(self, categoria: str, descoberta: str):
         """Salva uma nova preferência na tabela 'gostos_marina'."""
         self.db.adicionar_gosto(categoria=categoria, item=descoberta)
+
+    def get_context_for_message(self, current_message: str) -> str:
+        """Recupera contexto seletivo e balanceado para a mensagem atual."""
+        from context_builder import context_builder
+        return context_builder.build_system_prompt(user_message=current_message)
 
     def get_contexto_emocional(self) -> str:
         fatos_lista = self.db.get_fatos_patrick()

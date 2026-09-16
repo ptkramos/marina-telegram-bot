@@ -1,5 +1,5 @@
 """
-Bot Telegram de Marina Seltin (v3.0.0 Oficial Blindada).
+Bot Telegram de Marina Seltin (v3.4.1 Oficial Blindada).
 Jovem de 19 anos, modelo em início de carreira, namorada EXCLUSIVA de Patrick Ramos.
 Totalmente desinibida, carinhosa, com ciclo menstrual real, pausas humanas de digitação,
 envio REAL de balões separados sucessivos (multi-bubble), comandos /feedback e /edit com Auto-Patcher autônomo,
@@ -12,6 +12,7 @@ import asyncio
 import re
 import sys
 from datetime import datetime
+from typing import Optional, List, Dict
 
 from telegram import Update, InputProfilePhotoStatic, ReactionTypeEmoji
 from telegram.request import HTTPXRequest
@@ -35,6 +36,11 @@ from feedback_manager import feedback_manager
 from style_engine import style_engine
 from auto_patcher import auto_patcher
 from voice_engine import voice_engine
+from context_builder import context_builder
+from memory_consolidator import memory_consolidator
+from proactivity_service import proactivity_service
+from vision_service import vision_service
+from planner import planner
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -61,8 +67,8 @@ async def delete_after_delay(bot, chat_id: int, message_id: int, delay: float = 
 
 def is_authorized(update: Update) -> bool:
     """Verifica se quem enviou a mensagem é estritamente o Patrick Ramos."""
-    if not settings.TARGET_CHAT_ID:
-        return True
+    if not settings.TARGET_CHAT_ID or settings.TARGET_CHAT_ID <= 0:
+        return False
     chat_id = update.effective_chat.id if update.effective_chat else None
     user_id = update.effective_user.id if update.effective_user else None
     return chat_id == settings.TARGET_CHAT_ID or user_id == settings.TARGET_CHAT_ID
@@ -126,17 +132,87 @@ def buscar_web_se_necessario(texto: str) -> str:
         logger.warning(f"Aviso na busca web em tempo real: {e}")
     return ""
 
-def build_messages_payload(quoted_context: str = "", web_search_context: str = "") -> list[dict]:
+def build_messages_payload(
+    quoted_context: str = "",
+    web_search_context: str = "",
+    user_message: str = "",
+    vision_context: str = "",
+    planner_tone: Optional[str] = None,
+    planner_goal: Optional[str] = None
+) -> list[dict]:
+    if settings.SMART_MEMORY_ENABLED:
+        return context_builder.build(
+            user_message=user_message,
+            quoted_context=quoted_context,
+            web_context=web_search_context,
+            vision_context=vision_context,
+            planner_tone=planner_tone,
+            planner_goal=planner_goal
+        )
     contexto_momento = f"\n[MOMENTO ATUAL DO DIA: {get_temporal_greeting()}]"
     contexto_quote = f"\n{quoted_context}" if quoted_context else ""
     contexto_web = f"\n{web_search_context}" if web_search_context else ""
-    system_content = f"{MARIN_SYSTEM_PROMPT}\n{memory_manager.get_contexto_emocional()}{contexto_momento}{contexto_quote}{contexto_web}"
+    contexto_vis = f"\n{vision_context}\n" if vision_context else ""
+    system_content = f"{MARIN_SYSTEM_PROMPT}\n{memory_manager.get_contexto_emocional()}{contexto_momento}{contexto_quote}{contexto_web}{contexto_vis}"
     messages = [{"role": "system", "content": system_content}]
-    
-    for item in memory_manager.data.get("historico_recente", []):
+
+    for item in memory_manager.get_historico_recente(limit=10):
         messages.append({"role": item["role"], "content": item["content"]})
-        
+
     return messages
+
+
+# Lock de concorrência global para consolidação de memória
+MEMORY_CONSOLIDATION_LOCK = asyncio.Lock()
+
+
+async def check_and_trigger_memory_consolidation():
+    """
+    Verifica se há novas conversas registradas desde o último cursor persistente no SQLite.
+    Se a contagem atingir settings.MEMORY_CONSOLIDATION_BATCH_SIZE, consolida o lote assincronamente
+    passando os IDs de início e fim, atualizando o cursor persistente com segurança anti-falhas.
+    Protegido contra concorrência por MEMORY_CONSOLIDATION_LOCK.
+    """
+    if not getattr(settings, "MEMORY_CONSOLIDATION_ENABLED", False):
+        return
+
+    if MEMORY_CONSOLIDATION_LOCK.locked():
+        logger.debug("Consolidação de memória já está em execução. Pulando disparo concorrente.")
+        return
+
+    try:
+        last_id = memory_manager.db.get_last_consolidated_conversation_id()
+        novas_count = memory_manager.db.contar_conversas_desde(last_id)
+        batch_size = getattr(settings, "MEMORY_CONSOLIDATION_BATCH_SIZE", 8)
+
+        if novas_count >= batch_size:
+            novas_mensagens = memory_manager.db.get_conversas_desde(last_id, limit=50)
+            if not novas_mensagens:
+                return
+
+            start_id = novas_mensagens[0]["id"]
+            end_id = novas_mensagens[-1]["id"]
+            lote = [{"role": m["role"], "content": m["content"]} for m in novas_mensagens]
+
+            async def _run_consolidation():
+                async with MEMORY_CONSOLIDATION_LOCK:
+                    try:
+                        res = await memory_consolidator.consolidate_and_apply_async(
+                            lote,
+                            start_conv_id=start_id,
+                            end_conv_id=end_id
+                        )
+                        if res.get("success", True) and not res.get("error"):
+                            memory_manager.db.set_last_consolidated_conversation_id(end_id)
+                            logger.info(f"Consolidação de memória persistente concluída (IDs {start_id}..{end_id}): {res}")
+                        else:
+                            logger.warning(f"Consolidação retornou status não-positivo. Cursor NÃO avançado: {res}")
+                    except Exception as ex:
+                        logger.error(f"Falha na consolidação assíncrona de memória (cursor NÃO avançado): {ex}")
+
+            asyncio.create_task(_run_consolidation())
+    except Exception as e:
+        logger.warning(f"Aviso ao checar consolidação de memória: {e}")
 
 def split_into_human_bubbles(text: str) -> list[str]:
     """
@@ -293,7 +369,9 @@ async def handle_reaction(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = reaction_update.user.id if reaction_update.user else None
     
     # Exclusividade do Patrick
-    if settings.TARGET_CHAT_ID and (chat_id != settings.TARGET_CHAT_ID and user_id != settings.TARGET_CHAT_ID):
+    if not settings.TARGET_CHAT_ID or settings.TARGET_CHAT_ID <= 0:
+        return
+    if chat_id != settings.TARGET_CHAT_ID and user_id != settings.TARGET_CHAT_ID:
         return
 
     new_reactions = reaction_update.new_reaction or []
@@ -381,7 +459,7 @@ class MessageDebouncer:
         except asyncio.CancelledError:
             pass
 
-debouncer = MessageDebouncer(delay_seconds=3.8)
+debouncer = MessageDebouncer(delay_seconds=settings.MESSAGE_DEBOUNCE_SECONDS)
 
 # --- ROTINA DE ESCOLHA DE AVATAR ---
 
@@ -512,16 +590,17 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     risada = estilo.get("risada", {}).get("valor", "kkkk")
     
     status_msg = (
-        "🌹 **Status de Marina Seltin (v3.0.0 Oficial - SQLite & Reações):**\n\n"
+        f"🌹 **Status de {settings.APP_NAME} (v{settings.APP_VERSION} Oficial - SQLite & Reações):**\n\n"
         f"• **Namorado Exclusivo**: Patrick Ramos (Chat ID: `{settings.TARGET_CHAT_ID}`) 💕\n"
-        f"• **Fase Biológica**: Dia {ciclo_info['day']} de 28 ({ciclo_info['name']}) 🌸\n"
+        f"• **Fase Biológica**: Dia {ciclo_info['day']} de {ciclo_info.get('cycle_length', 28)} ({ciclo_info['name']}) 🌸\n"
         f"• **Cérebro (LLM)**: `{settings.LLM_MODEL}` (Temp: 0.72 - Anti-Glitch) ✅\n"
         f"• **Sincronia de Estilo**: Risada `{risada}` | Emojis & Gírias em espelhamento 💬\n"
-        f"• **Buffer de Digitação**: 2.8s (captura mensagens consecutivas completas) ⏱️\n"
+        f"• **Buffer de Digitação**: {settings.MESSAGE_DEBOUNCE_SECONDS}s (captura mensagens consecutivas completas) ⏱️\n"
         f"• **Reações Mão Dupla**: Ativas (Telegram Bot API 7.0+) 💖\n"
         f"• **Câmera**: {'Novita AI Serverless (FLUX.1 Dev 4090)' if settings.IMAGE_ENGINE == 'novita' else 'SD Local'} "
         f"({'Online 📸' if camera_online else 'Verificando ⚠️'})\n"
         f"• **Banco de Dados**: `marin_memory.db` (SQLite Relacional Exclusivo) 🗄️\n"
+        f"• **Memória Inteligente**: {'Ativa (FTS5 Seletivo & Consolidator)' if settings.SMART_MEMORY_ENABLED else 'Modo Legado'} 🧠\n"
         f"• **Auto-Patcher Remoto**: Ativo via `/edit` 🛠️\n"
         f"• **Chat 100% Limpo**: Comandos e recibos são auto-deletados 🧹\n\n"
         f"💬 **Histórico Permanente**: {memory_manager.db.get_total_conversas()} mensagens salvas\n"
@@ -594,8 +673,9 @@ async def feedback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def edit_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Comando /edit para Patrick solicitar melhorias e correções autônomas no código diretamente pelo Telegram.
-    Usa a LLM para gerar a alteração, valida via py_compile e reinicia o bot com segurança.
+    Comando /edit para Patrick solicitar melhorias e correções no código diretamente pelo Telegram.
+    Executa em staging isolado (.runtime/patch_staging/), valida sintaxe e compilação via subprocesso
+    e reinicia o bot de forma transacional e segura.
     """
     if not is_authorized(update):
         return
@@ -606,30 +686,96 @@ async def edit_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         pass
 
+    if not getattr(settings, "SAFE_PATCHER_ENABLED", False):
+        aviso = await context.bot.send_message(
+            chat_id=chat_id,
+            text="⚠️ **Auto-Patcher Seguro**: O recurso de auto-edição remota está desativado no momento (`SAFE_PATCHER_ENABLED=False` no `.env`).",
+            parse_mode="Markdown"
+        )
+        asyncio.create_task(delete_after_delay(context.bot, chat_id, aviso.message_id, delay=8.0))
+        return
+
     args = context.args
     if not args:
         ajuda = await context.bot.send_message(
             chat_id=chat_id,
             text=(
-                "🛠️ **Auto-Patcher da Marina (v3.0.0)**\n\n"
-                "Peça melhorias diretas no código sem precisar ligar o PC!\n"
-                "📌 **Exemplo:**\n"
-                "`/edit adicione uma regra no prompt para você me chamar de meu bem com mais frequência`\n"
-                "`/edit no style_engine inclua a gíria fechou no rastreador`"
+                "🛠️ **Auto-Patcher Seguro da Marina (v3.4.0)**\n\n"
+                "Peça melhorias diretas no código com proteção de staging e rollback!\n\n"
+                "📌 **Exemplos de uso:**\n"
+                "`/edit adicione no prompts.py mais apelidos carinhosos`\n"
+                "`/edit no visual_profile ajuste o ângulo de câmera`\n"
+                "`/edit no style_engine inclua a gíria fechou`\n\n"
+                "⏪ Para desfazer um patch: `/rollback`\n"
+                "📜 Para ver o histórico: `/patches`"
             ),
             parse_mode="Markdown"
         )
-        asyncio.create_task(delete_after_delay(context.bot, chat_id, ajuda.message_id, delay=8.0))
+        asyncio.create_task(delete_after_delay(context.bot, chat_id, ajuda.message_id, delay=12.0))
         return
 
     instrucao = " ".join(args)
     msg_espera = await context.bot.send_message(
         chat_id=chat_id,
-        text=f"🔧 **Auto-Patcher em Ação**: Analisando sua solicitação e aplicando melhoria via Gemini Pro... Aguarde amor! ⏳",
+        text="🔧 **Auto-Patcher Transacional (v3.4.0)**: Preparando staging isolado, gerando código e validando compilação... Aguarde amor! ⏳",
         parse_mode="Markdown"
     )
 
-    sucesso, resultado = await asyncio.to_thread(auto_patcher.apply_patch, instrucao, "Patrick Ramos")
+    sucesso, resultado, diff = await asyncio.to_thread(auto_patcher.apply_patch, instrucao, "Patrick Ramos")
+
+    try:
+        await msg_espera.delete()
+    except Exception:
+        pass
+
+    if sucesso:
+        diff_snippet = ""
+        if diff and len(diff) <= 1200:
+            diff_snippet = f"\n\n```diff\n{diff}\n```"
+        msg_ok = await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"{resultado}{diff_snippet}\n\n🔄 **Reiniciando o bot da Marina em 3 segundos** para carregar as novas instruções...",
+            parse_mode="Markdown"
+        )
+        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg_ok.message_id, delay=6.0))
+        await asyncio.sleep(3.0)
+        sys.exit(0)
+    else:
+        msg_fail = await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"{resultado}",
+            parse_mode="Markdown"
+        )
+        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg_fail.message_id, delay=15.0))
+
+async def rollback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /rollback para reverter com segurança o último patch aplicado."""
+    if not is_authorized(update):
+        return
+
+    chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
+    if not getattr(settings, "SAFE_PATCHER_ENABLED", False):
+        aviso = await context.bot.send_message(
+            chat_id=chat_id,
+            text="⚠️ **Auto-Patcher Seguro**: O recurso de auto-edição remota está desativado no momento (`SAFE_PATCHER_ENABLED=False` no `.env`).",
+            parse_mode="Markdown"
+        )
+        asyncio.create_task(delete_after_delay(context.bot, chat_id, aviso.message_id, delay=8.0))
+        return
+
+    patch_id_arg = context.args[0] if context.args else None
+    msg_espera = await context.bot.send_message(
+        chat_id=chat_id,
+        text="⏪ **Iniciando Rollback**: Restaurando arquivos originais a partir do backup seguro...",
+        parse_mode="Markdown"
+    )
+
+    sucesso, resultado = await asyncio.to_thread(auto_patcher.rollback_patch, patch_id_arg)
 
     try:
         await msg_espera.delete()
@@ -639,19 +785,71 @@ async def edit_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if sucesso:
         msg_ok = await context.bot.send_message(
             chat_id=chat_id,
-            text=f"✅ {resultado}\n\n🔄 **Reiniciando o bot da Marina em 3 segundos** para carregar as novas instruções...",
+            text=f"{resultado}\n\n🔄 **Reiniciando o bot em 3 segundos** para restabelecer a versão anterior...",
             parse_mode="Markdown"
         )
-        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg_ok.message_id, delay=4.0))
+        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg_ok.message_id, delay=6.0))
         await asyncio.sleep(3.0)
         sys.exit(0)
     else:
         msg_fail = await context.bot.send_message(
             chat_id=chat_id,
-            text=f"⚠️ **Não foi possível aplicar com segurança:**\n{resultado}",
+            text=f"⚠️ {resultado}",
             parse_mode="Markdown"
         )
         asyncio.create_task(delete_after_delay(context.bot, chat_id, msg_fail.message_id, delay=12.0))
+
+async def patches_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /patches para listar os patches recentes e seu status de auditoria."""
+    if not is_authorized(update):
+        return
+
+    chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
+    if not getattr(settings, "SAFE_PATCHER_ENABLED", False):
+        aviso = await context.bot.send_message(
+            chat_id=chat_id,
+            text="⚠️ **Auto-Patcher Seguro**: O recurso de auto-edição remota está desativado no momento (`SAFE_PATCHER_ENABLED=False` no `.env`).",
+            parse_mode="Markdown"
+        )
+        asyncio.create_task(delete_after_delay(context.bot, chat_id, aviso.message_id, delay=8.0))
+        return
+
+    from db import db_manager
+    history = db_manager.get_patch_history(limit=5)
+    if not history:
+        msg = await context.bot.send_message(
+            chat_id=chat_id,
+            text="📜 **Histórico de Patches**: Nenhum patch registrado até o momento.",
+            parse_mode="Markdown"
+        )
+        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=10.0))
+        return
+
+    linhas = ["📜 **Histórico Recente de Patches (SQLite Audit):**\n"]
+    for p in history:
+        status_icon = "✅" if p["status"] == "applied" else ("⏪" if p["status"] == "rolled_back" else "⚠️")
+        arquivos = ", ".join(p["target_files"]) if p["target_files"] else "N/A"
+        inst_curta = p["instruction"][:60] + "..." if len(p["instruction"]) > 60 else p["instruction"]
+        linhas.append(
+            f"{status_icon} **`{p['patch_id']}`** ({p['status']})\n"
+            f"   📁 Arquivos: `{arquivos}`\n"
+            f"   📝 \"{inst_curta}\"\n"
+            f"   🕒 {p['created_at']}\n"
+        )
+
+    linhas.append("*(Esta mensagem sumirá em 25s)*")
+    msg_history = await context.bot.send_message(
+        chat_id=chat_id,
+        text="\n".join(linhas),
+        parse_mode="Markdown"
+    )
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg_history.message_id, delay=25.0))
+
 
 async def memorias_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Exibe o que a Marina guarda na memória sobre o Patrick direto pelo Telegram (auto-limpeza em 15s)."""
@@ -782,9 +980,20 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     # 1. Aprendizado dinâmico do estilo linguístico do Patrick (risadas, emojis, gírias, cadência)
     style_engine.processar_mensagem_patrick(texto_usuario)
 
-    # 2. Reação espontânea da Marina no balão de mensagem do Patrick (Via 1)
-    reacao_emoji = choose_reaction_for_text(texto_usuario)
-    if reacao_emoji and random.random() < 0.50:
+    # 2. Planejamento Cognitivo Interno (tom, intenção, reação e detecção de compromissos futuros)
+    recent_turns = memory_manager.get_historico_recente(limit=4)
+    recent_ctx_repr = "\n".join([f"{m['role']}: {m['content']}" for m in recent_turns])
+
+    plan = None
+    if getattr(settings, "PLANNER_ENABLED", False):
+        plan = await asyncio.to_thread(planner.plan_message, texto_usuario, recent_ctx_repr)
+    else:
+        plan = planner.plan_heuristics(texto_usuario) or {}
+
+    # 3. Reação espontânea da Marina no balão de mensagem do Patrick (prioriza emoji do planner)
+    planner_emoji = plan.get("reaction_emoji") if plan else None
+    reacao_emoji = planner_emoji or choose_reaction_for_text(texto_usuario)
+    if reacao_emoji and (planner_emoji or random.random() < 0.50):
         try:
             await context.bot.set_message_reaction(
                 chat_id=chat_id,
@@ -795,8 +1004,8 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
             logger.warning(f"Erro ao setar reação na mensagem do Patrick: {e}")
 
     texto_lower = texto_usuario.lower()
-    
-    # 3. Verifica se o Patrick está escolhendo entre as opções de avatar pendentes
+
+    # 4. Verifica se o Patrick está escolhendo entre as opções de avatar pendentes
     if chat_id in AVATARES_PENDENTES:
         escolheu_1 = bool(
             re.search(r'^\s*1\s*$', texto_lower)
@@ -806,7 +1015,7 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
             re.search(r'^\s*2\s*$', texto_lower)
             or re.search(r'\b(segunda|opç[aã]o\s*2|a\s*2|o\s*2)\b', texto_lower)
         )
-        
+
         if escolheu_1 or escolheu_2:
             # Se ambos baterem (mensagem ambígua), prioriza a opção citada por último no texto
             if escolheu_1 and escolheu_2:
@@ -817,7 +1026,7 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                 escolha = "1" if escolheu_1 else "2"
             jpg_selecionado = AVATARES_PENDENTES[chat_id][escolha]
             del AVATARES_PENDENTES[chat_id]
-            
+
             try:
                 if hasattr(jpg_selecionado, "seek"):
                     jpg_selecionado.seek(0)
@@ -827,7 +1036,7 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
             except Exception as e:
                 logger.error(f"Falha ao setar foto de perfil: {e}")
                 atualizou = False
-            
+
             if atualizou:
                 prompt_reacao = (
                     f"O Patrick escolheu a Opção {escolha} para o seu perfil no Telegram. "
@@ -837,23 +1046,26 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                 resposta = generate_dynamic_speech(prompt_reacao, max_tokens=160) or f"Aaaah, sabia que você ia preferir essa! 🥰 Já atualizei meu perfil aqui com ela! Ficou linda, né amor? Amei sua escolha!"
             else:
                 resposta = "Amor, tentei atualizar meu perfil agora mas o Telegram deu uma travadinha 🥺 Me pede de novo daqui a pouco que eu troco de verdade, prometo!"
-            
-            memory_manager.registrar_interacao(texto_usuario, resposta)
+
+            u_id, b_id = memory_manager.registrar_interacao(texto_usuario, resposta)
+            if plan:
+                planner.apply_plan_effects(plan, conversation_id=u_id)
             await send_human_messages(chat_id, context.bot, resposta, reply_to_message_id=msg_id)
+            await check_and_trigger_memory_consolidation()
             return
 
-    # 4. Verifica se pediu para trocar foto de perfil (ANTES de foto de chat)
+    # 5. Verifica se pediu para trocar foto de perfil (ANTES de foto de chat)
     if is_avatar_request(texto_usuario):
         await iniciar_escolha_avatar(context.bot, chat_id)
         return
 
-    # 5. Verifica se o Patrick usou o recurso 'Responder' citando uma mensagem anterior
+    # 6. Verifica se o Patrick usou o recurso 'Responder' citando uma mensagem anterior
     quoted_context = ""
     if update.message.reply_to_message and update.message.reply_to_message.text:
         quoted_text = update.message.reply_to_message.text[:120]
         quoted_context = f"[O Patrick está respondendo especificamente a esta fala sua anterior: '{quoted_text}']"
 
-    # 6. Decisão natural de usar ou não o recurso 'Responder' (Quote)
+    # 7. Decisão natural de usar ou não o recurso 'Responder' (Quote)
     deve_citar = False
     if update.message.reply_to_message:
         deve_citar = random.random() < 0.75
@@ -864,15 +1076,21 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
 
     reply_to_id = msg_id if deve_citar else None
 
-    # 7. Verifica se pediu foto ou áudio normal
+    # 8. Verifica se pediu foto ou áudio normal
     pediu_foto = is_photo_request(texto_usuario)
     pediu_audio = is_audio_request(texto_usuario)
-    
+
     # Executa busca na web em tempo real caso a mensagem do Patrick envolva fatos, lançamentos ou perguntas
     web_info = await asyncio.to_thread(buscar_web_se_necessario, texto_usuario)
 
-    # Prepara o payload para a LLM com memórias + contexto de busca
-    messages = build_messages_payload(quoted_context=quoted_context, web_search_context=web_info)
+    # Prepara o payload para a LLM com memórias + contexto de busca + diretrizes do planner
+    messages = build_messages_payload(
+        quoted_context=quoted_context,
+        web_search_context=web_info,
+        user_message=texto_usuario,
+        planner_tone=plan.get("tone") if plan else None,
+        planner_goal=plan.get("response_goal") if plan else None
+    )
     if pediu_foto:
         messages.append({
             "role": "system",
@@ -965,8 +1183,10 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     if not pediu_foto and not pediu_audio and not queria_audio and random.random() < 0.06 and len(fala_limpa) > 30:
         queria_audio = True
 
-    # Registra na memória a fala já limpa (sem tags/rubricas)
-    memory_manager.registrar_interacao(texto_usuario, fala_limpa if fala_limpa else resposta_marin)
+    # Registra na memória a fala já limpa (sem tags/rubricas) e aplica efeitos do plano
+    u_id, b_id = memory_manager.registrar_interacao(texto_usuario, fala_limpa if fala_limpa else resposta_marin)
+    if plan:
+        planner.apply_plan_effects(plan, conversation_id=u_id)
 
     audio_enviado = False
     aviso_audio_ja_enviado = False
@@ -1046,7 +1266,7 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                 if not any(kw in prompt_cenario.lower() for kw in ["clothed", "wearing", "dress", "top", "hoodie", "pajama", "shorts", "jeans"]):
                     prompt_cenario += ", fully clothed, wearing casual chic outfit"
 
-            foto_stream = await sd_client.generate_photo(prompt_cenario)
+            foto_stream = await sd_client.generate_photo(prompt_cenario, user_intent=texto_usuario)
             if foto_stream:
                 prompt_legenda = (
                     f"Você acabou de tirar a foto que o Patrick pediu ('{texto_usuario}'). "
@@ -1070,36 +1290,144 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
         except Exception as e:
             logger.error(f"Erro ao processar envio de foto: {e}", exc_info=True)
 
+    # 8. Consolidação Periódica e Assíncrona de Memória Baseada em Cursor Persistente
+    await check_and_trigger_memory_consolidation()
+
+# --- PROCESSADOR DE FOTOS RECEBIDAS DO PATRICK (MULTIMODAL VISION) ---
+
+async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Manipula fotos enviadas pelo Patrick, utilizando visão computacional para compreensão e resposta afetuosa."""
+    if not is_authorized(update):
+        logger.warning(f"Foto de estranho ignorada. Chat ID: {update.effective_chat.id}")
+        await update.message.reply_text("Desculpa, mas eu tenho namorado e esse Telegram é só pra falar com ele. Por favor não mande fotos.")
+        return
+
+    if not update.message or not update.message.photo:
+        return
+
+    chat_id = update.effective_chat.id
+    msg_id = update.message.message_id
+    caption = update.message.caption or ""
+
+    logger.info(f"📸 Foto recebida do Patrick! Legenda: '{caption}'")
+    await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+
+    try:
+        # Baixa a foto na maior resolução disponível
+        largest_photo = update.message.photo[-1]
+        photo_file = await largest_photo.get_file()
+        photo_bytes = await photo_file.download_as_bytearray()
+
+        # Análise multimodal via VisionService
+        vision_data = await vision_service.analyze_image(bytes(photo_bytes), caption=caption)
+        vision_context = vision_service.format_vision_context(vision_data, caption=caption)
+
+        # Monta payload com visão
+        user_message_repr = f"[Foto enviada pelo Patrick: {caption}]" if caption else "[Foto enviada pelo Patrick]"
+        messages = build_messages_payload(
+            quoted_context="",
+            web_search_context="",
+            user_message=user_message_repr,
+            vision_context=vision_context
+        )
+
+        # Planejamento cognitivo da resposta (tom, reação, eventos)
+        reacao_emoji = None
+        plan = None
+        if getattr(settings, "PLANNER_ENABLED", False):
+            plan = await asyncio.to_thread(planner.plan_message, user_message_repr, vision_context)
+            reacao_emoji = plan.get("reaction_emoji")
+
+        if reacao_emoji:
+            try:
+                await context.bot.set_message_reaction(
+                    chat_id=chat_id,
+                    message_id=msg_id,
+                    reaction=[ReactionTypeEmoji(emoji=reacao_emoji)]
+                )
+            except Exception as e:
+                logger.warning(f"Erro ao setar reação em foto: {e}")
+
+        # Monta payload com visão e tom planejado
+        messages = build_messages_payload(
+            quoted_context="",
+            web_search_context="",
+            user_message=user_message_repr,
+            vision_context=vision_context,
+            planner_tone=plan.get("tone") if plan else None,
+            planner_goal=plan.get("response_goal") if plan else None
+        )
+
+        # Gera resposta dinâmica da Marina
+        completion = llm_client.chat.completions.create(
+            model=settings.LLM_MODEL,
+            messages=messages,
+            max_tokens=220,
+            temperature=0.72
+        )
+        resposta_raw = completion.choices[0].message.content.strip()
+        resposta_limpa = limpar_fala_marina(resposta_raw)
+
+        # Registra interação no banco com media_type='photo' e aplica efeitos do plano
+        u_id = memory_manager.db.adicionar_mensagem(role="user", content=user_message_repr, media_type="photo")
+        b_id = memory_manager.db.adicionar_mensagem(role="assistant", content=resposta_limpa, media_type="text")
+
+        if plan:
+            planner.apply_plan_effects(plan, conversation_id=u_id)
+
+        # Atualiza métricas de estilo se houver legenda
+        if caption:
+            style_engine.processar_mensagem_patrick(caption)
+
+        # Dispara consolidação de memória persistente
+        await check_and_trigger_memory_consolidation()
+
+        # Envia resposta humanizada em balões
+        if resposta_limpa:
+            await send_human_messages(chat_id, context.bot, resposta_limpa)
+
+    except Exception as e:
+        logger.error(f"Erro ao processar foto recebida do Patrick: {e}", exc_info=True)
+        await send_human_messages(
+            chat_id,
+            context.bot,
+            "Amor, tentei abrir a foto aqui no celular mas deu uma travadinha na internet 🥺 Manda de novo?"
+        )
+
 # --- VONTADE PRÓPRIA & INICIATIVA ÍNTIMA (DIRECIONADA APENAS AO PATRICK) ---
 
 async def autonomous_routine(application: Application):
     if not settings.TARGET_CHAT_ID:
         return
 
-    # Madrugada alta (entre 3h30 e 8h00): dormindo no apê
-    hora_atual = datetime.now().hour
-    if 3 < hora_atual < 8:
-        logger.info("Marina Seltin está dormindo no apê (rotina de sono noturna).")
+    # Avaliação inteligente de gatilho (janela de sono, limite diário, cooldowns e eventos pendentes)
+    should_run, trigger_reason = proactivity_service.should_trigger()
+    if not should_run:
+        logger.debug(f"Rotina autônoma de Marina: gatilho não disparado ({trigger_reason}).")
         return
 
-    # Sorteio de iniciativa
-    if random.random() > settings.AUTONOMOUS_TRIGGER_CHANCE:
-        return
-
-    logger.info("Marina Seltin decidiu puxar assunto por vontade própria!")
+    logger.info(f"Marina Seltin decidiu puxar assunto por iniciativa própria! Motivo: {trigger_reason}")
     
     # 6% de chance de ela ficar com vontade de trocar a foto de perfil e pedir ajuda ao Patrick!
     if random.random() < 0.06:
         logger.info("Marina Seltin decidiu pedir ajuda para escolher um novo avatar!")
         await iniciar_escolha_avatar(application.bot, settings.TARGET_CHAT_ID)
+        proactivity_service.record_autonomous_sent(reason="avatar_pick")
         return
 
     try:
-        decision_prompt = build_autonomous_decision_prompt()
+        proactive_info = proactivity_service.determine_proactive_prompt()
+        decision_prompt = build_autonomous_decision_prompt(custom_situation=proactive_info.get("instruction", ""))
+        
+        if settings.SMART_MEMORY_ENABLED:
+            system_prompt = context_builder.build_system_prompt()
+        else:
+            system_prompt = f"{MARIN_SYSTEM_PROMPT}\n{memory_manager.get_contexto_emocional()}"
+
         resposta = llm_client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=[
-                {"role": "system", "content": f"{MARIN_SYSTEM_PROMPT}\n{memory_manager.get_contexto_emocional()}"},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": decision_prompt}
             ],
             max_tokens=220,
@@ -1125,14 +1453,25 @@ async def autonomous_routine(application: Application):
             if audio_path and audio_path.exists():
                 with open(audio_path, "rb") as vf:
                     await application.bot.send_voice(chat_id=settings.TARGET_CHAT_ID, voice=vf)
-                memory_manager.registrar_interacao("[Iniciativa da Marina em Áudio]", texto_limpo)
+                memory_manager.db.registrar_iniciativa_marina(texto_limpo, media_type="voice")
             else:
-                memory_manager.registrar_interacao("[Iniciativa da Marina]", texto_limpo)
+                memory_manager.db.registrar_iniciativa_marina(texto_limpo, media_type="text")
                 if texto_limpo:
                     await send_human_messages(settings.TARGET_CHAT_ID, application.bot, texto_limpo)
         elif texto_limpo:
-            memory_manager.registrar_interacao("[Iniciativa da Marina]", texto_limpo)
+            memory_manager.db.registrar_iniciativa_marina(texto_limpo, media_type="text")
             await send_human_messages(settings.TARGET_CHAT_ID, application.bot, texto_limpo)
+
+        proactivity_service.record_autonomous_sent(reason=proactive_info.get("reason", "autonomous"))
+
+        # Conclui evento pendente apenas após confirmação de entrega da mensagem no Telegram
+        event_id = proactive_info.get("event_id")
+        if event_id:
+            try:
+                proactivity_service.db.concluir_evento_pendente(event_id)
+                logger.info(f"Evento pendente {event_id} concluído com sucesso após entrega no Telegram.")
+            except Exception as e_ev:
+                logger.warning(f"Erro ao concluir evento pendente {event_id}: {e_ev}")
 
         if prompt_foto:
             await asyncio.sleep(1.5)
@@ -1190,7 +1529,10 @@ def main():
     app.add_handler(CommandHandler("trocar_avatar", avatar_command))
     app.add_handler(CommandHandler("feedback", feedback_command))
     app.add_handler(CommandHandler("edit", edit_command))
+    app.add_handler(CommandHandler("rollback", rollback_command))
+    app.add_handler(CommandHandler("patches", patches_command))
     app.add_handler(CommandHandler("memorias", memorias_command))
+
     app.add_handler(CommandHandler("memoria", memorias_command))
     app.add_handler(CommandHandler("restart", restart_command))
     app.add_handler(CommandHandler("reset", restart_command))
@@ -1202,10 +1544,13 @@ def main():
     # Reações em tempo real (Via 2 - Patrick reagindo com emojis)
     app.add_handler(MessageReactionHandler(handle_reaction))
 
+    # Recepção e compreensão visual de fotos com Vision Multimodal
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo_message))
+
     # Conversa textual com Debouncer
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    logger.info("Bot de Marina Seltin (v3.0.0 Oficial Blindada) iniciado com sucesso!")
+    logger.info(f"Bot de {settings.APP_NAME} (v{settings.APP_VERSION} Oficial Blindada) iniciado com sucesso!")
     # allowed_updates=Update.ALL_TYPES garante recebimento de MESSAGE_REACTION
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 

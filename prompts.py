@@ -139,12 +139,18 @@ def get_temporal_greeting() -> str:
     else:
         return "Madrugada (já é bem tarde, você na cama, aconchegada no escuro mexendo no celular)."
 
-def build_autonomous_decision_prompt() -> str:
+def build_autonomous_decision_prompt(custom_situation: str = "") -> str:
     contexto_tempo = get_temporal_greeting()
-    evento_aleatorio = random.choice(EVENTOS_COTIDIANO)
+    if custom_situation:
+        situacao = custom_situation
+    else:
+        evento_aleatorio = random.choice(EVENTOS_COTIDIANO)
+        situacao = (
+            f"Agora é {contexto_tempo}. No seu dia a dia, {evento_aleatorio}.\n"
+            f"Você pensou no Patrick com carinho, saudades, empolgação ou vontade de provocar."
+        )
     
-    return f"""Agora é {contexto_tempo}. No seu dia a dia, {evento_aleatorio}.
-Você pensou no Patrick com carinho, saudades, empolgação ou vontade de provocar.
+    return f"""{situacao}
 
 Decida o que você quer mandar para o seu namorado agora com base na sua personalidade espontânea, nas suas vontades de momento e na sua fase hormonal atual.
 LEMBRE-SE: Fale de forma 100% natural, em 1 a 3 falas curtas. Se forem 2 ou 3 balões, separe-os com quebra de linha DENTRO do campo ACAO. NUNCA use 'Você sabia que...' ou frases de enciclopédia!
@@ -166,36 +172,15 @@ Exemplo 3 (foto íntima / sensual privada):
 ACAO: Acabei de sair do banho e o apê tá silencioso demais sem você aqui... Queria você comigo agora, amor 🙈 | FOTO_PROMPT: intimate candid photo of marina_reference, 19yo woman, gorgeous face, completely naked on bed wrapped in silky bedsheet, soft natural bedroom lighting, alluring romantic gaze
 """
 
-SD_BASE_PROMPT_PREFIX = (
-    "candid amateur black iphone 17 pro photo of marina_reference, 19yo woman, gorgeous face, "
-    "expressive luminous honey-amber eyes, delicate nose, full plump lips, full cheeks, "
-    "voluminous wavy chocolate brown hair with golden blonde tips, "
-    "fit athletic model physique, slim waist, shapely feminine proportions, "
-    "authentic modern apartment lighting, high realism, highly detailed natural skin texture with visible fine pores, "
-    "natural skin folds and subtle imperfections, authentic flash photography reflection, realistic non-plastic non-rubber skin, "
-)
+from visual_profile import visual_profile, MARINA_VISUAL_DNA_BASE
+
+SD_BASE_PROMPT_PREFIX = f"{MARINA_VISUAL_DNA_BASE}, "
 
 def build_flux_prompt(scene_tags: str, is_nsfw: bool = False, focus_angle: str = "frontal") -> str:
-    clean_scene = scene_tags.strip()
-    clothed_cues = ["clothed", "wearing", "dress", "vestid", "roupa", "hoodie", "top", "pajama", "pijama", "jeans", "shorts", "shirt", "casual"]
-    
-    # Se o cenário contiver qualquer indicação de roupa ou is_nsfw for False, garante 100% SFW e zero nudez
-    if not is_nsfw or any(k in clean_scene.lower() for k in clothed_cues):
-        anatomy_tag = "fully clothed, modest elegant casual outfit, zero nudity, natural model posture"
-    elif focus_angle == "behind" or any(k in clean_scene.lower() for k in ["ass", "behind", "costas", "bunda"]):
-        anatomy_tag = (
-            "from behind, round bubble butt projecting backward, firm shapely buttocks, "
-            "perky natural female curves, completely naked, uncensored, explicit female anatomy"
-        )
-    elif focus_angle == "side" or any(k in clean_scene.lower() for k in ["side", "lateral", "sideboob"]):
-        anatomy_tag = (
-            "side view profile, completely naked, uncensored, perky upright high-set natural breast with visible erect pink nipple and areola, "
-            "slim waist, arched lower back, explicit female anatomy"
-        )
-    else:
-        anatomy_tag = (
-            "completely naked, uncensored, perky natural breasts, firm upright high-set bust, "
-            "erect pink nipples with detailed natural areolas, slim waist, natural hips, "
-            "round bubble butt, detailed explicit female anatomy, pink labia, shaved pussy"
-        )
-    return f"{SD_BASE_PROMPT_PREFIX}{clean_scene}, {anatomy_tag}".strip(", ")
+    prompt, _, _ = visual_profile.build_scene_prompt(
+        scene_description=scene_tags,
+        is_nsfw=is_nsfw,
+        focus_angle=focus_angle
+    )
+    return prompt
+
