@@ -13,9 +13,9 @@ load_dotenv(ENV_FILE)
 
 class Settings:
     APP_NAME: str = "Marina Seltin"
-    APP_VERSION: str = "3.5.2"
+    APP_VERSION: str = "3.5.3"
     VERSION: str = APP_VERSION
-    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Adaptive Dual Voice)"
+    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Reflection & Memory Hygiene)"
 
 
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
@@ -95,6 +95,12 @@ class Settings:
     REMINDER_CHECK_INTERVAL_SECONDS: int = int(os.getenv("REMINDER_CHECK_INTERVAL_SECONDS", "30"))
     REMINDERS_RESPECT_SLEEP_WINDOW: bool = os.getenv("REMINDERS_RESPECT_SLEEP_WINDOW", "false").lower() in ("true", "1", "yes")
     MAX_ACTIVE_OPEN_LOOPS_CONTEXT: int = int(os.getenv("MAX_ACTIVE_OPEN_LOOPS_CONTEXT", "2"))
+
+    # Session Reflection & Memory Hygiene (Release 3.5.3)
+    SESSION_REFLECTION_ENABLED: bool = os.getenv("SESSION_REFLECTION_ENABLED", "true").lower() in ("true", "1", "yes")
+    MEMORY_HYGIENE_ENABLED: bool = os.getenv("MEMORY_HYGIENE_ENABLED", "true").lower() in ("true", "1", "yes")
+    MEMORY_HYGIENE_INTERVAL_HOURS: int = int(os.getenv("MEMORY_HYGIENE_INTERVAL_HOURS", "24"))
+    SESSION_REFLECTION_IDLE_MINUTES: int = int(os.getenv("SESSION_REFLECTION_IDLE_MINUTES", "90"))
     VISION_MODEL: str = os.getenv("VISION_MODEL", "google/gemini-2.0-flash-001").strip()
     VISION_ENABLED: bool = os.getenv("VISION_ENABLED", "true").lower() in ("true", "1", "yes")
     STYLE_ENGINE_V2_ENABLED: bool = os.getenv("STYLE_ENGINE_V2_ENABLED", "true").lower() in ("true", "1", "yes")

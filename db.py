@@ -1026,7 +1026,7 @@ class DatabaseManager:
                 """
                 SELECT id, loop_type, content, status, importance, due_at, next_check_after, last_touched_at
                 FROM open_loops
-                WHERE status = 'open'
+                WHERE status = 'open' AND (is_archived = 0 OR is_archived IS NULL)
                 ORDER BY importance DESC, last_touched_at DESC
                 LIMIT ?
                 """,
@@ -1043,7 +1043,7 @@ class DatabaseManager:
                 """
                 SELECT id, loop_type, content, status, importance, due_at, next_check_after, last_touched_at
                 FROM open_loops
-                WHERE status = 'open' AND (
+                WHERE status = 'open' AND (is_archived = 0 OR is_archived IS NULL) AND (
                     next_check_after IS NULL OR next_check_after <= ?
                 )
                 ORDER BY importance DESC, last_touched_at ASC
@@ -1053,14 +1053,18 @@ class DatabaseManager:
             )
             return [dict(r) for r in cursor.fetchall()]
 
-    def resolver_open_loop(self, loop_id: int) -> bool:
-        """Marca um open loop como resolvido quando o Patrick conclui o tema."""
+    def resolver_open_loop(self, loop_id: int, resolution_notes: Optional[str] = None) -> bool:
+        """Marca o open loop como resolvido com notas contextuais."""
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE open_loops SET status = 'resolved', resolved_at = ?, last_touched_at = ? WHERE id = ? AND status = 'open'",
-                (now_iso, now_iso, loop_id)
+                """
+                UPDATE open_loops
+                SET status = 'resolved', resolved_at = ?, resolution_notes = ?, last_touched_at = ?
+                WHERE id = ? AND status = 'open'
+                """,
+                (now_iso, resolution_notes, now_iso, loop_id)
             )
             conn.commit()
             return cursor.rowcount > 0
@@ -1088,6 +1092,24 @@ class DatabaseManager:
             )
             conn.commit()
             return cursor.rowcount > 0
+
+    def arquivar_open_loops_antigos(self, dias: int = 30) -> int:
+        """Marca como arquivados (is_archived = 1) os open loops resolvidos ou abandonados há mais de X dias."""
+        limite_dt = (datetime.now() - timedelta(days=dias)).isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE open_loops
+                SET is_archived = 1
+                WHERE status IN ('resolved', 'abandoned')
+                  AND (resolved_at IS NOT NULL AND resolved_at < ?)
+                  AND (is_archived = 0 OR is_archived IS NULL)
+                """,
+                (limite_dt,)
+            )
+            conn.commit()
+            return cursor.rowcount
 
     # --- MÉTODOS DE SMART REMINDERS (RELEASE 3.5.1) ---
 
@@ -1255,6 +1277,207 @@ class DatabaseManager:
                 (now_iso, limit)
             )
             return [dict(row) for row in cursor.fetchall()]
+
+    # --- MÉTODOS DE MEMORY HYGIENE E SESSION REFLECTION (RELEASE 3.5.3) ---
+
+    def aplicar_confidence_decay(
+        self,
+        dias_volatil: int = 14,
+        dias_medio: int = 60,
+        now: Optional[datetime] = None
+    ) -> dict:
+        """
+        Executa decay persistente de confiança nas memórias ativas com base na volatilidade e tempo decorrido.
+        Regras da Seção 77 do Plano 3.5:
+        - 'volatile': perde confiança após 14-30 dias sem confirmação (reduz 0.10 a cada ciclo, mínimo 0.30).
+        - 'medium': perde confiança após 60-90 dias sem confirmação (reduz 0.05, mínimo 0.50).
+        - 'stable' e tier 'core': preservam confiança e não decaem abaixo de 0.85.
+        - Memórias que caem abaixo de 0.60 de confiança são marcadas com needs_reconfirmation = 1.
+        """
+        dt_atual = now or datetime.now()
+        decayed_count = 0
+        reconfirmation_flagged = 0
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, fato, category, importance, confidence, memory_tier, volatility,
+                       canonical_key, created_at, updated_at, last_confirmed_at, needs_reconfirmation
+                FROM fatos_patrick
+                WHERE active = 1
+                """
+            )
+            fatos = cursor.fetchall()
+
+            for f in fatos:
+                fato_id = f["id"]
+                tier = (f["memory_tier"] or "standard").lower()
+                volatility = (f["volatility"] or "medium").lower()
+                conf_atual = float(f["confidence"] if f["confidence"] is not None else 1.0)
+
+                ref_str = f["last_confirmed_at"] or f["created_at"]
+                if not ref_str:
+                    continue
+                try:
+                    ref_dt = datetime.fromisoformat(ref_str)
+                except Exception:
+                    continue
+
+                dias_passados = (dt_atual - ref_dt).total_seconds() / 86400.0
+
+                novo_conf = conf_atual
+                deve_decaer = False
+
+                if tier == "core":
+                    novo_conf = max(conf_atual, 0.85)
+                elif volatility == "volatile" and dias_passados >= dias_volatil:
+                    ciclos = max(1, int(dias_passados // dias_volatil))
+                    novo_conf = max(0.30, round(1.0 - (ciclos * 0.10), 2))
+                    deve_decaer = novo_conf != conf_atual
+                elif volatility == "medium" and dias_passados >= dias_medio:
+                    ciclos = max(1, int(dias_passados // dias_medio))
+                    novo_conf = max(0.50, round(1.0 - (ciclos * 0.05), 2))
+                    deve_decaer = novo_conf != conf_atual
+                elif volatility == "stable":
+                    novo_conf = max(0.85, conf_atual)
+
+                needs_reconf = 1 if (novo_conf < 0.60 and float(f["importance"] or 0.5) >= 0.50) else 0
+                if needs_reconf and not f["needs_reconfirmation"]:
+                    reconfirmation_flagged += 1
+
+                if deve_decaer or needs_reconf != f["needs_reconfirmation"]:
+                    cursor.execute(
+                        """
+                        UPDATE fatos_patrick
+                        SET confidence = ?, needs_reconfirmation = ?, updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (novo_conf, needs_reconf, dt_atual.isoformat(), fato_id)
+                    )
+                    decayed_count += 1
+
+            conn.commit()
+
+        return {
+            "decayed_count": decayed_count,
+            "reconfirmation_flagged": reconfirmation_flagged
+        }
+
+    def get_memorias_para_reconfirmacao(self, limit: int = 3) -> list[dict]:
+        """Retorna memórias ativas prioritárias que necessitam de reconfirmação com o Patrick."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, fato, category, importance, confidence, memory_tier, volatility, canonical_key, last_confirmed_at
+                FROM fatos_patrick
+                WHERE active = 1
+                  AND (needs_reconfirmation = 1 OR (confidence <= 0.60 AND importance >= 0.60))
+                ORDER BY importance DESC, confidence ASC
+                LIMIT ?
+                """,
+                (limit,)
+            )
+            return [dict(r) for r in cursor.fetchall()]
+
+    def marcar_fato_reconfirmado(self, fato_id: int, nova_confianca: float = 1.0):
+        """Reafirma uma memória que estava em dúvida, elevando confiança e zerando needs_reconfirmation."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE fatos_patrick
+                SET confidence = ?,
+                    confirmation_count = confirmation_count + 1,
+                    last_confirmed_at = ?,
+                    needs_reconfirmation = 0,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (nova_confianca, now_iso, now_iso, fato_id)
+            )
+            conn.commit()
+
+    def deduplicar_fatos_redundantes(self) -> int:
+        """
+        Deduplicação leve de memórias ativas:
+        Identifica fatos ativos com canonical_key idêntica,
+        inativando réplicas mais antigas sem destruir histórico.
+        """
+        deduplicated = 0
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT canonical_key, COUNT(*) as qtd
+                FROM fatos_patrick
+                WHERE active = 1 AND canonical_key IS NOT NULL AND canonical_key != ''
+                GROUP BY canonical_key
+                HAVING qtd > 1
+                """
+            )
+            dupe_keys = cursor.fetchall()
+            for dk in dupe_keys:
+                key = dk["canonical_key"]
+                cursor.execute(
+                    """
+                    SELECT id FROM fatos_patrick
+                    WHERE active = 1 AND canonical_key = ?
+                    ORDER BY id DESC
+                    """,
+                    (key,)
+                )
+                ids = [r["id"] for r in cursor.fetchall()]
+                for old_id in ids[1:]:
+                    cursor.execute(
+                        "UPDATE fatos_patrick SET active = 0, updated_at = ? WHERE id = ?",
+                        (now_iso, old_id)
+                    )
+                    deduplicated += 1
+
+            conn.commit()
+        return deduplicated
+
+    def salvar_resumo_conversa(
+        self,
+        topic: str,
+        summary: str,
+        importance: float = 0.6,
+        start_conversation_id: Optional[int] = None,
+        end_conversation_id: Optional[int] = None
+    ) -> int:
+        """Salva um resumo holístico de sessão/conversa em resumos_conversa."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO resumos_conversa
+                (topic, summary, start_conversation_id, end_conversation_id, importance, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (topic, summary, start_conversation_id, end_conversation_id, importance, now_iso, now_iso)
+            )
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_mensagens_sessao(self, limit: int = 50) -> list[dict]:
+        """Retorna mensagens recentes da conversa para reflexão da sessão."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, role, content, timestamp
+                FROM conversas
+                ORDER BY id DESC LIMIT ?
+                """,
+                (limit,)
+            )
+            rows = cursor.fetchall()
+            return [dict(r) for r in reversed(rows)]
 
     # --- MÉTODOS DE ESTADO RELACIONAL ---
 

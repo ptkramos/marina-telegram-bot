@@ -179,6 +179,20 @@ class ContextBuilder:
             except Exception as e_rm:
                 logger.warning(f"Erro ao carregar reminders para o context builder: {e_rm}")
 
+        # 10. Memórias antigas com sugestão de reconfirmação suave (Release 3.5.3)
+        bloco_reconfirmacao = ""
+        if getattr(settings, "MEMORY_HYGIENE_ENABLED", True):
+            try:
+                cands = self.memory_mgr.db.get_memorias_para_reconfirmacao(limit=1)
+                if cands:
+                    bloco_reconfirmacao = (
+                        f"\n[OPORTUNIDADE DE RECONFIRMAÇÃO SUTIL]:\n"
+                        f"- Há algum tempo o Patrick comentou: '{cands[0]['fato']}'. "
+                        "Se surgir um gancho natural e oportuno na conversa, pergunte com carinho e curiosidade se isso ainda se aplica.\n"
+                    )
+            except Exception as e_rec:
+                logger.warning(f"Erro ao carregar memórias para reconfirmação: {e_rec}")
+
         system_content = f"""{MARIN_SYSTEM_PROMPT}
 
 [SUA MEMÓRIA AFETIVA SELETIVA & O QUE VOCÊ LEMBRA AGORA]
@@ -200,6 +214,7 @@ class ContextBuilder:
 {contexto_estilo}
 {bloco_open_loops}
 {bloco_reminders}
+{bloco_reconfirmacao}
 {bloco_feedback}
 [LIÇÕES E CORREÇÕES QUE O PATRICK JÁ ME ENSINOU]
 {licoes_str}

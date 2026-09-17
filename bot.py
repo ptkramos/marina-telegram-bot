@@ -44,6 +44,8 @@ from planner import planner
 from memory_retriever import memory_retriever
 from reminder_service import reminder_service
 from voice_router import VoiceSelectionContext
+from session_reflector import session_reflector
+from memory_hygiene import memory_hygiene_service
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -1086,6 +1088,47 @@ async def cancelar_lembrete_command(update: Update, context: ContextTypes.DEFAUL
     msg = await context.bot.send_message(chat_id=chat_id, text=texto, parse_mode="Markdown")
     asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=10.0))
 
+async def memory_hygiene_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /memoryhygiene para disparar manualmente o ciclo de manutenção da memória."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    stats = await asyncio.to_thread(memory_hygiene_service.run_hygiene_cycle)
+    texto = (
+        f"🧹 **Ciclo de Memory Hygiene Executado:**\n\n"
+        f"• Fatos com decay de confiança: `{stats.get('decay', {}).get('decayed_count', 0)}`\n"
+        f"• Fatos sinalizados para reconfirmar: `{stats.get('decay', {}).get('reconfirmation_flagged', 0)}`\n"
+        f"• Fatos redundantes deduplicados: `{stats.get('deduplicated_count', 0)}`\n"
+        f"• Open Loops antigos arquivados: `{stats.get('archived_loops_count', 0)}`\n"
+        f"• Candidatos a reconfirmação: `{stats.get('reconfirmation_candidates_count', 0)}`\n\n"
+        f"*(Esta mensagem sumirá em 20s)*"
+    )
+    msg = await context.bot.send_message(chat_id=chat_id, text=texto, parse_mode="Markdown")
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=20.0))
+
+async def refletir_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /refletir para forçar reflexão de sessão agora."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    res = await asyncio.to_thread(session_reflector.check_and_trigger_reflection, force=True)
+    if res and res.get("reflection"):
+        ref = res["reflection"]
+        resumo = ref.get("summary", "Nenhum resumo gerado.")
+        topicos = ", ".join(ref.get("topics", [])) or "Geral"
+        loops = len(ref.get("open_loops", []))
+        texto = (
+            f"💭 **Reflexão de Sessão Executada:**\n\n"
+            f"• **Tópicos:** {topicos}\n"
+            f"• **Resumo:** {resumo}\n"
+            f"• **Novos Open Loops:** {loops}\n\n"
+            f"*(Esta mensagem sumirá em 25s)*"
+        )
+    else:
+        texto = "Amor, não havia mensagens recentes suficientes para refletir agora!"
+    msg = await context.bot.send_message(chat_id=chat_id, text=texto, parse_mode="Markdown")
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=25.0))
+
 # --- RECEPTOR INICIAL COM BUFFER DE DIGITAÇÃO ---
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1685,6 +1728,20 @@ async def reminders_routine(application: Application):
     except Exception as e:
         logger.error(f"Erro no job de reminders_routine: {e}", exc_info=True)
 
+async def memory_hygiene_routine(application: Application):
+    """Job periódico de higiene de memória (Release 3.5.3)."""
+    try:
+        await asyncio.to_thread(memory_hygiene_service.run_hygiene_cycle)
+    except Exception as e:
+        logger.error(f"Erro no job de memory_hygiene_routine: {e}", exc_info=True)
+
+async def session_reflection_routine(application: Application):
+    """Job periódico de reflexão de sessão (Release 3.5.3)."""
+    try:
+        await asyncio.to_thread(session_reflector.check_and_trigger_reflection)
+    except Exception as e:
+        logger.error(f"Erro no job de session_reflection_routine: {e}", exc_info=True)
+
 # --- INICIALIZAÇÃO ---
 
 async def post_init(application: Application):
@@ -1706,6 +1763,28 @@ async def post_init(application: Application):
             args=[application]
         )
         logger.info(f"Job de Smart Reminders agendado a cada {rem_interval}s.")
+
+    # Job periódico de Memory Hygiene (Release 3.5.3)
+    if getattr(settings, "MEMORY_HYGIENE_ENABLED", True):
+        hygiene_hours = max(1, getattr(settings, "MEMORY_HYGIENE_INTERVAL_HOURS", 24))
+        scheduler.add_job(
+            memory_hygiene_routine,
+            "interval",
+            hours=hygiene_hours,
+            args=[application]
+        )
+        logger.info(f"Job de Memory Hygiene agendado a cada {hygiene_hours}h.")
+
+    # Job periódico de Session Reflection (Release 3.5.3)
+    if getattr(settings, "SESSION_REFLECTION_ENABLED", True):
+        refl_mins = max(15, getattr(settings, "SESSION_REFLECTION_IDLE_MINUTES", 90))
+        scheduler.add_job(
+            session_reflection_routine,
+            "interval",
+            minutes=refl_mins,
+            args=[application]
+        )
+        logger.info(f"Job de Session Reflection agendado a cada {refl_mins}min.")
 
     scheduler.start()
     ciclo_info = memory_manager.cycle_mgr.get_cycle_info()
@@ -1746,6 +1825,8 @@ def main():
     app.add_handler(CommandHandler("lembretes", lembretes_command))
     app.add_handler(CommandHandler("cancelarlembrete", cancelar_lembrete_command))
     app.add_handler(CommandHandler("cancelar_lembrete", cancelar_lembrete_command))
+    app.add_handler(CommandHandler("memoryhygiene", memory_hygiene_command))
+    app.add_handler(CommandHandler("refletir", refletir_command))
 
     # Reações em tempo real (Via 2 - Patrick reagindo com emojis)
     app.add_handler(MessageReactionHandler(handle_reaction))
