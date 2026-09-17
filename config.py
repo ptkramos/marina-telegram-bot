@@ -13,9 +13,9 @@ load_dotenv(ENV_FILE)
 
 class Settings:
     APP_NAME: str = "Marina Seltin"
-    APP_VERSION: str = "3.5.1"
+    APP_VERSION: str = "3.5.2"
     VERSION: str = APP_VERSION
-    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Open Loops & Smart Reminders)"
+    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Adaptive Dual Voice)"
 
 
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
@@ -57,6 +57,16 @@ class Settings:
     GEMINI_VOICE_NAME: str = os.getenv("GEMINI_VOICE_NAME", "Leda").strip()
     NOVITA_VOICE_ID: str = os.getenv("NOVITA_VOICE_ID", "voice_d91c415d-f6a2-4d6f-b32c-aacfd5ad2e39").strip()
     NOVITA_VOICE_MODEL: str = os.getenv("NOVITA_VOICE_MODEL", "speech-2.8-hd").strip()
+
+    # Adaptive Dual Voice (Release 3.5.2)
+    DUAL_VOICE_ENABLED: bool = os.getenv("DUAL_VOICE_ENABLED", "true").lower() in ("true", "1", "yes")
+    NOVITA_VOICE_ID_CONVERSATIONAL: str = os.getenv("NOVITA_VOICE_ID_CONVERSATIONAL", "voice_d91c415d-f6a2-4d6f-b32c-aacfd5ad2e39").strip()
+    NOVITA_VOICE_ID_INTIMATE: str = os.getenv("NOVITA_VOICE_ID_INTIMATE", "voice_73e73b73-65be-4cf9-9ab6-35d84f1946a3").strip()
+    VOICE_ALLOW_CROSS_PROFILE_FALLBACK: bool = os.getenv("VOICE_ALLOW_CROSS_PROFILE_FALLBACK", "false").lower() in ("true", "1", "yes")
+    NOVITA_CONVERSATIONAL_SPEED: float = float(os.getenv("NOVITA_CONVERSATIONAL_SPEED", "1.00"))
+    NOVITA_CONVERSATIONAL_PITCH: int = int(os.getenv("NOVITA_CONVERSATIONAL_PITCH", "0"))
+    NOVITA_INTIMATE_SPEED: float = float(os.getenv("NOVITA_INTIMATE_SPEED", "0.96"))
+    NOVITA_INTIMATE_PITCH: int = int(os.getenv("NOVITA_INTIMATE_PITCH", "0"))
 
     # Feature Flags para evolução arquitetural incremental (3.2.0 - 3.5.0)
     SMART_MEMORY_ENABLED: bool = os.getenv("SMART_MEMORY_ENABLED", "true").lower() in ("true", "1", "yes")

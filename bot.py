@@ -43,6 +43,7 @@ from vision_service import vision_service
 from planner import planner
 from memory_retriever import memory_retriever
 from reminder_service import reminder_service
+from voice_router import VoiceSelectionContext
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -988,6 +989,58 @@ async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await context.bot.send_message(chat_id=chat_id, text="Amor, deu uma falhinha no microfone do apê! Tenta de novo? 🥺")
 
+async def voz_natural_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /voz_natural <texto> para sintetizar estritamente com o perfil Conversational (Natural)."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    texto = " ".join(context.args).strip() if context.args else ""
+    if not texto:
+        texto = "Oi meu amor! Tô gravando na minha voz normal pra você ver como tá soando bem natural."
+    await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.RECORD_VOICE)
+    audio_path = await voice_engine.synthesize(texto, profile="conversational")
+    if audio_path and audio_path.exists():
+        with open(audio_path, "rb") as vf:
+            await context.bot.send_voice(chat_id=chat_id, voice=vf, caption="🎙️ Marina: Perfil Conversational (Natural)")
+    else:
+        await context.bot.send_message(chat_id=chat_id, text="Amor, falha ao sintetizar na voz natural! 🥺")
+
+async def voz_intima_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /voz_intima <texto> para sintetizar estritamente com o perfil Intimate (Dengosa / Sensual)."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    texto = " ".join(context.args).strip() if context.args else ""
+    if not texto:
+        texto = "Oi amor... tô aqui na cama pensando em você... com tanta saudade do seu carinho, meu bem..."
+    await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.RECORD_VOICE)
+    audio_path = await voice_engine.synthesize(texto, profile="intimate")
+    if audio_path and audio_path.exists():
+        with open(audio_path, "rb") as vf:
+            await context.bot.send_voice(chat_id=chat_id, voice=vf, caption="🎙️ Marina: Perfil Intimate (Sensual / Dengosa)")
+    else:
+        await context.bot.send_message(chat_id=chat_id, text="Amor, falha ao sintetizar na voz íntima! 🥺")
+
+async def vozes_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /vozes <texto> para comparar os dois perfis vocais lado a lado com a mesma frase."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    texto = " ".join(context.args).strip() if context.args else ""
+    if not texto:
+        texto = "Oi meu amor! Só passando pra te mandar esse áudio e saber como você tá hoje."
+
+    await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.RECORD_VOICE)
+    audio_conv = await voice_engine.synthesize(texto, profile="conversational")
+    if audio_conv and audio_conv.exists():
+        with open(audio_conv, "rb") as vf:
+            await context.bot.send_voice(chat_id=chat_id, voice=vf, caption="🎙️ [1/2] Perfil Conversational (Natural)")
+
+    audio_int = await voice_engine.synthesize(texto, profile="intimate")
+    if audio_int and audio_int.exists():
+        with open(audio_int, "rb") as vf:
+            await context.bot.send_voice(chat_id=chat_id, voice=vf, caption="🎙️ [2/2] Perfil Intimate (Dengosa / Sensual)")
+
 async def lembretes_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /lembretes para exibir os lembretes ativos e confirmados da Marina."""
     if not is_authorized(update):
@@ -1298,7 +1351,14 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                 aviso_audio_ja_enviado = True
         else:
             await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.RECORD_VOICE)
-            audio_path = await voice_engine.synthesize(fala_limpa)
+            voice_ctx = VoiceSelectionContext(
+                intent=plan.get("intent", "") if plan else "",
+                tone=plan.get("tone", "") if plan else "",
+                emotional_state=memory_manager.db.get_estado_emocional() if hasattr(memory_manager, "db") else {},
+                user_text=texto_usuario,
+                is_proactive=False
+            )
+            audio_path = await voice_engine.synthesize(fala_limpa, context=voice_ctx)
             if audio_path and audio_path.exists():
                 with open(audio_path, "rb") as vf:
                     sent_voice = await context.bot.send_voice(
@@ -1549,7 +1609,16 @@ async def autonomous_routine(application: Application):
         if deve_mandar_audio and voice_engine.is_configured():
             logger.info("Marina decidiu gravar uma mensagem de voz autônoma por vontade própria!")
             await application.bot.send_chat_action(chat_id=settings.TARGET_CHAT_ID, action=ChatAction.RECORD_VOICE)
-            audio_path = await voice_engine.synthesize(texto_limpo)
+            proactive_reason = proactive_info.get("reason", "autonomous") if proactive_info else "autonomous"
+            proactive_voice_ctx = VoiceSelectionContext(
+                intent="romantic" if proactive_reason in ("romantic_followup", "affection") else "casual_chat",
+                tone="dengosa" if proactive_reason in ("romantic_followup", "affection") else "carinhosa",
+                emotional_state=memory_manager.db.get_estado_emocional() if hasattr(memory_manager, "db") else {},
+                user_text="",
+                is_proactive=True,
+                source="autonomous"
+            )
+            audio_path = await voice_engine.synthesize(texto_limpo, context=proactive_voice_ctx)
             if audio_path and audio_path.exists():
                 with open(audio_path, "rb") as vf:
                     await application.bot.send_voice(chat_id=settings.TARGET_CHAT_ID, voice=vf)
@@ -1671,6 +1740,9 @@ def main():
     app.add_handler(CommandHandler("clear", limpar_command))
     app.add_handler(CommandHandler("audio", audio_command))
     app.add_handler(CommandHandler("voz", audio_command))
+    app.add_handler(CommandHandler("voz_natural", voz_natural_command))
+    app.add_handler(CommandHandler("voz_intima", voz_intima_command))
+    app.add_handler(CommandHandler("vozes", vozes_command))
     app.add_handler(CommandHandler("lembretes", lembretes_command))
     app.add_handler(CommandHandler("cancelarlembrete", cancelar_lembrete_command))
     app.add_handler(CommandHandler("cancelar_lembrete", cancelar_lembrete_command))

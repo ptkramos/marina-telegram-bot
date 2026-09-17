@@ -17,6 +17,15 @@ import requests
 from pathlib import Path
 from dotenv import load_dotenv
 
+from config import settings
+from voice_profile import (
+    VoiceProfile,
+    get_voice_profile,
+    PROFILE_CONVERSATIONAL,
+    PROFILE_INTIMATE,
+)
+from voice_router import VoiceRouter, VoiceSelectionContext, voice_router
+
 load_dotenv()
 logger = logging.getLogger("VoiceEngine")
 
@@ -42,8 +51,9 @@ class VoiceEngine:
         ]
 
     def is_configured(self) -> bool:
-        """Verifica se há algum motor ativo."""
-        has_novita = bool(self.novita_api_key and self.novita_voice_id)
+        """Verifica se há algum motor ativo (Novita, ElevenLabs ou Gemini)."""
+        conv_id = getattr(settings, "NOVITA_VOICE_ID_CONVERSATIONAL", "") or self.novita_voice_id
+        has_novita = bool(self.novita_api_key and conv_id)
         has_eleven = bool(self.eleven_api_key and self.eleven_voice_id and self.eleven_voice_id != "cgSgspJ2msm6clMCkdW9")
         has_gemini = bool(self.gemini_api_key)
         return has_novita or has_eleven or has_gemini
@@ -107,12 +117,43 @@ class VoiceEngine:
 
         return clean.strip()
 
-    async def _synthesize_novita_minimax(self, clean_text: str, out_ogg: Path) -> bool:
+    def _apply_expression_tags(self, clean_text: str, voice_profile: VoiceProfile, planner_tone: str = "") -> str:
         """
-        Sintetiza via Novita MiniMax Speech 2.8 HD com a voz oficial clonada da Marina.
+        Aplica tags acústicas nativas do MiniMax 2.8 de forma sutil e natural.
+        Regra da Seção 68: 0 a 2 tags por mensagem curta (na maioria 0).
+        Tags válidas: (chuckle), (laughs), (sighs), (breath), (pant), (gasp), (humming).
+        """
+        tags_validas = ["(chuckle)", "(laughs)", "(sighs)", "(breath)", "(pant)", "(gasp)", "(humming)"]
+        existing_count = sum(clean_text.count(t) for t in tags_validas)
+
+        # Se já possui 2 ou mais tags acústicas geradas pelo clean_text, não adiciona mais
+        if existing_count >= 2:
+            return clean_text
+
+        # Para perfil íntimo com tom dengoso ou contexto de saudade, insere no máximo 1 tag suave
+        if voice_profile.name == PROFILE_INTIMATE and existing_count == 0:
+            tone_lower = (planner_tone or "").lower()
+            text_lower = clean_text.lower()
+            if "saudade" in text_lower:
+                if not clean_text.startswith("("):
+                    clean_text = f"(sighs) {clean_text}"
+            elif tone_lower in ("dengosa", "sensual"):
+                if not clean_text.startswith("("):
+                    clean_text = f"(breath) {clean_text}"
+
+        return clean_text
+
+    async def _synthesize_novita_minimax(self, clean_text: str, out_ogg: Path, profile: VoiceProfile | None = None) -> bool:
+        """
+        Sintetiza via Novita MiniMax Speech 2.8 HD com o perfil vocal da Marina.
         Retorno de áudio binário direto via HEX com streaming instantâneo e sem delay de S3.
         """
-        if not self.novita_api_key or not self.novita_voice_id:
+        if not self.novita_api_key:
+            return False
+
+        active_profile = profile or get_voice_profile(PROFILE_CONVERSATIONAL)
+        voice_id = active_profile.voice_id or self.novita_voice_id
+        if not voice_id:
             return False
 
         url = f"https://api.novita.ai/v3/minimax-{self.novita_voice_model}"
@@ -123,10 +164,10 @@ class VoiceEngine:
         payload = {
             "text": clean_text,
             "voice_setting": {
-                "voice_id": self.novita_voice_id,
-                "speed": 1.0,
-                "vol": 1.0,
-                "pitch": 0
+                "voice_id": voice_id,
+                "speed": active_profile.speed,
+                "vol": active_profile.volume,
+                "pitch": active_profile.pitch
             },
             "audio_setting": {
                 "format": "mp3",
@@ -142,7 +183,7 @@ class VoiceEngine:
         temp_mp3 = out_ogg.with_suffix(".mp3")
 
         try:
-            logger.info(f"🎙️ Sintetizando áudio da Marina via Novita MiniMax ({self.novita_voice_model})...")
+            logger.info(f"🎙️ Sintetizando áudio da Marina ({active_profile.name}) via Novita MiniMax ({self.novita_voice_model})...")
             res = await loop.run_in_executor(
                 None,
                 lambda: requests.post(url, json=payload, headers=headers, timeout=30)
@@ -293,30 +334,68 @@ class VoiceEngine:
 
         return False
 
-    async def synthesize(self, text: str) -> Path | None:
+    async def synthesize(
+        self,
+        text: str,
+        profile: str | VoiceProfile = "auto",
+        context: VoiceSelectionContext | dict | None = None
+    ) -> Path | None:
         """
         Sintetiza texto em áudio nativo do Telegram (.ogg Opus com waveform).
+
         Ordem de Prioridade:
-        1. Novita MiniMax Voice Cloning (speech-2.8-hd com a voz clonada oficial)
-        2. ElevenLabs (fallback)
-        3. Google Gemini TTS Leda (fallback)
+        1. Seleção de perfil vocal (Conversational vs Intimate) via VoiceRouter ou parâmetro explícito.
+        2. Novita MiniMax Voice Cloning (speech-2.8-hd) com as configurações do perfil selecionado.
+        3. Fallback de Provedor (ElevenLabs -> Google Gemini TTS Leda).
+           - Se VOICE_ALLOW_CROSS_PROFILE_FALLBACK=False, NÃO troca de perfil Novita na falha!
         """
         clean_text = self._clean_text_for_speech(text)
         if not clean_text:
             return None
 
+        # 1. Determina o perfil vocal da Marina
+        selected_profile: VoiceProfile
+        reason: str = ""
+        if profile == "auto":
+            selected_profile, reason = voice_router.route(context)
+        elif isinstance(profile, str):
+            selected_profile = get_voice_profile(profile)
+            reason = f"explicit_profile_{profile}"
+        elif isinstance(profile, VoiceProfile):
+            selected_profile = profile
+            reason = "custom_profile_instance"
+        else:
+            selected_profile = get_voice_profile(PROFILE_CONVERSATIONAL)
+            reason = "default_conversational"
+
+        planner_tone = getattr(context, "tone", "") if context else ""
+        if isinstance(context, dict):
+            planner_tone = context.get("tone", "")
+        clean_text = self._apply_expression_tags(clean_text, selected_profile, planner_tone=planner_tone)
+
+        logger.info(f"🎙️ Voice Profile selecionado: {selected_profile.name} (motivo: {reason})")
+
         uid = uuid.uuid4().hex[:8]
         out_ogg = TEMP_AUDIO_DIR / f"voice_{uid}.ogg"
 
-        # 1. Novita MiniMax Voice Cloning (PRIORIDADE OFICIAL)
-        if await self._synthesize_novita_minimax(clean_text, out_ogg):
+        # 2. Novita MiniMax Voice Cloning com o perfil selecionado (PRIORIDADE OFICIAL)
+        if await self._synthesize_novita_minimax(clean_text, out_ogg, profile=selected_profile):
             return out_ogg
 
-        # 2. ElevenLabs
+        # Se Novita falhou e cross-profile fallback estiver expressamente permitido:
+        if getattr(settings, "VOICE_ALLOW_CROSS_PROFILE_FALLBACK", False):
+            alt_profile_name = PROFILE_INTIMATE if selected_profile.name == PROFILE_CONVERSATIONAL else PROFILE_CONVERSATIONAL
+            alt_profile = get_voice_profile(alt_profile_name)
+            if alt_profile.voice_id != selected_profile.voice_id:
+                logger.info(f"Tentando perfil Novita cruzado ({alt_profile.name}) por fallback configurado...")
+                if await self._synthesize_novita_minimax(clean_text, out_ogg, profile=alt_profile):
+                    return out_ogg
+
+        # 3. ElevenLabs (Fallback de Provedor)
         if await self._synthesize_elevenlabs(clean_text, out_ogg):
             return out_ogg
 
-        # 3. Google Gemini TTS (Leda)
+        # 4. Google Gemini TTS Leda (Fallback de Provedor)
         if await self._synthesize_gemini(clean_text, out_ogg):
             return out_ogg
 
