@@ -1576,7 +1576,10 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                 await send_human_messages(chat_id, context.bot, aviso, reply_to_message_id=reply_to_id)
                 aviso_audio_ja_enviado = True
         else:
-            await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.RECORD_VOICE)
+            try:
+                await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.RECORD_VOICE)
+            except Exception:
+                pass
             voice_ctx = VoiceSelectionContext(
                 intent=plan.get("intent", "") if plan else "",
                 tone=plan.get("tone", "") if plan else "",

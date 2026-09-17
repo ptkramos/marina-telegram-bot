@@ -211,66 +211,71 @@ def is_pure_time_specification(text: str, pending_description: str = "") -> bool
     """
     Verifica se uma mensagem do usuário é estritamente uma resposta de horário/tempo
     para um esclarecimento de lembrete pendente, ou se introduz uma nova atividade/outro assunto.
-    (P1 - Rodada 4)
+    (P1 - Rodadas 4 e 5)
     """
     if not text:
         return False
 
     t = text.strip().lower()
 
-    # 1. Se contiver recusa explícita, não é especificação de horário
-    if re.search(r"\b(esquece|deixa pra l[aá]|deixa quieto|n[aã]o precisa|cancela|n[aã]o quero)\b", t):
+    # 1. Se contiver recusa ou cancelamento explícito, não é especificação de horário
+    if re.search(r"\b(esquece|deixa pra l[aá]|deixa quieto|n[aã]o precisa|cancela|n[aã]o quero|deixa que eu me lembro)\b", t):
         return False
 
-    # 2. Detecção de nova atividade / compromisso / mudança de assunto
-    # Verbos de ação ou compromissos em primeira/terceira pessoa
-    new_activity_patterns = [
-        r"\b(?:vou|vamos|vai|irei|iremos|fui|fomos)\s+(?:viajar|sair|trabalhar|almoçar|jantar|dormir|treinar|malhar|correr|visitar|estudar|jogar|encontrar|passear|pescar|comprar|arrumar|limpar|fazer\s+compras)\b",
-        r"\b(?:vou|vai|vamos)\s+(?:ao|ao\s+m[eé]dico|ao\s+dentista|ao\s+shopping|ao\s+banco|ao\s+mercado|a\s+uma\s+reuni[aã]o|na\s+academia|no\s+m[eé]dico|no\s+dentista|na\s+casa|pra\s+casa|pro\s+trabalho)\b",
-        r"\b(?:tenho|terei|temos)\s+(?:reuni[aã]o|consulta|m[eé]dico|dentista|prova|aula|entrevista|plant[aã]o|compromisso|viagem|visita|almoço|jantar)\b",
-        r"\b(?:estou|t[oô]|estamos)\s+(?:indo|viajando|saindo|trabalhando|estudando|treinando)\b",
-        r"\b(?:visita|reuni[aã]o|consulta)\s+(?:com|de|na|no)\b"
-    ]
-
-    has_new_activity = False
-    for act_pat in new_activity_patterns:
-        if re.search(act_pat, t):
-            has_new_activity = True
-            break
-
-    if has_new_activity:
-        # Se a nova atividade mencionada já faz parte da descrição do lembrete pendente
-        # (ex: lembrete era "viajar" ou "minha viagem" e o usuário diz "vou viajar amanhã às 14h")
-        if pending_description:
-            desc_lower = pending_description.lower()
-            keywords = [w for w in re.findall(r"\b\w{4,}\b", desc_lower) if w not in ("lembra", "lembrete", "favor", "pode", "para", "hoje", "amanha", "amanhã")]
-            if any(kw in t for kw in keywords):
-                has_new_activity = False
-
-        if has_new_activity:
-            return False
-
-    # 3. Deve conter ao menos um marcador temporal reconhecível
+    # 2. Deve conter ao menos um marcador temporal reconhecível
+    # Horas explícitas (ex: 14h, 14:00, às 10, às 8 da noite)
     has_time = bool(re.search(r"\b(?:[aà]s\s+)?\d{1,2}(?::\d{2}|h(?:\d{2})?|\s*(?:da\s+manh[aã]|da\s+tarde|da\s+noite))\b", t))
-    has_day = bool(re.search(r"\b(?:hoje|amanh[aã]|depois\s+de\s+amanh[aã]|segunda|ter[çc]a|quarta|quinta|sexta|s[aá]bado|domingo|de\s+manh[aã]|pela\s+manh[aã]|[aà]\s+tarde|de\s+tarde|de\s+noite|[aà]\s+noite|daqui\s+a\s+\d+)\b", t))
+    # Palavras de dias/períodos/deltas
+    has_day = bool(re.search(r"\b(?:hoje|amanh[aã]|depois\s+de\s+amanh[aã]|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[aá]bado|domingo|fim\s+de\s+semana|final\s+de\s+semana|fds|de\s+manh[aã]|pela\s+manh[aã]|[aà]\s+tarde|de\s+tarde|pela\s+tarde|de\s+noite|[aà]\s+noite|pela\s+noite|de\s+madrugada|cedo|cedinho|daqui\s+a\s+\d+|em\s+\d+\s+(?:minutos?|horas?|dias?))\b", t))
 
     if not (has_time or has_day):
         return False
 
-    # 4. Remove partículas comuns de resposta conversacional de horário:
-    cleaned = re.sub(r"\b(pode\s+ser|marca|coloca|anota|me\s+lembra|lembra|por\s+favor|beleza|fechado|ok|t[aá]|amor|vida|marina|a[ií]|ent[aã]o|pra|para|[aà]s?)\b", " ", t)
-    cleaned = re.sub(r"\b(hoje|amanh[aã]|depois\s+de\s+amanh[aã]|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[aá]bado|domingo)\b", " ", cleaned)
-    cleaned = re.sub(r"\b(de\s+manh[aã]|pela\s+manh[aã]|[aà]\s+tarde|de\s+tarde|de\s+noite|[aà]\s+noite|daqui\s+a|\d+\s*(?:horas?|minutos?|dias?))\b", " ", cleaned)
+    # 3. Normalização e remoção sistemática de componentes temporais e partículas
+    cleaned = t
+
+    # 3.1 Se pending_description for fornecida, remove as palavras do assunto pendente
+    # (ex: se o lembrete pendente é "pagar a conta" e Patrick diz "pagar a conta amanhã às 14h")
+    if pending_description:
+        desc_words = [re.escape(w) for w in re.findall(r"\b\w+\b", pending_description.lower()) if len(w) > 1]
+        if desc_words:
+            cleaned = re.sub(rf"\b(?:{'|'.join(desc_words)})\b", " ", cleaned)
+
+    # 3.2 Remove expressões temporais compostas
+    cleaned = re.sub(r"\b(?:depois\s+de\s+amanh[aã]|fim\s+de\s+semana|final\s+de\s+semana|semana\s+que\s+vem|pr[oó]xima\s+semana|m[eê]s\s+que\s+vem|pr[oó]ximo\s+m[eê]s)\b", " ", cleaned)
+    cleaned = re.sub(r"\b(?:pela\s+manh[aã]|de\s+manh[aã]|na\s+parte\s+da\s+manh[aã]|pela\s+tarde|[aà]\s+tarde|de\s+tarde|na\s+parte\s+da\s+tarde|pela\s+noite|[aà]\s+noite|de\s+noite|de\s+madrugada)\b", " ", cleaned)
+    cleaned = re.sub(r"\b(?:daqui\s+a\s+\d+\s*(?:horas?|minutos?|dias?)|em\s+\d+\s*(?:horas?|minutos?|dias?))\b", " ", cleaned)
+    cleaned = re.sub(r"\b(?:mais\s+ou\s+menos|por\s+volta\s+de|l[aá]\s+pelas?)\b", " ", cleaned)
+
+    # 3.3 Remove dias individuais e períodos
+    cleaned = re.sub(r"\b(?:hoje|amanh[aã]|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[aá]bado|domingo|fds|cedo|cedinho)\b", " ", cleaned)
+
+    # 3.4 Remove horários e números
     cleaned = re.sub(r"\b\d{1,2}(?::\d{2}|h(?:\d{2})?|\s*(?:da\s+manh[aã]|da\s+tarde|da\s+noite)?)\b", " ", cleaned)
+    cleaned = re.sub(r"\b\d+\s*(?:horas?|hrs?|minutos?|mins?|dias?)\b", " ", cleaned)
+
+    # 3.5 Remove partículas de concordância, verbos de agendamento e vocativos comuns de resposta
+    filler_patterns = [
+        r"\b(?:pode\s+ser|pode|ser)\b",
+        r"\b(?:marca|marcar|coloca|colocar|bota|botar|agenda|agendar|cria|criar|anota|anotar)\b",
+        r"\b(?:me\s+lembra|lembra|lembrar|me\s+avisa|avisa|avisar)\b",
+        r"\b(?:por\s+favor|faz\s+favor|pfv|porfavor)\b",
+        r"\b(?:beleza|blz|fechado|ok|okay|t[aá]|bom|sim|isso|combinado|perfeito|[oó]timo)\b",
+        r"\b(?:obrigado|valeu|brigado|agrade[çc]o)\b",
+        r"\b(?:amor|vida|marina|linda|querida|beb[eê])\b",
+        r"\b(?:a[ií]|ent[aã]o|l[aá]|umas?|pelas?|pelo|pelos)\b",
+        r"\b(?:[aà]s?|ao|aos|de|do|da|dos|das|em|no|na|nos|nas|pra|para|pro|pras|pros|com|que|e|ou|o|a|os|as|um|uma|uns|umas)\b"
+    ]
+    for pat in filler_patterns:
+        cleaned = re.sub(pat, " ", cleaned)
+
     cleaned = re.sub(r"[^\w\s]", " ", cleaned).strip()
 
-    if pending_description:
-        for w in re.findall(r"\b\w+\b", pending_description.lower()):
-            cleaned = re.sub(rf"\b{re.escape(w)}\b", " ", cleaned)
-        cleaned = re.sub(r"\s+", " ", cleaned).strip()
-
-    words_left = [w for w in cleaned.split() if len(w) > 2]
-    if len(words_left) > 2:
+    # 4. Verificação estrita:
+    # Se restou QUALQUER palavra (comprimento >= 2) que não era preposição/filler/tempo/assunto pendente,
+    # significa que o Patrick introduziu uma nova atividade/proposição (ex: 'viajo', 'festa', 'médico', 'estudo', 'reunião').
+    remaining_words = [w for w in cleaned.split() if len(w) >= 2]
+    if remaining_words:
         return False
 
     return True
@@ -605,19 +610,28 @@ class InternalPlanner:
                         raw_rem_time = dir_rem.get("remind_at")
                         # P1.5 / P2: Exigir horário explícito e futuro, sem default_offset_hours implícito
                         rem_time_iso = parse_iso_or_relative_datetime(raw_rem_time, default_offset_hours=None)
-                    if rem_time_iso:
-                        rem_dt = datetime.fromisoformat(rem_time_iso)
-                        if rem_dt > datetime.now():
-                            from reminder_service import reminder_service
-                            reminder_service.create_direct_reminder(
-                                description=rem_desc,
-                                remind_at=rem_time_iso,
-                                offset_minutes=0,
-                                event_id=event_row_id,
-                                source_conversation_id=conversation_id
-                            )
+                        if rem_time_iso:
+                            rem_dt = datetime.fromisoformat(rem_time_iso)
+                            if rem_dt > datetime.now():
+                                from reminder_service import reminder_service
+                                reminder_service.create_direct_reminder(
+                                    description=rem_desc,
+                                    remind_at=rem_time_iso,
+                                    offset_minutes=0,
+                                    event_id=event_row_id,
+                                    source_conversation_id=conversation_id
+                                )
+                            else:
+                                logger.info(f"Horário de reminder direto no passado ({rem_time_iso}); solicitando esclarecimento.")
+                                plan["needs_clarification"] = "direct_reminder_time"
+                                plan["clarification_subject"] = rem_desc
+                                if hasattr(self.db, "set_estado_relacional"):
+                                    self.db.set_estado_relacional(
+                                        "pending_direct_reminder",
+                                        json.dumps({"description": rem_desc, "source_conversation_id": conversation_id, "created_at": datetime.now().isoformat()})
+                                    )
                         else:
-                            logger.info(f"Horário de reminder direto no passado ({rem_time_iso}); solicitando esclarecimento.")
+                            logger.info(f"Horário de reminder direto não reconhecido ({raw_rem_time}); pendente de esclarecimento.")
                             plan["needs_clarification"] = "direct_reminder_time"
                             plan["clarification_subject"] = rem_desc
                             if hasattr(self.db, "set_estado_relacional"):
@@ -625,15 +639,6 @@ class InternalPlanner:
                                     "pending_direct_reminder",
                                     json.dumps({"description": rem_desc, "source_conversation_id": conversation_id, "created_at": datetime.now().isoformat()})
                                 )
-                    else:
-                        logger.info(f"Horário de reminder direto não reconhecido ({raw_rem_time}); pendente de esclarecimento.")
-                        plan["needs_clarification"] = "direct_reminder_time"
-                        plan["clarification_subject"] = rem_desc
-                        if hasattr(self.db, "set_estado_relacional"):
-                            self.db.set_estado_relacional(
-                                "pending_direct_reminder",
-                                json.dumps({"description": rem_desc, "source_conversation_id": conversation_id, "created_at": datetime.now().isoformat()})
-                            )
                 except Exception as e_dir:
                     logger.warning(f"Erro ao registrar reminder direto: {e_dir}")
 
