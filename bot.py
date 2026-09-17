@@ -362,6 +362,7 @@ async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_messag
 
     if len(ULTIMAS_MENSAGENS_MARINA[chat_id]) > 8:
         ULTIMAS_MENSAGENS_MARINA[chat_id] = ULTIMAS_MENSAGENS_MARINA[chat_id][-8:]
+    return sent_msg
 
 # --- SISTEMA DE REAÇÕES (VIA DE MÃO DUPLA) ---
 
@@ -1093,7 +1094,7 @@ async def memory_hygiene_command(update: Update, context: ContextTypes.DEFAULT_T
     if not is_authorized(update):
         return
     chat_id = update.effective_chat.id
-    stats = await asyncio.to_thread(memory_hygiene_service.run_hygiene_cycle)
+    stats = await asyncio.to_thread(memory_hygiene_service.run_hygiene_cycle, force=True)
     texto = (
         f"🧹 **Ciclo de Memory Hygiene Executado:**\n\n"
         f"• Fatos com decay de confiança: `{stats.get('decay', {}).get('decayed_count', 0)}`\n"
@@ -1174,11 +1175,23 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     else:
         plan = planner.plan_heuristics(texto_usuario) or {}
 
-    # 2.1 Verificação de consentimento para oferta recente de lembrete (Smart Reminders Release 3.5.1)
+    # 2.1 Verificação de consentimento para oferta recente de lembrete com atribuição estrita (Release 3.5.1 / P1.3)
     if getattr(settings, "SMART_REMINDERS_ENABLED", True):
         last_offered = reminder_service.get_last_offered_reminder(max_age_minutes=60)
         if last_offered:
-            confirmation = reminder_service.parse_confirmation_response(texto_usuario)
+            # Atribuição estrita: verifica se é resposta direta ou turno consecutivo
+            is_reply_to_offer = bool(reply_to_id and last_offered.get("offer_message_id") and reply_to_id == last_offered.get("offer_message_id"))
+            is_immediate_next_turn = False
+            ultimas_msgs = ULTIMAS_MENSAGENS_MARINA.get(chat_id, [])
+            if ultimas_msgs and last_offered.get("offer_message_id"):
+                is_immediate_next_turn = (ultimas_msgs[-1].get("message_id") == last_offered.get("offer_message_id"))
+            elif last_offered.get("source_conversation_id"):
+                ultimas_convs = memory_manager.db.get_mensagens_sessao(limit=2)
+                if ultimas_convs and len(ultimas_convs) >= 1:
+                    is_immediate_next_turn = (ultimas_convs[-1]["id"] == last_offered.get("source_conversation_id"))
+
+            has_context = is_reply_to_offer or is_immediate_next_turn
+            confirmation = reminder_service.parse_confirmation_response(texto_usuario, has_context=has_context)
             if confirmation["action"] == "confirm":
                 reminder_service.confirm_reminder(last_offered["id"], custom_offset_minutes=confirmation.get("offset_minutes"))
                 logger.info(f"Oferta de lembrete {last_offered['id']} confirmada pelo Patrick com offset {confirmation.get('offset_minutes')}m.")
@@ -1287,6 +1300,17 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
         planner_tone=plan.get("tone") if plan else None,
         planner_goal=plan.get("response_goal") if plan else None
     )
+    if plan and plan.get("should_offer_reminder"):
+        event_desc = plan.get("event_details", {}).get("description") or "compromisso"
+        messages.append({
+            "role": "system",
+            "content": (
+                f"[INSTRUÇÃO OBRIGATÓRIA DESTE TURNO]: O Patrick mencionou um compromisso ({event_desc}). "
+                "Pergunte a ele explicitamente e com carinho de namorada se ele quer que você o lembre disso quando estiver próximo. "
+                "Sua resposta PRECISA conter essa pergunta de oferta de lembrete."
+            )
+        })
+
     if pediu_foto:
         messages.append({
             "role": "system",
@@ -1419,8 +1443,18 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                 aviso_audio_ja_enviado = True
 
     # Se não mandou áudio (nem aviso de falha), manda texto (balões)
+    sent_text_msg = None
     if not audio_enviado and not aviso_audio_ja_enviado and fala_limpa:
-        await send_human_messages(chat_id, context.bot, fala_limpa, reply_to_message_id=reply_to_id)
+        sent_text_msg = await send_human_messages(chat_id, context.bot, fala_limpa, reply_to_message_id=reply_to_id)
+
+    # Registra message_id do Telegram da oferta para permitir atribuição estrita de resposta (P1.3)
+    if plan and plan.get("should_offer_reminder"):
+        offered_rem = reminder_service.get_last_offered_reminder()
+        offer_mid = getattr(sent_text_msg, "message_id", None)
+        if not offer_mid and audio_enviado and 'sent_voice' in locals():
+            offer_mid = getattr(sent_voice, "message_id", None)
+        if offered_rem and offer_mid:
+            reminder_service.record_offer_message(offered_rem["id"], offer_mid)
     
     # Se pediu foto, renderiza a cena e envia foto com status realista apenas no momento do upload
     if pediu_foto:
@@ -1710,7 +1744,7 @@ async def autonomous_routine(application: Application):
         logger.error(f"Erro na rotina autônoma de Marina: {e}", exc_info=True)
 
 async def reminders_routine(application: Application):
-    """Job de alta frequência para disparo de reminders confirmados no horário exato (Release 3.5.1)."""
+    """Job de alta frequência para disparo de reminders confirmados no horário exato (Release 3.5.1 / P1.2)."""
     if not getattr(settings, "SMART_REMINDERS_ENABLED", True):
         return
     try:
@@ -1718,13 +1752,23 @@ async def reminders_routine(application: Application):
         if getattr(settings, "REMINDERS_RESPECT_SLEEP_WINDOW", False) and proactivity_service.check_sleep_window(now):
             return
 
-        due = reminder_service.get_due_reminders(now)
+        # P1.2: Reserva atômica de reminders via claim_due_reminders para impedir entregas duplicadas
+        if hasattr(reminder_service, "claim_due_reminders"):
+            due = reminder_service.claim_due_reminders(now)
+        else:
+            due = reminder_service.get_due_reminders(now)
+
         for rem in due:
             rid = rem["id"]
             msg_lembrete = reminder_service.format_reminder_message(rem)
             logger.info(f"Disparando reminder {rid} para o Patrick: '{rem['description']}'")
-            await send_human_messages(settings.TARGET_CHAT_ID, application.bot, msg_lembrete)
-            reminder_service.mark_sent(rid)
+            try:
+                await send_human_messages(settings.TARGET_CHAT_ID, application.bot, msg_lembrete)
+                reminder_service.mark_sent(rid)
+            except Exception as e_send:
+                logger.error(f"Erro no envio do reminder {rid}: {e_send}")
+                if hasattr(reminder_service, "release_claim"):
+                    reminder_service.release_claim(rid)
     except Exception as e:
         logger.error(f"Erro no job de reminders_routine: {e}", exc_info=True)
 
@@ -1753,19 +1797,21 @@ async def post_init(application: Application):
         args=[application]
     )
 
-    # Job dedicado de alta frequência para Smart Reminders (Release 3.5.1)
+    # Job dedicado de alta frequência para Smart Reminders (Release 3.5.1 / P1.2)
     if getattr(settings, "SMART_REMINDERS_ENABLED", True):
         rem_interval = max(5, getattr(settings, "REMINDER_CHECK_INTERVAL_SECONDS", 30))
         scheduler.add_job(
             reminders_routine,
             "interval",
             seconds=rem_interval,
-            args=[application]
+            args=[application],
+            max_instances=1,
+            coalesce=True
         )
         logger.info(f"Job de Smart Reminders agendado a cada {rem_interval}s.")
 
     # Job periódico de Memory Hygiene (Release 3.5.3)
-    if getattr(settings, "MEMORY_HYGIENE_ENABLED", True):
+    if getattr(settings, "MEMORY_HYGIENE_ENABLED", False):
         hygiene_hours = max(1, getattr(settings, "MEMORY_HYGIENE_INTERVAL_HOURS", 24))
         scheduler.add_job(
             memory_hygiene_routine,
@@ -1776,7 +1822,7 @@ async def post_init(application: Application):
         logger.info(f"Job de Memory Hygiene agendado a cada {hygiene_hours}h.")
 
     # Job periódico de Session Reflection (Release 3.5.3)
-    if getattr(settings, "SESSION_REFLECTION_ENABLED", True):
+    if getattr(settings, "SESSION_REFLECTION_ENABLED", False):
         refl_mins = max(15, getattr(settings, "SESSION_REFLECTION_IDLE_MINUTES", 90))
         scheduler.add_job(
             session_reflection_routine,

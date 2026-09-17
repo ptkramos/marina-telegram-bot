@@ -97,8 +97,8 @@ class Settings:
     MAX_ACTIVE_OPEN_LOOPS_CONTEXT: int = int(os.getenv("MAX_ACTIVE_OPEN_LOOPS_CONTEXT", "2"))
 
     # Session Reflection & Memory Hygiene (Release 3.5.3)
-    SESSION_REFLECTION_ENABLED: bool = os.getenv("SESSION_REFLECTION_ENABLED", "true").lower() in ("true", "1", "yes")
-    MEMORY_HYGIENE_ENABLED: bool = os.getenv("MEMORY_HYGIENE_ENABLED", "true").lower() in ("true", "1", "yes")
+    SESSION_REFLECTION_ENABLED: bool = os.getenv("SESSION_REFLECTION_ENABLED", "false").lower() in ("true", "1", "yes")
+    MEMORY_HYGIENE_ENABLED: bool = os.getenv("MEMORY_HYGIENE_ENABLED", "false").lower() in ("true", "1", "yes")
     MEMORY_HYGIENE_INTERVAL_HOURS: int = int(os.getenv("MEMORY_HYGIENE_INTERVAL_HOURS", "24"))
     SESSION_REFLECTION_IDLE_MINUTES: int = int(os.getenv("SESSION_REFLECTION_IDLE_MINUTES", "90"))
     VISION_MODEL: str = os.getenv("VISION_MODEL", "google/gemini-2.0-flash-001").strip()

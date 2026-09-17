@@ -16,7 +16,7 @@ from contextlib import closing, contextmanager
 from threading import local
 from datetime import datetime, date, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 logger = logging.getLogger("MarinaDB")
 
@@ -154,6 +154,18 @@ class DatabaseManager:
                     )
                     conn.commit()
                     logger.info(f"Migration {version_num} aplicada com sucesso.")
+
+            # Garante colunas de robustez mesmo se migrations já foram executadas
+            try:
+                cursor.execute("ALTER TABLE fatos_patrick ADD COLUMN last_decay_at TEXT;")
+                conn.commit()
+            except Exception:
+                pass
+            try:
+                cursor.execute("ALTER TABLE reminders ADD COLUMN offer_message_id INTEGER;")
+                conn.commit()
+            except Exception:
+                pass
 
     def get_schema_version(self) -> int:
         """Retorna a versão mais recente do schema aplicada no banco."""
@@ -361,7 +373,8 @@ class DatabaseManager:
             query = """
             SELECT id, fato, category, importance, confidence, created_at, updated_at,
                    access_count, active, supersedes_id, source_conversation_id, memory_tier,
-                   volatility, canonical_key, last_confirmed_at, confirmation_count
+                   volatility, canonical_key, last_confirmed_at, confirmation_count,
+                   needs_reconfirmation, last_decay_at
             FROM fatos_patrick
             WHERE id = ?
             """
@@ -985,6 +998,23 @@ class DatabaseManager:
             )
             return [dict(r) for r in cursor.fetchall()]
 
+    def buscar_evento_pendente_identico(self, description: str, event_at: Optional[str] = None) -> Optional[dict]:
+        """Busca evento pendente ativo com descrição e data idênticas para evitar duplicações (P1.3)."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if event_at:
+                cursor.execute(
+                    "SELECT * FROM eventos_pendentes WHERE description = ? AND event_at = ? AND status = 'pending' LIMIT 1",
+                    (description, event_at)
+                )
+            else:
+                cursor.execute(
+                    "SELECT * FROM eventos_pendentes WHERE description = ? AND status = 'pending' LIMIT 1",
+                    (description,)
+                )
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
     # --- MÉTODOS DE OPEN LOOPS (ASSUNTOS EM ABERTO - RELEASE 3.5.1) ---
 
     def adicionar_open_loop(
@@ -997,7 +1027,12 @@ class DatabaseManager:
         source_conversation_id: Optional[int] = None
     ) -> int:
         """Cria um novo assunto/processo em aberto com o Patrick."""
-        now_iso = datetime.now().isoformat()
+        now_dt = datetime.now()
+        now_iso = now_dt.isoformat()
+        if next_check_after is None:
+            # P2.1: Prazo inicial padrão (24h) para evitar check-in imediato em loops sem prazo
+            next_check_after = (now_dt + timedelta(days=1)).isoformat()
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -1034,9 +1069,15 @@ class DatabaseManager:
             )
             return [dict(r) for r in cursor.fetchall()]
 
-    def get_open_loops_para_checkin(self, now_iso: Optional[str] = None, limit: int = 2) -> list[dict]:
-        """Retorna open loops que já atingiram a data para checagem/pergunta carinhosa."""
-        check_time = now_iso or datetime.now().isoformat()
+    def get_open_loops_para_checkin(self, now_iso: Optional[Union[str, datetime]] = None, limit: int = 2, now: Optional[Union[str, datetime]] = None) -> list[dict]:
+        """Retorna open loops que já atingiram a data para checagem/pergunta carinhosa (P2.1)."""
+        val = now or now_iso
+        if isinstance(val, datetime):
+            check_time = val.isoformat()
+        elif isinstance(val, str):
+            check_time = val
+        else:
+            check_time = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -1044,7 +1085,7 @@ class DatabaseManager:
                 SELECT id, loop_type, content, status, importance, due_at, next_check_after, last_touched_at
                 FROM open_loops
                 WHERE status = 'open' AND (is_archived = 0 OR is_archived IS NULL) AND (
-                    next_check_after IS NULL OR next_check_after <= ?
+                    next_check_after IS NOT NULL AND next_check_after <= ?
                 )
                 ORDER BY importance DESC, last_touched_at ASC
                 LIMIT ?
@@ -1249,14 +1290,100 @@ class DatabaseManager:
             )
             return [dict(row) for row in cursor.fetchall()]
 
-    def marcar_reminder_enviado(self, reminder_id: int) -> bool:
-        """Marca o reminder como enviado no SQLite após envio com sucesso no Telegram."""
+    def claim_due_reminders(self, now_iso: Optional[str] = None, lease_seconds: int = 120) -> list[dict]:
+        """
+        Reserva atomicamente lembretes confirmados vencidos para envio no Telegram.
+        Usa transação de escrita imediata e lease time para evitar envio duplicado
+        por jobs concorrentes ou reinício durante o envio (Release 3.5.1 / Correção P1.2).
+        """
+        check_time = now_iso or datetime.now().isoformat()
+        try:
+            now_dt = datetime.fromisoformat(check_time)
+        except Exception:
+            now_dt = datetime.now()
+        lease_cutoff = (now_dt - timedelta(seconds=lease_seconds)).isoformat()
+        now_str = now_dt.isoformat()
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("BEGIN IMMEDIATE")
+            cursor.execute(
+                """
+                SELECT r.*, e.description as event_description, e.event_at
+                FROM reminders r
+                LEFT JOIN eventos_pendentes e ON r.event_id = e.id
+                WHERE (r.status = 'confirmed' AND r.remind_at <= ?)
+                   OR (r.status = 'sending' AND r.updated_at <= ?)
+                ORDER BY r.remind_at ASC
+                """,
+                (now_str, lease_cutoff)
+            )
+            rows = cursor.fetchall()
+            claimed = [dict(row) for row in rows]
+            if claimed:
+                ids = [r["id"] for r in claimed]
+                placeholders = ",".join("?" for _ in ids)
+                cursor.execute(
+                    f"""
+                    UPDATE reminders
+                    SET status = 'sending', updated_at = ?
+                    WHERE id IN ({placeholders})
+                    """,
+                    [now_str] + ids
+                )
+                for r in claimed:
+                    r["status"] = "sending"
+                    r["updated_at"] = now_str
+            conn.commit()
+            return claimed
+
+    def release_reminder_claim(self, reminder_id: int) -> bool:
+        """Libera a reserva de um reminder caso o envio falhe, revertendo para 'confirmed' (P1.2)."""
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE reminders SET status = 'sent', sent_at = ?, updated_at = ? WHERE id = ? AND status = 'confirmed'",
+                "UPDATE reminders SET status = 'confirmed', updated_at = ? WHERE id = ? AND status = 'sending'",
+                (now_iso, reminder_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def marcar_reminder_enviado(self, reminder_id: int) -> bool:
+        """Marca o reminder como enviado no SQLite após envio com sucesso no Telegram (P1.2)."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE reminders SET status = 'sent', sent_at = ?, updated_at = ? WHERE id = ? AND status IN ('sending', 'confirmed')",
                 (now_iso, now_iso, reminder_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def get_reminder_by_event_id(self, event_id: int) -> Optional[dict]:
+        """Retorna o lembrete associado a um evento caso exista (P1.3)."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM reminders
+                WHERE event_id = ?
+                ORDER BY id DESC LIMIT 1
+                """,
+                (event_id,)
+            )
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def salvar_mensagem_oferta_reminder(self, reminder_id: int, message_id: int) -> bool:
+        """Registra o message_id do Telegram em que a oferta de lembrete foi apresentada (P1.3)."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE reminders SET offer_message_id = ?, updated_at = ? WHERE id = ?",
+                (message_id, now_iso, reminder_id)
             )
             conn.commit()
             return cursor.rowcount > 0
@@ -1288,10 +1415,11 @@ class DatabaseManager:
     ) -> dict:
         """
         Executa decay persistente de confiança nas memórias ativas com base na volatilidade e tempo decorrido.
-        Regras da Seção 77 do Plano 3.5:
-        - 'volatile': perde confiança após 14-30 dias sem confirmação (reduz 0.10 a cada ciclo, mínimo 0.30).
-        - 'medium': perde confiança após 60-90 dias sem confirmação (reduz 0.05, mínimo 0.50).
-        - 'stable' e tier 'core': preservam confiança e não decaem abaixo de 0.85.
+        Regras da Seção 77 do Plano 3.5 e Correção P0.1:
+        - Redução estritamente monotônica: novo_conf <= conf_atual para todas as volatilidades e tiers.
+        - 'volatile': perde 0.10 a cada ciclo desde o último decaimento (ou confirmação/criação), com piso = min(conf_atual, 0.30) ou 0.05 se já menor.
+        - 'medium': perde 0.05 a cada ciclo desde o último decaimento (ou confirmação/criação), com piso = min(conf_atual, 0.50) ou 0.05 se já menor.
+        - 'stable' e tier 'core': preservam confiança e nunca sofrem aumento automático nem decaimento (novo_conf = conf_atual).
         - Memórias que caem abaixo de 0.60 de confiança são marcadas com needs_reconfirmation = 1.
         """
         dt_atual = now or datetime.now()
@@ -1303,7 +1431,7 @@ class DatabaseManager:
             cursor.execute(
                 """
                 SELECT id, fato, category, importance, confidence, memory_tier, volatility,
-                       canonical_key, created_at, updated_at, last_confirmed_at, needs_reconfirmation
+                       canonical_key, created_at, updated_at, last_confirmed_at, needs_reconfirmation, last_decay_at
                 FROM fatos_patrick
                 WHERE active = 1
                 """
@@ -1316,7 +1444,8 @@ class DatabaseManager:
                 volatility = (f["volatility"] or "medium").lower()
                 conf_atual = float(f["confidence"] if f["confidence"] is not None else 1.0)
 
-                ref_str = f["last_confirmed_at"] or f["created_at"]
+                # P0.1: Prioriza last_decay_at, depois last_confirmed_at, depois created_at
+                ref_str = f["last_decay_at"] or f["last_confirmed_at"] or f["created_at"]
                 if not ref_str:
                     continue
                 try:
@@ -1325,22 +1454,29 @@ class DatabaseManager:
                     continue
 
                 dias_passados = (dt_atual - ref_dt).total_seconds() / 86400.0
-
                 novo_conf = conf_atual
                 deve_decaer = False
 
-                if tier == "core":
-                    novo_conf = max(conf_atual, 0.85)
+                if tier == "core" or volatility == "stable":
+                    # Core e estável não decaem e NUNCA aumentam via rotina de higiene (P0.1 / §§ 9, 77)
+                    novo_conf = conf_atual
                 elif volatility == "volatile" and dias_passados >= dias_volatil:
                     ciclos = max(1, int(dias_passados // dias_volatil))
-                    novo_conf = max(0.30, round(1.0 - (ciclos * 0.10), 2))
-                    deve_decaer = novo_conf != conf_atual
+                    reducao = round(ciclos * 0.10, 2)
+                    target_floor = 0.30 if conf_atual >= 0.30 else 0.10
+                    floor = min(conf_atual, target_floor)
+                    novo_conf = max(floor, round(conf_atual - reducao, 2))
+                    # Invariante estrita: nunca pode aumentar
+                    novo_conf = min(conf_atual, novo_conf)
+                    deve_decaer = novo_conf < conf_atual
                 elif volatility == "medium" and dias_passados >= dias_medio:
                     ciclos = max(1, int(dias_passados // dias_medio))
-                    novo_conf = max(0.50, round(1.0 - (ciclos * 0.05), 2))
-                    deve_decaer = novo_conf != conf_atual
-                elif volatility == "stable":
-                    novo_conf = max(0.85, conf_atual)
+                    reducao = round(ciclos * 0.05, 2)
+                    target_floor = 0.50 if conf_atual >= 0.50 else 0.10
+                    floor = min(conf_atual, target_floor)
+                    novo_conf = max(floor, round(conf_atual - reducao, 2))
+                    novo_conf = min(conf_atual, novo_conf)
+                    deve_decaer = novo_conf < conf_atual
 
                 needs_reconf = 1 if (novo_conf < 0.60 and float(f["importance"] or 0.5) >= 0.50) else 0
                 if needs_reconf and not f["needs_reconfirmation"]:
@@ -1350,12 +1486,13 @@ class DatabaseManager:
                     cursor.execute(
                         """
                         UPDATE fatos_patrick
-                        SET confidence = ?, needs_reconfirmation = ?, updated_at = ?
+                        SET confidence = ?, needs_reconfirmation = ?, updated_at = ?, last_decay_at = ?
                         WHERE id = ?
                         """,
-                        (novo_conf, needs_reconf, dt_atual.isoformat(), fato_id)
+                        (novo_conf, needs_reconf, dt_atual.isoformat(), dt_atual.isoformat(), fato_id)
                     )
-                    decayed_count += 1
+                    if deve_decaer:
+                        decayed_count += 1
 
             conn.commit()
 
@@ -1382,7 +1519,7 @@ class DatabaseManager:
             return [dict(r) for r in cursor.fetchall()]
 
     def marcar_fato_reconfirmado(self, fato_id: int, nova_confianca: float = 1.0):
-        """Reafirma uma memória que estava em dúvida, elevando confiança e zerando needs_reconfirmation."""
+        """Reafirma uma memória que estava em dúvida, elevando confiança e zerando needs_reconfirmation (P0.1)."""
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -1392,6 +1529,7 @@ class DatabaseManager:
                 SET confidence = ?,
                     confirmation_count = confirmation_count + 1,
                     last_confirmed_at = ?,
+                    last_decay_at = NULL,
                     needs_reconfirmation = 0,
                     updated_at = ?
                 WHERE id = ?
@@ -1464,20 +1602,44 @@ class DatabaseManager:
             conn.commit()
             return cursor.lastrowid
 
-    def get_mensagens_sessao(self, limit: int = 50) -> list[dict]:
-        """Retorna mensagens recentes da conversa para reflexão da sessão."""
+    def get_mensagens_sessao(self, limit: int = 50, since_id: Optional[int] = None) -> list[dict]:
+        """Retorna mensagens recentes da conversa para reflexão da sessão a partir de um cursor opcional (P1.1)."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT id, role, content, timestamp
-                FROM conversas
-                ORDER BY id DESC LIMIT ?
-                """,
-                (limit,)
-            )
-            rows = cursor.fetchall()
-            return [dict(r) for r in reversed(rows)]
+            if since_id is not None and since_id > 0:
+                cursor.execute(
+                    """
+                    SELECT id, role, content, timestamp
+                    FROM conversas
+                    WHERE id > ?
+                    ORDER BY id ASC LIMIT ?
+                    """,
+                    (since_id, limit)
+                )
+                rows = cursor.fetchall()
+                return [dict(r) for r in rows]
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, role, content, timestamp
+                    FROM conversas
+                    ORDER BY id DESC LIMIT ?
+                    """,
+                    (limit,)
+                )
+                rows = cursor.fetchall()
+                return [dict(r) for r in reversed(rows)]
+
+    def get_ultimo_conversa_id_refletido(self) -> int:
+        """Retorna o ID da última conversa refletida persistido no estado relacional (P1.1)."""
+        st = self.get_estado_relacional()
+        val = st.get("last_reflected_conversa_id")
+        if val:
+            try:
+                return int(val)
+            except ValueError:
+                pass
+        return 0
 
     # --- MÉTODOS DE ESTADO RELACIONAL ---
 

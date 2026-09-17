@@ -22,12 +22,12 @@ class MemoryHygieneService:
     def __init__(self, db: Optional[DatabaseManager] = None):
         self.db = db or db_manager
 
-    def run_hygiene_cycle(self, now: Optional[datetime] = None) -> dict:
+    def run_hygiene_cycle(self, now: Optional[datetime] = None, force: bool = False) -> dict:
         """
         Executa um ciclo completo de higiene e manutenção da memória.
         Retorna um dicionário com as métricas da execução.
         """
-        if not getattr(settings, "MEMORY_HYGIENE_ENABLED", True):
+        if not getattr(settings, "MEMORY_HYGIENE_ENABLED", False) and not force:
             logger.info("Memory Hygiene desativado por feature flag (MEMORY_HYGIENE_ENABLED=False).")
             return {"status": "disabled", "success": False}
 

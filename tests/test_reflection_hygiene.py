@@ -246,7 +246,7 @@ class TestReflectionAndMemoryHygiene(unittest.TestCase):
             "events": []
         }
 
-        result = self.reflector.apply_reflection(reflection_data)
+        result = self.reflector.apply_reflection(reflection_data, allowed_loop_ids={existing_loop_id})
         self.assertIsNotNone(result["summary_id"])
         self.assertEqual(len(result["created_loops"]), 1)
         self.assertEqual(result["resolved_loops_count"], 1)

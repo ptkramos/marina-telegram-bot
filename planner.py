@@ -341,16 +341,25 @@ class InternalPlanner:
                 if follow_prompt and follow_prompt not in desc:
                     desc = f"{desc} | Follow-up: {follow_prompt}"
 
-                event_row_id = self.db.adicionar_evento_pendente(
-                    event_type=ed.get("event_type", "compromisso"),
-                    description=desc,
-                    event_at=event_at_iso,
-                    follow_up_after=follow_up_iso,
-                    importance=float(ed.get("importance", 0.5)),
-                    source_conversation_id=conversation_id,
-                    follow_up_prompt=follow_prompt
-                )
-                logger.info(f"Novo evento pendente registrado pelo Planner: {desc} (Event: {event_at_iso}, Follow-up: {follow_up_iso})")
+                # Deduplicação de eventos pendentes idênticos ainda abertos (P1.3)
+                existing_event = None
+                if hasattr(self.db, "buscar_evento_pendente_identico"):
+                    existing_event = self.db.buscar_evento_pendente_identico(desc, event_at_iso)
+
+                if existing_event:
+                    event_row_id = existing_event["id"]
+                    logger.info(f"Evento pendente existente reutilizado para ID {event_row_id}: {desc}")
+                else:
+                    event_row_id = self.db.adicionar_evento_pendente(
+                        event_type=ed.get("event_type", "compromisso"),
+                        description=desc,
+                        event_at=event_at_iso,
+                        follow_up_after=follow_up_iso,
+                        importance=float(ed.get("importance", 0.5)),
+                        source_conversation_id=conversation_id,
+                        follow_up_prompt=follow_prompt
+                    )
+                    logger.info(f"Novo evento pendente registrado pelo Planner: {desc} (Event: {event_at_iso}, Follow-up: {follow_up_iso})")
             except Exception as e:
                 logger.error(f"Erro ao salvar evento pendente do planner: {e}")
 
@@ -358,18 +367,26 @@ class InternalPlanner:
         if getattr(settings, "SMART_REMINDERS_ENABLED", True):
             if plan.get("should_offer_reminder") and event_at_iso:
                 try:
-                    offset = int(plan.get("recommended_reminder_offset_minutes") or 30)
-                    ev_dt = datetime.fromisoformat(event_at_iso)
-                    remind_at_iso = (ev_dt - timedelta(minutes=offset)).strftime("%Y-%m-%dT%H:%M:%S")
-                    if datetime.fromisoformat(remind_at_iso) > datetime.now():
-                        from reminder_service import reminder_service
-                        reminder_service.offer_reminder(
-                            event_id=event_row_id,
-                            description=plan.get("event_details", {}).get("description", "seu compromisso"),
-                            remind_at=remind_at_iso,
-                            offset_minutes=offset,
-                            source_conversation_id=conversation_id
-                        )
+                    # Deduplicação: se já existe oferta/lembrete para este evento em status ativo/decidido, não duplicar (P1.3)
+                    existing_rem = None
+                    if event_row_id and hasattr(self.db, "get_reminder_by_event_id"):
+                        existing_rem = self.db.get_reminder_by_event_id(event_row_id)
+
+                    if existing_rem and existing_rem.get("status") in ("offered", "confirmed", "declined"):
+                        logger.info(f"Ignorando nova oferta para evento {event_row_id}; lembrete já em status '{existing_rem.get('status')}'.")
+                    else:
+                        offset = int(plan.get("recommended_reminder_offset_minutes") or 30)
+                        ev_dt = datetime.fromisoformat(event_at_iso)
+                        remind_at_iso = (ev_dt - timedelta(minutes=offset)).strftime("%Y-%m-%dT%H:%M:%S")
+                        if datetime.fromisoformat(remind_at_iso) > datetime.now():
+                            from reminder_service import reminder_service
+                            reminder_service.offer_reminder(
+                                event_id=event_row_id,
+                                description=plan.get("event_details", {}).get("description", "seu compromisso"),
+                                remind_at=remind_at_iso,
+                                offset_minutes=offset,
+                                source_conversation_id=conversation_id
+                            )
                 except Exception as e_rem:
                     logger.warning(f"Erro ao ofertar reminder para evento: {e_rem}")
 
@@ -379,16 +396,23 @@ class InternalPlanner:
                 try:
                     rem_desc = dir_rem.get("description") or "seu compromisso"
                     raw_rem_time = dir_rem.get("remind_at")
-                    rem_time_iso = parse_iso_or_relative_datetime(raw_rem_time, default_offset_hours=1)
+                    # P1.5: Exigir horário explícito e futuro, sem default_offset_hours implícito
+                    rem_time_iso = parse_iso_or_relative_datetime(raw_rem_time, default_offset_hours=None)
                     if rem_time_iso:
-                        from reminder_service import reminder_service
-                        reminder_service.create_direct_reminder(
-                            description=rem_desc,
-                            remind_at=rem_time_iso,
-                            offset_minutes=0,
-                            event_id=event_row_id,
-                            source_conversation_id=conversation_id
-                        )
+                        rem_dt = datetime.fromisoformat(rem_time_iso)
+                        if rem_dt > datetime.now():
+                            from reminder_service import reminder_service
+                            reminder_service.create_direct_reminder(
+                                description=rem_desc,
+                                remind_at=rem_time_iso,
+                                offset_minutes=0,
+                                event_id=event_row_id,
+                                source_conversation_id=conversation_id
+                            )
+                        else:
+                            logger.info(f"Horário de reminder direto no passado ({rem_time_iso}); ignorando agendamento.")
+                    else:
+                        logger.info(f"Horário de reminder direto não reconhecido ({raw_rem_time}); pendente de esclarecimento.")
                 except Exception as e_dir:
                     logger.warning(f"Erro ao registrar reminder direto: {e_dir}")
 

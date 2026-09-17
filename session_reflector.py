@@ -13,7 +13,7 @@ import re
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Iterable, Set
 from openai import OpenAI
 
 from config import settings
@@ -122,20 +122,35 @@ class SessionReflector:
             return data
         except Exception as e:
             logger.warning(f"Exceção ao chamar LLM no SessionReflector: {e}")
-            return {
-                "topics": [],
-                "summary": "Conversa carinhosa recente com o Patrick.",
-                "open_loops": [],
-                "resolved_loops": [],
-                "relationship_moments": [],
-                "events": []
-            }
+            return None
 
-    def apply_reflection(self, reflection_data: dict, start_msg_id: Optional[int] = None, end_msg_id: Optional[int] = None) -> dict:
+    def apply_reflection(
+        self,
+        reflection_data: dict,
+        start_msg_id: Optional[int] = None,
+        end_msg_id: Optional[int] = None,
+        allowed_loop_ids: Optional[Iterable[int]] = None
+    ) -> dict:
         """
         Aplica e persiste as conclusões da reflexão no banco de dados.
+        Verifica idempotência do intervalo de mensagens e valida loops com allowlist (P1.1 / P1.4).
         """
-        summary = reflection_data.get("summary", "").strip()
+        if not reflection_data:
+            return {"summary_id": None, "created_loops": [], "resolved_loops_count": 0, "moments_created": []}
+
+        # Idempotência por intervalo de sessão
+        if start_msg_id and end_msg_id:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT id FROM resumos_conversa WHERE start_conversation_id = ? AND end_conversation_id = ?",
+                    (start_msg_id, end_msg_id)
+                )
+                if cursor.fetchone():
+                    logger.info(f"Sessão {start_msg_id}-{end_msg_id} já refletida anteriormente; pulando duplicação.")
+                    return {"summary_id": None, "created_loops": [], "resolved_loops_count": 0, "moments_created": []}
+
+        summary = (reflection_data.get("summary") or "").strip()
         topics = reflection_data.get("topics", [])
         topic_str = ", ".join(topics) if topics else "Sessão de Conversa"
 
@@ -166,14 +181,26 @@ class SessionReflector:
                 created_loops.append(lid)
                 logger.info(f"SessionReflector: novo open loop criado com ID {lid}: '{content}'.")
 
-        # Resolve loops indicados
+        # Resolve loops indicados com validação estrita de allowlist (P1.4)
         resolved_count = 0
+        allowed_set = set(allowed_loop_ids) if allowed_loop_ids is not None else set()
         for res in reflection_data.get("resolved_loops", []):
             lid = res.get("loop_id")
             notes = res.get("resolution_notes", "")
-            if lid and self.db.resolver_open_loop(lid, resolution_notes=notes):
+            if not isinstance(lid, int) or lid <= 0:
+                logger.warning(f"SessionReflector: loop_id inválido ignorado: {lid}")
+                continue
+            if lid not in allowed_set:
+                logger.warning(f"SessionReflector: tentativa de resolver loop {lid} não apresentado na lista de loops ativos.")
+                continue
+            loop_db = self.db.get_open_loop(lid)
+            if not loop_db or loop_db.get("status") != "open":
+                logger.warning(f"SessionReflector: loop {lid} não existe ou não está aberto.")
+                continue
+
+            if self.db.resolver_open_loop(lid, resolution_notes=notes):
                 resolved_count += 1
-                logger.info(f"SessionReflector: open loop {lid} resolvido.")
+                logger.info(f"SessionReflector: open loop {lid} resolvido com sucesso.")
 
         # Registra momentos marcantes
         moments_created = []
@@ -198,12 +225,15 @@ class SessionReflector:
     def check_and_trigger_reflection(self, force: bool = False, min_messages: int = 4) -> Optional[dict]:
         """
         Verifica se houve inatividade suficiente (1–2 horas) e mensagens acumuladas
-        para disparar a reflexão da sessão.
+        para disparar a reflexão da sessão com controle estrito de cursor (P1.1).
         """
-        if not getattr(settings, "SESSION_REFLECTION_ENABLED", True) and not force:
+        if not getattr(settings, "SESSION_REFLECTION_ENABLED", False) and not force:
             return None
 
-        messages = self.db.get_mensagens_sessao(limit=30)
+        last_reflected_id = self.db.get_ultimo_conversa_id_refletido()
+        messages = self.db.get_mensagens_sessao(limit=30, since_id=last_reflected_id if last_reflected_id > 0 else None)
+        if not messages:
+            return None
         if len(messages) < min_messages and not force:
             return None
 
@@ -213,7 +243,8 @@ class SessionReflector:
             if last_ts:
                 try:
                     last_dt = datetime.fromisoformat(last_ts)
-                    if (datetime.now() - last_dt).total_seconds() < 3600:  # Menos de 1h de inatividade
+                    idle_minutes = getattr(settings, "SESSION_REFLECTION_IDLE_MINUTES", 90)
+                    if (datetime.now() - last_dt).total_seconds() < idle_minutes * 60:
                         return None
                 except Exception:
                     pass
@@ -221,9 +252,24 @@ class SessionReflector:
         start_id = messages[0]["id"] if messages else None
         end_id = messages[-1]["id"] if messages else None
 
-        logger.info(f"Disparando reflexão de sessão para {len(messages)} mensagens recentes...")
-        data = self.reflect_session(messages)
-        applied = self.apply_reflection(data, start_msg_id=start_id, end_msg_id=end_id)
+        # Busca loops ativos para apresentar à LLM e define allowlist
+        active_loops = self.db.get_open_loops_ativos(limit=5)
+        allowed_loop_ids = {l["id"] for l in active_loops}
+
+        logger.info(f"Disparando reflexão de sessão para {len(messages)} mensagens recentes (cursor: {last_reflected_id} -> {end_id})...")
+        try:
+            data = self.reflect_session(messages, active_loops=active_loops)
+        except TypeError:
+            data = self.reflect_session(messages)
+        if not data:
+            logger.warning("Reflect session falhou ou retornou vazio; abortando aplicação para evitar resumos espúrios.")
+            return None
+
+        applied = self.apply_reflection(data, start_msg_id=start_id, end_msg_id=end_id, allowed_loop_ids=allowed_loop_ids)
+        if applied and end_id:
+            self.db.set_estado_relacional("last_reflected_conversa_id", str(end_id))
+            logger.info(f"Cursor de reflexão de sessão avançado para {end_id}.")
+
         return {"reflection": data, "applied": applied}
 
 

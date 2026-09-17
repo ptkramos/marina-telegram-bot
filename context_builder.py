@@ -181,7 +181,7 @@ class ContextBuilder:
 
         # 10. Memórias antigas com sugestão de reconfirmação suave (Release 3.5.3)
         bloco_reconfirmacao = ""
-        if getattr(settings, "MEMORY_HYGIENE_ENABLED", True):
+        if getattr(settings, "MEMORY_INTELLIGENCE_ENABLED", True):
             try:
                 cands = self.memory_mgr.db.get_memorias_para_reconfirmacao(limit=1)
                 if cands:

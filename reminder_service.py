@@ -50,31 +50,42 @@ class ReminderService:
         """Recupera a última oferta de lembrete pendente de confirmação."""
         return self.db.get_ultimo_reminder_ofertado(max_age_minutes=max_age_minutes)
 
-    def parse_confirmation_response(self, text: str) -> Dict[str, Any]:
+    def parse_confirmation_response(self, text: str, has_context: bool = False) -> Dict[str, Any]:
         """
-        Analisa se a mensagem do Patrick é uma resposta de aceitação, recusa ou ajuste
-        de offset a uma oferta recente de lembrete.
+        Analisa a resposta do Patrick para identificar consentimento (ou recusa) de oferta de lembrete.
+        Se has_context for False, afirmações/recusas genéricas e soltas (ex: 'sim', 'claro', 'não')
+        NÃO são atribuídas ao lembrete (P1.3), exigindo termos explícitos (ex: 'me lembra', 'lembra sim').
         """
-        t = (text or "").lower().strip()
-        t_clean = re.sub(r'[!?,.]+', '', t).strip()
+        if not text:
+            return {"action": "none", "offset_minutes": None}
 
-        # Recusa explícita
-        recusa_padroes = [
-            r"^n(ã|a)o$",
-            r"^n(ã|a)o precisa",
-            r"^precisa n(ã|a)o",
-            r"^deixa$",
-            r"^deixa quieto",
-            r"^n(ã|a)o quero",
-            r"^n(ã|a)o precisa me lembrar",
-            r"^tranquilo, n(ã|a)o precisa"
+        t_clean = text.lower().strip()
+
+        # Recusa explícita de lembrete (sempre recusará independente de has_context)
+        recusa_explicita = [
+            r"n(ã|a)o precisa me lembrar",
+            r"n(ã|a)o precisa lembrar",
+            r"n(ã|a)o me lembra",
+            r"lembrar n(ã|a)o precisa",
+            r"deixa que eu me lembro",
+            r"n(ã|a)o precisa de lembrete",
+            r"\bn(ã|a)o precisa\b",
+            r"\bprecisa n(ã|a)o\b",
+            r"\bdeixa quieto\b",
+            r"\bn(ã|a)o quero\b",
+            r"\btranquilo, n(ã|a)o precisa\b"
         ]
-        for padrao in recusa_padroes:
+        for padrao in recusa_explicita:
             if re.search(padrao, t_clean):
                 return {"action": "decline", "offset_minutes": None}
 
+        # Recusa isolada monossilábica ('não', 'n') só declina com contexto comprovado
+        if re.match(r"^\s*n(ã|a)o[!.? ]*$", t_clean) or re.match(r"^\s*n[!.? ]*$", t_clean):
+            if has_context:
+                return {"action": "decline", "offset_minutes": None}
+            return {"action": "none", "offset_minutes": None}
+
         # Aceitação ou ajuste de offset
-        # Casos com offset explícito: "sim, meia hora antes", "15 minutos antes", "1h antes"
         offset = None
         if "meia hora" in t_clean or "30 min" in t_clean or "30min" in t_clean:
             offset = 30
@@ -89,18 +100,39 @@ class ReminderService:
         elif "2 horas" in t_clean or "2h" in t_clean or "duas horas" in t_clean:
             offset = 120
 
-        # Aceitação pura ou com offset
-        aceite_padroes = [
-            r"^(sim|s|ss|simm|claro|com certeza|pode ser|por favor|quero|lembra sim|me lembra sim|fechou|manda bala)\b",
-            r"\b(me lembra|quero sim|pode me lembrar|lembra aí|lembra ai)\b"
+        # Aceitação com menção direta de lembrete
+        aceite_explicito = [
+            r"\b(me lembra|quero sim me lembrar|pode me lembrar|lembra aí|lembra ai|lembra sim|me lembra sim)\b",
+            r"\b(coloca lembrete|pode agendar|pode marcar o lembrete|pode marcar)\b",
+            r"\bpode ser\b"
         ]
-        for padrao in aceite_padroes:
+        for padrao in aceite_explicito:
             if re.search(padrao, t_clean):
                 return {"action": "confirm", "offset_minutes": offset}
 
-        # Se especificou apenas o tempo sem "sim" ("meia hora antes", "15 min antes")
+        # Se especificou apenas o offset ("meia hora antes", "15 min antes"):
         if offset is not None and ("antes" in t_clean or "antes de" in t_clean):
             return {"action": "confirm", "offset_minutes": offset}
+
+        # Afirmação solta monossilábica ('sim', 's', 'ss', 'simm') sem contexto NÃO confirma (P1.3)
+        is_bare_yes = bool(re.match(r"^\s*(sim|s|ss|simm)[!.? ]*$", t_clean))
+        if is_bare_yes:
+            if has_context:
+                return {"action": "confirm", "offset_minutes": offset}
+            return {"action": "none", "offset_minutes": None}
+
+        # Aceitação genérica com frase (ex: 'com certeza', 'por favor', 'fechou', 'manda bala')
+        aceite_generico = [
+            r"\b(com certeza|por favor|quero sim|fechou|manda bala)\b"
+        ]
+        for padrao in aceite_generico:
+            if re.search(padrao, t_clean):
+                return {"action": "confirm", "offset_minutes": offset}
+
+        # Se houver contexto comprovado, início afirmativo confirma
+        if has_context:
+            if re.search(r"^(sim|claro|quero)\b", t_clean):
+                return {"action": "confirm", "offset_minutes": offset}
 
         return {"action": "none", "offset_minutes": None}
 
@@ -172,9 +204,22 @@ class ReminderService:
         now_iso = (now or datetime.now()).isoformat()
         return self.db.get_due_reminders(now_iso)
 
+    def claim_due_reminders(self, now: Optional[datetime] = None, lease_seconds: int = 120) -> List[Dict[str, Any]]:
+        """Reserva atomicamente lembretes confirmados vencidos para envio (P1.2)."""
+        now_iso = (now or datetime.now()).isoformat()
+        return self.db.claim_due_reminders(now_iso, lease_seconds=lease_seconds)
+
+    def release_claim(self, reminder_id: int) -> bool:
+        """Libera a reserva de um reminder em caso de erro no envio (P1.2)."""
+        return self.db.release_reminder_claim(reminder_id)
+
     def mark_sent(self, reminder_id: int) -> bool:
         """Registra no SQLite que o lembrete foi enviado com sucesso."""
         return self.db.marcar_reminder_enviado(reminder_id)
+
+    def record_offer_message(self, reminder_id: int, message_id: int) -> bool:
+        """Registra o message_id do Telegram onde a oferta de lembrete foi apresentada (P1.3)."""
+        return self.db.salvar_mensagem_oferta_reminder(reminder_id, message_id)
 
     def format_reminder_message(self, reminder: Dict[str, Any]) -> str:
         """Gera mensagem natural, carinhosa e humanizada para o lembrete da namorada."""
