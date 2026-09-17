@@ -97,6 +97,12 @@ class ProactivityService:
         if eventos_vencidos:
             return True, "pending_event_ready"
 
+        # 4.1. Verifica se há Open Loop pronto para check-in (Release 3.5.1)
+        if getattr(settings, "OPEN_LOOPS_ENABLED", True):
+            loops_prontos = self.db.get_open_loops_para_checkin(dt.isoformat())
+            if loops_prontos:
+                return True, "open_loop_ready"
+
         # 5. Chance estatística configurada caso não haja evento específico
         if random.random() < settings.AUTONOMOUS_TRIGGER_CHANCE:
             return True, "stochastic_trigger"
@@ -107,8 +113,9 @@ class ProactivityService:
         """
         Determina a razão e o prompt estruturado de proatividade segundo hierarquia:
         1. Evento pendente vencido (ex: como foi a reunião?)
-        2. Assunto recente compartilhado
-        3. Rotina e momento do dia
+        2. Open Loop pronto para check-in (ex: teve novidades sobre aquela vaga?)
+        3. Assunto recente compartilhado
+        4. Rotina e momento do dia
         """
         dt = now or datetime.now()
         contexto_tempo = get_temporal_greeting()
@@ -117,22 +124,39 @@ class ProactivityService:
         eventos_vencidos = self.db.get_eventos_pendentes_para_followup(dt.isoformat())
         if eventos_vencidos:
             ev = eventos_vencidos[0]
-            # Conclui imediatamente apenas se auto_complete=True (padrão é aguardar confirmação de envio no Telegram)
             if auto_complete:
                 self.db.concluir_evento_pendente(ev["id"])
             desc = ev["description"]
-            follow_hint = ev.get("follow_up_after") or desc
             return {
                 "reason": "pending_event_followup",
                 "event_id": ev["id"],
                 "instruction": (
-                    f"Agora é {contexto_tempo}. Você acabou de se lembrar com carinho e carinho de namorada que o Patrick "
+                    f"Agora é {contexto_tempo}. Você acabou de se lembrar com carinho de namorada que o Patrick "
                     f"tinha o seguinte compromisso: '{desc}'. "
                     f"Pergunte a ele como foi e como ele está, mostrando interesse genuíno e afeto natural de namorada!"
                 )
             }
 
-        # Prioridade 2: Tópico compartilhado recente
+        # Prioridade 2: Open Loop pronto para check-in (Release 3.5.1)
+        if getattr(settings, "OPEN_LOOPS_ENABLED", True):
+            loops_prontos = self.db.get_open_loops_para_checkin(dt.isoformat())
+            if loops_prontos:
+                loop = loops_prontos[0]
+                # Empurra próximo check para daqui a 3 dias para não insistir
+                novo_check = (dt + timedelta(days=3)).strftime("%Y-%m-%dT%H:%M:%S")
+                self.db.atualizar_open_loop_touch(loop["id"], next_check_after=novo_check)
+                return {
+                    "reason": "open_loop_checkin",
+                    "loop_id": loop["id"],
+                    "instruction": (
+                        f"Agora é {contexto_tempo}. Você lembrou de um assunto que o Patrick comentou recentemente: "
+                        f"'{loop['content']}'. "
+                        "Puxe conversa de forma carinhosa, perguntando se teve alguma novidade ou como estão as coisas sobre isso, "
+                        "com total leveza e afeto de namorada, sem cobrança."
+                    )
+                }
+
+        # Prioridade 3: Tópico compartilhado recente
         estado_relacional = self.db.get_estado_relacional()
         shared_topic = estado_relacional.get("current_shared_topic")
         if shared_topic and shared_topic not in ("dia a dia e planos juntos", ""):
@@ -145,7 +169,7 @@ class ProactivityService:
                 )
             }
 
-        # Prioridade 3: Momento cotidiano espontâneo
+        # Prioridade 4: Momento cotidiano espontâneo
         evento_aleatorio = random.choice(EVENTOS_COTIDIANO)
         return {
             "reason": "daily_routine",

@@ -160,6 +160,23 @@ Você deve responder ESTRITAMENTE em formato JSON com a seguinte estrutura:
     "follow_up_hint": "Momento para follow-up (ex: 2026-09-17T16:00:00 ou amanhã às 16h)",
     "follow_up_prompt": "Pergunta ou gancho específico que a Marina deve fazer no follow-up"
   },
+  "reminder_candidate": false,
+  "should_offer_reminder": false,
+  "recommended_reminder_offset_minutes": 30,
+  "direct_reminder": {
+    "is_direct_reminder": false,
+    "description": null,
+    "remind_at": null
+  },
+  "creates_open_loop": false,
+  "open_loop_details": {
+    "loop_type": "waiting|decision|task|story|promise|project|relationship|other",
+    "content": "Descrição concisa do assunto ou processo pendente",
+    "importance": 0.5,
+    "next_check_hint": "Estimativa de quando voltar a tocar no assunto (ex: em dois dias, semana que vem)"
+  },
+  "resolves_open_loop": false,
+  "resolved_loop_hint": null,
   "shared_topic": "Tema ou assunto marcante compartilhado na mensagem ou null",
   "emotional_deltas": {
     "affection": 0.0,
@@ -173,11 +190,18 @@ REGRAS RÍGIDAS:
 1. DETECÇÃO DE EVENTOS PENDENTES (creates_event):
    - Apenas marque creates_event = true se o Patrick mencionar um evento/compromisso FUTURO real (ex: "amanhã tenho consulta às 10h", "sexta tenho prova", "semana que vem vou viajar a trabalho").
    - Se for apenas um comentário do passado ou presente imediato ("estou comendo pizza"), creates_event = false.
-2. DELTAS EMOCIONAIS (valores sutis entre -0.05 e +0.05):
+2. LEMBRETES INTELIGENTES (Smart Reminders):
+   - reminder_candidate = true e should_offer_reminder = true quando for evento concreto com hora ou deadline (médico, reunião, prova, voo). A Marina vai carinhosamente OFERECER ("quer que eu te lembre um pouquinho antes?").
+   - NÃO ofereça reminder para coisas vagas como "amanhã vou jogar" ou "depois vejo um filme".
+   - direct_reminder.is_direct_reminder = true quando Patrick pedir explicitamente ("me lembra amanhã às 8h de tomar o remédio").
+3. ASSUNTOS EM ABERTO (Open Loops):
+   - creates_open_loop = true para tópicos que não terminaram mas não têm alarme com hora fixa (ex: "tô esperando a resposta da empresa", "preciso decidir se viajo", "meu PC tá com problema depois vejo").
+   - resolves_open_loop = true quando Patrick trouxer a conclusão de um assunto pendente anterior ("eles responderam!", "comprei a passagem", "consertei o PC").
+4. DELTAS EMOCIONAIS (valores sutis entre -0.05 e +0.05):
    - Elogio, carinho ou declaração de amor -> affection +0.02 a +0.04, romantic_intensity +0.02
    - Brincadeira boba ou risadas -> playfulness +0.03
    - Conversa tensa ou cansaço do dia -> energy -0.02
-3. REAÇÃO EMOJI:
+5. REAÇÃO EMOJI:
    - Sugira um emoji comum do Telegram se o momento for propício (❤️, 🥰, 😂, 🔥, 👍), ou null se neutro.
 """
 
@@ -285,8 +309,10 @@ class InternalPlanner:
         }
 
     def apply_plan_effects(self, plan: Dict[str, Any], conversation_id: Optional[int] = None):
-        """Aplica os efeitos colaterais do plano (criação de eventos pendentes normalizados, tópico e humor)."""
+        """Aplica os efeitos colaterais do plano (eventos, lembretes, open loops, tópico e humor)."""
         # 1. Salva evento pendente com timestamps ISO rigorosos se detectado
+        event_row_id = None
+        event_at_iso = None
         if plan.get("creates_event") and plan.get("event_details"):
             ed = plan["event_details"]
             try:
@@ -315,18 +341,96 @@ class InternalPlanner:
                 if follow_prompt and follow_prompt not in desc:
                     desc = f"{desc} | Follow-up: {follow_prompt}"
 
-                self.db.adicionar_evento_pendente(
+                event_row_id = self.db.adicionar_evento_pendente(
                     event_type=ed.get("event_type", "compromisso"),
                     description=desc,
                     event_at=event_at_iso,
                     follow_up_after=follow_up_iso,
-                    source_conversation_id=conversation_id
+                    importance=float(ed.get("importance", 0.5)),
+                    source_conversation_id=conversation_id,
+                    follow_up_prompt=follow_prompt
                 )
                 logger.info(f"Novo evento pendente registrado pelo Planner: {desc} (Event: {event_at_iso}, Follow-up: {follow_up_iso})")
             except Exception as e:
                 logger.error(f"Erro ao salvar evento pendente do planner: {e}")
 
-        # 2. Atualiza tópico compartilhado se relevante
+        # 2. Oferta de Smart Reminder com consentimento
+        if getattr(settings, "SMART_REMINDERS_ENABLED", True):
+            if plan.get("should_offer_reminder") and event_at_iso:
+                try:
+                    offset = int(plan.get("recommended_reminder_offset_minutes") or 30)
+                    ev_dt = datetime.fromisoformat(event_at_iso)
+                    remind_at_iso = (ev_dt - timedelta(minutes=offset)).strftime("%Y-%m-%dT%H:%M:%S")
+                    if datetime.fromisoformat(remind_at_iso) > datetime.now():
+                        from reminder_service import reminder_service
+                        reminder_service.offer_reminder(
+                            event_id=event_row_id,
+                            description=plan.get("event_details", {}).get("description", "seu compromisso"),
+                            remind_at=remind_at_iso,
+                            offset_minutes=offset,
+                            source_conversation_id=conversation_id
+                        )
+                except Exception as e_rem:
+                    logger.warning(f"Erro ao ofertar reminder para evento: {e_rem}")
+
+            # Pedido direto de reminder (consentimento implícito)
+            dir_rem = plan.get("direct_reminder")
+            if dir_rem and isinstance(dir_rem, dict) and dir_rem.get("is_direct_reminder"):
+                try:
+                    rem_desc = dir_rem.get("description") or "seu compromisso"
+                    raw_rem_time = dir_rem.get("remind_at")
+                    rem_time_iso = parse_iso_or_relative_datetime(raw_rem_time, default_offset_hours=1)
+                    if rem_time_iso:
+                        from reminder_service import reminder_service
+                        reminder_service.create_direct_reminder(
+                            description=rem_desc,
+                            remind_at=rem_time_iso,
+                            offset_minutes=0,
+                            event_id=event_row_id,
+                            source_conversation_id=conversation_id
+                        )
+                except Exception as e_dir:
+                    logger.warning(f"Erro ao registrar reminder direto: {e_dir}")
+
+        # 3. Gestão de Open Loops (Release 3.5.1)
+        if getattr(settings, "OPEN_LOOPS_ENABLED", True):
+            # Criação de novo Open Loop
+            if plan.get("creates_open_loop") and plan.get("open_loop_details"):
+                old = plan["open_loop_details"]
+                content = old.get("content")
+                if content and isinstance(content, str):
+                    try:
+                        loop_type = old.get("loop_type", "task")
+                        imp = float(old.get("importance", 0.5))
+                        hint = old.get("next_check_hint")
+                        next_check = parse_iso_or_relative_datetime(hint, default_offset_hours=48) if hint else None
+                        self.db.adicionar_open_loop(
+                            loop_type=loop_type,
+                            content=content.strip(),
+                            importance=imp,
+                            due_at=None,
+                            next_check_after=next_check,
+                            source_conversation_id=conversation_id
+                        )
+                        logger.info(f"Novo Open Loop registrado pelo Planner: {content} (tipo: {loop_type})")
+                    except Exception as e_loop:
+                        logger.warning(f"Erro ao salvar open loop: {e_loop}")
+
+            # Resolução de Open Loop existente
+            if plan.get("resolves_open_loop"):
+                hint = (plan.get("resolved_loop_hint") or "").strip().lower()
+                try:
+                    active_loops = self.db.get_open_loops_ativos(limit=5)
+                    for loop in active_loops:
+                        # Se só há 1 loop ativo ou se o hint dá match no conteúdo
+                        if len(active_loops) == 1 or (hint and any(w in loop["content"].lower() for w in hint.split() if len(w) > 3)):
+                            self.db.resolver_open_loop(loop["id"])
+                            logger.info(f"Open Loop {loop['id']} ('{loop['content']}') marcado como resolvido.")
+                            break
+                except Exception as e_res:
+                    logger.warning(f"Erro ao resolver open loop: {e_res}")
+
+        # 4. Atualiza tópico compartilhado se relevante
         shared_topic = plan.get("shared_topic")
         if shared_topic and isinstance(shared_topic, str) and shared_topic.lower() not in ("null", "none", ""):
             try:
@@ -335,7 +439,7 @@ class InternalPlanner:
             except Exception as e:
                 logger.warning(f"Erro ao atualizar current_shared_topic: {e}")
 
-        # 3. Aplica deltas emocionais com clamp automático
+        # 5. Aplica deltas emocionais com clamp automático
         deltas = plan.get("emotional_deltas", {})
         if deltas and isinstance(deltas, dict):
             for emotion, delta in deltas.items():

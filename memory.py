@@ -15,8 +15,8 @@ from style_engine import style_engine
 logger = logging.getLogger("MarinaMemory")
 
 class MemoryManager:
-    def __init__(self):
-        self.db = db_manager
+    def __init__(self, db=None):
+        self.db = db or db_manager
         data_ciclo = self.db.get_data_inicio_ciclo()
         self.cycle_mgr = MenstrualCycleManager(data_ciclo)
 

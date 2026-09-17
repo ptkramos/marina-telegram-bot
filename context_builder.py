@@ -4,6 +4,7 @@ Centraliza e balanceia a montagem do payload para a LLM, respeitando orçamentos
 de contexto e unificando identidade, memórias seletivas, ciclo, estilo, histórico e ferramentas.
 """
 import logging
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 
 from prompts import MARIN_SYSTEM_PROMPT, get_temporal_greeting
@@ -137,6 +138,47 @@ class ContextBuilder:
         contexto_web = f"\n{web_context}" if web_context else ""
         contexto_vision = f"\n{vision_context}\n" if vision_context else ""
 
+        # 8. Open Loops (Assuntos em aberto - Release 3.5.1)
+        bloco_open_loops = ""
+        if getattr(settings, "OPEN_LOOPS_ENABLED", True):
+            max_loops = getattr(settings, "MAX_ACTIVE_OPEN_LOOPS_CONTEXT", 2)
+            try:
+                active_loops = self.memory_mgr.db.get_open_loops_ativos(limit=max_loops)
+                if active_loops:
+                    loops_lines = "\n".join([f"- {loop['content']}" for loop in active_loops])
+                    bloco_open_loops = (
+                        f"\n[ASSUNTOS AINDA EM ABERTO COM O PATRICK]:\n{loops_lines}\n"
+                        "(Esses são assuntos em andamento. Se fizer sentido na conversa, demonstre interesse natural sem cobrança).\n"
+                    )
+            except Exception as e_ol:
+                logger.warning(f"Erro ao carregar open loops para o context builder: {e_ol}")
+
+        # 9. Lembretes confirmados nas próximas 24 horas (Release 3.5.1)
+        bloco_reminders = ""
+        if getattr(settings, "SMART_REMINDERS_ENABLED", True):
+            try:
+                now_iso = datetime.now().isoformat()
+                limite_24h = (datetime.now() + timedelta(hours=24)).isoformat()
+                with self.memory_mgr.db.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        SELECT description, remind_at FROM reminders
+                        WHERE status = 'confirmed' AND remind_at >= ? AND remind_at <= ?
+                        ORDER BY remind_at ASC LIMIT 3
+                        """,
+                        (now_iso, limite_24h)
+                    )
+                    rems = cursor.fetchall()
+                if rems:
+                    rem_lines = "\n".join([f"- {r['description']} (lembrete agendado para {r['remind_at']})" for r in rems])
+                    bloco_reminders = (
+                        f"\n[LEMBRETES CONFIRMADOS QUE VOCÊ VAI ENVIAR AO PATRICK]:\n{rem_lines}\n"
+                        "(Você já prometeu lembrá-lo disso no horário agendado. Não precisa repetir agora se não couber no assunto).\n"
+                    )
+            except Exception as e_rm:
+                logger.warning(f"Erro ao carregar reminders para o context builder: {e_rm}")
+
         system_content = f"""{MARIN_SYSTEM_PROMPT}
 
 [SUA MEMÓRIA AFETIVA SELETIVA & O QUE VOCÊ LEMBRA AGORA]
@@ -156,6 +198,8 @@ class ContextBuilder:
 {bloco_emocional}
 {bloco_planner}
 {contexto_estilo}
+{bloco_open_loops}
+{bloco_reminders}
 {bloco_feedback}
 [LIÇÕES E CORREÇÕES QUE O PATRICK JÁ ME ENSINOU]
 {licoes_str}

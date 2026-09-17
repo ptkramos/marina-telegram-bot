@@ -13,9 +13,9 @@ load_dotenv(ENV_FILE)
 
 class Settings:
     APP_NAME: str = "Marina Seltin"
-    APP_VERSION: str = "3.5.0"
+    APP_VERSION: str = "3.5.1"
     VERSION: str = APP_VERSION
-    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Memory Intelligence)"
+    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Open Loops & Smart Reminders)"
 
 
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
@@ -78,6 +78,13 @@ class Settings:
     PLANNER_ENABLED: bool = os.getenv("PLANNER_ENABLED", "true").lower() in ("true", "1", "yes")
     EMOTIONAL_STATE_ENABLED: bool = os.getenv("EMOTIONAL_STATE_ENABLED", "true").lower() in ("true", "1", "yes")
     PENDING_EVENTS_ENABLED: bool = os.getenv("PENDING_EVENTS_ENABLED", "true").lower() in ("true", "1", "yes")
+    
+    # Open Loops & Smart Reminders (Release 3.5.1)
+    OPEN_LOOPS_ENABLED: bool = os.getenv("OPEN_LOOPS_ENABLED", "true").lower() in ("true", "1", "yes")
+    SMART_REMINDERS_ENABLED: bool = os.getenv("SMART_REMINDERS_ENABLED", "true").lower() in ("true", "1", "yes")
+    REMINDER_CHECK_INTERVAL_SECONDS: int = int(os.getenv("REMINDER_CHECK_INTERVAL_SECONDS", "30"))
+    REMINDERS_RESPECT_SLEEP_WINDOW: bool = os.getenv("REMINDERS_RESPECT_SLEEP_WINDOW", "false").lower() in ("true", "1", "yes")
+    MAX_ACTIVE_OPEN_LOOPS_CONTEXT: int = int(os.getenv("MAX_ACTIVE_OPEN_LOOPS_CONTEXT", "2"))
     VISION_MODEL: str = os.getenv("VISION_MODEL", "google/gemini-2.0-flash-001").strip()
     VISION_ENABLED: bool = os.getenv("VISION_ENABLED", "true").lower() in ("true", "1", "yes")
     STYLE_ENGINE_V2_ENABLED: bool = os.getenv("STYLE_ENGINE_V2_ENABLED", "true").lower() in ("true", "1", "yes")

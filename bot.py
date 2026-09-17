@@ -42,6 +42,7 @@ from proactivity_service import proactivity_service
 from vision_service import vision_service
 from planner import planner
 from memory_retriever import memory_retriever
+from reminder_service import reminder_service
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -987,6 +988,51 @@ async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await context.bot.send_message(chat_id=chat_id, text="Amor, deu uma falhinha no microfone do apê! Tenta de novo? 🥺")
 
+async def lembretes_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /lembretes para exibir os lembretes ativos e confirmados da Marina."""
+    if not is_authorized(update):
+        return
+
+    chat_id = update.effective_chat.id
+    rems = reminder_service.get_active_reminders(limit=10)
+    if not rems:
+        msg_texto = "⏰ **Lembretes da Marina (SQLite):**\n\nNenhum lembrete pendente ou agendado no momento, amor! ❤️\n\n*(Esta mensagem sumirá em 15s)*"
+    else:
+        linhas = ["⏰ **Seus Lembretes Agendados comigo, meu bem:**\n"]
+        for r in rems:
+            status_emoji = "✅" if r["status"] == "confirmed" else "💬"
+            status_desc = "Confirmado" if r["status"] == "confirmed" else "Aguardando seu 'sim'"
+            linhas.append(f"• `[ID {r['id']}]` **{r['description']}**\n   {status_emoji} Disparo: `{r['remind_at']}` ({status_desc})")
+        linhas.append("\n*(Para cancelar algum lembrete, use `/cancelarlembrete <id>` — esta mensagem sumirá em 20s)*")
+        msg_texto = "\n".join(linhas)
+
+    msg = await context.bot.send_message(chat_id=chat_id, text=msg_texto, parse_mode="Markdown")
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=20.0))
+
+async def cancelar_lembrete_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /cancelarlembrete <id> para cancelar um lembrete agendado."""
+    if not is_authorized(update):
+        return
+
+    chat_id = update.effective_chat.id
+    if not context.args:
+        msg = await context.bot.send_message(chat_id=chat_id, text="Amor, use `/cancelarlembrete <id>` informando o ID do lembrete que você viu no `/lembretes`!", parse_mode="Markdown")
+        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=10.0))
+        return
+
+    try:
+        rid = int(context.args[0])
+        sucesso = reminder_service.cancel_reminder(rid)
+        if sucesso:
+            texto = f"✅ Prontinho amor, lembrete ID `{rid}` foi cancelado e não vou mais te lembrar dele! 💕"
+        else:
+            texto = f"⚠️ Amor, não encontrei nenhum lembrete ativo com o ID `{rid}`. Dá uma olhada no `/lembretes`!"
+    except ValueError:
+        texto = "⚠️ O ID precisa ser um número, amor! Exemplo: `/cancelarlembrete 2`"
+
+    msg = await context.bot.send_message(chat_id=chat_id, text=texto, parse_mode="Markdown")
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=10.0))
+
 # --- RECEPTOR INICIAL COM BUFFER DE DIGITAÇÃO ---
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1031,6 +1077,18 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
         plan = await asyncio.to_thread(planner.plan_message, texto_usuario, recent_ctx_repr)
     else:
         plan = planner.plan_heuristics(texto_usuario) or {}
+
+    # 2.1 Verificação de consentimento para oferta recente de lembrete (Smart Reminders Release 3.5.1)
+    if getattr(settings, "SMART_REMINDERS_ENABLED", True):
+        last_offered = reminder_service.get_last_offered_reminder(max_age_minutes=60)
+        if last_offered:
+            confirmation = reminder_service.parse_confirmation_response(texto_usuario)
+            if confirmation["action"] == "confirm":
+                reminder_service.confirm_reminder(last_offered["id"], custom_offset_minutes=confirmation.get("offset_minutes"))
+                logger.info(f"Oferta de lembrete {last_offered['id']} confirmada pelo Patrick com offset {confirmation.get('offset_minutes')}m.")
+            elif confirmation["action"] == "decline":
+                reminder_service.decline_reminder(last_offered["id"])
+                logger.info(f"Oferta de lembrete {last_offered['id']} recusada pelo Patrick.")
 
     # 3. Reação espontânea da Marina no balão de mensagem do Patrick (prioriza emoji do planner)
     planner_emoji = plan.get("reaction_emoji") if plan else None
@@ -1539,6 +1597,25 @@ async def autonomous_routine(application: Application):
     except Exception as e:
         logger.error(f"Erro na rotina autônoma de Marina: {e}", exc_info=True)
 
+async def reminders_routine(application: Application):
+    """Job de alta frequência para disparo de reminders confirmados no horário exato (Release 3.5.1)."""
+    if not getattr(settings, "SMART_REMINDERS_ENABLED", True):
+        return
+    try:
+        now = datetime.now()
+        if getattr(settings, "REMINDERS_RESPECT_SLEEP_WINDOW", False) and proactivity_service.check_sleep_window(now):
+            return
+
+        due = reminder_service.get_due_reminders(now)
+        for rem in due:
+            rid = rem["id"]
+            msg_lembrete = reminder_service.format_reminder_message(rem)
+            logger.info(f"Disparando reminder {rid} para o Patrick: '{rem['description']}'")
+            await send_human_messages(settings.TARGET_CHAT_ID, application.bot, msg_lembrete)
+            reminder_service.mark_sent(rid)
+    except Exception as e:
+        logger.error(f"Erro no job de reminders_routine: {e}", exc_info=True)
+
 # --- INICIALIZAÇÃO ---
 
 async def post_init(application: Application):
@@ -1549,6 +1626,18 @@ async def post_init(application: Application):
         minutes=settings.AUTONOMOUS_CHECK_INTERVAL_MINUTES,
         args=[application]
     )
+
+    # Job dedicado de alta frequência para Smart Reminders (Release 3.5.1)
+    if getattr(settings, "SMART_REMINDERS_ENABLED", True):
+        rem_interval = max(5, getattr(settings, "REMINDER_CHECK_INTERVAL_SECONDS", 30))
+        scheduler.add_job(
+            reminders_routine,
+            "interval",
+            seconds=rem_interval,
+            args=[application]
+        )
+        logger.info(f"Job de Smart Reminders agendado a cada {rem_interval}s.")
+
     scheduler.start()
     ciclo_info = memory_manager.cycle_mgr.get_cycle_info()
     logger.info(f"Agendador autônomo iniciado! Marina está no Dia {ciclo_info['day']} do Ciclo ({ciclo_info['name']}).")
@@ -1582,6 +1671,9 @@ def main():
     app.add_handler(CommandHandler("clear", limpar_command))
     app.add_handler(CommandHandler("audio", audio_command))
     app.add_handler(CommandHandler("voz", audio_command))
+    app.add_handler(CommandHandler("lembretes", lembretes_command))
+    app.add_handler(CommandHandler("cancelarlembrete", cancelar_lembrete_command))
+    app.add_handler(CommandHandler("cancelar_lembrete", cancelar_lembrete_command))
 
     # Reações em tempo real (Via 2 - Patrick reagindo com emojis)
     app.add_handler(MessageReactionHandler(handle_reaction))

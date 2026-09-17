@@ -868,7 +868,8 @@ class DatabaseManager:
         event_at: Optional[str] = None,
         follow_up_after: Optional[str] = None,
         importance: float = 0.5,
-        source_conversation_id: Optional[int] = None
+        source_conversation_id: Optional[int] = None,
+        follow_up_prompt: Optional[str] = None
     ) -> int:
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
@@ -876,10 +877,10 @@ class DatabaseManager:
             cursor.execute(
                 """
                 INSERT INTO eventos_pendentes
-                (event_type, description, event_at, follow_up_after, status, importance, source_conversation_id, created_at)
-                VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)
+                (event_type, description, event_at, follow_up_after, status, importance, source_conversation_id, created_at, follow_up_prompt)
+                VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?)
                 """,
-                (event_type, description, event_at, follow_up_after, importance, source_conversation_id, now_iso)
+                (event_type, description, event_at, follow_up_after, importance, source_conversation_id, now_iso, follow_up_prompt)
             )
             conn.commit()
             return cursor.lastrowid
@@ -891,7 +892,7 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, event_type, description, event_at, follow_up_after, importance, source_conversation_id, created_at
+                SELECT id, event_type, description, event_at, follow_up_after, importance, source_conversation_id, created_at, follow_up_prompt
                 FROM eventos_pendentes
                 WHERE status = 'pending' AND (
                     (follow_up_after IS NOT NULL AND follow_up_after <= ?) OR
@@ -913,6 +914,68 @@ class DatabaseManager:
             )
             conn.commit()
 
+    def cancelar_evento_pendente(self, event_id: int) -> bool:
+        """Cancela um evento pendente e cancela automaticamente quaisquer reminders atrelados a ele."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE eventos_pendentes SET status = 'cancelled', cancelled_at = ? WHERE id = ? AND status = 'pending'",
+                (now_iso, event_id)
+            )
+            updated = cursor.rowcount > 0
+            if updated:
+                cursor.execute(
+                    "UPDATE reminders SET status = 'cancelled', updated_at = ? WHERE event_id = ? AND status IN ('offered', 'confirmed')",
+                    (now_iso, event_id)
+                )
+            conn.commit()
+            return updated
+
+    def atualizar_data_evento(
+        self,
+        event_id: int,
+        new_event_at: str,
+        new_follow_up_after: Optional[str] = None
+    ) -> bool:
+        """Atualiza a data do evento e recalcula automaticamente reminders atrelados baseados em offset_minutes."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE eventos_pendentes
+                SET event_at = ?, follow_up_after = COALESCE(?, follow_up_after)
+                WHERE id = ? AND status = 'pending'
+                """,
+                (new_event_at, new_follow_up_after, event_id)
+            )
+            if cursor.rowcount == 0:
+                conn.commit()
+                return False
+
+            # Recalcula reminders ativos
+            cursor.execute(
+                "SELECT id, offset_minutes FROM reminders WHERE event_id = ? AND status IN ('offered', 'confirmed')",
+                (event_id,)
+            )
+            active_reminders = cursor.fetchall()
+            for r in active_reminders:
+                rid = r["id"]
+                off = r["offset_minutes"] or 0
+                try:
+                    ev_dt = datetime.fromisoformat(new_event_at)
+                    new_remind = (ev_dt - timedelta(minutes=off)).isoformat()
+                    cursor.execute(
+                        "UPDATE reminders SET remind_at = ?, updated_at = ? WHERE id = ?",
+                        (new_remind, now_iso, rid)
+                    )
+                except Exception as e:
+                    logger.warning(f"Erro ao recalcular remind_at para reminder {rid}: {e}")
+
+            conn.commit()
+            return True
+
     def listar_eventos_pendentes(self, status: str = "pending", limit: int = 10) -> list[dict]:
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -921,6 +984,277 @@ class DatabaseManager:
                 (status, limit)
             )
             return [dict(r) for r in cursor.fetchall()]
+
+    # --- MÉTODOS DE OPEN LOOPS (ASSUNTOS EM ABERTO - RELEASE 3.5.1) ---
+
+    def adicionar_open_loop(
+        self,
+        loop_type: str,
+        content: str,
+        importance: float = 0.5,
+        due_at: Optional[str] = None,
+        next_check_after: Optional[str] = None,
+        source_conversation_id: Optional[int] = None
+    ) -> int:
+        """Cria um novo assunto/processo em aberto com o Patrick."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO open_loops
+                (loop_type, content, status, importance, due_at, next_check_after, source_conversation_id, created_at, last_touched_at)
+                VALUES (?, ?, 'open', ?, ?, ?, ?, ?, ?)
+                """,
+                (loop_type, content, importance, due_at, next_check_after, source_conversation_id, now_iso, now_iso)
+            )
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_open_loop(self, loop_id: int) -> Optional[dict]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM open_loops WHERE id = ?", (loop_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def get_open_loops_ativos(self, limit: int = 3) -> list[dict]:
+        """Retorna os open loops ativos prioritários para injeção no prompt da Marina."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, loop_type, content, status, importance, due_at, next_check_after, last_touched_at
+                FROM open_loops
+                WHERE status = 'open'
+                ORDER BY importance DESC, last_touched_at DESC
+                LIMIT ?
+                """,
+                (limit,)
+            )
+            return [dict(r) for r in cursor.fetchall()]
+
+    def get_open_loops_para_checkin(self, now_iso: Optional[str] = None, limit: int = 2) -> list[dict]:
+        """Retorna open loops que já atingiram a data para checagem/pergunta carinhosa."""
+        check_time = now_iso or datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, loop_type, content, status, importance, due_at, next_check_after, last_touched_at
+                FROM open_loops
+                WHERE status = 'open' AND (
+                    next_check_after IS NULL OR next_check_after <= ?
+                )
+                ORDER BY importance DESC, last_touched_at ASC
+                LIMIT ?
+                """,
+                (check_time, limit)
+            )
+            return [dict(r) for r in cursor.fetchall()]
+
+    def resolver_open_loop(self, loop_id: int) -> bool:
+        """Marca um open loop como resolvido quando o Patrick conclui o tema."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE open_loops SET status = 'resolved', resolved_at = ?, last_touched_at = ? WHERE id = ? AND status = 'open'",
+                (now_iso, now_iso, loop_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def abandonar_open_loop(self, loop_id: int) -> bool:
+        """Marca um open loop como abandonado/descartado."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE open_loops SET status = 'abandoned', last_touched_at = ? WHERE id = ? AND status = 'open'",
+                (now_iso, loop_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def atualizar_open_loop_touch(self, loop_id: int, next_check_after: Optional[str] = None) -> bool:
+        """Atualiza a data em que o loop foi tocado/mencionado na conversa."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE open_loops SET last_touched_at = ?, next_check_after = COALESCE(?, next_check_after) WHERE id = ?",
+                (now_iso, next_check_after, loop_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    # --- MÉTODOS DE SMART REMINDERS (RELEASE 3.5.1) ---
+
+    def criar_reminder(
+        self,
+        description: str,
+        remind_at: str,
+        status: str = "offered",
+        event_id: Optional[int] = None,
+        offset_minutes: int = 30,
+        source_conversation_id: Optional[int] = None
+    ) -> int:
+        """Cria um registro de reminder (por padrão com status 'offered' aguardando consentimento)."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO reminders
+                (event_id, description, remind_at, offset_minutes, status, source_conversation_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (event_id, description, remind_at, offset_minutes, status, source_conversation_id, now_iso, now_iso)
+            )
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_reminder(self, reminder_id: int) -> Optional[dict]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM reminders WHERE id = ?", (reminder_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def get_ultimo_reminder_ofertado(self, max_age_minutes: int = 60) -> Optional[dict]:
+        """Recupera a oferta de lembrete mais recente ainda pendente de resposta do Patrick."""
+        cutoff = (datetime.now() - timedelta(minutes=max_age_minutes)).isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM reminders
+                WHERE status = 'offered' AND created_at >= ?
+                ORDER BY id DESC LIMIT 1
+                """,
+                (cutoff,)
+            )
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def confirmar_reminder(
+        self,
+        reminder_id: int,
+        remind_at: Optional[str] = None,
+        offset_minutes: Optional[int] = None
+    ) -> bool:
+        """Confirma o reminder após consentimento do Patrick."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE reminders
+                SET status = 'confirmed',
+                    remind_at = COALESCE(?, remind_at),
+                    offset_minutes = COALESCE(?, offset_minutes),
+                    updated_at = ?
+                WHERE id = ? AND status IN ('offered', 'confirmed')
+                """,
+                (remind_at, offset_minutes, now_iso, reminder_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def recusar_reminder(self, reminder_id: int) -> bool:
+        """Marca o reminder ofertado como recusado pelo Patrick."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE reminders SET status = 'declined', updated_at = ? WHERE id = ? AND status = 'offered'",
+                (now_iso, reminder_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def cancelar_reminder(self, reminder_id: int) -> bool:
+        """Cancela um reminder agendado."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE reminders SET status = 'cancelled', updated_at = ? WHERE id = ? AND status IN ('offered', 'confirmed')",
+                (now_iso, reminder_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def cancelar_reminders_por_evento(self, event_id: int) -> int:
+        """Cancela todos os reminders atrelados a um evento."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE reminders SET status = 'cancelled', updated_at = ? WHERE event_id = ? AND status IN ('offered', 'confirmed')",
+                (now_iso, event_id)
+            )
+            conn.commit()
+            return cursor.rowcount
+
+    def remarcar_reminder(self, reminder_id: int, new_remind_at: str) -> bool:
+        """Altera o horário de disparo de um reminder."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE reminders SET remind_at = ?, updated_at = ? WHERE id = ? AND status IN ('offered', 'confirmed')",
+                (new_remind_at, now_iso, reminder_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def get_due_reminders(self, now_iso: Optional[str] = None) -> list[dict]:
+        """Retorna todos os reminders confirmados prontos para envio (remind_at <= now)."""
+        check_time = now_iso or datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT r.*, e.description as event_description, e.event_at
+                FROM reminders r
+                LEFT JOIN eventos_pendentes e ON r.event_id = e.id
+                WHERE r.status = 'confirmed' AND r.remind_at <= ?
+                ORDER BY r.remind_at ASC
+                """,
+                (check_time,)
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
+    def marcar_reminder_enviado(self, reminder_id: int) -> bool:
+        """Marca o reminder como enviado no SQLite após envio com sucesso no Telegram."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE reminders SET status = 'sent', sent_at = ?, updated_at = ? WHERE id = ? AND status = 'confirmed'",
+                (now_iso, now_iso, reminder_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def get_active_reminders(self, limit: int = 10) -> list[dict]:
+        """Retorna lembretes futuros ativos (confirmados ou ofertados) para comando /lembretes."""
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT r.*, e.description as event_description, e.event_at
+                FROM reminders r
+                LEFT JOIN eventos_pendentes e ON r.event_id = e.id
+                WHERE r.status IN ('confirmed', 'offered') AND r.remind_at >= ?
+                ORDER BY r.remind_at ASC LIMIT ?
+                """,
+                (now_iso, limit)
+            )
+            return [dict(row) for row in cursor.fetchall()]
 
     # --- MÉTODOS DE ESTADO RELACIONAL ---
 
