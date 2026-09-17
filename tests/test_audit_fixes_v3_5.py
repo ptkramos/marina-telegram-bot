@@ -536,6 +536,469 @@ class TestAuditFixesV35(unittest.TestCase):
         self.assertEqual(active_rems[0]["description"], "pagar a conta de luz")
         self.assertEqual(active_rems[0]["status"], "confirmed")
 
+    # =========================================================================
+    # REVISÃO TÉCNICA RODADA 3 — GARANTIAS DE CONTRATO E ATRIBUIÇÃO
+    # =========================================================================
+
+    def test_rodada3_p1_turn1_direct_reminder_without_time_ensures_question_and_records_mid(self):
+        """
+        P1: Garante que no primeiro turno de um pedido direto sem horário, mesmo que a LLM
+        omita completamente a pergunta 'quando?', o bot anexa a pergunta de esclarecimento,
+        persiste pending_direct_reminder e vincula clarification_message_id ao ID da mensagem enviada.
+        """
+        # Valida que o planner pré-computa needs_clarification nas heurísticas
+        heur = bot.planner.plan_heuristics("me lembra de comprar ração pro gato")
+        self.assertIsNotNone(heur)
+        self.assertEqual(heur.get("needs_clarification"), "direct_reminder_time")
+        self.assertEqual(heur.get("clarification_subject"), "comprar ração pro gato")
+
+        mock_msg = MagicMock()
+        mock_msg.message_id = 2001
+        mock_msg.text = "me lembra de comprar ração pro gato"
+        mock_msg.reply_to_message = None
+        mock_msg.from_user.id = 12345
+        mock_msg.chat.id = 12345
+
+        mock_update = MagicMock()
+        mock_update.message = mock_msg
+        mock_update.effective_chat.id = 12345
+
+        sent_messages_captured = []
+        async def fake_send_human(chat_id, bot_instance, text, reply_to_message_id=None):
+            sent_messages_captured.append(text)
+            return MagicMock(message_id=9901)
+
+        plan = {
+            "intent": "direct_reminder",
+            "direct_reminder": {
+                "is_direct_reminder": True,
+                "description": "comprar ração pro gato",
+                "remind_at": None
+            },
+            "needs_clarification": "direct_reminder_time",
+            "clarification_subject": "comprar ração pro gato"
+        }
+
+        with patch.object(bot.memory_manager, "db", self.db), \
+             patch.object(bot, "reminder_service", self.reminder_svc), \
+             patch.object(bot.planner, "db", self.db), \
+             patch.object(bot, "planner") as mock_plan, \
+             patch.object(bot, "llm_client") as mock_llm, \
+             patch.object(bot, "send_human_messages", side_effect=fake_send_human), \
+             patch.object(bot, "check_and_trigger_memory_consolidation"):
+
+            mock_plan.plan_message.return_value = plan
+            mock_plan.plan_heuristics.return_value = plan
+            mock_plan.apply_plan_effects.side_effect = lambda p, conversation_id=None: InternalPlanner(db=self.db).apply_plan_effects(p, conversation_id=conversation_id)
+
+            # LLM omite totalmente a pergunta "quando?", apenas confirma de forma declarativa
+            mock_llm.chat.completions.create.return_value = MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Pode deixar amor, anotei aqui com carinho!"))]
+            )
+
+            asyncio.run(bot.process_incoming_batch(
+                update=mock_update,
+                context=MagicMock(),
+                texto_usuario="me lembra de comprar ração pro gato"
+            ))
+
+        # 1. Verifica se a mensagem enviada contém a pergunta de esclarecimento
+        self.assertTrue(len(sent_messages_captured) > 0)
+        sent_text = sent_messages_captured[0]
+        self.assertIn("Quando você quer que eu te lembre", sent_text)
+        self.assertIn("?", sent_text)
+
+        # 2. Verifica se o estado pendente foi salvo com clarification_message_id = 9901
+        pdr_str = self.db.get_estado_relacional("pending_direct_reminder")
+        self.assertIsNotNone(pdr_str)
+        import json
+        pdr_data = json.loads(pdr_str)
+        self.assertEqual(pdr_data.get("clarification_message_id"), 9901)
+        self.assertIn("ração", pdr_data.get("description", ""))
+
+    def test_rodada3_p2_pending_direct_reminder_expiration_ttl(self):
+        """
+        P2: Garante que pendência de esclarecimento mais velha que 30 minutos expira,
+        não agenda lembrete mesmo com mensagem contendo data/hora e limpa o estado.
+        """
+        import json
+        old_time = (datetime.now() - timedelta(minutes=35)).isoformat()
+        self.db.set_estado_relacional("pending_direct_reminder", json.dumps({
+            "description": "reunião antiga",
+            "source_conversation_id": None,
+            "clarification_message_id": 8801,
+            "created_at": old_time
+        }))
+
+        mock_msg = MagicMock()
+        mock_msg.message_id = 3001
+        mock_msg.text = "amanhã às 14h"
+        mock_msg.reply_to_message = None
+        mock_msg.from_user.id = 12345
+        mock_msg.chat.id = 12345
+
+        mock_update = MagicMock()
+        mock_update.message = mock_msg
+        mock_update.effective_chat.id = 12345
+
+        with patch.object(bot.memory_manager, "db", self.db), \
+             patch.object(bot, "reminder_service", self.reminder_svc), \
+             patch.object(bot.planner, "db", self.db), \
+             patch.object(bot, "planner") as mock_plan, \
+             patch.object(bot, "llm_client") as mock_llm, \
+             patch.object(bot, "send_human_messages", return_value=MagicMock(message_id=9902)), \
+             patch.object(bot, "check_and_trigger_memory_consolidation"):
+
+            mock_plan.plan_message.return_value = {"intent": "chat", "emotional_deltas": {}}
+            mock_plan.plan_heuristics.return_value = {"intent": "chat", "emotional_deltas": {}}
+            mock_llm.chat.completions.create.return_value = MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Oi amor!"))]
+            )
+
+            asyncio.run(bot.process_incoming_batch(
+                update=mock_update,
+                context=MagicMock(),
+                texto_usuario="amanhã às 14h"
+            ))
+
+        # Não deve ter agendado lembrete
+        active_rems = self.reminder_svc.get_active_reminders()
+        self.assertEqual(len(active_rems), 0)
+        # Estado deve ter sido limpo
+        st = self.db.get_estado_relacional("pending_direct_reminder")
+        self.assertIsNone(st)
+
+    def test_rodada3_p2_pending_direct_reminder_explicit_refusal(self):
+        """
+        P2: Garante que Patrick recusando/cancelando o esclarecimento ("esquece", "não precisa")
+        descarta a pendência sem agendar nada.
+        """
+        import json
+        recent_time = datetime.now().isoformat()
+        self.db.set_estado_relacional("pending_direct_reminder", json.dumps({
+            "description": "comprar flores",
+            "source_conversation_id": None,
+            "clarification_message_id": 8802,
+            "created_at": recent_time
+        }))
+
+        mock_msg = MagicMock()
+        mock_msg.message_id = 3002
+        mock_msg.text = "deixa quieto amor, não precisa mais"
+        mock_msg.reply_to_message = MagicMock(message_id=8802)
+        mock_msg.from_user.id = 12345
+        mock_msg.chat.id = 12345
+
+        mock_update = MagicMock()
+        mock_update.message = mock_msg
+        mock_update.effective_chat.id = 12345
+
+        with patch.object(bot.memory_manager, "db", self.db), \
+             patch.object(bot, "reminder_service", self.reminder_svc), \
+             patch.object(bot.planner, "db", self.db), \
+             patch.object(bot, "planner") as mock_plan, \
+             patch.object(bot, "llm_client") as mock_llm, \
+             patch.object(bot, "send_human_messages", return_value=MagicMock(message_id=9903)), \
+             patch.object(bot, "check_and_trigger_memory_consolidation"):
+
+            mock_plan.plan_message.return_value = {"intent": "chat", "emotional_deltas": {}}
+            mock_plan.plan_heuristics.return_value = {"intent": "chat", "emotional_deltas": {}}
+            mock_llm.chat.completions.create.return_value = MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Tudo bem amor!"))]
+            )
+
+            asyncio.run(bot.process_incoming_batch(
+                update=mock_update,
+                context=MagicMock(),
+                texto_usuario="deixa quieto amor, não precisa mais"
+            ))
+
+        active_rems = self.reminder_svc.get_active_reminders()
+        self.assertEqual(len(active_rems), 0)
+        st = self.db.get_estado_relacional("pending_direct_reminder")
+        self.assertIsNone(st)
+
+    def test_rodada3_p2_unrelated_message_does_not_consume_date_for_pending_reminder(self):
+        """
+        P2: Uma mensagem enviada em outro assunto (sem reply_to à mensagem de esclarecimento
+        e não sendo turno imediatamente consecutivo) não consome datas mencionadas nela
+        para resolver o lembrete pendente alheio.
+        """
+        import json
+        recent_time = datetime.now().isoformat()
+        self.db.set_estado_relacional("pending_direct_reminder", json.dumps({
+            "description": "lavar o carro",
+            "source_conversation_id": 100,
+            "clarification_message_id": 8803,
+            "created_at": recent_time
+        }))
+
+        # Mock de histórico com outra mensagem intermediária da Marina (não é o turno consecutivo da pergunta 8803)
+        bot.ULTIMAS_MENSAGENS_MARINA[12345] = [{"message_id": 9999, "text": "Te amo lindo!"}]
+
+        mock_msg = MagicMock()
+        mock_msg.message_id = 3003
+        mock_msg.text = "Vou viajar na sexta-feira às 18h"
+        mock_msg.reply_to_message = None
+        mock_msg.from_user.id = 12345
+        mock_msg.chat.id = 12345
+
+        mock_update = MagicMock()
+        mock_update.message = mock_msg
+        mock_update.effective_chat.id = 12345
+
+        with patch.object(bot.memory_manager, "db", self.db), \
+             patch.object(bot, "reminder_service", self.reminder_svc), \
+             patch.object(bot.planner, "db", self.db), \
+             patch.object(bot, "planner") as mock_plan, \
+             patch.object(bot, "llm_client") as mock_llm, \
+             patch.object(bot, "send_human_messages", return_value=MagicMock(message_id=10004)), \
+             patch.object(bot, "check_and_trigger_memory_consolidation"):
+
+            mock_plan.plan_message.return_value = {"intent": "chat", "emotional_deltas": {}}
+            mock_plan.plan_heuristics.return_value = {"intent": "chat", "emotional_deltas": {}}
+            mock_llm.chat.completions.create.return_value = MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Boa viagem amor!"))]
+            )
+
+            asyncio.run(bot.process_incoming_batch(
+                update=mock_update,
+                context=MagicMock(),
+                texto_usuario="Vou viajar na sexta-feira às 18h"
+            ))
+
+        # "lavar o carro" NÃO deve ter sido agendado para as 18h de sexta-feira!
+        for rem in self.reminder_svc.get_active_reminders():
+            self.assertNotEqual(rem["description"], "lavar o carro")
+
+    def test_rodada3_p2_legitimate_resume_via_reply_schedules_reminder(self):
+        """
+        P2: Patrick responde diretamente à pergunta de esclarecimento informando o horário
+        (retomada legítima via reply_to_message). O lembrete deve ser agendado com sucesso.
+        """
+        import json
+        recent_time = datetime.now().isoformat()
+        tomorrow_17 = (datetime.now() + timedelta(days=1)).replace(hour=17, minute=0, second=0, microsecond=0)
+        self.db.set_estado_relacional("pending_direct_reminder", json.dumps({
+            "description": "comprar pão",
+            "source_conversation_id": None,
+            "clarification_message_id": 8804,
+            "created_at": recent_time
+        }))
+
+        mock_msg = MagicMock()
+        mock_msg.message_id = 3004
+        mock_msg.text = "amanhã às 17h"
+        mock_msg.reply_to_message = MagicMock(message_id=8804)
+        mock_msg.from_user.id = 12345
+        mock_msg.chat.id = 12345
+
+        mock_update = MagicMock()
+        mock_update.message = mock_msg
+        mock_update.effective_chat.id = 12345
+
+        with patch.object(bot.memory_manager, "db", self.db), \
+             patch.object(bot, "reminder_service", self.reminder_svc), \
+             patch.object(bot.planner, "db", self.db), \
+             patch.object(bot, "planner") as mock_plan, \
+             patch.object(bot, "llm_client") as mock_llm, \
+             patch.object(bot, "send_human_messages", return_value=MagicMock(message_id=10005)), \
+             patch.object(bot, "check_and_trigger_memory_consolidation"), \
+             patch("planner.parse_iso_or_relative_datetime", return_value=tomorrow_17.isoformat()):
+
+            mock_plan.plan_message.return_value = {"intent": "chat", "emotional_deltas": {}}
+            mock_plan.plan_heuristics.return_value = {"intent": "chat", "emotional_deltas": {}}
+            mock_llm.chat.completions.create.return_value = MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Pode deixar amor, agendado!"))]
+            )
+
+            asyncio.run(bot.process_incoming_batch(
+                update=mock_update,
+                context=MagicMock(),
+                texto_usuario="amanhã às 17h"
+            ))
+
+        # Lembrete deve ter sido criado com sucesso
+        active_rems = self.reminder_svc.get_active_reminders()
+        self.assertEqual(len(active_rems), 1)
+        self.assertEqual(active_rems[0]["description"], "comprar pão")
+        self.assertEqual(active_rems[0]["status"], "confirmed")
+        # Estado deve ter sido limpo
+        st = self.db.get_estado_relacional("pending_direct_reminder")
+        self.assertIsNone(st)
+
+    def test_rodada3_p1_offer_verification_rejects_declarative_lembrete_and_adds_question(self):
+        """
+        P1: Garante que uma fala declarativa contendo a palavra 'lembrete' (ex: 'Já anotei um lembrete para depois.')
+        sem pergunta interrogativa é rejeitada pelo validador de oferta e recebe a pergunta interrogativa anexada.
+        """
+        self.assertFalse(bot.is_reminder_offer_question("Já anotei um lembrete para depois."))
+        self.assertFalse(bot.is_reminder_offer_question("Tenho um lembrete aqui."))
+        self.assertTrue(bot.is_reminder_offer_question("Quer que eu te lembre?"))
+        self.assertTrue(bot.is_reminder_offer_question("Quer que eu te lembre do médico antes, amor? 💕"))
+        self.assertTrue(bot.is_reminder_offer_question("Posso te avisar meia hora antes?"))
+        self.assertTrue(bot.is_reminder_offer_question("Se quiser posso te lembrar antes, quer?"))
+
+        mock_msg = MagicMock()
+        mock_msg.message_id = 4001
+        mock_msg.text = "Amanhã às 15h tenho dentista"
+        mock_msg.reply_to_message = None
+        mock_msg.from_user.id = 12345
+        mock_msg.chat.id = 12345
+
+        mock_update = MagicMock()
+        mock_update.message = mock_msg
+        mock_update.effective_chat.id = 12345
+
+        sent_captured = []
+        async def fake_send_human(chat_id, bot_instance, text, reply_to_message_id=None):
+            sent_captured.append(text)
+            return MagicMock(message_id=9905)
+
+        plan = {
+            "should_offer_reminder": True,
+            "event_details": {"description": "dentista", "event_at": (datetime.now() + timedelta(days=1)).isoformat()}
+        }
+
+        with patch.object(bot.memory_manager, "db", self.db), \
+             patch.object(bot, "reminder_service", self.reminder_svc), \
+             patch.object(bot.planner, "db", self.db), \
+             patch.object(bot, "planner") as mock_plan, \
+             patch.object(bot, "llm_client") as mock_llm, \
+             patch.object(bot, "send_human_messages", side_effect=fake_send_human), \
+             patch.object(bot, "check_and_trigger_memory_consolidation"):
+
+            mock_plan.plan_message.return_value = plan
+            mock_plan.plan_heuristics.return_value = plan
+            mock_plan.apply_plan_effects.side_effect = lambda p, conversation_id=None: InternalPlanner(db=self.db).apply_plan_effects(p, conversation_id=conversation_id)
+
+            # LLM responde declarativo contendo 'lembrete', sem fazer pergunta interrogativa de consentimento
+            mock_llm.chat.completions.create.return_value = MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Já anotei um lembrete para depois no meu caderno."))]
+            )
+
+            asyncio.run(bot.process_incoming_batch(
+                update=mock_update,
+                context=MagicMock(),
+                texto_usuario="Amanhã às 15h tenho dentista"
+            ))
+
+        self.assertTrue(len(sent_captured) > 0)
+        sent = sent_captured[0]
+        self.assertIn("Quer que eu te lembre", sent)
+        self.assertIn("?", sent)
+
+    def test_rodada3_p1_exact_offered_reminder_id_attribution(self):
+        """
+        P1: Garante que apenas a oferta criada neste turno tem seu offer_message_id registrado
+        (e em caso de falha de envio, apenas ela é cancelada), sem contaminar ofertas antigas abertas.
+        """
+        # Cria uma oferta pré-existente
+        old_rem_id = self.reminder_svc.offer_reminder(
+            event_id=None,
+            description="oferta antiga aberta",
+            remind_at=(datetime.now() + timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S")
+        )
+        self.assertIsNotNone(old_rem_id)
+
+        # Agora cria um plano que oferta um novo lembrete com ID específico
+        new_rem_id = self.reminder_svc.offer_reminder(
+            event_id=None,
+            description="novo evento",
+            remind_at=(datetime.now() + timedelta(days=3)).strftime("%Y-%m-%dT%H:%M:%S")
+        )
+
+        plan = {
+            "should_offer_reminder": True,
+            "offered_reminder_id": new_rem_id,
+            "event_details": {"description": "novo evento"}
+        }
+
+        mock_msg = MagicMock()
+        mock_msg.message_id = 4002
+        mock_msg.text = "Tenho prova quinta"
+        mock_msg.reply_to_message = None
+        mock_msg.from_user.id = 12345
+        mock_msg.chat.id = 12345
+
+        mock_update = MagicMock()
+        mock_update.message = mock_msg
+        mock_update.effective_chat.id = 12345
+
+        with patch.object(bot.memory_manager, "db", self.db), \
+             patch.object(bot, "reminder_service", self.reminder_svc), \
+             patch.object(bot.planner, "db", self.db), \
+             patch.object(bot, "planner") as mock_plan, \
+             patch.object(bot, "llm_client") as mock_llm, \
+             patch.object(bot, "send_human_messages", return_value=MagicMock(message_id=7777)), \
+             patch.object(bot, "check_and_trigger_memory_consolidation"):
+
+            mock_plan.plan_message.return_value = plan
+            mock_plan.plan_heuristics.return_value = plan
+            mock_llm.chat.completions.create.return_value = MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Quer que eu te lembre, amor?"))]
+            )
+
+            asyncio.run(bot.process_incoming_batch(
+                update=mock_update,
+                context=MagicMock(),
+                texto_usuario="Tenho prova quinta"
+            ))
+
+        # Verifica no banco: new_rem_id deve ter offer_message_id = 7777
+        new_rem = self.db.get_reminder(new_rem_id)
+        self.assertEqual(new_rem["offer_message_id"], 7777)
+
+        # old_rem_id NÃO deve ter sido alterado nem cancelado
+        old_rem = self.db.get_reminder(old_rem_id)
+        self.assertIsNone(old_rem["offer_message_id"])
+        self.assertEqual(old_rem["status"], "offered")
+
+    def test_rodada3_db_migration_upgrade_with_duplicate_resumos_intervalo(self):
+        """
+        Reflexão e migrations: Garante que um banco existente com registros duplicados
+        em resumos_conversa(start_conversation_id, end_conversation_id) é migrado com sucesso,
+        deduplicando os registros antigos e criando o índice único idx_resumos_intervalo.
+        """
+        import sqlite3
+        temp_mig_db = Path(self.temp_dir.name) / "test_migration_upgrade.db"
+        with sqlite3.connect(temp_mig_db) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS resumos_conversa (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic TEXT,
+                summary TEXT NOT NULL,
+                start_conversation_id INTEGER,
+                end_conversation_id INTEGER,
+                importance REAL DEFAULT 0.5,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            """)
+            # Insere 3 registros com o mesmo intervalo (10, 20)
+            cursor.execute("INSERT INTO resumos_conversa (start_conversation_id, end_conversation_id, topic, summary, created_at, updated_at) VALUES (10, 20, 'Geral', 'Resumo 1', '2026-09-17T12:00:00', '2026-09-17T12:00:00')")
+            cursor.execute("INSERT INTO resumos_conversa (start_conversation_id, end_conversation_id, topic, summary, created_at, updated_at) VALUES (10, 20, 'Geral', 'Resumo 2 duplicado', '2026-09-17T12:01:00', '2026-09-17T12:01:00')")
+            cursor.execute("INSERT INTO resumos_conversa (start_conversation_id, end_conversation_id, topic, summary, created_at, updated_at) VALUES (10, 20, 'Geral', 'Resumo 3 duplicado', '2026-09-17T12:02:00', '2026-09-17T12:02:00')")
+            cursor.execute("INSERT INTO resumos_conversa (start_conversation_id, end_conversation_id, topic, summary, created_at, updated_at) VALUES (21, 30, 'Outro', 'Resumo outro intervalo', '2026-09-17T12:03:00', '2026-09-17T12:03:00')")
+            conn.commit()
+
+        # Instancia DatabaseManager apontando para o banco duplicado (executará _run_migrations)
+        mig_db = DatabaseManager(db_path=temp_mig_db)
+
+        # Verifica que a migração não falhou e deduplicou
+        with mig_db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, start_conversation_id, end_conversation_id, summary FROM resumos_conversa WHERE start_conversation_id = 10 AND end_conversation_id = 20")
+            rows = cursor.fetchall()
+            self.assertEqual(len(rows), 1, "Deveria sobrar exatamente 1 registro para o intervalo (10, 20)")
+            self.assertEqual(rows[0][3], 'Resumo 1', "Deveria ter mantido o registro mais antigo com MIN(id)")
+
+            # Verifica que o índice único existe e impede nova duplicação
+            with self.assertRaises(sqlite3.IntegrityError):
+                cursor.execute("INSERT INTO resumos_conversa (start_conversation_id, end_conversation_id, topic, summary, created_at, updated_at) VALUES (10, 20, 'Geral', 'Duplicata proibida', '2026-09-17T12:04:00', '2026-09-17T12:04:00')")
+                conn.commit()
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -12,7 +12,7 @@ import asyncio
 import re
 import sys
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 
 from telegram import Update, InputProfilePhotoStatic, ReactionTypeEmoji
@@ -332,6 +332,44 @@ def is_audio_request(texto: str) -> bool:
         "solta a voz", "manda um áudio amor",
     ]
     return any(p in t for p in palavras)
+
+def is_reminder_offer_question(text: str) -> bool:
+    """
+    Verifica se o texto contém uma pergunta genuína de oferta de lembrete com consentimento.
+    Exige ponto de interrogação '?' e estrutura de oferta/pergunta.
+    Rejeita afirmações puramente declarativas (ex: 'Já anotei um lembrete para depois.').
+    """
+    if not text or "?" not in text:
+        return False
+
+    t_clean = text.lower()
+    padrao_oferta = (
+        r"(?:"
+        r"(?:quer|deseja|prefere|posso|posso te|devo|vai querer|se quiser(?:,? eu posso)?)\s+.*?"
+        r"(?:lembr|avis|toque|aviso|lembrete)"
+        r"|"
+        r"(?:te\s+(?:lembro|aviso)|lembro\s+voc[êe])"
+        r"|"
+        r"(?:quer\s+(?:que\s+eu\s+te\s+)?(?:lembre|avise))"
+        r"|"
+        r"(?:posso\s+(?:te\s+)?(?:lembrar|avisar))"
+        r"|"
+        r"(?:quer\s+(?:um\s+)?(?:lembrete|aviso))"
+        r")"
+        r".*?\?"
+    )
+    return bool(re.search(padrao_oferta, t_clean, re.DOTALL))
+
+def is_time_clarification_question(text: str) -> bool:
+    """
+    Verifica se o texto contém uma pergunta genuína sobre quando/que horas realizar o lembrete.
+    Exige ponto de interrogação '?' e termo interrogativo de horário/data.
+    """
+    if not text or "?" not in text:
+        return False
+    t_clean = text.lower()
+    padrao = r"(?:\b(quando|que horas|qual hor[aá]rio|qual hora|que dia)\b.*?\?|\b(a que horas|em que momento)\b.*?\?)"
+    return bool(re.search(padrao, t_clean, re.DOTALL))
 
 async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_message_id: int = None):
     """Envia a mensagem em balões curtos sucessivos com animação realista de digitação e rastreia IDs."""
@@ -1171,22 +1209,80 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     # 1. Aprendizado dinâmico do estilo linguístico do Patrick (risadas, emojis, gírias, cadência)
     style_engine.processar_mensagem_patrick(texto_usuario)
 
-    # 1.1 Resolução de esclarecimento para pedido direto de lembrete pendente (P2)
+    # 1.1 Resolução de esclarecimento para pedido direto de lembrete pendente (P2 / Rodada 3)
     pending_direct_rem = memory_manager.db.get_estado_relacional("pending_direct_reminder")
     if pending_direct_rem:
         try:
-            pending_data = json.loads(pending_direct_rem)
-            from planner import parse_iso_or_relative_datetime
-            parsed_time = parse_iso_or_relative_datetime(texto_usuario, default_offset_hours=None)
-            if parsed_time and datetime.fromisoformat(parsed_time) > datetime.now():
-                rem_id = reminder_service.create_direct_reminder(
-                    description=pending_data.get("description", "seu compromisso"),
-                    remind_at=parsed_time,
-                    offset_minutes=0,
-                    source_conversation_id=pending_data.get("source_conversation_id")
-                )
-                memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
-                logger.info(f"Lembrete direto pendente '{pending_data.get('description')}' agendado com sucesso para {parsed_time} (ID {rem_id}).")
+            pending_data = json.loads(pending_direct_rem) if isinstance(pending_direct_rem, str) else pending_direct_rem
+            if pending_data and isinstance(pending_data, dict):
+                # 1. TTL / Expiração (30 minutos)
+                created_at_str = pending_data.get("created_at")
+                is_expired = False
+                if created_at_str:
+                    try:
+                        created_dt = datetime.fromisoformat(created_at_str)
+                        if datetime.now() - created_dt > timedelta(minutes=30):
+                            is_expired = True
+                    except Exception:
+                        pass
+
+                if is_expired:
+                    logger.info("Esclarecimento de lembrete direto pendente expirou por TTL (>30 min). Limpando estado.")
+                    memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
+                    pending_data = None
+
+                if pending_data:
+                    # 2. Contexto de resposta e atribuição
+                    clarif_msg_id = pending_data.get("clarification_message_id")
+                    source_conv_id = pending_data.get("source_conversation_id")
+
+                    is_reply_to_clarif = bool(
+                        user_replied_to_msg_id and clarif_msg_id and user_replied_to_msg_id == clarif_msg_id
+                    )
+                    is_immediate_next_turn = False
+                    ultimas_msgs = ULTIMAS_MENSAGENS_MARINA.get(chat_id, [])
+                    if ultimas_msgs and clarif_msg_id:
+                        is_immediate_next_turn = (ultimas_msgs[-1].get("message_id") == clarif_msg_id)
+                    elif source_conv_id:
+                        ultimas_convs = memory_manager.db.get_mensagens_sessao(limit=2)
+                        if not ultimas_convs or ultimas_convs[-1]["id"] == source_conv_id:
+                            is_immediate_next_turn = True
+
+                    has_clarif_context = is_reply_to_clarif or is_immediate_next_turn
+
+                    # 3. Recusa ou cancelamento explícito
+                    is_refusal = bool(re.search(
+                        r"\b(esquece|deixa pra l[aá]|deixa quieto|n[aã]o precisa|cancela|n[aã]o quero|n[aã]o precisa me lembrar|deixa que eu me lembro)\b",
+                        texto_usuario,
+                        re.IGNORECASE
+                    ))
+                    if is_refusal and has_clarif_context:
+                        logger.info("Patrick cancelou/recusou o esclarecimento do lembrete direto pendente.")
+                        memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
+                        pending_data = None
+
+                    # 4. Consumo legítimo de horário vs resposta desconexa / outro assunto
+                    if pending_data:
+                        if has_clarif_context:
+                            from planner import parse_iso_or_relative_datetime
+                            parsed_time = parse_iso_or_relative_datetime(texto_usuario, default_offset_hours=None)
+                            if parsed_time and datetime.fromisoformat(parsed_time) > datetime.now():
+                                rem_id = reminder_service.create_direct_reminder(
+                                    description=pending_data.get("description", "seu compromisso"),
+                                    remind_at=parsed_time,
+                                    offset_minutes=0,
+                                    source_conversation_id=source_conv_id
+                                )
+                                memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
+                                logger.info(f"Lembrete direto pendente '{pending_data.get('description')}' agendado com sucesso para {parsed_time} (ID {rem_id}).")
+                            elif is_immediate_next_turn and not is_reply_to_clarif:
+                                # Patrick mudou de assunto no turno imediatamente seguinte sem informar horário
+                                logger.info("Patrick mudou de assunto sem informar horário para o lembrete pendente. Descartando pendência.")
+                                memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
+                        else:
+                            # Mensagem fora de contexto (sem reply e não é o turno consecutivo).
+                            # Não consome a data de outro assunto e não agenda o lembrete pendente.
+                            pass
         except Exception as e_pdr:
             logger.warning(f"Erro ao processar esclarecimento de lembrete direto pendente: {e_pdr}")
 
@@ -1438,19 +1534,18 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     queria_audio = bool(re.search(r'\[MANDAR_AUDIO\]|\[AUDIO\]', resposta_marin, flags=re.IGNORECASE))
     fala_limpa = limpar_fala_marina(resposta_marin)
 
-    # P1.3: Garante deterministicamente que a pergunta de oferta de lembrete esteja na fala enviada
+    # P1.3 / Rodada 3: Garante deterministicamente que a pergunta interrogativa de oferta de lembrete esteja na fala enviada
     if plan and plan.get("should_offer_reminder"):
-        event_desc = plan.get("event_details", {}).get("description") or "compromisso"
-        has_offer_in_text = bool(re.search(r"\b(lembr|aviso|avisar|lembrete)\b", fala_limpa, re.IGNORECASE))
-        if not has_offer_in_text:
+        if not is_reminder_offer_question(fala_limpa):
+            event_desc = plan.get("event_details", {}).get("description") or "compromisso"
             pergunta_lembrete = f"\nQuer que eu te lembre do {event_desc} antes, amor? 💕"
             fala_limpa = f"{fala_limpa.strip()}{pergunta_lembrete}"
 
-    # P2: Garante pergunta de esclarecimento caso o Patrick tenha pedido lembrete sem horário
+    # P1 / P2 / Rodada 3: Garante pergunta de esclarecimento caso o Patrick tenha pedido lembrete sem horário
     if plan and plan.get("needs_clarification") == "direct_reminder_time":
-        has_time_q = bool(re.search(r"\b(quando|que horas|qual horário|qual hora|que dia)\b", fala_limpa, re.IGNORECASE))
-        if not has_time_q:
-            pergunta_tempo = "\nQuando você quer que eu te lembre disso, amor? Me diz o horário certinho! 💕"
+        if not is_time_clarification_question(fala_limpa):
+            subj = plan.get("clarification_subject") or "disso"
+            pergunta_tempo = f"\nQuando você quer que eu te lembre de {subj}, amor? Me diz o horário certinho! 💕"
             fala_limpa = f"{fala_limpa.strip()}{pergunta_tempo}"
 
     # Chance espontânea adicional: ~6% de mandar áudio por vontade própria em mensagens carinhosas (apenas se não for pedido de foto)
@@ -1502,18 +1597,33 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     if not audio_enviado and not aviso_audio_ja_enviado and fala_limpa:
         sent_text_msg = await send_human_messages(chat_id, context.bot, fala_limpa, reply_to_message_id=reply_to_id)
 
-    # Registra message_id do Telegram da oferta para permitir atribuição estrita de resposta (P1.3)
-    if plan and plan.get("should_offer_reminder"):
-        offered_rem = reminder_service.get_last_offered_reminder()
-        offer_mid = getattr(sent_text_msg, "message_id", None)
-        if not offer_mid and audio_enviado and sent_voice:
-            offer_mid = getattr(sent_voice, "message_id", None)
-        if offered_rem:
-            if offer_mid:
-                reminder_service.record_offer_message(offered_rem["id"], offer_mid)
-            else:
-                # O envio falhou ou não houve mensagem transmitida; cancela a oferta para evitar oferta fantasma
-                reminder_service.cancel_reminder(offered_rem["id"])
+    # P1.3 / Rodada 3: Registra message_id do Telegram da oferta para permitir atribuição estrita de resposta
+    sent_mid = getattr(sent_text_msg, "message_id", None)
+    if not sent_mid and audio_enviado and sent_voice:
+        sent_mid = getattr(sent_voice, "message_id", None)
+
+    offered_rem_id = plan.get("offered_reminder_id") if plan else None
+    if offered_rem_id:
+        if sent_mid:
+            reminder_service.record_offer_message(offered_rem_id, sent_mid)
+        else:
+            # O envio falhou ou não houve mensagem transmitida; cancela a oferta para evitar oferta fantasma
+            reminder_service.cancel_reminder(offered_rem_id)
+
+    # P1 / P2 / Rodada 3: Vincula message_id do Telegram ao esclarecimento de lembrete pendente
+    if plan and plan.get("needs_clarification") == "direct_reminder_time":
+        if sent_mid:
+            try:
+                pdr_str = memory_manager.db.get_estado_relacional("pending_direct_reminder")
+                if pdr_str:
+                    pdr_data = json.loads(pdr_str) if isinstance(pdr_str, str) else pdr_str
+                    pdr_data["clarification_message_id"] = sent_mid
+                    memory_manager.db.set_estado_relacional("pending_direct_reminder", json.dumps(pdr_data))
+            except Exception as e_pdr_up:
+                logger.warning(f"Erro ao vincular clarification_message_id ao pending_direct_reminder: {e_pdr_up}")
+        else:
+            # Envio falhou; limpa estado para evitar pendência fantasma
+            memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
     
     # Se pediu foto, renderiza a cena e envia foto com status realista apenas no momento do upload
     if pediu_foto:

@@ -248,6 +248,31 @@ class InternalPlanner:
                 "emotional_deltas": {"affection": 0.04, "romantic_intensity": 0.03}
             }
 
+        # Pedidos diretos óbvios de lembrete (P1 - Rodada 3)
+        rem_match = re.search(r"\b(?:me\s+)?(?:lembra|avisa)\s+(?:de\s+|que\s+|pra\s+)?(.+)", t)
+        if rem_match:
+            assunto = rem_match.group(1).strip()
+            parsed_time = parse_iso_or_relative_datetime(assunto, default_offset_hours=None)
+            is_valid_future = bool(parsed_time and datetime.fromisoformat(parsed_time) > datetime.now())
+            plan_res = {
+                "intent": "direct_reminder",
+                "tone": "carinhosa",
+                "response_goal": "Anotar o pedido de lembrete com carinho e confirmar o horário",
+                "reaction_emoji": "⏰",
+                "creates_event": False,
+                "event_details": None,
+                "direct_reminder": {
+                    "is_direct_reminder": True,
+                    "description": assunto,
+                    "remind_at": parsed_time if is_valid_future else None
+                },
+                "emotional_deltas": {"affection": 0.02}
+            }
+            if not is_valid_future:
+                plan_res["needs_clarification"] = "direct_reminder_time"
+                plan_res["clarification_subject"] = assunto
+            return plan_res
+
         return None
 
     def plan_message(self, user_message: str, recent_context: str = "") -> Dict[str, Any]:
@@ -259,6 +284,20 @@ class InternalPlanner:
 
         # 2. Se planner não estiver habilitado em config, usa plano padrão
         if not getattr(settings, "PLANNER_ENABLED", False):
+            rem_check = re.search(r"\b(?:me\s+)?(?:lembra|avisa)\b", user_message.lower())
+            if rem_check:
+                return {
+                    "intent": "direct_reminder",
+                    "tone": "carinhosa",
+                    "response_goal": "Anotar lembrete com carinho e perguntar o horário",
+                    "reaction_emoji": "⏰",
+                    "creates_event": False,
+                    "event_details": None,
+                    "direct_reminder": {"is_direct_reminder": True, "description": user_message.strip(), "remind_at": None},
+                    "needs_clarification": "direct_reminder_time",
+                    "clarification_subject": user_message.strip(),
+                    "emotional_deltas": {}
+                }
             return {
                 "intent": "casual_chat",
                 "tone": "carinhosa",
@@ -287,6 +326,17 @@ class InternalPlanner:
                 )
                 raw_text = response.choices[0].message.content.strip()
                 data = json.loads(raw_text)
+
+                # Validação antecipada de lembrete direto no plano (P1 - Rodada 3)
+                dir_rem = data.get("direct_reminder")
+                if dir_rem and isinstance(dir_rem, dict) and dir_rem.get("is_direct_reminder"):
+                    rem_desc = dir_rem.get("description") or "seu compromisso"
+                    raw_rem_time = dir_rem.get("remind_at")
+                    rem_time_iso = parse_iso_or_relative_datetime(raw_rem_time, default_offset_hours=None)
+                    if not rem_time_iso or datetime.fromisoformat(rem_time_iso) <= datetime.now():
+                        data["needs_clarification"] = "direct_reminder_time"
+                        data["clarification_subject"] = rem_desc
+
                 return data
             except Exception as e:
                 err_str = str(e)
@@ -297,7 +347,7 @@ class InternalPlanner:
                 logger.warning(f"Aviso no InternalPlanner LLM: {e}. Usando plano de contingência.")
                 break
 
-        return {
+        fallback_plan = {
             "intent": "casual_chat",
             "tone": "carinhosa",
             "response_goal": "Responder com carinho e naturalidade",
@@ -307,6 +357,13 @@ class InternalPlanner:
             "shared_topic": None,
             "emotional_deltas": {}
         }
+        rem_check = re.search(r"\b(?:me\s+)?(?:lembra|avisa)\b", user_message.lower())
+        if rem_check:
+            fallback_plan["intent"] = "direct_reminder"
+            fallback_plan["direct_reminder"] = {"is_direct_reminder": True, "description": user_message.strip(), "remind_at": None}
+            fallback_plan["needs_clarification"] = "direct_reminder_time"
+            fallback_plan["clarification_subject"] = user_message.strip()
+        return fallback_plan
 
     def apply_plan_effects(self, plan: Dict[str, Any], conversation_id: Optional[int] = None):
         """Aplica os efeitos colaterais do plano (eventos, lembretes, open loops, tópico e humor)."""
@@ -374,19 +431,23 @@ class InternalPlanner:
 
                     if existing_rem and existing_rem.get("status") in ("offered", "confirmed", "declined"):
                         logger.info(f"Ignorando nova oferta para evento {event_row_id}; lembrete já em status '{existing_rem.get('status')}'.")
+                        if existing_rem.get("status") == "offered":
+                            plan["offered_reminder_id"] = existing_rem["id"]
                     else:
                         offset = int(plan.get("recommended_reminder_offset_minutes") or 30)
                         ev_dt = datetime.fromisoformat(event_at_iso)
                         remind_at_iso = (ev_dt - timedelta(minutes=offset)).strftime("%Y-%m-%dT%H:%M:%S")
                         if datetime.fromisoformat(remind_at_iso) > datetime.now():
                             from reminder_service import reminder_service
-                            reminder_service.offer_reminder(
+                            offered_id = reminder_service.offer_reminder(
                                 event_id=event_row_id,
                                 description=plan.get("event_details", {}).get("description", "seu compromisso"),
                                 remind_at=remind_at_iso,
                                 offset_minutes=offset,
                                 source_conversation_id=conversation_id
                             )
+                            if offered_id:
+                                plan["offered_reminder_id"] = offered_id
                 except Exception as e_rem:
                     logger.warning(f"Erro ao ofertar reminder para evento: {e_rem}")
 

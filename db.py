@@ -168,13 +168,21 @@ class DatabaseManager:
                 pass
             try:
                 cursor.execute("""
+                DELETE FROM resumos_conversa
+                WHERE id NOT IN (
+                    SELECT MIN(id)
+                    FROM resumos_conversa
+                    GROUP BY start_conversation_id, end_conversation_id
+                ) AND start_conversation_id IS NOT NULL AND end_conversation_id IS NOT NULL;
+                """)
+                cursor.execute("""
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_resumos_intervalo
                 ON resumos_conversa(start_conversation_id, end_conversation_id)
                 WHERE start_conversation_id IS NOT NULL AND end_conversation_id IS NOT NULL;
                 """)
                 conn.commit()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Erro ao verificar/criar idx_resumos_intervalo: {e}")
 
     def get_schema_version(self) -> int:
         """Retorna a versão mais recente do schema aplicada no banco."""
