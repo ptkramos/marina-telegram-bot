@@ -12,7 +12,8 @@ Sistema 100% autônomo sem dependência de arquivos JSON.
 import sqlite3
 import json
 import logging
-from contextlib import closing
+from contextlib import closing, contextmanager
+from threading import local
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Optional
@@ -45,17 +46,60 @@ class _ManagedConnection:
         return getattr(self._conn, name)
 
 
+class _TransactionConnection:
+    """Empresta a conexão do lote sem permitir commits parciais."""
+    def __init__(self, conn):
+        self.conn = conn
+        self.failed = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.failed = True
+
+    def commit(self):
+        pass
+
+    def rollback(self):
+        self.failed = True
+
+    def __getattr__(self, name):
+        return getattr(self.conn, name)
+
+
 class DatabaseManager:
     def __init__(self, db_path: Path = DB_FILE):
         self.db_path = db_path
+        self._transaction_state = local()
         self._init_db()
 
     def get_connection(self):
+        active = getattr(self._transaction_state, "connection", None)
+        if active is not None:
+            return active
         conn = sqlite3.connect(self.db_path, timeout=5.0)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA busy_timeout=5000;")
         conn.execute("PRAGMA foreign_keys=ON;")
         return _ManagedConnection(conn)
+
+    @contextmanager
+    def transaction(self):
+        """Uma transação por lote, isolada por thread; métodos existentes a reutilizam."""
+        if getattr(self._transaction_state, "connection", None) is not None:
+            raise RuntimeError("Transação de memória aninhada não suportada")
+        with self.get_connection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            borrowed = _TransactionConnection(conn)
+            self._transaction_state.connection = borrowed
+            try:
+                yield
+                if borrowed.failed:
+                    raise RuntimeError("Uma operação do lote solicitou rollback")
+            finally:
+                del self._transaction_state.connection
 
     def _init_db(self):
         is_new = not self.db_path.exists()
@@ -352,7 +396,8 @@ class DatabaseManager:
             cursor.execute(
                 """
                 SELECT id, fato, category, importance, confidence, memory_tier, volatility,
-                       canonical_key, source_conversation_id, last_confirmed_at
+                       canonical_key, source_conversation_id, last_confirmed_at,
+                       created_at, updated_at, access_count, active, confirmation_count, supersedes_id
                 FROM fatos_patrick
                 WHERE active = 1 AND memory_tier = 'core'
                 ORDER BY importance DESC, confidence DESC, id ASC
@@ -403,6 +448,8 @@ class DatabaseManager:
         with self.get_connection() as conn:
             try:
                 cursor = conn.cursor()
+                if not conn.in_transaction:
+                    conn.execute("BEGIN IMMEDIATE")
                 # 1. Verifica se o fato antigo existe e está ativo
                 cursor.execute(
                     "SELECT id, fato, canonical_key FROM fatos_patrick WHERE id = ? AND active = 1",
@@ -598,7 +645,8 @@ class DatabaseManager:
                     """
                     SELECT f.id, f.fato, f.category, f.importance, f.confidence,
                            f.memory_tier, f.volatility, f.canonical_key, f.last_confirmed_at,
-                           f.confirmation_count, f.access_count, fts.rank
+                           f.confirmation_count, f.access_count, f.created_at, f.updated_at,
+                           f.source_conversation_id, f.active, f.supersedes_id, fts.rank
                     FROM fatos_fts fts
                     JOIN fatos_patrick f ON f.id = fts.rowid
                     WHERE fatos_fts MATCH ? AND f.active = 1

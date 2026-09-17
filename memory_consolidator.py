@@ -9,7 +9,7 @@ import re
 import json
 import logging
 import asyncio
-from typing import Optional, Set, Dict, List
+from typing import Optional
 from openai import OpenAI
 
 from config import settings
@@ -179,238 +179,181 @@ class MemoryConsolidator:
                     "success": False
                 }
 
+    @staticmethod
+    def _validate_payload(payload: dict) -> dict:
+        """Valida todo o JSON antes de qualquer escrita; metadados internos são preservados."""
+        import math
+        if not isinstance(payload, dict):
+            raise MemoryConsolidationError("Resposta da consolidação deve ser objeto")
+        clean = dict(payload)
+        for name in ("facts_to_create", "facts_to_deactivate", "keys_to_deactivate", "important_moments"):
+            items = payload.get(name, [])
+            if not isinstance(items, list):
+                raise MemoryConsolidationError(f"{name} deve ser lista")
+            clean[name] = []
+            for item in items:
+                if name == "keys_to_deactivate":
+                    if not isinstance(item, str) or not _normalize_canonical_key(item):
+                        raise MemoryConsolidationError("Chave de revogação inválida")
+                    clean[name].append(_normalize_canonical_key(item))
+                    continue
+                if not isinstance(item, dict):
+                    raise MemoryConsolidationError(f"Item inválido em {name}")
+                row = dict(item)
+                for key in ("existing_fact_id", "supersedes_id"):
+                    value = row.get(key)
+                    if value is not None and (type(value) is not int or value <= 0):
+                        raise MemoryConsolidationError(f"{key} deve ser inteiro positivo")
+                if row.get("existing_fact_id") and row.get("supersedes_id") and row["existing_fact_id"] != row["supersedes_id"]:
+                    raise MemoryConsolidationError("IDs conflitantes no mesmo item")
+                if name == "facts_to_deactivate" and row.get("existing_fact_id") is None:
+                    raise MemoryConsolidationError("Revogação sem ID")
+                text_key = "fato" if name == "facts_to_create" else "momento"
+                if name != "facts_to_deactivate":
+                    value = row.get(text_key, "")
+                    if not isinstance(value, str):
+                        raise MemoryConsolidationError(f"{text_key} deve ser texto")
+                    row[text_key] = value.strip()
+                    for key, default in (("importance", 0.8 if name == "important_moments" else 0.5), ("confidence", 1.0)):
+                        value = row.get(key, default)
+                        try:
+                            if isinstance(value, bool):
+                                raise ValueError()
+                            number = float(value)
+                            if not math.isfinite(number):
+                                raise ValueError()
+                        except (TypeError, ValueError, OverflowError):
+                            raise MemoryConsolidationError(f"{key} deve ser número finito")
+                        row[key] = max(0.0, min(1.0, number))
+                if name == "facts_to_create":
+                    decision = row.get("decision", "new")
+                    if not isinstance(decision, str) or decision.strip().lower() not in ("new", "same", "update", "contradiction", "ignore"):
+                        raise MemoryConsolidationError("Decisão de memória inválida")
+                    row["decision"] = decision.strip().lower()
+                    if row["decision"] != "ignore" and not row["fato"]:
+                        raise MemoryConsolidationError("Fato vazio")
+                    for key, allowed, default in (
+                        ("category", ("preferencia", "rotina", "trabalho", "projeto", "hobby", "relacionamento", "pessoal", "saude", "outro", "geral"), "geral"),
+                        ("memory_tier", ("core", "standard", "contextual"), "standard"),
+                        ("volatility", ("stable", "medium", "volatile"), "medium"),
+                    ):
+                        value = row.get(key, default)
+                        value = value.strip().lower() if isinstance(value, str) else default
+                        row[key] = value if value in allowed else default
+                    if row.get("canonical_key") is not None and not isinstance(row["canonical_key"], str):
+                        raise MemoryConsolidationError("canonical_key deve ser texto ou null")
+                    row["canonical_key"] = _normalize_canonical_key(row.get("canonical_key"))
+                    if row["decision"] == "new" and (row.get("existing_fact_id") or row.get("supersedes_id")):
+                        raise MemoryConsolidationError("Novo fato não pode substituir um ID; use update")
+                clean[name].append(row)
+        summary = payload.get("topic_summary")
+        if summary is not None and not isinstance(summary, str):
+            raise MemoryConsolidationError("Resumo deve ser texto ou null")
+        return clean
+
     def apply_consolidation(
-        self,
-        consolidation: dict,
-        start_conv_id: Optional[int] = None,
+        self, consolidation: dict, start_conv_id: Optional[int] = None,
         end_conv_id: Optional[int] = None
     ) -> dict:
-        """
-        Aplica no banco SQLite os fatos, desativações, momentos e resumos extraídos.
-        Implementa controle autoritativo por 'decision', allowlist de candidatos e atomicidade.
-        """
-        created_count = 0
-        confirmed_count = 0
-        updated_count = 0
-        deactivated_count = 0
-        ignored_count = 0
-        moments_count = 0
-        summary_saved = False
+        payload = self._validate_payload(consolidation)
+        candidate_ids = {i for i in (payload.get("_candidate_fact_ids") or []) if type(i) is int and i > 0}
+        candidate_keys = set(payload.get("_candidate_keys") or [])
+        candidates = [c for c in (payload.get("_candidates") or []) if c.get("id") in candidate_ids and c.get("active", 1)]
 
-        candidate_ids = set(consolidation.get("_candidate_fact_ids") or [])
-        candidate_keys = set(consolidation.get("_candidate_keys") or [])
-        candidates_list = consolidation.get("_candidates") or []
+        def target_for(row):
+            explicit = row.get("existing_fact_id") or row.get("supersedes_id")
+            if explicit is not None:
+                if explicit in candidate_ids:
+                    return explicit
+                logger.warning("Alvo rejeitado: ID %s fora dos candidatos", explicit)
+                return None
+            key = row.get("canonical_key")
+            matches = [c for c in candidates if key and c.get("canonical_key") == key]
+            if len(matches) == 1:
+                return matches[0]["id"]
+            if row["decision"] == "same":
+                matches = [c for c in candidates if c.get("fato", "").strip().casefold() == row["fato"].casefold()]
+                if len(matches) == 1:
+                    return matches[0]["id"]
+            logger.warning("Alvo ausente ou ambíguo; operação ignorada")
+            return None
 
-        # 0. Desativa por chaves canônicas explicitamente revogadas com proteção de allowlist
-        for ck in consolidation.get("keys_to_deactivate", []):
-            if ck and isinstance(ck, str):
-                ck_clean = _normalize_canonical_key(ck)
-                if not ck_clean:
-                    continue
-                if candidate_keys and ck_clean not in candidate_keys:
-                    logger.warning(f"Desativação por chave '{ck_clean}' rejeitada: chave fora da allowlist de candidatos.")
-                    continue
-                count = self.db.desativar_fato_por_chave(ck_clean)
-                deactivated_count += count
-                logger.info(f"Fatos com canonical_key '{ck_clean}' desativados ({count} registros).")
-
-        # 1. Desativa fatos contraditos com proteção de allowlist
-        for deact in consolidation.get("facts_to_deactivate", []):
-            fact_id = deact.get("existing_fact_id")
-            if fact_id:
-                if candidate_ids and fact_id not in candidate_ids:
-                    logger.warning(f"Desativação de fato ID {fact_id} rejeitada: ID fora da allowlist de candidatos.")
-                    continue
-                self.db.desativar_fato(fact_id)
-                deactivated_count += 1
-                logger.info(f"Fato ID {fact_id} desativado: {deact.get('reason')}")
-
-        # 2. Processa fatos orientados pela DECISION
-        for fc in consolidation.get("facts_to_create", []):
-            fato_text = (fc.get("fato") or "").strip()
-            decision = str(fc.get("decision", "new")).strip().lower()
-
-            # Sanitização e Whitelist de Decisão
-            if decision not in ("new", "same", "update", "contradiction", "ignore"):
-                decision = "new"
-
-            # Caso IGNORE: nenhuma mutação
-            if decision == "ignore":
-                ignored_count += 1
-                continue
-
-            # Validação e Clamping de Domínio (P1.6)
-            cat = str(fc.get("category", "geral")).strip().lower()
-            if cat not in ("preferencia", "rotina", "trabalho", "projeto", "hobby",
-                           "relacionamento", "pessoal", "saude", "outro", "geral"):
-                cat = "geral"
-
-            try:
-                imp = max(0.0, min(1.0, float(fc.get("importance", 0.5))))
-            except (ValueError, TypeError):
-                imp = 0.5
-
-            try:
-                conf = max(0.0, min(1.0, float(fc.get("confidence", 1.0))))
-            except (ValueError, TypeError):
-                conf = 1.0
-
-            tier = str(fc.get("memory_tier", "standard")).strip().lower()
-            if tier not in ("core", "standard", "contextual"):
-                tier = "standard"
-
-            vol = str(fc.get("volatility", "medium")).strip().lower()
-            if vol not in ("stable", "medium", "volatile"):
-                vol = "medium"
-
-            ck = _normalize_canonical_key(fc.get("canonical_key"))
-            existing_id = fc.get("existing_fact_id") or fc.get("supersedes_id")
-
-            # --- DECISION: SAME (Reafirmação / Confirmação) ---
-            if decision == "same":
-                target_id = None
-                # 1. Se informou existing_fact_id, valida no allowlist
-                if existing_id:
-                    if not candidate_ids or existing_id in candidate_ids:
-                        target_id = existing_id
-                    else:
-                        logger.warning(f"decision=same: existing_fact_id {existing_id} rejeitado (fora da allowlist).")
-
-                # 2. Se não informou ID ou falhou, tenta resolver com segurança exclusivamente entre os candidatos
-                if not target_id and candidates_list:
-                    # Tenta match por canonical_key única
-                    if ck:
-                        matching_by_key = [c for c in candidates_list if c.get("canonical_key") == ck and c.get("active", 1)]
-                        if len(matching_by_key) == 1:
-                            target_id = matching_by_key[0]["id"]
-
-                    # Tenta match por texto idêntico/normalizado
-                    if not target_id and fato_text:
-                        matching_by_text = [
-                            c for c in candidates_list
-                            if c.get("fato", "").strip().lower() == fato_text.lower() and c.get("active", 1)
-                        ]
-                        if len(matching_by_text) == 1:
-                            target_id = matching_by_text[0]["id"]
-
-                # 3. Se ainda assim não resolveu e candidate_ids está vazio (chamada direta de teste)
-                if not target_id and existing_id:
-                    target_id = existing_id
-
-                if target_id:
-                    confirmed = self.db.confirmar_fato(target_id)
-                    if confirmed:
-                        confirmed_count += 1
-                        logger.info(f"Fato ID {target_id} reafirmado com sucesso (decision=same).")
-                    else:
-                        logger.warning(f"decision=same: Falha ao confirmar fato ID {target_id} (inativo ou inexistente).")
-                else:
-                    logger.warning(f"decision=same para '{fato_text}': Alvo ambíguo ou não identificado. Mutação ignorada por segurança.")
-                continue
-
-            # --- DECISION: UPDATE ou CONTRADICTION (Substituição Atômica) ---
-            if decision in ("update", "contradiction"):
-                target_id = None
-                if existing_id:
-                    if not candidate_ids or existing_id in candidate_ids:
-                        target_id = existing_id
-                    else:
-                        logger.warning(f"decision={decision}: existing_fact_id {existing_id} rejeitado (fora da allowlist).")
-
-                if not target_id and ck and candidates_list:
-                    matching_by_key = [c for c in candidates_list if c.get("canonical_key") == ck and c.get("active", 1)]
-                    if len(matching_by_key) == 1:
-                        target_id = matching_by_key[0]["id"]
-
-                if not target_id and existing_id and not candidate_ids:
-                    target_id = existing_id
-
-                if target_id:
-                    new_fact_data = {
-                        "fato": fato_text,
-                        "category": cat,
-                        "importance": imp,
-                        "confidence": conf,
-                        "source_conversation_id": end_conv_id,
-                        "memory_tier": tier,
-                        "volatility": vol,
-                        "canonical_key": ck
-                    }
-                    new_id = self.db.substituir_fato_atomicamente(target_id, new_fact_data)
-                    if new_id:
-                        if new_id == target_id:
-                            # Caso seguro de texto idêntico confirmado
-                            confirmed_count += 1
-                        else:
-                            updated_count += 1
-                            deactivated_count += 1
-                        logger.info(f"Fato ID {target_id} substituído com sucesso por novo ID {new_id} (decision={decision}).")
-                    else:
-                        logger.warning(f"Falha atômica ao substituir fato ID {target_id}. Fato original preservado.")
-                else:
-                    logger.warning(f"decision={decision} para '{fato_text}': ID alvo não resolvido no allowlist. Nenhuma substituição realizada.")
-                continue
-
-            # --- DECISION: NEW (Inserção de Novo Fato) ---
-            # Não desativa fatos anteriores automaticamente apenas pela presença de canonical_key!
-            if not fato_text:
-                continue
-
-            row_id = self.db.adicionar_fato_patrick(
-                fato=fato_text,
-                category=cat,
-                importance=imp,
-                confidence=conf,
-                source_conversation_id=end_conv_id,
-                supersedes_id=existing_id,
-                memory_tier=tier,
-                volatility=vol,
-                canonical_key=ck
-            )
-            if row_id and row_id > 0:
-                created_count += 1
-                logger.info(f"Novo fato aprendido: '{fato_text}' (Categoria: {cat} | Tier: {tier} | Key: {ck})")
+        revocations = set()
+        for row in payload["facts_to_deactivate"]:
+            if row["existing_fact_id"] in candidate_ids:
+                revocations.add(row["existing_fact_id"])
             else:
-                logger.info(f"Fato '{fato_text}' já existia no banco e foi ignorado pelo SQLite UNIQUE constraint.")
-
-        # 3. Registra momentos marcantes
-        for mom in consolidation.get("important_moments", []):
-            mom_text = (mom.get("momento") or "").strip()
-            if not mom_text:
+                logger.warning("Revogação rejeitada: ID fora dos candidatos")
+        for key in payload["keys_to_deactivate"]:
+            if key not in candidate_keys:
+                logger.warning("Revogação rejeitada: chave fora dos candidatos")
                 continue
-            try:
-                imp = max(0.0, min(1.0, float(mom.get("importance", 0.8))))
-            except (ValueError, TypeError):
-                imp = 0.8
-            self.db.adicionar_momento_marcante(
-                momento=mom_text,
-                importance=imp,
-                source_conversation_id=end_conv_id
-            )
-            moments_count += 1
-            logger.info(f"Momento marcante registrado: '{mom_text}'")
+            revocations.update(c["id"] for c in candidates if c.get("canonical_key") == key)
 
-        # 4. Salva resumo de conversa se houver tópico relevante
-        topic_summary = consolidation.get("topic_summary")
-        if topic_summary and isinstance(topic_summary, str) and len(topic_summary.strip()) > 8:
-            self.db.salvar_resumo_conversa(
-                topic=topic_summary.strip(),
-                summary=topic_summary.strip(),
-                start_conversation_id=start_conv_id,
-                end_conversation_id=end_conv_id
-            )
-            summary_saved = True
-            logger.info(f"Resumo temático salvo: '{topic_summary.strip()}'")
+        operations = []
+        used_targets = set()
+        for row in payload["facts_to_create"]:
+            decision = row["decision"]
+            target = target_for(row) if decision in ("same", "update", "contradiction") else None
+            if decision == "ignore":
+                ignored_target = row.get("existing_fact_id") or row.get("supersedes_id")
+                ignored_ids = {ignored_target} if ignored_target else {c["id"] for c in candidates if row.get("canonical_key") and c.get("canonical_key") == row["canonical_key"]}
+                if ignored_ids & revocations:
+                    raise MemoryConsolidationError("ignore e revogação conflitantes")
+            if target is not None:
+                if target in used_targets:
+                    raise MemoryConsolidationError("Múltiplas decisões sobre o mesmo fato")
+                used_targets.add(target)
+                if decision == "same" and target in revocations:
+                    raise MemoryConsolidationError("same e revogação conflitantes")
+                if decision in ("update", "contradiction"):
+                    revocations.discard(target)
+            operations.append((row, target))
 
-        return {
-            "created": created_count,
-            "confirmed": confirmed_count,
-            "updated": updated_count,
-            "deactivated": deactivated_count,
-            "ignored": ignored_count,
-            "moments": moments_count,
-            "summary_saved": summary_saved
-        }
+        result = dict(created=0, confirmed=0, updated=0, deactivated=0, ignored=0, moments=0, summary_saved=False)
+        try:
+            with self.db.transaction():
+                for row, target in operations:
+                    decision = row["decision"]
+                    if decision == "ignore" or (decision != "new" and target is None):
+                        result["ignored"] += 1
+                        continue
+                    if decision == "same":
+                        if not self.db.confirmar_fato(target):
+                            raise MemoryConsolidationError("Candidato não está mais ativo")
+                        result["confirmed"] += 1
+                    elif decision in ("update", "contradiction"):
+                        data = dict(row, source_conversation_id=end_conv_id)
+                        new_id = self.db.substituir_fato_atomicamente(target, data)
+                        if not new_id:
+                            raise MemoryConsolidationError("Replacement falhou; revertendo lote inteiro")
+                        result["confirmed" if new_id == target else "updated"] += 1
+                        result["deactivated"] += int(new_id != target)
+                    else:
+                        new_id = self.db.adicionar_fato_patrick(
+                            fato=row["fato"], category=row["category"], importance=row["importance"],
+                            confidence=row["confidence"], memory_tier=row["memory_tier"],
+                            volatility=row["volatility"], canonical_key=row["canonical_key"],
+                            source_conversation_id=end_conv_id
+                        )
+                        result["created"] += int(bool(new_id))
+                for target in revocations:
+                    if self.db.get_fato_detalhado(target):
+                        self.db.desativar_fato(target)
+                        result["deactivated"] += 1
+                for row in payload["important_moments"]:
+                    if row["momento"]:
+                        self.db.adicionar_momento_marcante(row["momento"], importance=row["importance"], source_conversation_id=end_conv_id)
+                        result["moments"] += 1
+                summary = payload.get("topic_summary")
+                if summary and len(summary.strip()) > 8:
+                    self.db.salvar_resumo_conversa(topic=summary.strip(), summary=summary.strip(), start_conversation_id=start_conv_id, end_conversation_id=end_conv_id)
+                    result["summary_saved"] = True
+        except MemoryConsolidationError:
+            raise
+        except Exception as exc:
+            raise MemoryConsolidationError("Falha ao aplicar lote; todas as escritas revertidas") from exc
+        return result
 
     async def consolidate_and_apply_async(
         self,

@@ -58,7 +58,7 @@ class MemoryRetriever:
             return 0.5
         try:
             dt = datetime.fromisoformat(timestamp_iso)
-            days = (datetime.now() - dt).total_seconds() / 86400.0
+            days = (datetime.now(dt.tzinfo) - dt).total_seconds() / 86400.0
             if days <= 7:
                 return 1.0
             elif days <= 30:
@@ -88,7 +88,7 @@ class MemoryRetriever:
 
         try:
             dt = datetime.fromisoformat(timestamp_iso)
-            days = (datetime.now() - dt).total_seconds() / 86400.0
+            days = (datetime.now(dt.tzinfo) - dt).total_seconds() / 86400.0
         except Exception:
             return raw_conf
 
@@ -98,17 +98,17 @@ class MemoryRetriever:
         if volatility == "stable":
             if days > 365:
                 penalty = min(0.05, ((days - 365) / 365.0) * 0.05)
-                return max(0.0, min(1.0, round(raw_conf - penalty, 4)))
+                return min(raw_conf, max(0.0, round(raw_conf - penalty, 4)))
             return raw_conf
         elif volatility == "volatile":
             if days > 30:
                 penalty = min(0.60, ((days - 30) / 60.0) * 0.60)
-                return max(0.10, min(1.0, round(raw_conf - penalty, 4)))
+                return min(raw_conf, max(0.10, round(raw_conf - penalty, 4)))
             return raw_conf
         else:  # medium
             if days > 90:
                 penalty = min(0.30, ((days - 90) / 90.0) * 0.30)
-                return max(0.30, min(1.0, round(raw_conf - penalty, 4)))
+                return min(raw_conf, max(0.30, round(raw_conf - penalty, 4)))
             return raw_conf
 
     def compute_hybrid_score(
@@ -130,7 +130,7 @@ class MemoryRetriever:
         # Se foi passado fts_rank relativo ou is_fts_match sem lexical_score específico
         if is_fts_match and lexical_score <= 0.05:
             if fts_rank < 0:
-                lexical_score = min(1.0, max(0.35, 1.0 / (1.0 + abs(fts_rank) * 0.1)))
+                lexical_score = min(1.0, 0.35 + 0.65 * abs(fts_rank) / (1.0 + abs(fts_rank)))
             else:
                 lexical_score = 0.75
 
@@ -146,12 +146,13 @@ class MemoryRetriever:
         access_count = fact.get("access_count", 0)
         access_bonus = min(1.0, access_count / 10.0)
 
-        w_lex = getattr(settings, "MEMORY_WEIGHT_LEXICAL", 0.40)
-        w_imp = getattr(settings, "MEMORY_WEIGHT_IMPORTANCE", 0.20)
-        w_cnf = getattr(settings, "MEMORY_WEIGHT_CONFIDENCE", 0.15)
-        w_frs = getattr(settings, "MEMORY_WEIGHT_FRESHNESS", 0.10)
-        w_cor = getattr(settings, "MEMORY_WEIGHT_CORE", 0.10)
-        w_acc = getattr(settings, "MEMORY_WEIGHT_ACCESS", 0.05)
+        weights = settings.memory_weights()
+        w_lex = weights["LEXICAL"]
+        w_imp = weights["IMPORTANCE"]
+        w_cnf = weights["CONFIDENCE"]
+        w_frs = weights["FRESHNESS"]
+        w_cor = weights["CORE"]
+        w_acc = weights["ACCESS"]
 
         total_score = (
             (lexical_score * w_lex) +
@@ -340,7 +341,9 @@ class MemoryRetriever:
             # Anotação de cautela para reconfirmação se a confiança efetiva for baixa (< 0.5)
             eff_conf = sf.get("effective_confidence", 1.0)
             if eff_conf < 0.5:
-                retrieved_fact_strings.append(f"{sf['fato']} (lembrança vaga/a confirmar)")
+                retrieved_fact_strings.append(f"{sf['fato']} (lembrança vaga; reconfirmar naturalmente antes de afirmar)")
+            elif eff_conf < 0.8:
+                retrieved_fact_strings.append(f"{sf['fato']} (pode estar desatualizado; tratar com cautela)")
             else:
                 retrieved_fact_strings.append(sf["fato"])
 

@@ -3,6 +3,7 @@ Módulo de configurações e variáveis de ambiente do Bot de Marina Seltin.
 Compatível com OpenAI, OpenRouter e outros provedores sem censura.
 """
 import os
+import math
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -89,9 +90,23 @@ class Settings:
     IPHONE_DEVICE_LORA_NAME: str = os.getenv("IPHONE_DEVICE_LORA_NAME", "iphone16pro_flux.safetensors").strip()
 
 
+    def memory_weights(self) -> dict[str, float]:
+        names = ("LEXICAL", "IMPORTANCE", "CONFIDENCE", "FRESHNESS", "CORE", "ACCESS")
+        weights = {name: getattr(self, "MEMORY_WEIGHT_" + name) for name in names}
+        if any(not math.isfinite(value) or value < 0 for value in weights.values()):
+            raise ValueError("Pesos de memória devem ser finitos e não negativos")
+        total = sum(weights.values())
+        if not math.isfinite(total) or total <= 0:
+            raise ValueError("Soma dos pesos de memória deve ser finita e positiva")
+        return {name: value / total for name, value in weights.items()}
+
     @classmethod
     def validate(cls) -> list[str]:
         errors = []
+        try:
+            cls().memory_weights()
+        except ValueError as exc:
+            errors.append(str(exc))
         if not cls.TELEGRAM_BOT_TOKEN or cls.TELEGRAM_BOT_TOKEN == "SEU_TOKEN_TELEGRAM_AQUI":
             errors.append("TELEGRAM_BOT_TOKEN não configurado no .env")
         if not cls.LLM_API_KEY or cls.LLM_API_KEY.startswith("sk-..."):

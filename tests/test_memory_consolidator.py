@@ -81,6 +81,7 @@ class TestMemoryConsolidatorDatabase(unittest.TestCase):
             "facts_to_create": [
                 {
                     "fato": "Patrick parou de tomar café e agora bebe chá verde",
+                    "decision": "update",
                     "category": "preferencia",
                     "importance": 0.8,
                     "confidence": 1.0,
@@ -96,6 +97,7 @@ class TestMemoryConsolidatorDatabase(unittest.TestCase):
             "important_moments": [],
             "topic_summary": "Mudança de hábitos matinais"
         }
+        payload["_candidate_fact_ids"] = {fato_antigo_id}
 
         self.consolidator.apply_consolidation(payload)
 
@@ -169,11 +171,11 @@ class TestMemoryConsolidatorLLM(unittest.TestCase):
         if result.get("error") and "402" in result.get("error"):
             self.skipTest("OpenRouter sem créditos suficientes (HTTP 402).")
         deactivations = result.get("facts_to_deactivate", [])
-        self.assertTrue(
-            any(d.get("existing_fact_id") == 42 for d in deactivations),
-            "O fato ID 42 (café) deveria ter sido marcado para desativação!"
-        )
         fatos_novos = result.get("facts_to_create", [])
+        self.assertTrue(
+            any(f.get("decision") in ("update", "contradiction") and f.get("existing_fact_id") == 42 for f in fatos_novos),
+            "O fato ID 42 deve ser substituído por decisão atômica"
+        )
         self.assertTrue(
             any("suco" in f["fato"].lower() for f in fatos_novos),
             "Deveria ter criado fato sobre suco de laranja"

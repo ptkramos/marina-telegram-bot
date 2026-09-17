@@ -428,6 +428,7 @@ class TestMemoryIntelligenceHardened(unittest.TestCase):
         # Abre com DatabaseManager v3.5.0
         mgr = DatabaseManager(db_path=legacy_db_path)
         self.assertEqual(mgr.get_schema_version(), 5)
+        self.assertEqual(mgr.get_mensagens_recentes()[0]["content"], "Oi amor")
 
         # Conversas e fatos intactos
         fatos = mgr.get_fatos_patrick_detalhados()
