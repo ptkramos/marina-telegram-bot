@@ -142,6 +142,139 @@ def parse_iso_or_relative_datetime(
     # Caso contrário, retorna None (evita converter frases descritivas em timestamps falsos)
     return None
 
+def detect_direct_reminder_intent(text: str) -> tuple[bool, Optional[str]]:
+    """
+    Analisa se o texto é uma ordem/pedido afirmativo e imperativo de lembrete direto futuro.
+    Retorna (True, subject) se for um pedido legítimo afirmativo.
+    Retorna (False, None) se contiver negação, se for pergunta de memória passada/recordação
+    ou se não for um pedido de lembrete. (P0 - Rodada 4)
+    """
+    if not text:
+        return False, None
+
+    t = text.strip().lower()
+
+    # 1. Rejeita imediatamente qualquer negação
+    # ex: "não me lembra", "não precisa me lembrar", "nem me lembra", "sem me lembrar", "não me avisa"
+    negative_patterns = [
+        r"\b(?:n[aã]o|nem|nunca|jamais|sem|dispensa|esquece|nada de)\s+.*?\b(?:lembr|avis)",
+        r"\b(?:n[aã]o\s+precisa|n[aã]o\s+quero|n[aã]o\s+vai)\s+.*?\b(?:lembr|avis)",
+        r"\b(?:lembr|avis)\w*\s+n[aã]o\s+precisa\b",
+        r"\bdeixa\s+que\s+eu\s+(?:me\s+)?lembro\b",
+        r"\bdeixa\s+quieto\b",
+        r"^\s*(?:n[aã]o|nem|nunca|jamais)\b"
+    ]
+    for neg in negative_patterns:
+        if re.search(neg, t):
+            return False, None
+
+    # 2. Rejeita perguntas de memória passada / recordação / nostalgia
+    # ex: "você lembra", "lembra quando", "lembra de quando", "lembra daquele", "lembra do"
+    past_memory_patterns = [
+        r"\b(?:voc[êe]|vc|c[êe]|tu)\s+lembra\b",
+        r"\blembra\s+(?:de\s+quando|quando|como|daquela|daquele|daqueles|daquelas|do\s+dia|de\s+ontem)\b",
+        r"\blembra\s+(?:do|da|dos|das|disso|dessa|desse|dele|dela|da\s+gente|do\s+nosso|da\s+nossa)\b.*?\?",
+        r"^\s*lembra\s+de\s+.*?\?"
+    ]
+    for mem in past_memory_patterns:
+        if re.search(mem, t):
+            return False, None
+
+    # 3. Padrões estritos de solicitação imperativa / afirmativa de lembrete futuro
+    imperative_patterns = [
+        # "me lembra de ...", "me lembra que ...", "me lembra pra ...", "me lembra amanhã ..."
+        r"^\s*(?:por\s+favor,?\s*)?(?:me\s+)?(?:lembra|avisa)\s+(?:de\s+|que\s+|pra\s+|a\s+|quando\s+)?(.+)",
+        # "pode me lembrar de ...", "favor me avisar de ..."
+        r"\b(?:pode\s+(?:me\s+)?(?:lembrar|avisar)|favor\s+(?:me\s+)?(?:lembrar|avisar))\s+(?:de\s+|que\s+|pra\s+|a\s+|quando\s+)?(.+)",
+        # "quero que você me lembre de ..."
+        r"\b(?:quero\s+que\s+(?:voc[êe]|vc)\s+me\s+(?:lembre|avise))\s+(?:de\s+|que\s+|pra\s+|a\s+)?(.+)",
+        # "coloca/agenda/cria um lembrete pra ..."
+        r"\b(?:coloca|agenda|cria|marca)\s+(?:um\s+)?lembrete\s+(?:de\s+|que\s+|pra\s+|para\s+)?(.+)"
+    ]
+
+    for pat in imperative_patterns:
+        m = re.search(pat, t)
+        if m:
+            subject = m.group(1).strip().rstrip(".!? ")
+            if not subject:
+                return False, None
+            # Se a frase inteira for uma pergunta e o verbo for apenas "lembra" sem "me lembra" / "pode me lembrar"
+            # ex: "Lembra disso?"
+            if "?" in text and not re.search(r"\b(?:me\s+lembra|pode\s+me\s+lembrar|coloca\s+um\s+lembrete)\b", t):
+                return False, None
+            return True, subject
+
+    return False, None
+
+
+def is_pure_time_specification(text: str, pending_description: str = "") -> bool:
+    """
+    Verifica se uma mensagem do usuário é estritamente uma resposta de horário/tempo
+    para um esclarecimento de lembrete pendente, ou se introduz uma nova atividade/outro assunto.
+    (P1 - Rodada 4)
+    """
+    if not text:
+        return False
+
+    t = text.strip().lower()
+
+    # 1. Se contiver recusa explícita, não é especificação de horário
+    if re.search(r"\b(esquece|deixa pra l[aá]|deixa quieto|n[aã]o precisa|cancela|n[aã]o quero)\b", t):
+        return False
+
+    # 2. Detecção de nova atividade / compromisso / mudança de assunto
+    # Verbos de ação ou compromissos em primeira/terceira pessoa
+    new_activity_patterns = [
+        r"\b(?:vou|vamos|vai|irei|iremos|fui|fomos)\s+(?:viajar|sair|trabalhar|almoçar|jantar|dormir|treinar|malhar|correr|visitar|estudar|jogar|encontrar|passear|pescar|comprar|arrumar|limpar|fazer\s+compras)\b",
+        r"\b(?:vou|vai|vamos)\s+(?:ao|ao\s+m[eé]dico|ao\s+dentista|ao\s+shopping|ao\s+banco|ao\s+mercado|a\s+uma\s+reuni[aã]o|na\s+academia|no\s+m[eé]dico|no\s+dentista|na\s+casa|pra\s+casa|pro\s+trabalho)\b",
+        r"\b(?:tenho|terei|temos)\s+(?:reuni[aã]o|consulta|m[eé]dico|dentista|prova|aula|entrevista|plant[aã]o|compromisso|viagem|visita|almoço|jantar)\b",
+        r"\b(?:estou|t[oô]|estamos)\s+(?:indo|viajando|saindo|trabalhando|estudando|treinando)\b",
+        r"\b(?:visita|reuni[aã]o|consulta)\s+(?:com|de|na|no)\b"
+    ]
+
+    has_new_activity = False
+    for act_pat in new_activity_patterns:
+        if re.search(act_pat, t):
+            has_new_activity = True
+            break
+
+    if has_new_activity:
+        # Se a nova atividade mencionada já faz parte da descrição do lembrete pendente
+        # (ex: lembrete era "viajar" ou "minha viagem" e o usuário diz "vou viajar amanhã às 14h")
+        if pending_description:
+            desc_lower = pending_description.lower()
+            keywords = [w for w in re.findall(r"\b\w{4,}\b", desc_lower) if w not in ("lembra", "lembrete", "favor", "pode", "para", "hoje", "amanha", "amanhã")]
+            if any(kw in t for kw in keywords):
+                has_new_activity = False
+
+        if has_new_activity:
+            return False
+
+    # 3. Deve conter ao menos um marcador temporal reconhecível
+    has_time = bool(re.search(r"\b(?:[aà]s\s+)?\d{1,2}(?::\d{2}|h(?:\d{2})?|\s*(?:da\s+manh[aã]|da\s+tarde|da\s+noite))\b", t))
+    has_day = bool(re.search(r"\b(?:hoje|amanh[aã]|depois\s+de\s+amanh[aã]|segunda|ter[çc]a|quarta|quinta|sexta|s[aá]bado|domingo|de\s+manh[aã]|pela\s+manh[aã]|[aà]\s+tarde|de\s+tarde|de\s+noite|[aà]\s+noite|daqui\s+a\s+\d+)\b", t))
+
+    if not (has_time or has_day):
+        return False
+
+    # 4. Remove partículas comuns de resposta conversacional de horário:
+    cleaned = re.sub(r"\b(pode\s+ser|marca|coloca|anota|me\s+lembra|lembra|por\s+favor|beleza|fechado|ok|t[aá]|amor|vida|marina|a[ií]|ent[aã]o|pra|para|[aà]s?)\b", " ", t)
+    cleaned = re.sub(r"\b(hoje|amanh[aã]|depois\s+de\s+amanh[aã]|segunda(?:-feira)?|ter[çc]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[aá]bado|domingo)\b", " ", cleaned)
+    cleaned = re.sub(r"\b(de\s+manh[aã]|pela\s+manh[aã]|[aà]\s+tarde|de\s+tarde|de\s+noite|[aà]\s+noite|daqui\s+a|\d+\s*(?:horas?|minutos?|dias?))\b", " ", cleaned)
+    cleaned = re.sub(r"\b\d{1,2}(?::\d{2}|h(?:\d{2})?|\s*(?:da\s+manh[aã]|da\s+tarde|da\s+noite)?)\b", " ", cleaned)
+    cleaned = re.sub(r"[^\w\s]", " ", cleaned).strip()
+
+    if pending_description:
+        for w in re.findall(r"\b\w+\b", pending_description.lower()):
+            cleaned = re.sub(rf"\b{re.escape(w)}\b", " ", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+    words_left = [w for w in cleaned.split() if len(w) > 2]
+    if len(words_left) > 2:
+        return False
+
+    return True
+
 
 PLANNER_SYSTEM_PROMPT = """Você é o Planejador Cognitivo Interno de Marina Seltin.
 Sua função é analisar a mensagem de Patrick Ramos (namorado da Marina) e planejar a melhor estratégia de resposta antes da geração final.
@@ -193,7 +326,8 @@ REGRAS RÍGIDAS:
 2. LEMBRETES INTELIGENTES (Smart Reminders):
    - reminder_candidate = true e should_offer_reminder = true quando for evento concreto com hora ou deadline (médico, reunião, prova, voo). A Marina vai carinhosamente OFERECER ("quer que eu te lembre um pouquinho antes?").
    - NÃO ofereça reminder para coisas vagas como "amanhã vou jogar" ou "depois vejo um filme".
-   - direct_reminder.is_direct_reminder = true quando Patrick pedir explicitamente ("me lembra amanhã às 8h de tomar o remédio").
+   - direct_reminder.is_direct_reminder = true APENAS quando Patrick pedir explicitamente ("me lembra amanhã às 8h de tomar o remédio").
+   - NUNCA marque direct_reminder se a frase contiver NEGAÇÃO (ex: "não me lembra...", "não precisa me lembrar") ou se for PERGUNTA DE MEMÓRIA PASSADA (ex: "você lembra quando...", "lembra de quando fui ao médico?").
 3. ASSUNTOS EM ABERTO (Open Loops):
    - creates_open_loop = true para tópicos que não terminaram mas não têm alarme com hora fixa (ex: "tô esperando a resposta da empresa", "preciso decidir se viajo", "meu PC tá com problema depois vejo").
    - resolves_open_loop = true quando Patrick trouxer a conclusão de um assunto pendente anterior ("eles responderam!", "comprei a passagem", "consertei o PC").
@@ -248,11 +382,10 @@ class InternalPlanner:
                 "emotional_deltas": {"affection": 0.04, "romantic_intensity": 0.03}
             }
 
-        # Pedidos diretos óbvios de lembrete (P1 - Rodada 3)
-        rem_match = re.search(r"\b(?:me\s+)?(?:lembra|avisa)\s+(?:de\s+|que\s+|pra\s+)?(.+)", t)
-        if rem_match:
-            assunto = rem_match.group(1).strip()
-            parsed_time = parse_iso_or_relative_datetime(assunto, default_offset_hours=None)
+        # Pedidos diretos óbvios de lembrete (P1 - Rodada 3 / P0 - Rodada 4)
+        is_direct, subject = detect_direct_reminder_intent(user_message)
+        if is_direct and subject:
+            parsed_time = parse_iso_or_relative_datetime(subject, default_offset_hours=None)
             is_valid_future = bool(parsed_time and datetime.fromisoformat(parsed_time) > datetime.now())
             plan_res = {
                 "intent": "direct_reminder",
@@ -263,14 +396,14 @@ class InternalPlanner:
                 "event_details": None,
                 "direct_reminder": {
                     "is_direct_reminder": True,
-                    "description": assunto,
+                    "description": subject,
                     "remind_at": parsed_time if is_valid_future else None
                 },
                 "emotional_deltas": {"affection": 0.02}
             }
             if not is_valid_future:
                 plan_res["needs_clarification"] = "direct_reminder_time"
-                plan_res["clarification_subject"] = assunto
+                plan_res["clarification_subject"] = subject
             return plan_res
 
         return None
@@ -284,8 +417,8 @@ class InternalPlanner:
 
         # 2. Se planner não estiver habilitado em config, usa plano padrão
         if not getattr(settings, "PLANNER_ENABLED", False):
-            rem_check = re.search(r"\b(?:me\s+)?(?:lembra|avisa)\b", user_message.lower())
-            if rem_check:
+            is_dir, subj = detect_direct_reminder_intent(user_message)
+            if is_dir and subj:
                 return {
                     "intent": "direct_reminder",
                     "tone": "carinhosa",
@@ -293,9 +426,9 @@ class InternalPlanner:
                     "reaction_emoji": "⏰",
                     "creates_event": False,
                     "event_details": None,
-                    "direct_reminder": {"is_direct_reminder": True, "description": user_message.strip(), "remind_at": None},
+                    "direct_reminder": {"is_direct_reminder": True, "description": subj, "remind_at": None},
                     "needs_clarification": "direct_reminder_time",
-                    "clarification_subject": user_message.strip(),
+                    "clarification_subject": subj,
                     "emotional_deltas": {}
                 }
             return {
@@ -327,15 +460,22 @@ class InternalPlanner:
                 raw_text = response.choices[0].message.content.strip()
                 data = json.loads(raw_text)
 
-                # Validação antecipada de lembrete direto no plano (P1 - Rodada 3)
+                # Validação antecipada de lembrete direto no plano (P1 - Rodada 3 / P0 - Rodada 4)
                 dir_rem = data.get("direct_reminder")
                 if dir_rem and isinstance(dir_rem, dict) and dir_rem.get("is_direct_reminder"):
-                    rem_desc = dir_rem.get("description") or "seu compromisso"
-                    raw_rem_time = dir_rem.get("remind_at")
-                    rem_time_iso = parse_iso_or_relative_datetime(raw_rem_time, default_offset_hours=None)
-                    if not rem_time_iso or datetime.fromisoformat(rem_time_iso) <= datetime.now():
-                        data["needs_clarification"] = "direct_reminder_time"
-                        data["clarification_subject"] = rem_desc
+                    is_valid_intent, detected_subj = detect_direct_reminder_intent(user_message)
+                    if not is_valid_intent:
+                        logger.info(f"LLM gerou direct_reminder indevido para mensagem negada/passada: '{user_message}'. Removendo direct_reminder.")
+                        data["direct_reminder"] = None
+                        if data.get("intent") == "direct_reminder":
+                            data["intent"] = "casual_chat"
+                    else:
+                        rem_desc = dir_rem.get("description") or detected_subj or "seu compromisso"
+                        raw_rem_time = dir_rem.get("remind_at")
+                        rem_time_iso = parse_iso_or_relative_datetime(raw_rem_time, default_offset_hours=None)
+                        if not rem_time_iso or datetime.fromisoformat(rem_time_iso) <= datetime.now():
+                            data["needs_clarification"] = "direct_reminder_time"
+                            data["clarification_subject"] = rem_desc
 
                 return data
             except Exception as e:
@@ -357,12 +497,12 @@ class InternalPlanner:
             "shared_topic": None,
             "emotional_deltas": {}
         }
-        rem_check = re.search(r"\b(?:me\s+)?(?:lembra|avisa)\b", user_message.lower())
-        if rem_check:
+        is_fallback_dir, fallback_subj = detect_direct_reminder_intent(user_message)
+        if is_fallback_dir and fallback_subj:
             fallback_plan["intent"] = "direct_reminder"
-            fallback_plan["direct_reminder"] = {"is_direct_reminder": True, "description": user_message.strip(), "remind_at": None}
+            fallback_plan["direct_reminder"] = {"is_direct_reminder": True, "description": fallback_subj, "remind_at": None}
             fallback_plan["needs_clarification"] = "direct_reminder_time"
-            fallback_plan["clarification_subject"] = user_message.strip()
+            fallback_plan["clarification_subject"] = fallback_subj
         return fallback_plan
 
     def apply_plan_effects(self, plan: Dict[str, Any], conversation_id: Optional[int] = None):
@@ -456,9 +596,15 @@ class InternalPlanner:
             if dir_rem and isinstance(dir_rem, dict) and dir_rem.get("is_direct_reminder"):
                 try:
                     rem_desc = dir_rem.get("description") or "seu compromisso"
-                    raw_rem_time = dir_rem.get("remind_at")
-                    # P1.5 / P2: Exigir horário explícito e futuro, sem default_offset_hours implícito
-                    rem_time_iso = parse_iso_or_relative_datetime(raw_rem_time, default_offset_hours=None)
+                    neg_check = re.search(r"\b(?:n[aã]o|nem|nunca|jamais|sem|dispensa)\b.*?\b(?:lembr|avis)", rem_desc.lower())
+                    mem_check = re.search(r"\b(?:voc[êe]|vc|tu)\s+lembra\b|\blembra\s+(?:quando|como|de\s+quando)\b", rem_desc.lower())
+                    if neg_check or mem_check:
+                        logger.warning(f"Rejeitando direct_reminder em apply_plan_effects com texto negado ou recordação: {rem_desc}")
+                        plan["direct_reminder"] = None
+                    else:
+                        raw_rem_time = dir_rem.get("remind_at")
+                        # P1.5 / P2: Exigir horário explícito e futuro, sem default_offset_hours implícito
+                        rem_time_iso = parse_iso_or_relative_datetime(raw_rem_time, default_offset_hours=None)
                     if rem_time_iso:
                         rem_dt = datetime.fromisoformat(rem_time_iso)
                         if rem_dt > datetime.now():

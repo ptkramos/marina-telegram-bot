@@ -999,6 +999,230 @@ class TestAuditFixesV35(unittest.TestCase):
                 cursor.execute("INSERT INTO resumos_conversa (start_conversation_id, end_conversation_id, topic, summary, created_at, updated_at) VALUES (10, 20, 'Geral', 'Duplicata proibida', '2026-09-17T12:04:00', '2026-09-17T12:04:00')")
                 conn.commit()
 
+    # --- RODADA 4: P0 (Negações / Perguntas de Memória) & P1 (Data de outro assunto) ---
+    def test_rodada4_p0_detect_direct_reminder_intent(self):
+        """
+        P0: Valida que frases negadas e perguntas de recordação/memória passada
+        NÃO são classificadas como solicitação de lembrete direto futuro.
+        """
+        from planner import detect_direct_reminder_intent
+
+        # 1. Negações explícitas
+        negatives = [
+            "Não me lembra da reunião amanhã às 10h",
+            "não me lembra de pagar a conta",
+            "não precisa me lembrar de nada amanhã",
+            "nem me lembra disso",
+            "sem me lembrar amanhã",
+            "não me avisa de nada",
+            "deixa quieto",
+            "deixa que eu me lembro amanhã",
+        ]
+        for neg in negatives:
+            is_dir, subj = detect_direct_reminder_intent(neg)
+            self.assertFalse(is_dir, f"Frase negada não deve ser lembrete direto: '{neg}'")
+            self.assertIsNone(subj)
+
+        # 2. Perguntas de memória passada / recordação / nostalgia
+        past_memories = [
+            "Você lembra de quando eu fui ao médico?",
+            "Lembra quando fomos viajar?",
+            "lembra de quando a gente viajou?",
+            "você lembra daquele restaurante?",
+            "Lembra do nosso primeiro encontro?",
+            "Lembra quando fui ao médico?",
+            "lembra de ontem?",
+        ]
+        for mem in past_memories:
+            is_dir, subj = detect_direct_reminder_intent(mem)
+            self.assertFalse(is_dir, f"Pergunta de memória passada não deve ser lembrete direto: '{mem}'")
+            self.assertIsNone(subj)
+
+        # 3. Pedidos afirmativos e imperativos legítimos
+        positives = [
+            ("me lembra de pagar a conta amanhã às 14h", "pagar a conta amanhã às 14h"),
+            ("por favor me lembra que amanhã tenho reunião às 9h", "amanhã tenho reunião às 9h"),
+            ("pode me lembrar de tomar o remédio?", "tomar o remédio"),
+            ("coloca um lembrete pra comprar pão amanhã", "comprar pão amanhã"),
+            ("agenda um lembrete de ligar pra minha mãe", "ligar pra minha mãe"),
+        ]
+        for pos, expected_sub in positives:
+            is_dir, subj = detect_direct_reminder_intent(pos)
+            self.assertTrue(is_dir, f"Pedido legítimo deve ser reconhecido: '{pos}'")
+            self.assertIn(expected_sub.lower(), subj.lower() if subj else "")
+
+    def test_rodada4_p0_planner_rejects_negative_or_memory_phrase_and_no_reminder_created(self):
+        """
+        P0: Garante que o InternalPlanner não cria direct_reminder (nem no plano nem em DB)
+        para 'Não me lembra da reunião amanhã às 10h' ou 'Você lembra de quando fui ao médico?'.
+        """
+        planner = InternalPlanner(db=self.db, llm_client=MagicMock())
+
+        # Teste 1: Negação com horário
+        msg_neg = "Não me lembra da reunião amanhã às 10h"
+        plan_neg = planner.plan_heuristics(msg_neg)
+        # plan_heuristics não deve criar direct_reminder
+        self.assertIsNone(plan_neg)
+
+        # plan_message fallback/sem LLM
+        with patch.object(settings, "PLANNER_ENABLED", False):
+            plan_full_neg = planner.plan_message(msg_neg)
+            self.assertNotEqual(plan_full_neg.get("intent"), "direct_reminder")
+            self.assertFalse(plan_full_neg.get("direct_reminder", {}).get("is_direct_reminder", False))
+
+        # Efeitos colaterais: não deve salvar nada em reminders
+        planner.apply_plan_effects(plan_full_neg, conversation_id=999)
+        active_rems = self.reminder_svc.get_active_reminders()
+        self.assertEqual(len(active_rems), 0)
+
+        # Teste 2: Pergunta de memória passada
+        msg_mem = "Você lembra de quando eu fui ao médico?"
+        plan_mem = planner.plan_heuristics(msg_mem)
+        self.assertIsNone(plan_mem)
+
+        with patch.object(settings, "PLANNER_ENABLED", False):
+            plan_full_mem = planner.plan_message(msg_mem)
+            self.assertNotEqual(plan_full_mem.get("intent"), "direct_reminder")
+
+        planner.apply_plan_effects(plan_full_mem, conversation_id=999)
+        active_rems = self.reminder_svc.get_active_reminders()
+        self.assertEqual(len(active_rems), 0)
+
+    def test_rodada4_p1_is_pure_time_specification(self):
+        """
+        P1: Valida a diferenciação entre especificações puras de horário
+        e frases que introduzem novos assuntos / outras atividades.
+        """
+        from planner import is_pure_time_specification
+
+        # Respostas válidas de tempo
+        self.assertTrue(is_pure_time_specification("amanhã às 15h", "pagar a conta"))
+        self.assertTrue(is_pure_time_specification("às 14h", "pagar a conta"))
+        self.assertTrue(is_pure_time_specification("pode ser às 10:00", "pagar a conta"))
+        self.assertTrue(is_pure_time_specification("amanhã de tarde", "pagar a conta"))
+        self.assertTrue(is_pure_time_specification("daqui a 2 horas", "pagar a conta"))
+        self.assertTrue(is_pure_time_specification("pode ser amanhã de manhã amor", "pagar a conta"))
+        self.assertTrue(is_pure_time_specification("pagar a conta amanhã às 14h", "pagar a conta"))
+
+        # Frases com outros compromissos / mudança de assunto
+        self.assertFalse(is_pure_time_specification("Amanhã vou viajar", "pagar a conta"))
+        self.assertFalse(is_pure_time_specification("Semana que vem tenho consulta médica", "pagar a conta"))
+        self.assertFalse(is_pure_time_specification("Amanhã vou na academia", "pagar a conta"))
+        self.assertFalse(is_pure_time_specification("Hoje vou jantar fora", "pagar a conta"))
+        self.assertFalse(is_pure_time_specification("Não quero mais lembrar disso", "pagar a conta"))
+
+    def test_rodada4_p1_pending_direct_reminder_discarded_on_subject_change(self):
+        """
+        P1: Turno 1 pede lembrete sem horário ('me lembra de pagar a conta').
+        Turno 2 (imediato seguinte) Patrick fala 'Amanhã vou viajar'.
+        O bot NÃO deve agendar 'pagar a conta' para amanhã às 14h e deve limpar a pendência.
+        """
+        import json
+        self.db.set_estado_relacional("pending_direct_reminder", json.dumps({
+            "description": "pagar a conta",
+            "source_conversation_id": 5001,
+            "created_at": datetime.now().isoformat()
+        }))
+
+        mock_msg = MagicMock()
+        mock_msg.message_id = 5002
+        mock_msg.text = "Amanhã vou viajar"
+        mock_msg.reply_to_message = None
+        mock_msg.from_user.id = 12345
+        mock_msg.chat.id = 12345
+
+        mock_update = MagicMock()
+        mock_update.message = mock_msg
+        mock_update.effective_chat.id = 12345
+
+        with patch.object(bot.memory_manager, "db", self.db), \
+             patch.object(bot, "reminder_service", self.reminder_svc), \
+             patch.object(bot.planner, "db", self.db), \
+             patch.object(bot, "planner") as mock_plan, \
+             patch.object(bot, "llm_client") as mock_llm, \
+             patch.object(bot, "send_human_messages", return_value=MagicMock(message_id=9001)), \
+             patch.object(bot, "check_and_trigger_memory_consolidation"):
+
+            mock_plan.plan_message.return_value = {"intent": "chat", "emotional_deltas": {}}
+            mock_plan.plan_heuristics.return_value = None
+            mock_llm.chat.completions.create.return_value = MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Boa viagem meu amor!"))]
+            )
+
+            with patch.object(bot.memory_manager.db, "get_mensagens_sessao", return_value=[{"id": 5001, "role": "assistant", "content": "Quando quer que eu te lembre?"}]):
+                asyncio.run(bot.process_incoming_batch(
+                    update=mock_update,
+                    context=MagicMock(),
+                    texto_usuario="Amanhã vou viajar"
+                ))
+
+        # 1. O lembrete pendente NÃO deve ter sido agendado
+        active_rems = self.reminder_svc.get_active_reminders()
+        self.assertEqual(len(active_rems), 0, "Lembrete pendente de 'pagar a conta' NÃO deve ser agendado com a data de 'vou viajar'")
+
+        # 2. O estado pendente deve ter sido descartado
+        st = self.db.get_estado_relacional("pending_direct_reminder")
+        self.assertIsNone(st)
+
+    def test_rodada4_p1_pending_direct_reminder_confirmed_on_valid_time(self):
+        """
+        P1: Turno 1 pede lembrete sem horário ('me lembra de pagar a conta').
+        Turno 2 (imediato seguinte) Patrick responde 'amanhã às 15h'.
+        O bot agenda o lembrete com sucesso para amanhã às 15h e limpa o estado pendente.
+        """
+        import json
+        tomorrow_15 = datetime.now().replace(microsecond=0) + timedelta(days=1)
+        tomorrow_15 = tomorrow_15.replace(hour=15, minute=0, second=0)
+
+        self.db.set_estado_relacional("pending_direct_reminder", json.dumps({
+            "description": "pagar a conta",
+            "source_conversation_id": 6001,
+            "created_at": datetime.now().isoformat()
+        }))
+
+        mock_msg = MagicMock()
+        mock_msg.message_id = 6002
+        mock_msg.text = "amanhã às 15h"
+        mock_msg.reply_to_message = None
+        mock_msg.from_user.id = 12345
+        mock_msg.chat.id = 12345
+
+        mock_update = MagicMock()
+        mock_update.message = mock_msg
+        mock_update.effective_chat.id = 12345
+
+        with patch.object(bot.memory_manager, "db", self.db), \
+             patch.object(bot, "reminder_service", self.reminder_svc), \
+             patch.object(bot.planner, "db", self.db), \
+             patch.object(bot, "planner") as mock_plan, \
+             patch.object(bot, "llm_client") as mock_llm, \
+             patch.object(bot, "send_human_messages", return_value=MagicMock(message_id=9002)), \
+             patch.object(bot, "check_and_trigger_memory_consolidation"):
+
+            mock_plan.plan_message.return_value = {"intent": "chat", "emotional_deltas": {}}
+            mock_plan.plan_heuristics.return_value = None
+            mock_llm.chat.completions.create.return_value = MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Combinado vida, anotadinho!"))]
+            )
+
+            with patch.object(bot.memory_manager.db, "get_mensagens_sessao", return_value=[{"id": 6001, "role": "assistant", "content": "Quando quer que eu te lembre?"}]):
+                asyncio.run(bot.process_incoming_batch(
+                    update=mock_update,
+                    context=MagicMock(),
+                    texto_usuario="amanhã às 15h"
+                ))
+
+        # 1. Lembrete confirmado com sucesso
+        active_rems = self.reminder_svc.get_active_reminders()
+        self.assertEqual(len(active_rems), 1)
+        self.assertEqual(active_rems[0]["description"], "pagar a conta")
+        self.assertEqual(active_rems[0]["status"], "confirmed")
+        self.assertEqual(active_rems[0]["remind_at"], tomorrow_15.strftime("%Y-%m-%dT%H:%M:%S"))
+
+        # 2. O estado pendente foi limpo
+        st = self.db.get_estado_relacional("pending_direct_reminder")
+        self.assertIsNone(st)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

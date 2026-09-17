@@ -1261,24 +1261,33 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                         memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
                         pending_data = None
 
-                    # 4. Consumo legítimo de horário vs resposta desconexa / outro assunto
+                    # 4. Consumo legítimo de horário vs resposta desconexa / outro assunto (P1 - Rodada 4)
                     if pending_data:
                         if has_clarif_context:
-                            from planner import parse_iso_or_relative_datetime
-                            parsed_time = parse_iso_or_relative_datetime(texto_usuario, default_offset_hours=None)
-                            if parsed_time and datetime.fromisoformat(parsed_time) > datetime.now():
-                                rem_id = reminder_service.create_direct_reminder(
-                                    description=pending_data.get("description", "seu compromisso"),
-                                    remind_at=parsed_time,
-                                    offset_minutes=0,
-                                    source_conversation_id=source_conv_id
-                                )
-                                memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
-                                logger.info(f"Lembrete direto pendente '{pending_data.get('description')}' agendado com sucesso para {parsed_time} (ID {rem_id}).")
-                            elif is_immediate_next_turn and not is_reply_to_clarif:
-                                # Patrick mudou de assunto no turno imediatamente seguinte sem informar horário
-                                logger.info("Patrick mudou de assunto sem informar horário para o lembrete pendente. Descartando pendência.")
-                                memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
+                            from planner import parse_iso_or_relative_datetime, is_pure_time_specification
+                            pending_desc = pending_data.get("description", "seu compromisso")
+                            is_valid_time_reply = is_pure_time_specification(texto_usuario, pending_desc)
+
+                            if is_valid_time_reply:
+                                parsed_time = parse_iso_or_relative_datetime(texto_usuario, default_offset_hours=None)
+                                if parsed_time and datetime.fromisoformat(parsed_time) > datetime.now():
+                                    rem_id = reminder_service.create_direct_reminder(
+                                        description=pending_desc,
+                                        remind_at=parsed_time,
+                                        offset_minutes=0,
+                                        source_conversation_id=source_conv_id
+                                    )
+                                    memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
+                                    logger.info(f"Lembrete direto pendente '{pending_desc}' agendado com sucesso para {parsed_time} (ID {rem_id}).")
+                                elif is_immediate_next_turn and not is_reply_to_clarif:
+                                    logger.info("Patrick informou especificação temporal inválida ou no passado. Descartando pendência.")
+                                    memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
+                            else:
+                                if is_immediate_next_turn or is_reply_to_clarif:
+                                    # Patrick mudou de assunto ou mencionou outra atividade (ex: 'Amanhã vou viajar')
+                                    # no turno imediatamente seguinte. Descarta a pendência para não engolir o novo assunto!
+                                    logger.info(f"Patrick mudou de assunto/atividade ('{texto_usuario}') em vez de especificar horário para '{pending_desc}'. Descartando lembrete pendente.")
+                                    memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
                         else:
                             # Mensagem fora de contexto (sem reply e não é o turno consecutivo).
                             # Não consome a data de outro assunto e não agenda o lembrete pendente.
