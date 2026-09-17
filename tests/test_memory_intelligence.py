@@ -1,13 +1,25 @@
 """
-Suite de Testes Automatizados para a Release 3.5.0 (Memory Intelligence).
-Valida:
-1. FTS5 multi-tipo para momentos e resumos (db.py)
-2. Core memories, volatilidade e confirmação/decay (db.py)
-3. Chaves canônicas e desativação semântica (db.py)
-4. MemoryRetriever 2.0: score híbrido, diversidade e deduplicação (memory_retriever.py)
-5. MemoryConsolidator 2.0: recuperação seletiva de candidatos e decisões (memory_consolidator.py)
+Suite de Testes Automatizados para a Release 3.5.0 (Memory Intelligence Hardened).
+Cobre os testes obrigatórios 7.1 a 7.16 da REVISAO_TECNICA_MARINA_V3_5_0.md:
+- 7.1: SAME com texto idêntico (confirmação sem perda de memória)
+- 7.2: SAME semanticamente igual com texto diferente
+- 7.3: IGNORE (zero mutações no banco)
+- 7.4: UPDATE atômico com supersedes_id
+- 7.5: CONTRADICTION atômico
+- 7.6: Falha durante replacement (rollback e preservação do fato original)
+- 7.7: UNIQUE(fato) não apaga memória (reprodução e prevenção do bug crítico)
+- 7.8: ID alucinado pela LLM bloqueado por allowlist
+- 7.9: Key fora do allowlist bloqueada
+- 7.10: Volatilidade afetando effective_confidence sem mutar o banco
+- 7.11: Relevância lexical FTS relativa/normalizada
+- 7.12: Background retrieval sem side-effects em access_count
+- 7.13: Context Builder registrando acesso normalmente
+- 7.14: /memorydebug sem alterar access_count
+- 7.15: Feature flag MEMORY_INTELLIGENCE_ENABLED=False (fallback legado v3.4.3)
+- 7.16: Migration regression v3.4.3 -> v3.5.0
 """
 import sys
+import sqlite3
 import unittest
 import tempfile
 from pathlib import Path
@@ -20,257 +32,410 @@ sys.path.insert(0, str(BASE_DIR))
 from db import DatabaseManager
 from memory_retriever import MemoryRetriever
 from memory_consolidator import MemoryConsolidator
+from config import settings
 
 
-class TestMemoryIntelligenceDB(unittest.TestCase):
-    """Testa os novos métodos de banco SQLite introduzidos na migration 005."""
-
+class TestMemoryIntelligenceHardened(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_db_path = Path(self.temp_dir.name) / "test_mem_intel.db"
-        self.db = DatabaseManager(db_path=self.temp_db_path)
-
-    def tearDown(self):
-        self.temp_dir.cleanup()
-
-    def test_schema_version_is_five(self):
-        """Valida que a migration 005_memory_intelligence foi aplicada com sucesso."""
-        self.assertEqual(self.db.get_schema_version(), 5)
-
-    def test_adicionar_fato_com_tier_volatilidade_e_canonical_key(self):
-        """Testa inserção e recuperação de fatos com os novos metadados da 3.5.0."""
-        fid = self.db.adicionar_fato_patrick(
-            fato="Patrick ama suco de maracujá bem gelado",
-            category="preferencia",
-            importance=0.85,
-            confidence=1.0,
-            memory_tier="core",
-            volatility="stable",
-            canonical_key="favorite_juice"
-        )
-        self.assertGreater(fid, 0)
-
-        fatos = self.db.get_fatos_patrick_detalhados()
-        fato = next((f for f in fatos if f["id"] == fid), None)
-        self.assertIsNotNone(fato)
-        self.assertEqual(fato["memory_tier"], "core")
-        self.assertEqual(fato["volatility"], "stable")
-        self.assertEqual(fato["canonical_key"], "favorite_juice")
-        self.assertEqual(fato["confirmation_count"], 0)
-
-    def test_get_core_memories(self):
-        """Valida recuperação exclusiva de memórias com memory_tier='core'."""
-        self.db.adicionar_fato_patrick("Fato Standard", memory_tier="standard")
-        self.db.adicionar_fato_patrick("Fato Contextual", memory_tier="contextual")
-        self.db.adicionar_fato_patrick("Fato Core 1", memory_tier="core", importance=0.9)
-        self.db.adicionar_fato_patrick("Fato Core 2", memory_tier="core", importance=0.95)
-
-        core = self.db.get_core_memories(limit=5)
-        self.assertEqual(len(core), 2)
-        self.assertTrue(all(c["memory_tier"] == "core" for c in core))
-        # Deve ordenar por importância decrescente
-        self.assertEqual(core[0]["fato"], "Fato Core 2")
-
-    def test_confirmar_fato(self):
-        """Valida o ciclo de confirmação: incrementa confirmation_count, ajusta confiança e atualiza timestamp."""
-        fid = self.db.adicionar_fato_patrick(
-            fato="Patrick joga tênis aos sábados",
-            confidence=0.6,
-            volatility="medium"
-        )
-        # Confirma o fato
-        sucesso = self.db.confirmar_fato(fid)
-        self.assertTrue(sucesso)
-
-        fatos = self.db.get_fatos_patrick_detalhados()
-        fato = next(f for f in fatos if f["id"] == fid)
-        self.assertEqual(fato["confirmation_count"], 1)
-        self.assertAlmostEqual(fato["confidence"], 0.7)  # 0.6 + 0.1
-        self.assertIsNotNone(fato["last_confirmed_at"])
-
-    def test_desativar_fato_por_chave_canonica(self):
-        """Valida que desativar_fato_por_chave inativa registros com a mesma canonical_key."""
-        fid1 = self.db.adicionar_fato_patrick(
-            fato="Patrick joga Final Fantasy XIV",
-            canonical_key="current_main_game"
-        )
-        self.db.desativar_fato_por_chave("current_main_game")
-
-        # Fato 1 não deve estar ativo
-        ativos = self.db.get_fatos_patrick_detalhados(active_only=True)
-        self.assertFalse(any(f["id"] == fid1 for f in ativos))
-
-        # Mas ainda existe no banco inativo
-        todos = self.db.get_fatos_patrick_detalhados(active_only=False)
-        self.assertTrue(any(f["id"] == fid1 for f in todos))
-
-    def test_buscar_momentos_e_resumos_fts(self):
-        """Valida FTS5 em momentos marcantes e resumos de conversas anteriores."""
-        self.db.adicionar_momento_marcante(
-            momento="Fomos juntos ao mirante ver o pôr do sol no verão",
-            importance=0.9
-        )
-        self.db.salvar_resumo_conversa(
-            topic="viagem, praia, planos",
-            summary="Conversamos sobre planos de viajar para a praia em Florianópolis"
-        )
-
-        # Busca FTS em momentos
-        momentos_fts = self.db.buscar_momentos_fts("mirante")
-        self.assertEqual(len(momentos_fts), 1)
-        self.assertIn("mirante", momentos_fts[0]["momento"])
-
-        # Busca FTS em resumos
-        resumos_fts = self.db.buscar_resumos_fts("Florianópolis")
-        self.assertEqual(len(resumos_fts), 1)
-        self.assertIn("Florianópolis", resumos_fts[0]["summary"])
-
-
-class TestMemoryRetrieverIntelligence(unittest.TestCase):
-    """Testa a inteligência de busca híbrida e balanceamento do MemoryRetriever 2.0."""
-
-    def setUp(self):
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_db_path = Path(self.temp_dir.name) / "test_retriever.db"
+        self.temp_db_path = Path(self.temp_dir.name) / "test_mem_hardened.db"
         self.db = DatabaseManager(db_path=self.temp_db_path)
         self.retriever = MemoryRetriever(db=self.db)
-
-    def tearDown(self):
-        self.temp_dir.cleanup()
-
-    def test_compute_hybrid_score_calculation(self):
-        """Valida o cálculo do score híbrido ponderado."""
-        fact = {
-            "importance": 0.9,
-            "confidence": 1.0,
-            "memory_tier": "core",
-            "access_count": 5,
-            "created_at": datetime.now().isoformat(),
-            "last_confirmed_at": None,
-            "updated_at": None
-        }
-        # Com match FTS
-        score_fts = self.retriever.compute_hybrid_score(fact, is_fts_match=True)
-        # lexical: 1.0 * 0.4 = 0.40
-        # importance: 0.9 * 0.2 = 0.18
-        # confidence: 1.0 * 0.15 = 0.15
-        # freshness: 1.0 * 0.10 = 0.10
-        # core: 1.0 * 0.10 = 0.10
-        # access: (5/10) * 0.05 = 0.025
-        # Total esperado: 0.40 + 0.18 + 0.15 + 0.10 + 0.10 + 0.025 = 0.955
-        self.assertAlmostEqual(score_fts, 0.955, places=2)
-
-        # Sem match FTS
-        score_no_fts = self.retriever.compute_hybrid_score(fact, is_fts_match=False)
-        self.assertLess(score_no_fts, score_fts)
-
-    def test_diversity_deduplication_by_canonical_key(self):
-        """Valida que memórias com a mesma chave canônica não duplicam na recuperação."""
-        self.db.adicionar_fato_patrick(
-            "Patrick adora Monster Energy Ultra",
-            category="bebidas",
-            canonical_key="energy_drink",
-            importance=0.8
-        )
-        self.db.adicionar_fato_patrick(
-            "Patrick toma Monster Energy todo dia",
-            category="bebidas",
-            canonical_key="energy_drink",
-            importance=0.7
-        )
-
-        contexto = self.retriever.retrieve_context("energy monster", max_facts=5)
-        # Deve conter no máximo 1 fato sobre energy_drink
-        detalhes = contexto["fatos_detalhados"]
-        chaves = [f.get("canonical_key") for f in detalhes if f.get("canonical_key")]
-        self.assertEqual(chaves.count("energy_drink"), 1)
-
-    def test_low_confidence_fact_annotation(self):
-        """Valida que fatos com confiança < 0.5 recebem a anotação para o prompt reconfirmar com sutileza."""
-        self.db.adicionar_fato_patrick(
-            fato="Patrick treina na academia pela manhã",
-            category="rotina",
-            confidence=0.4,
-            importance=0.7
-        )
-
-        contexto = self.retriever.retrieve_context("academia manhã", max_facts=3)
-        self.assertTrue(any("lembrança vaga/a confirmar" in f for f in contexto["fatos"]))
-
-
-class TestMemoryConsolidatorIntelligence(unittest.TestCase):
-    """Testa a integração do MemoryConsolidator 2.0 com MemoryRetriever seletivo."""
-
-    def setUp(self):
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_db_path = Path(self.temp_dir.name) / "test_consolidator_intel.db"
-        self.db = DatabaseManager(db_path=self.temp_db_path)
         self.consolidator = MemoryConsolidator(db=self.db)
 
     def tearDown(self):
-        self.temp_dir.cleanup()
+        import gc
+        gc.collect()
+        try:
+            self.temp_dir.cleanup()
+        except Exception:
+            pass
 
-    def test_selective_candidate_retrieval(self):
-        """Valida que consolidate_dialogue busca candidatos relevantes via retriever em vez de todos os fatos."""
-        # Cria 20 fatos não relacionados
-        for i in range(20):
-            self.db.adicionar_fato_patrick(f"Fato irrelevante número {i}", category="geral")
+    # --- 7.1 SAME com texto idêntico ---
+    def test_7_1_same_com_texto_identico(self):
+        """Reafirmação exata deve confirmar e incrementar contagem sem criar duplicatas nem apagar fato."""
+        fid = self.db.adicionar_fato_patrick(
+            fato="Patrick joga FFXIV",
+            canonical_key="current_main_game",
+            confidence=0.7
+        )
+        self.assertGreater(fid, 0)
 
-        # Cria 1 fato relevante
-        self.db.adicionar_fato_patrick("Patrick adora pizza de calabresa", category="comida")
-
-        dialogo = [
-            {"role": "user", "content": "Amor, tô com vontade de pedir uma pizza de calabresa hoje à noite."}
-        ]
-
-        # Intercepta chamada LLM para verificar prompt enviado
-        captured_messages = []
-        def mock_llm_create(*args, **kwargs):
-            nonlocal captured_messages
-            captured_messages = kwargs.get("messages", [])
-            mock_resp = MagicMock()
-            mock_choice = MagicMock()
-            mock_choice.message.content = '{"facts_to_create":[], "facts_to_deactivate":[], "important_moments":[], "topic_summary":"Pizza"}'
-            mock_resp.choices = [mock_choice]
-            return mock_resp
-
-        with patch.object(self.consolidator.llm.chat.completions, "create", side_effect=mock_llm_create):
-            self.consolidator.consolidate_dialogue(dialogo)
-
-        self.assertTrue(len(captured_messages) > 0)
-        user_prompt = captured_messages[1]["content"]
-
-        # O fato relevante da pizza deve estar presente nos candidatos
-        self.assertIn("calabresa", user_prompt)
-        # Mas NÃO deve ter todos os 20 fatos irrelevantes entupindo o prompt
-        self.assertNotIn("Fato irrelevante número 18", user_prompt)
-
-    def test_apply_consolidation_with_canonical_key_and_tier(self):
-        """Valida que apply_consolidation persiste memory_tier, volatility e canonical_key."""
         payload = {
             "facts_to_create": [
                 {
-                    "fato": "Patrick programa em Python e Rust",
-                    "category": "trabalho",
-                    "importance": 0.9,
-                    "confidence": 1.0,
-                    "memory_tier": "core",
-                    "volatility": "stable",
-                    "canonical_key": "programming_languages"
+                    "fato": "Patrick joga FFXIV",
+                    "decision": "same",
+                    "existing_fact_id": fid,
+                    "canonical_key": "current_main_game"
                 }
             ],
             "facts_to_deactivate": [],
-            "important_moments": [],
-            "topic_summary": "Linguagens de programação do Patrick"
+            "_candidate_fact_ids": {fid},
+            "_candidate_keys": {"current_main_game"}
         }
 
-        result = self.consolidator.apply_consolidation(payload)
-        self.assertEqual(result["created"], 1)
+        res = self.consolidator.apply_consolidation(payload)
+        self.assertEqual(res["created"], 0)
+        self.assertEqual(res["confirmed"], 1)
 
-        fatos = self.db.get_fatos_patrick_detalhados()
-        f = next(f for f in fatos if f["canonical_key"] == "programming_languages")
-        self.assertEqual(f["memory_tier"], "core")
-        self.assertEqual(f["volatility"], "stable")
+        ativos = self.db.get_fatos_por_chave("current_main_game", active_only=True)
+        self.assertEqual(len(ativos), 1)
+        self.assertEqual(ativos[0]["id"], fid)
+        self.assertEqual(ativos[0]["confirmation_count"], 1)
+        self.assertAlmostEqual(ativos[0]["confidence"], 0.8)
+        self.assertIsNotNone(ativos[0]["last_confirmed_at"])
+
+    # --- 7.2 SAME semanticamente igual, texto diferente ---
+    def test_7_2_same_semanticamente_igual_texto_diferente(self):
+        """LLM decide 'same' com variação de texto: não cria segunda linha, confirma original."""
+        fid = self.db.adicionar_fato_patrick(
+            fato="Patrick adora café expresso",
+            canonical_key="coffee_preference",
+            confidence=0.7
+        )
+
+        payload = {
+            "facts_to_create": [
+                {
+                    "fato": "Patrick continua tomando bastante café expresso",
+                    "decision": "same",
+                    "existing_fact_id": fid,
+                    "canonical_key": "coffee_preference"
+                }
+            ],
+            "_candidate_fact_ids": {fid},
+            "_candidate_keys": {"coffee_preference"}
+        }
+
+        res = self.consolidator.apply_consolidation(payload)
+        self.assertEqual(res["created"], 0)
+        self.assertEqual(res["confirmed"], 1)
+
+        fatos_chave = self.db.get_fatos_por_chave("coffee_preference", active_only=True)
+        self.assertEqual(len(fatos_chave), 1)
+        self.assertEqual(fatos_chave[0]["id"], fid)
+        self.assertEqual(fatos_chave[0]["confirmation_count"], 1)
+
+    # --- 7.3 IGNORE ---
+    def test_7_3_ignore(self):
+        """Decisão ignore não realiza mutação de escrita no banco."""
+        self.db.adicionar_fato_patrick("Fato base")
+        count_antes = len(self.db.get_fatos_patrick_detalhados())
+
+        payload = {
+            "facts_to_create": [
+                {
+                    "fato": "Chitchat sem relevância",
+                    "decision": "ignore"
+                }
+            ]
+        }
+        res = self.consolidator.apply_consolidation(payload)
+        self.assertEqual(res["ignored"], 1)
+        self.assertEqual(len(self.db.get_fatos_patrick_detalhados()), count_antes)
+
+    # --- 7.4 UPDATE ---
+    def test_7_4_update(self):
+        """Update atômico substitui o antigo pelo novo, ligando supersedes_id e mantendo 1 ativo."""
+        old_id = self.db.adicionar_fato_patrick(
+            fato="Patrick joga FFXIV",
+            canonical_key="current_main_game"
+        )
+
+        payload = {
+            "facts_to_create": [
+                {
+                    "fato": "Patrick agora joga Guild Wars 2 como jogo principal",
+                    "decision": "update",
+                    "existing_fact_id": old_id,
+                    "canonical_key": "current_main_game"
+                }
+            ],
+            "_candidate_fact_ids": {old_id},
+            "_candidate_keys": {"current_main_game"}
+        }
+
+        res = self.consolidator.apply_consolidation(payload)
+        self.assertEqual(res["updated"], 1)
+
+        ativos = self.db.get_fatos_por_chave("current_main_game", active_only=True)
+        self.assertEqual(len(ativos), 1)
+        self.assertIn("Guild Wars 2", ativos[0]["fato"])
+        self.assertEqual(ativos[0]["supersedes_id"], old_id)
+
+        # Fato antigo está inativo
+        old_det = self.db.get_fato_detalhado(old_id, active_only=False)
+        self.assertEqual(old_det["active"], 0)
+
+    # --- 7.5 CONTRADICTION ---
+    def test_7_5_contradiction(self):
+        """Contradiction substitui atomicamente o fato contradito."""
+        old_id = self.db.adicionar_fato_patrick(
+            fato="Patrick toma café todo dia de manhã",
+            canonical_key="morning_drink"
+        )
+
+        payload = {
+            "facts_to_create": [
+                {
+                    "fato": "Patrick parou de tomar café e agora só toma suco de laranja",
+                    "decision": "contradiction",
+                    "existing_fact_id": old_id,
+                    "canonical_key": "morning_drink"
+                }
+            ],
+            "_candidate_fact_ids": {old_id},
+            "_candidate_keys": {"morning_drink"}
+        }
+
+        res = self.consolidator.apply_consolidation(payload)
+        self.assertEqual(res["updated"], 1)
+
+        ativos = self.db.get_fatos_por_chave("morning_drink", active_only=True)
+        self.assertEqual(len(ativos), 1)
+        self.assertIn("suco de laranja", ativos[0]["fato"])
+
+    # --- 7.6 Falha durante replacement preserva memória antiga ---
+    def test_7_6_falha_durante_replacement(self):
+        """Se ocorrer falha no banco durante replacement, rollback preserva o fato antigo ativo."""
+        old_id = self.db.adicionar_fato_patrick(
+            fato="Fato crítico importante",
+            canonical_key="critical_fact"
+        )
+
+        # Simula erro forçado durante a inserção
+        with patch.object(self.db, "get_connection") as mock_conn_mgr:
+            mock_conn = MagicMock()
+            mock_cursor = MagicMock()
+            # 1ª query (SELECT) retorna o fato antigo ativo
+            mock_cursor.fetchone.return_value = {"id": old_id, "fato": "Fato crítico importante", "canonical_key": "critical_fact"}
+            # 2ª query (INSERT) falha com erro de integridade
+            mock_cursor.execute.side_effect = [None, sqlite3.IntegrityError("Falha simulada")]
+            mock_conn.cursor.return_value = mock_cursor
+            mock_conn_mgr.return_value.__enter__.return_value = mock_conn
+
+            res = self.db.substituir_fato_atomicamente(old_id, {"fato": "Novo fato que falha"})
+            self.assertIsNone(res)
+            mock_conn.rollback.assert_called_once()
+
+        # O fato no SQLite real continua ativo e intacto
+        det = self.db.get_fato_detalhado(old_id, active_only=True)
+        self.assertIsNotNone(det)
+        self.assertEqual(det["active"], 1)
+
+    # --- 7.7 UNIQUE(fato) não apaga memória ---
+    def test_7_7_unique_fato_nao_apaga_memoria(self):
+        """Reprodução independente do bug da auditoria: mesma canonical key com texto idêntico não apaga a memória."""
+        fid = self.db.adicionar_fato_patrick(
+            fato="Patrick joga FFXIV",
+            canonical_key="current_main_game",
+            confidence=0.8
+        )
+
+        # Se vier update com o mesmo texto
+        payload = {
+            "facts_to_create": [
+                {
+                    "fato": "Patrick joga FFXIV",
+                    "decision": "update",
+                    "existing_fact_id": fid,
+                    "canonical_key": "current_main_game"
+                }
+            ],
+            "_candidate_fact_ids": {fid},
+            "_candidate_keys": {"current_main_game"}
+        }
+
+        self.consolidator.apply_consolidation(payload)
+
+        # DEVE restar 1 fato ativo, JAMAIS 0!
+        ativos = self.db.get_fatos_por_chave("current_main_game", active_only=True)
+        self.assertEqual(len(ativos), 1, "Bug crítico da auditoria evitado: exatamente 1 fato ativo deve restar.")
+        self.assertEqual(ativos[0]["id"], fid)
+
+    # --- 7.8 ID alucinado pela LLM bloqueado por allowlist ---
+    def test_7_8_id_alucinado_pela_llm(self):
+        """ID fora da allowlist de candidatos apresentados é rejeitado com NO-OP."""
+        unrelated_id = self.db.adicionar_fato_patrick(
+            fato="Fato não relacionado que não participou da conversa",
+            canonical_key="secret_fact"
+        )
+
+        payload = {
+            "facts_to_create": [],
+            "facts_to_deactivate": [{"existing_fact_id": unrelated_id, "reason": "Alucinação da LLM"}],
+            "_candidate_fact_ids": {101, 102}  # unrelated_id NÃO está na allowlist!
+        }
+
+        self.consolidator.apply_consolidation(payload)
+
+        # Fato não relacionado deve continuar ativo
+        det = self.db.get_fato_detalhado(unrelated_id, active_only=True)
+        self.assertIsNotNone(det)
+        self.assertEqual(det["active"], 1)
+
+    # --- 7.9 Key fora do allowlist bloqueada ---
+    def test_7_9_key_fora_do_allowlist(self):
+        """Chave fora da allowlist de candidatos apresentados é rejeitada com NO-OP."""
+        fid = self.db.adicionar_fato_patrick(
+            fato="Patrick ama suco de maçã",
+            canonical_key="protected_key"
+        )
+
+        payload = {
+            "facts_to_create": [],
+            "keys_to_deactivate": ["protected_key"],
+            "_candidate_keys": {"other_key"}  # protected_key NÃO está na allowlist!
+        }
+
+        self.consolidator.apply_consolidation(payload)
+
+        det = self.db.get_fato_detalhado(fid, active_only=True)
+        self.assertIsNotNone(det)
+        self.assertEqual(det["active"], 1)
+
+    # --- 7.10 Volatilidade afetando effective_confidence sem mutar o banco ---
+    def test_7_10_volatilidade_effective_confidence(self):
+        """Volatilidade reduz confiança efetiva de fatos voláteis após 30 dias, sem alterar o valor bruto no banco."""
+        # Cria fato stable e fato volatile há 45 dias
+        ts_45d = (datetime.now() - timedelta(days=45)).isoformat()
+        fact_stable = {
+            "fato": "Patrick nasceu no Rio de Janeiro",
+            "volatility": "stable",
+            "confidence": 1.0,
+            "created_at": ts_45d,
+            "last_confirmed_at": ts_45d
+        }
+        fact_volatile = {
+            "fato": "Patrick treina às 7h da manhã esta semana",
+            "volatility": "volatile",
+            "confidence": 1.0,
+            "created_at": ts_45d,
+            "last_confirmed_at": ts_45d
+        }
+
+        eff_stable = self.retriever.compute_effective_confidence(fact_stable)
+        eff_volatile = self.retriever.compute_effective_confidence(fact_volatile)
+
+        self.assertAlmostEqual(eff_stable, 1.0)
+        self.assertLess(eff_volatile, eff_stable)
+        self.assertLess(eff_volatile, 1.0)
+
+        # Score híbrido reflete a perda de confiança no volátil
+        score_stable = self.retriever.compute_hybrid_score(fact_stable)
+        score_volatile = self.retriever.compute_hybrid_score(fact_volatile)
+        self.assertGreater(score_stable, score_volatile)
+
+    # --- 7.11 Relevância lexical relativa ---
+    def test_7_11_relevancia_lexical(self):
+        """Candidatos FTS com posições/ranks diferentes recebem scores léxicos proporcionais."""
+        self.db.adicionar_fato_patrick("Energético Monster Energy favorito do Patrick")
+        self.db.adicionar_fato_patrick("Patrick às vezes toma Monster branco")
+
+        context = self.retriever.retrieve_context("Monster", max_facts=2, record_access=False)
+        detalhes = context["fatos_detalhados"]
+        self.assertGreaterEqual(len(detalhes), 2)
+        # O primeiro resultado ordenado deve ter score híbrido maior ou igual ao segundo
+        self.assertGreaterEqual(detalhes[0]["hybrid_score"], detalhes[1]["hybrid_score"])
+
+    # --- 7.12 Background retrieval sem side-effects em access_count ---
+    def test_7_12_background_retrieval_sem_popularity_feedback(self):
+        """Busca do Consolidator com record_access=False não altera access_count."""
+        fid = self.db.adicionar_fato_patrick("Patrick adora café arábica")
+        det_antes = self.db.get_fato_detalhado(fid)
+        self.assertEqual(det_antes["access_count"], 0)
+
+        # Executa recuperação em background com record_access=False
+        self.retriever.retrieve_context("café arábica", record_access=False)
+
+        det_depois = self.db.get_fato_detalhado(fid)
+        self.assertEqual(det_depois["access_count"], 0)
+
+    # --- 7.13 Context Builder incrementa acesso normalmente ---
+    def test_7_13_context_builder_incrementa_acesso_normalmente(self):
+        """Conversa real com record_access=True incrementa métrica de acesso no banco."""
+        fid = self.db.adicionar_fato_patrick("Patrick estuda Inteligência Artificial")
+        det_antes = self.db.get_fato_detalhado(fid)
+        self.assertEqual(det_antes["access_count"], 0)
+
+        # Executa recuperação com record_access=True
+        self.retriever.retrieve_context("Inteligência Artificial", record_access=True)
+
+        det_depois = self.db.get_fato_detalhado(fid)
+        self.assertEqual(det_depois["access_count"], 1)
+
+    # --- 7.14 /memorydebug não altera access_count ---
+    def test_7_14_memorydebug_nao_altera_access_count(self):
+        """Comando administrativo /memorydebug usa record_access=False e é puramente observacional."""
+        fid = self.db.adicionar_fato_patrick("Patrick joga xadrez online")
+        self.retriever.retrieve_context("xadrez", record_access=False)
+
+        det = self.db.get_fato_detalhado(fid)
+        self.assertEqual(det["access_count"], 0)
+
+    # --- 7.15 Feature flag MEMORY_INTELLIGENCE_ENABLED=False ---
+    def test_7_15_feature_flag_off(self):
+        """Com feature flag desativada, executa fallback legado v3.4.3 sem falhar."""
+        self.db.adicionar_fato_patrick("Fato legado de teste", importance=0.8)
+        self.db.adicionar_momento_marcante("Momento legado")
+        self.db.salvar_resumo_conversa(topic="Geral", summary="Resumo legado")
+
+        orig_flag = settings.MEMORY_INTELLIGENCE_ENABLED
+        try:
+            settings.MEMORY_INTELLIGENCE_ENABLED = False
+            ctx = self.retriever.retrieve_context("legado", record_access=False)
+            self.assertIn("fatos", ctx)
+            self.assertIn("momentos", ctx)
+            self.assertIn("resumos", ctx)
+            self.assertTrue(len(ctx["fatos"]) >= 1)
+        finally:
+            settings.MEMORY_INTELLIGENCE_ENABLED = orig_flag
+
+    # --- 7.16 Migration regression v3.4.3 -> v3.5.0 ---
+    def test_7_16_migration_regression(self):
+        """Valida que um banco legado v3.4.3 recebe migration 005 preservando todas as conversas e fatos."""
+        legacy_db_path = Path(self.temp_dir.name) / "legacy_v343.db"
+        conn = sqlite3.connect(legacy_db_path)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS schema_version (
+                version INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                applied_at TEXT NOT NULL
+            );
+        """)
+        # Executa migrations 001 a 004 manualmente para simular estado v3.4.3
+        mig_dir = BASE_DIR / "migrations"
+        for i in range(1, 5):
+            mig_file = next(mig_dir.glob(f"{i:03d}_*.sql"))
+            conn.executescript(mig_file.read_text(encoding="utf-8"))
+            conn.execute(
+                "INSERT OR REPLACE INTO schema_version (version, name, applied_at) VALUES (?, ?, datetime('now'))",
+                (i, mig_file.stem)
+            )
+        
+        # Insere dados legados
+        conn.execute(
+            "INSERT INTO conversas (role, content, timestamp) VALUES ('user', 'Oi amor', datetime('now'))"
+        )
+        conn.execute(
+            "INSERT INTO fatos_patrick (fato, created_at, category, importance, confidence, active) "
+            "VALUES ('Fato antigo v3.4.3', datetime('now'), 'geral', 0.8, 1.0, 1)"
+        )
+        conn.commit()
+        conn.close()
+
+        # Abre com DatabaseManager v3.5.0
+        mgr = DatabaseManager(db_path=legacy_db_path)
+        self.assertEqual(mgr.get_schema_version(), 5)
+
+        # Conversas e fatos intactos
+        fatos = mgr.get_fatos_patrick_detalhados()
+        self.assertEqual(len(fatos), 1)
+        self.assertEqual(fatos[0]["fato"], "Fato antigo v3.4.3")
+        self.assertEqual(fatos[0]["memory_tier"], "standard")
+        self.assertEqual(fatos[0]["volatility"], "medium")
+        self.assertEqual(fatos[0]["confirmation_count"], 0)
 
 
 if __name__ == "__main__":

@@ -64,6 +64,16 @@ class Settings:
     MEMORY_MAX_FACTS: int = int(os.getenv("MEMORY_MAX_FACTS", "5"))
     MEMORY_MAX_MOMENTS: int = int(os.getenv("MEMORY_MAX_MOMENTS", "3"))
     MEMORY_MAX_SUMMARIES: int = int(os.getenv("MEMORY_MAX_SUMMARIES", "2"))
+    MEMORY_CANDIDATE_POOL_SIZE: int = int(os.getenv("MEMORY_CANDIDATE_POOL_SIZE", "20"))
+    
+    # Pesos do Ranking Híbrido da Memory Intelligence (3.5.0)
+    MEMORY_WEIGHT_LEXICAL: float = float(os.getenv("MEMORY_WEIGHT_LEXICAL", "0.40"))
+    MEMORY_WEIGHT_IMPORTANCE: float = float(os.getenv("MEMORY_WEIGHT_IMPORTANCE", "0.20"))
+    MEMORY_WEIGHT_CONFIDENCE: float = float(os.getenv("MEMORY_WEIGHT_CONFIDENCE", "0.15"))
+    MEMORY_WEIGHT_FRESHNESS: float = float(os.getenv("MEMORY_WEIGHT_FRESHNESS", "0.10"))
+    MEMORY_WEIGHT_CORE: float = float(os.getenv("MEMORY_WEIGHT_CORE", "0.10"))
+    MEMORY_WEIGHT_ACCESS: float = float(os.getenv("MEMORY_WEIGHT_ACCESS", "0.05"))
+
     PLANNER_ENABLED: bool = os.getenv("PLANNER_ENABLED", "true").lower() in ("true", "1", "yes")
     EMOTIONAL_STATE_ENABLED: bool = os.getenv("EMOTIONAL_STATE_ENABLED", "true").lower() in ("true", "1", "yes")
     PENDING_EVENTS_ENABLED: bool = os.getenv("PENDING_EVENTS_ENABLED", "true").lower() in ("true", "1", "yes")

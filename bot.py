@@ -880,7 +880,7 @@ async def memorias_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Modo busca e debug privado de memória (/memoria <termo> ou /memorydebug <termo>)
     if context.args:
         termo = " ".join(context.args).strip()
-        retrieval = memory_retriever.retrieve_context(termo, max_facts=6)
+        retrieval = memory_retriever.retrieve_context(termo, max_facts=6, record_access=False)
         detalhes = retrieval.get("fatos_detalhados", [])
         if not detalhes:
             msg_texto = f"🔍 **Busca de Memória por '{termo}':**\nNenhum fato relevante encontrado no SQLite."
@@ -888,13 +888,14 @@ async def memorias_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             linhas = [f"🔍 **Debug de Memória para '{termo}':**\n"]
             for f in detalhes:
                 score = f.get("hybrid_score", 0.0)
-                conf = f.get("confidence", 1.0)
+                conf = f.get("effective_confidence", f.get("confidence", 1.0))
                 tier = f.get("memory_tier", "standard")
                 ck = f.get("canonical_key") or "none"
                 cat = f.get("category", "geral")
+                src = f.get("source_conversation_id") or "init"
                 linhas.append(
                     f"• **{f['fato']}**\n"
-                    f"  📊 Score: `{score:.2f}` | Conf: `{conf:.2f}` | Tier: `{tier}` | Key: `{ck}` | Cat: `{cat}`"
+                    f"  📊 Score: `{score:.2f}` | Conf: `{conf:.2f}` | Tier: `{tier}` | Key: `{ck}` | Cat: `{cat}` | Src: `{src}`"
                 )
             linhas.append("\n*(Esta mensagem sumirá em 20s)*")
             msg_texto = "\n".join(linhas)

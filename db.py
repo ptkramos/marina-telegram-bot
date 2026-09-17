@@ -283,7 +283,7 @@ class DatabaseManager:
                 (fato, now_iso, category, importance, confidence, source_conversation_id, supersedes_id, memory_tier, volatility, canonical_key, now_iso)
             )
             conn.commit()
-            return cursor.lastrowid
+            return cursor.lastrowid if cursor.rowcount > 0 else 0
 
     def get_fatos_patrick(self, active_only: bool = True) -> list[str]:
         with self.get_connection() as conn:
@@ -300,8 +300,8 @@ class DatabaseManager:
             cursor = conn.cursor()
             query = """
             SELECT id, fato, category, importance, confidence, created_at, updated_at,
-                   access_count, active, supersedes_id, memory_tier, volatility,
-                   canonical_key, last_confirmed_at, confirmation_count
+                   access_count, active, supersedes_id, source_conversation_id, memory_tier,
+                   volatility, canonical_key, last_confirmed_at, confirmation_count
             FROM fatos_patrick
             """
             if active_only:
@@ -310,13 +310,49 @@ class DatabaseManager:
             cursor.execute(query)
             return [dict(r) for r in cursor.fetchall()]
 
+    def get_fato_detalhado(self, fato_id: int, active_only: bool = True) -> Optional[dict]:
+        """Recupera um fato específico com todos os seus metadados."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = """
+            SELECT id, fato, category, importance, confidence, created_at, updated_at,
+                   access_count, active, supersedes_id, source_conversation_id, memory_tier,
+                   volatility, canonical_key, last_confirmed_at, confirmation_count
+            FROM fatos_patrick
+            WHERE id = ?
+            """
+            if active_only:
+                query += " AND active = 1"
+            cursor.execute(query, (fato_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def get_memory_fallback_candidates(self, limit: int = 20) -> list[dict]:
+        """Retorna pool limitado de memórias ativas ordenadas por relevância permanente para o Retriever."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, fato, category, importance, confidence, created_at, updated_at,
+                       access_count, active, supersedes_id, source_conversation_id, memory_tier,
+                       volatility, canonical_key, last_confirmed_at, confirmation_count
+                FROM fatos_patrick
+                WHERE active = 1
+                ORDER BY importance DESC, confidence DESC, updated_at DESC
+                LIMIT ?
+                """,
+                (limit,)
+            )
+            return [dict(r) for r in cursor.fetchall()]
+
     def get_core_memories(self, limit: int = 5) -> list[dict]:
         """Retorna memórias centrais e estáveis (tier 'core') para o Context Builder."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, fato, category, importance, confidence, memory_tier, volatility, canonical_key, last_confirmed_at
+                SELECT id, fato, category, importance, confidence, memory_tier, volatility,
+                       canonical_key, source_conversation_id, last_confirmed_at
                 FROM fatos_patrick
                 WHERE active = 1 AND memory_tier = 'core'
                 ORDER BY importance DESC, confidence DESC, id ASC
@@ -327,7 +363,7 @@ class DatabaseManager:
             return [dict(r) for r in cursor.fetchall()]
 
     def confirmar_fato(self, fato_id: int) -> bool:
-        """Incrementa confirmação e confiança de um fato reafirmado pelo Patrick."""
+        """Incrementa confirmação e confiança de um fato ativo reafirmado pelo Patrick."""
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -338,12 +374,100 @@ class DatabaseManager:
                     confidence = MIN(1.0, confidence + 0.1),
                     last_confirmed_at = ?,
                     updated_at = ?
-                WHERE id = ?
+                WHERE id = ? AND active = 1
                 """,
                 (now_iso, now_iso, fato_id)
             )
             conn.commit()
             return cursor.rowcount > 0
+
+    def substituir_fato_atomicamente(
+        self,
+        existing_fact_id: int,
+        new_fact_data: dict
+    ) -> Optional[int]:
+        """
+        Substitui atomicamente um fato antigo por um novo em uma única transação SQLite.
+        Garante que a versão anterior só é inativada se o novo fato for inserido com sucesso.
+        Se ocorrer qualquer erro (ex: constraint UNIQUE ou falha de dados), faz ROLLBACK
+        e preserva o fato antigo intacto e ativo.
+        """
+        if not existing_fact_id or not new_fact_data:
+            return None
+
+        novo_fato = str(new_fact_data.get("fato", "")).strip()
+        if not novo_fato:
+            return None
+
+        now_iso = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            try:
+                cursor = conn.cursor()
+                # 1. Verifica se o fato antigo existe e está ativo
+                cursor.execute(
+                    "SELECT id, fato, canonical_key FROM fatos_patrick WHERE id = ? AND active = 1",
+                    (existing_fact_id,)
+                )
+                old_row = cursor.fetchone()
+                if not old_row:
+                    logger.warning(f"substituir_fato_atomicamente: Fato {existing_fact_id} não encontrado ou já inativo.")
+                    return None
+
+                # Se o novo fato tiver o texto exatamente idêntico ao antigo ativo:
+                # Trata como confirmação segura (same) em vez de replacement com conflito UNIQUE
+                if old_row["fato"].strip() == novo_fato:
+                    cursor.execute(
+                        """
+                        UPDATE fatos_patrick
+                        SET confirmation_count = confirmation_count + 1,
+                            confidence = MIN(1.0, confidence + 0.1),
+                            last_confirmed_at = ?,
+                            updated_at = ?
+                        WHERE id = ? AND active = 1
+                        """,
+                        (now_iso, now_iso, existing_fact_id)
+                    )
+                    conn.commit()
+                    return existing_fact_id
+
+                # 2. Insere novo fato apontando supersedes_id para o antigo
+                cursor.execute(
+                    """
+                    INSERT INTO fatos_patrick
+                    (fato, created_at, category, importance, confidence, active,
+                     source_conversation_id, supersedes_id, memory_tier, volatility,
+                     canonical_key, last_confirmed_at, confirmation_count)
+                    VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 0)
+                    """,
+                    (
+                        novo_fato,
+                        now_iso,
+                        new_fact_data.get("category", "geral"),
+                        float(new_fact_data.get("importance", 0.5)),
+                        float(new_fact_data.get("confidence", 1.0)),
+                        new_fact_data.get("source_conversation_id"),
+                        existing_fact_id,
+                        new_fact_data.get("memory_tier", "standard"),
+                        new_fact_data.get("volatility", "medium"),
+                        new_fact_data.get("canonical_key") or old_row["canonical_key"],
+                        now_iso
+                    )
+                )
+                new_id = cursor.lastrowid
+
+                # 3. Inativa a versão antiga
+                cursor.execute(
+                    "UPDATE fatos_patrick SET active = 0, updated_at = ? WHERE id = ? AND active = 1",
+                    (now_iso, existing_fact_id)
+                )
+
+                # 4. Confirma a transação inteira atomicamente
+                conn.commit()
+                return new_id
+            except Exception as e:
+                conn.rollback()
+                logger.error(f"Erro em substituir_fato_atomicamente (rollback realizado): {e}")
+                return None
 
     def desativar_fato(self, fato_id: int):
         """Desativa um fato antigo contradito ou substituído."""
