@@ -166,6 +166,15 @@ class DatabaseManager:
                 conn.commit()
             except Exception:
                 pass
+            try:
+                cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_resumos_intervalo
+                ON resumos_conversa(start_conversation_id, end_conversation_id)
+                WHERE start_conversation_id IS NOT NULL AND end_conversation_id IS NOT NULL;
+                """)
+                conn.commit()
+            except Exception:
+                pass
 
     def get_schema_version(self) -> int:
         """Retorna a versão mais recente do schema aplicada no banco."""
@@ -613,23 +622,31 @@ class DatabaseManager:
         self,
         topic: str,
         summary: str,
-        start_conversation_id: int = None,
-        end_conversation_id: int = None,
-        importance: float = 0.5
-    ) -> int:
+        start_conversation_id: Optional[int] = None,
+        end_conversation_id: Optional[int] = None,
+        importance: float = 0.6
+    ) -> Optional[int]:
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO resumos_conversa
-                (topic, summary, start_conversation_id, end_conversation_id, importance, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (topic, summary, start_conversation_id, end_conversation_id, importance, now_iso, now_iso)
-            )
-            conn.commit()
-            return cursor.lastrowid
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO resumos_conversa
+                    (topic, summary, start_conversation_id, end_conversation_id, importance, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (topic, summary, start_conversation_id, end_conversation_id, importance, now_iso, now_iso)
+                )
+                conn.commit()
+                return cursor.lastrowid
+            except sqlite3.IntegrityError as ie:
+                if "UNIQUE constraint failed" in str(ie):
+                    logger.warning(
+                        f"Resumo para intervalo {start_conversation_id}-{end_conversation_id} já existe no banco; inserção ignorada."
+                    )
+                    return None
+                raise
 
     def get_resumos_conversa(self, limit: int = 5) -> list[dict]:
         with self.get_connection() as conn:
@@ -1579,29 +1596,6 @@ class DatabaseManager:
             conn.commit()
         return deduplicated
 
-    def salvar_resumo_conversa(
-        self,
-        topic: str,
-        summary: str,
-        importance: float = 0.6,
-        start_conversation_id: Optional[int] = None,
-        end_conversation_id: Optional[int] = None
-    ) -> int:
-        """Salva um resumo holístico de sessão/conversa em resumos_conversa."""
-        now_iso = datetime.now().isoformat()
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO resumos_conversa
-                (topic, summary, start_conversation_id, end_conversation_id, importance, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (topic, summary, start_conversation_id, end_conversation_id, importance, now_iso, now_iso)
-            )
-            conn.commit()
-            return cursor.lastrowid
-
     def get_mensagens_sessao(self, limit: int = 50, since_id: Optional[int] = None) -> list[dict]:
         """Retorna mensagens recentes da conversa para reflexão da sessão a partir de um cursor opcional (P1.1)."""
         with self.get_connection() as conn:
@@ -1641,15 +1635,96 @@ class DatabaseManager:
                 pass
         return 0
 
-    # --- MÉTODOS DE ESTADO RELACIONAL ---
+    def claim_session_reflection(self, start_id: int, end_id: int, lease_seconds: int = 120) -> bool:
+        """
+        Garante atomicidade da execução da reflexão de sessão (P1.1).
+        Verifica se o intervalo já foi refletido ou se há um lease ativo não expirado.
+        Se livre, registra lease temporário em estado_relacional.
+        """
+        now = datetime.now()
+        now_iso = now.isoformat()
+        lease_until = (now + timedelta(seconds=lease_seconds)).isoformat()
 
-    def get_estado_relacional(self) -> dict[str, str]:
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            cursor.execute("BEGIN IMMEDIATE")
+            try:
+                # 1. Verifica se já existe resumo gravado para este intervalo
+                cursor.execute(
+                    "SELECT id FROM resumos_conversa WHERE start_conversation_id = ? AND end_conversation_id = ?",
+                    (start_id, end_id)
+                )
+                if cursor.fetchone():
+                    conn.rollback()
+                    return False
+
+                # 2. Verifica se o cursor persistido já passou deste end_id
+                cursor.execute("SELECT valor FROM estado_relacional WHERE chave = 'last_reflected_conversa_id'")
+                row = cursor.fetchone()
+                if row and row["valor"]:
+                    try:
+                        if int(row["valor"]) >= end_id:
+                            conn.rollback()
+                            return False
+                    except ValueError:
+                        pass
+
+                # 3. Verifica se há lease ativo para este end_id
+                cursor.execute("SELECT valor FROM estado_relacional WHERE chave = 'reflection_lease_end_id'")
+                row_end = cursor.fetchone()
+                cursor.execute("SELECT valor FROM estado_relacional WHERE chave = 'reflection_lease_until'")
+                row_until = cursor.fetchone()
+
+                if row_end and row_until and row_end["valor"] == str(end_id):
+                    try:
+                        until_dt = datetime.fromisoformat(row_until["valor"])
+                        if now < until_dt:
+                            conn.rollback()
+                            return False
+                    except Exception:
+                        pass
+
+                # 4. Adquire lease
+                cursor.execute(
+                    "INSERT OR REPLACE INTO estado_relacional (chave, valor, updated_at) VALUES (?, ?, ?)",
+                    ("reflection_lease_end_id", str(end_id), now_iso)
+                )
+                cursor.execute(
+                    "INSERT OR REPLACE INTO estado_relacional (chave, valor, updated_at) VALUES (?, ?, ?)",
+                    ("reflection_lease_until", lease_until, now_iso)
+                )
+                conn.commit()
+                return True
+            except Exception:
+                conn.rollback()
+                raise
+
+    def release_session_reflection_claim(self, end_id: int):
+        """Libera o lease de reflexão caso o processamento falhe antes de consolidar (P1.1)."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT valor FROM estado_relacional WHERE chave = 'reflection_lease_end_id'")
+            row = cursor.fetchone()
+            if row and row["valor"] == str(end_id):
+                cursor.execute("DELETE FROM estado_relacional WHERE chave IN ('reflection_lease_end_id', 'reflection_lease_until')")
+                conn.commit()
+
+    # --- MÉTODOS DE ESTADO RELACIONAL ---
+
+    def get_estado_relacional(self, chave: Optional[str] = None) -> Union[dict[str, str], Optional[str]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if chave:
+                cursor.execute("SELECT valor FROM estado_relacional WHERE chave = ?", (chave,))
+                row = cursor.fetchone()
+                return row["valor"] if row else None
             cursor.execute("SELECT chave, valor FROM estado_relacional")
             return {r["chave"]: r["valor"] for r in cursor.fetchall()}
 
-    def set_estado_relacional(self, chave: str, valor: str):
+    def set_estado_relacional(self, chave: str, valor: Optional[str]):
+        if valor is None or valor == "":
+            self.remover_estado_relacional(chave)
+            return
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -1657,6 +1732,13 @@ class DatabaseManager:
                 "INSERT OR REPLACE INTO estado_relacional (chave, valor, updated_at) VALUES (?, ?, ?)",
                 (chave, valor, now_iso)
             )
+            conn.commit()
+
+    def remover_estado_relacional(self, chave: str):
+        """Remove uma chave de estado_relacional."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM estado_relacional WHERE chave = ?", (chave,))
             conn.commit()
 
     # --- MÉTODOS DE ESTADO EMOCIONAL COM CLAMP & DECAY ---

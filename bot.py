@@ -11,6 +11,7 @@ import random
 import asyncio
 import re
 import sys
+import json
 from datetime import datetime
 from typing import Optional, List, Dict
 
@@ -1161,9 +1162,33 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_TYPE, texto_usuario: str):
     chat_id = update.effective_chat.id
     msg_id = update.message.message_id
+    user_replied_to_msg_id = (
+        update.message.reply_to_message.message_id
+        if (update.message and getattr(update.message, "reply_to_message", None))
+        else None
+    )
 
     # 1. Aprendizado dinâmico do estilo linguístico do Patrick (risadas, emojis, gírias, cadência)
     style_engine.processar_mensagem_patrick(texto_usuario)
+
+    # 1.1 Resolução de esclarecimento para pedido direto de lembrete pendente (P2)
+    pending_direct_rem = memory_manager.db.get_estado_relacional("pending_direct_reminder")
+    if pending_direct_rem:
+        try:
+            pending_data = json.loads(pending_direct_rem)
+            from planner import parse_iso_or_relative_datetime
+            parsed_time = parse_iso_or_relative_datetime(texto_usuario, default_offset_hours=None)
+            if parsed_time and datetime.fromisoformat(parsed_time) > datetime.now():
+                rem_id = reminder_service.create_direct_reminder(
+                    description=pending_data.get("description", "seu compromisso"),
+                    remind_at=parsed_time,
+                    offset_minutes=0,
+                    source_conversation_id=pending_data.get("source_conversation_id")
+                )
+                memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
+                logger.info(f"Lembrete direto pendente '{pending_data.get('description')}' agendado com sucesso para {parsed_time} (ID {rem_id}).")
+        except Exception as e_pdr:
+            logger.warning(f"Erro ao processar esclarecimento de lembrete direto pendente: {e_pdr}")
 
     # 2. Planejamento Cognitivo Interno (tom, intenção, reação e detecção de compromissos futuros)
     recent_turns = memory_manager.get_historico_recente(limit=4)
@@ -1175,12 +1200,15 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     else:
         plan = planner.plan_heuristics(texto_usuario) or {}
 
-    # 2.1 Verificação de consentimento para oferta recente de lembrete com atribuição estrita (Release 3.5.1 / P1.3)
+    # 2.1 Verificação de consentimento para oferta recente de lembrete com atribuição estrita (Release 3.5.1 / P0/P1.3)
     if getattr(settings, "SMART_REMINDERS_ENABLED", True):
         last_offered = reminder_service.get_last_offered_reminder(max_age_minutes=60)
         if last_offered:
             # Atribuição estrita: verifica se é resposta direta ou turno consecutivo
-            is_reply_to_offer = bool(reply_to_id and last_offered.get("offer_message_id") and reply_to_id == last_offered.get("offer_message_id"))
+            is_reply_to_offer = bool(
+                user_replied_to_msg_id and last_offered.get("offer_message_id")
+                and user_replied_to_msg_id == last_offered.get("offer_message_id")
+            )
             is_immediate_next_turn = False
             ultimas_msgs = ULTIMAS_MENSAGENS_MARINA.get(chat_id, [])
             if ultimas_msgs and last_offered.get("offer_message_id"):
@@ -1311,6 +1339,17 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
             )
         })
 
+    if plan and plan.get("needs_clarification") == "direct_reminder_time":
+        subj = plan.get("clarification_subject") or "isso"
+        messages.append({
+            "role": "system",
+            "content": (
+                f"[INSTRUÇÃO CRÍTICA DESTE TURNO]: O Patrick pediu para você lembrá-lo de '{subj}', "
+                "mas não informou quando ou o horário exato. "
+                "Pergunte com carinho de namorada a que horas ou quando ele quer que você o lembre!"
+            )
+        })
+
     if pediu_foto:
         messages.append({
             "role": "system",
@@ -1399,6 +1438,21 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     queria_audio = bool(re.search(r'\[MANDAR_AUDIO\]|\[AUDIO\]', resposta_marin, flags=re.IGNORECASE))
     fala_limpa = limpar_fala_marina(resposta_marin)
 
+    # P1.3: Garante deterministicamente que a pergunta de oferta de lembrete esteja na fala enviada
+    if plan and plan.get("should_offer_reminder"):
+        event_desc = plan.get("event_details", {}).get("description") or "compromisso"
+        has_offer_in_text = bool(re.search(r"\b(lembr|aviso|avisar|lembrete)\b", fala_limpa, re.IGNORECASE))
+        if not has_offer_in_text:
+            pergunta_lembrete = f"\nQuer que eu te lembre do {event_desc} antes, amor? 💕"
+            fala_limpa = f"{fala_limpa.strip()}{pergunta_lembrete}"
+
+    # P2: Garante pergunta de esclarecimento caso o Patrick tenha pedido lembrete sem horário
+    if plan and plan.get("needs_clarification") == "direct_reminder_time":
+        has_time_q = bool(re.search(r"\b(quando|que horas|qual horário|qual hora|que dia)\b", fala_limpa, re.IGNORECASE))
+        if not has_time_q:
+            pergunta_tempo = "\nQuando você quer que eu te lembre disso, amor? Me diz o horário certinho! 💕"
+            fala_limpa = f"{fala_limpa.strip()}{pergunta_tempo}"
+
     # Chance espontânea adicional: ~6% de mandar áudio por vontade própria em mensagens carinhosas (apenas se não for pedido de foto)
     if not pediu_foto and not pediu_audio and not queria_audio and random.random() < 0.06 and len(fala_limpa) > 30:
         queria_audio = True
@@ -1410,6 +1464,7 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
 
     audio_enviado = False
     aviso_audio_ja_enviado = False
+    sent_voice = None
     if pediu_audio or queria_audio:
         if not voice_engine.is_configured():
             if pediu_audio:
@@ -1451,10 +1506,14 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     if plan and plan.get("should_offer_reminder"):
         offered_rem = reminder_service.get_last_offered_reminder()
         offer_mid = getattr(sent_text_msg, "message_id", None)
-        if not offer_mid and audio_enviado and 'sent_voice' in locals():
+        if not offer_mid and audio_enviado and sent_voice:
             offer_mid = getattr(sent_voice, "message_id", None)
-        if offered_rem and offer_mid:
-            reminder_service.record_offer_message(offered_rem["id"], offer_mid)
+        if offered_rem:
+            if offer_mid:
+                reminder_service.record_offer_message(offered_rem["id"], offer_mid)
+            else:
+                # O envio falhou ou não houve mensagem transmitida; cancela a oferta para evitar oferta fantasma
+                reminder_service.cancel_reminder(offered_rem["id"])
     
     # Se pediu foto, renderiza a cena e envia foto com status realista apenas no momento do upload
     if pediu_foto:

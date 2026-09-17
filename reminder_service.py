@@ -32,7 +32,8 @@ class ReminderService:
         description: str,
         remind_at: str,
         offset_minutes: int = 30,
-        source_conversation_id: Optional[int] = None
+        source_conversation_id: Optional[int] = None,
+        offer_message_id: Optional[int] = None
     ) -> int:
         """Registra um reminder ofertado aguardando consentimento explícito."""
         rid = self.db.criar_reminder(
@@ -43,6 +44,8 @@ class ReminderService:
             offset_minutes=offset_minutes,
             source_conversation_id=source_conversation_id
         )
+        if offer_message_id and rid:
+            self.db.salvar_mensagem_oferta_reminder(rid, offer_message_id)
         logger.info(f"Reminder {rid} ofertado ao Patrick para '{description}' em {remind_at} (offset: {offset_minutes}m).")
         return rid
 
@@ -50,7 +53,7 @@ class ReminderService:
         """Recupera a última oferta de lembrete pendente de confirmação."""
         return self.db.get_ultimo_reminder_ofertado(max_age_minutes=max_age_minutes)
 
-    def parse_confirmation_response(self, text: str, has_context: bool = False) -> Dict[str, Any]:
+    def parse_confirmation_response(self, text: str, has_context: Optional[bool] = None) -> Dict[str, Any]:
         """
         Analisa a resposta do Patrick para identificar consentimento (ou recusa) de oferta de lembrete.
         Se has_context for False, afirmações/recusas genéricas e soltas (ex: 'sim', 'claro', 'não')
@@ -58,6 +61,9 @@ class ReminderService:
         """
         if not text:
             return {"action": "none", "offset_minutes": None}
+
+        if has_context is None:
+            has_context = bool(self.get_last_offered_reminder())
 
         t_clean = text.lower().strip()
 
@@ -100,38 +106,27 @@ class ReminderService:
         elif "2 horas" in t_clean or "2h" in t_clean or "duas horas" in t_clean:
             offset = 120
 
-        # Aceitação com menção direta de lembrete
-        aceite_explicito = [
+        # Aceitação com menção DIRETA e EXPLÍCITA a lembrete (independe de has_context)
+        aceite_estritamente_explicito = [
             r"\b(me lembra|quero sim me lembrar|pode me lembrar|lembra aí|lembra ai|lembra sim|me lembra sim)\b",
-            r"\b(coloca lembrete|pode agendar|pode marcar o lembrete|pode marcar)\b",
-            r"\bpode ser\b"
+            r"\b(coloca (o )?lembrete|pode agendar (o )?lembrete|pode marcar (o )?lembrete|agenda (o )?lembrete|marca (esse |o )?lembrete|cria (o )?lembrete|quero (o )?lembrete)\b"
         ]
-        for padrao in aceite_explicito:
+        for padrao in aceite_estritamente_explicito:
             if re.search(padrao, t_clean):
                 return {"action": "confirm", "offset_minutes": offset}
 
-        # Se especificou apenas o offset ("meia hora antes", "15 min antes"):
-        if offset is not None and ("antes" in t_clean or "antes de" in t_clean):
-            return {"action": "confirm", "offset_minutes": offset}
-
-        # Afirmação solta monossilábica ('sim', 's', 'ss', 'simm') sem contexto NÃO confirma (P1.3)
-        is_bare_yes = bool(re.match(r"^\s*(sim|s|ss|simm)[!.? ]*$", t_clean))
-        if is_bare_yes:
-            if has_context:
-                return {"action": "confirm", "offset_minutes": offset}
-            return {"action": "none", "offset_minutes": None}
-
-        # Aceitação genérica com frase (ex: 'com certeza', 'por favor', 'fechou', 'manda bala')
-        aceite_generico = [
-            r"\b(com certeza|por favor|quero sim|fechou|manda bala)\b"
-        ]
-        for padrao in aceite_generico:
-            if re.search(padrao, t_clean):
-                return {"action": "confirm", "offset_minutes": offset}
-
-        # Se houver contexto comprovado, início afirmativo confirma
+        # TODAS as confirmações genéricas (ex: 'sim', 'pode ser', 'por favor', 'quero sim', 'fechou', 'manda bala', 'claro', 'com certeza', 'bora', 'beleza', 'ok', 'show')
+        # EXIGEM contexto comprovado da oferta (has_context=True, P1.3)
         if has_context:
-            if re.search(r"^(sim|claro|quero)\b", t_clean):
+            aceite_com_contexto = [
+                r"\b(sim|s|ss|simm|claro|com certeza|pode ser|por favor|quero|quero sim|fechou|manda bala|bora|beleza|ok|show|perfeito|combinado)\b"
+            ]
+            for padrao in aceite_com_contexto:
+                if re.search(padrao, t_clean):
+                    return {"action": "confirm", "offset_minutes": offset}
+
+            # Se especificou apenas o offset ("meia hora antes", "15 min antes") respondendo à oferta:
+            if offset is not None and ("antes" in t_clean or "antes de" in t_clean):
                 return {"action": "confirm", "offset_minutes": offset}
 
         return {"action": "none", "offset_minutes": None}

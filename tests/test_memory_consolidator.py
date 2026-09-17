@@ -133,8 +133,9 @@ class TestMemoryConsolidatorLLM(unittest.TestCase):
         ]
 
         result = self.consolidator.consolidate_dialogue(dialogue, existing_facts=[])
-        if result.get("error") and "402" in result.get("error"):
-            self.skipTest("OpenRouter sem créditos suficientes (HTTP 402).")
+        err = str(result.get("error") or "")
+        if err and ("402" in err or "Connection error" in err or "ConnectError" in err):
+            self.skipTest(f"LLM indisponível no ambiente de teste: {err}")
         self.assertEqual(len(result.get("facts_to_create", [])), 0, "Chitchat casual não deve criar fatos!")
 
     def test_real_fact_extraction(self):
@@ -146,8 +147,9 @@ class TestMemoryConsolidatorLLM(unittest.TestCase):
         ]
 
         result = self.consolidator.consolidate_dialogue(dialogue, existing_facts=[])
-        if result.get("error") and "402" in result.get("error"):
-            self.skipTest("OpenRouter sem créditos suficientes (HTTP 402).")
+        err = str(result.get("error") or "")
+        if err and ("402" in err or "Connection error" in err or "ConnectError" in err):
+            self.skipTest(f"LLM indisponível no ambiente de teste: {err}")
         fatos = result.get("facts_to_create", [])
         self.assertGreaterEqual(len(fatos), 1, "Deveria ter extraído ao menos um fato sobre FFXIV")
         fato_texto = fatos[0]["fato"].lower()
@@ -168,8 +170,9 @@ class TestMemoryConsolidatorLLM(unittest.TestCase):
         ]
 
         result = self.consolidator.consolidate_dialogue(dialogue, existing_facts=existing_facts)
-        if result.get("error") and "402" in result.get("error"):
-            self.skipTest("OpenRouter sem créditos suficientes (HTTP 402).")
+        err = str(result.get("error") or "")
+        if err and ("402" in err or "Connection error" in err or "ConnectError" in err):
+            self.skipTest(f"LLM indisponível no ambiente de teste: {err}")
         deactivations = result.get("facts_to_deactivate", [])
         fatos_novos = result.get("facts_to_create", [])
         self.assertTrue(

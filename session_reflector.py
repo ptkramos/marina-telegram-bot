@@ -163,6 +163,9 @@ class SessionReflector:
                 start_conversation_id=start_msg_id,
                 end_conversation_id=end_msg_id
             )
+            if summary_id is None and start_msg_id and end_msg_id:
+                logger.info(f"Resumo para sessão {start_msg_id}-{end_msg_id} já gravado por outra instância; abortando aplicação concorrente.")
+                return {"summary_id": None, "created_loops": [], "resolved_loops_count": 0, "moments_created": []}
             logger.info(f"SessionReflector: resumo de conversa salvo com ID {summary_id}.")
 
         # Cria novos open loops detectados na reflexão
@@ -252,6 +255,11 @@ class SessionReflector:
         start_id = messages[0]["id"] if messages else None
         end_id = messages[-1]["id"] if messages else None
 
+        if start_id and end_id:
+            if not self.db.claim_session_reflection(start_id, end_id):
+                logger.info(f"Reflexão para intervalo {start_id}-{end_id} já concluída ou em andamento em outra instância; abortando.")
+                return None
+
         # Busca loops ativos para apresentar à LLM e define allowlist
         active_loops = self.db.get_open_loops_ativos(limit=5)
         allowed_loop_ids = {l["id"] for l in active_loops}
@@ -260,8 +268,18 @@ class SessionReflector:
         try:
             data = self.reflect_session(messages, active_loops=active_loops)
         except TypeError:
-            data = self.reflect_session(messages)
+            try:
+                data = self.reflect_session(messages)
+            except Exception as e:
+                logger.warning(f"Exceção ao chamar reflect_session: {e}")
+                data = None
+        except Exception as e:
+            logger.warning(f"Exceção ao chamar reflect_session: {e}")
+            data = None
+
         if not data:
+            if end_id:
+                self.db.release_session_reflection_claim(end_id)
             logger.warning("Reflect session falhou ou retornou vazio; abortando aplicação para evitar resumos espúrios.")
             return None
 

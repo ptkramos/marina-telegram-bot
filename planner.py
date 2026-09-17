@@ -396,7 +396,7 @@ class InternalPlanner:
                 try:
                     rem_desc = dir_rem.get("description") or "seu compromisso"
                     raw_rem_time = dir_rem.get("remind_at")
-                    # P1.5: Exigir horário explícito e futuro, sem default_offset_hours implícito
+                    # P1.5 / P2: Exigir horário explícito e futuro, sem default_offset_hours implícito
                     rem_time_iso = parse_iso_or_relative_datetime(raw_rem_time, default_offset_hours=None)
                     if rem_time_iso:
                         rem_dt = datetime.fromisoformat(rem_time_iso)
@@ -410,9 +410,23 @@ class InternalPlanner:
                                 source_conversation_id=conversation_id
                             )
                         else:
-                            logger.info(f"Horário de reminder direto no passado ({rem_time_iso}); ignorando agendamento.")
+                            logger.info(f"Horário de reminder direto no passado ({rem_time_iso}); solicitando esclarecimento.")
+                            plan["needs_clarification"] = "direct_reminder_time"
+                            plan["clarification_subject"] = rem_desc
+                            if hasattr(self.db, "set_estado_relacional"):
+                                self.db.set_estado_relacional(
+                                    "pending_direct_reminder",
+                                    json.dumps({"description": rem_desc, "source_conversation_id": conversation_id, "created_at": datetime.now().isoformat()})
+                                )
                     else:
                         logger.info(f"Horário de reminder direto não reconhecido ({raw_rem_time}); pendente de esclarecimento.")
+                        plan["needs_clarification"] = "direct_reminder_time"
+                        plan["clarification_subject"] = rem_desc
+                        if hasattr(self.db, "set_estado_relacional"):
+                            self.db.set_estado_relacional(
+                                "pending_direct_reminder",
+                                json.dumps({"description": rem_desc, "source_conversation_id": conversation_id, "created_at": datetime.now().isoformat()})
+                            )
                 except Exception as e_dir:
                     logger.warning(f"Erro ao registrar reminder direto: {e_dir}")
 
@@ -472,6 +486,8 @@ class InternalPlanner:
                         self.db.ajustar_emocao(emotion, float(delta))
                     except Exception:
                         pass
+
+        return plan
 
 
 internal_planner = InternalPlanner()

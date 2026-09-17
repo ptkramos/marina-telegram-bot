@@ -326,6 +326,216 @@ class TestAuditFixesV35(unittest.TestCase):
         self.assertFalse(fresh_settings.SESSION_REFLECTION_ENABLED)
         self.assertFalse(fresh_settings.MEMORY_HYGIENE_ENABLED)
 
+    # =========================================================================
+    # REVISÃO TÉCNICA RODADA 2 — REGRESSÕES E NOVAS PROTEÇÕES
+    # =========================================================================
+
+    def test_rodada2_p0_user_replied_to_msg_id_no_unbound_local(self):
+        """
+        P0: Garante que user_replied_to_msg_id é inicializado no topo de process_incoming_batch
+        e que a presença de oferta pendente não causa UnboundLocalError: reply_to_id.
+        """
+        # Cria oferta pendente
+        rem_id = self.reminder_svc.offer_reminder(None, "reunião de teste", "2026-09-18T10:00:00", offer_message_id=555)
+        self.assertIsNotNone(rem_id)
+
+        # Mock de update do Telegram com reply_to_message
+        mock_msg = MagicMock()
+        mock_msg.message_id = 1001
+        mock_msg.text = "sim, pode me lembrar"
+        mock_msg.reply_to_message.message_id = 555
+        mock_msg.from_user.id = 12345
+        mock_msg.chat.id = 12345
+
+        mock_update = MagicMock()
+        mock_update.message = mock_msg
+        mock_update.effective_chat.id = 12345
+
+        # Executa em loop assíncrono isolado com mocks para evitar envio real ao telegram
+        with patch.object(bot.memory_manager, "db", self.db), \
+             patch.object(bot, "reminder_service", self.reminder_svc), \
+             patch.object(bot, "planner") as mock_plan, \
+             patch.object(bot, "llm_client") as mock_llm, \
+             patch.object(bot, "send_human_messages", return_value=MagicMock(message_id=2000)), \
+             patch.object(bot, "check_and_trigger_memory_consolidation"):
+
+            mock_plan.plan_message.return_value = {
+                "intention": "chat",
+                "direct_reminder": {"is_direct_reminder": False},
+                "emotional_delta": {}
+            }
+            mock_plan.plan_heuristics.return_value = {
+                "intention": "chat",
+                "direct_reminder": {"is_direct_reminder": False},
+                "emotional_delta": {}
+            }
+            mock_llm.chat.completions.create.return_value = MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Beleza amor!"))]
+            )
+
+            # Não pode levantar UnboundLocalError
+            try:
+                asyncio.run(bot.process_incoming_batch(
+                    update=mock_update,
+                    context=MagicMock(),
+                    texto_usuario="sim, pode me lembrar"
+                ))
+            except UnboundLocalError as ule:
+                self.fail(f"process_incoming_batch falhou com UnboundLocalError: {ule}")
+
+    def test_rodada2_p1_3_strict_affirmations_require_context(self):
+        """
+        P1.3: Frases genéricas (pode ser, por favor, quero sim, fechou, manda bala, etc)
+        NÃO devem confirmar lembretes se has_context=False.
+        Apenas frases explícitas contendo 'lembr' confirmam sem contexto.
+        """
+        genericas = [
+            "pode ser", "por favor", "quero sim", "fechou", "manda bala",
+            "claro", "com certeza", "sim", "bora", "beleza", "ok", "show"
+        ]
+        for frase in genericas:
+            res_sem_ctx = self.reminder_svc.parse_confirmation_response(frase, has_context=False)
+            self.assertEqual(
+                res_sem_ctx.get("action"), "none",
+                f"Frase genérica '{frase}' NÃO deveria confirmar reminder sem contexto!"
+            )
+
+            res_com_ctx = self.reminder_svc.parse_confirmation_response(frase, has_context=True)
+            self.assertEqual(
+                res_com_ctx.get("action"), "confirm",
+                f"Frase genérica '{frase}' DEVERIA confirmar reminder quando tem contexto!"
+            )
+
+        explicitas = [
+            "me lembra", "pode me lembrar", "me lembra sim",
+            "coloca o lembrete", "marca esse lembrete", "quero o lembrete"
+        ]
+        for frase in explicitas:
+            res_sem_ctx = self.reminder_svc.parse_confirmation_response(frase, has_context=False)
+            self.assertEqual(
+                res_sem_ctx.get("action"), "confirm",
+                f"Frase explícita '{frase}' DEVE confirmar mesmo sem contexto prévio!"
+            )
+
+    def test_rodada2_p1_1_concurrent_reflection_lease_and_unique_constraint(self):
+        """
+        P1.1: Valida proteção atômica contra reflexões de sessão concorrentes e duplicação:
+        1. Unique index em resumos_conversa(start_conversation_id, end_conversation_id)
+        2. claim_session_reflection impede concorrência
+        3. salvar_resumo_conversa trata IntegrityError e retorna None
+        """
+        # 1. Testa claim_session_reflection
+        claimed1 = self.db.claim_session_reflection(start_id=1, end_id=10, lease_seconds=60)
+        self.assertTrue(claimed1, "Primeiro claim deveria ter sucesso")
+
+        # Concorrente tentando o mesmo intervalo deve ser rejeitado pelo lease
+        claimed2 = self.db.claim_session_reflection(start_id=1, end_id=10, lease_seconds=60)
+        self.assertFalse(claimed2, "Claim concorrente para mesmo end_id dentro do lease deve ser rejeitado")
+
+        # Libera o claim
+        self.db.release_session_reflection_claim(end_id=10)
+
+        # Agora pode adquirir novamente
+        claimed3 = self.db.claim_session_reflection(start_id=1, end_id=10, lease_seconds=60)
+        self.assertTrue(claimed3, "Claim deve ter sucesso após release")
+
+        # 2. Salva resumo no banco para o intervalo 1-10
+        rid1 = self.db.salvar_resumo_conversa(
+            topic="Test", summary="Resumo 1",
+            start_conversation_id=1, end_conversation_id=10
+        )
+        self.assertIsNotNone(rid1)
+
+        # Inserção duplicada com mesmo intervalo deve retornar None sem estourar exceção
+        rid2 = self.db.salvar_resumo_conversa(
+            topic="Test 2", summary="Resumo 2",
+            start_conversation_id=1, end_conversation_id=10
+        )
+        self.assertIsNone(rid2, "Segunda inserção para mesmo intervalo deve retornar None devido a índice UNIQUE")
+
+        # Claim após resumo já gravado também deve retornar False
+        self.db.release_session_reflection_claim(end_id=10)
+        claimed4 = self.db.claim_session_reflection(start_id=1, end_id=10)
+        self.assertFalse(claimed4, "Não deve permitir claim para intervalo já gravado")
+
+    def test_rodada2_p2_direct_reminder_clarification_and_second_turn_completion(self):
+        """
+        P2: Lembrete direto sem horário válido:
+        - Planner deve setar needs_clarification='direct_reminder_time' e salvar pending_direct_reminder.
+        - Segundo turno: quando Patrick responde com o horário, bot completa o agendamento.
+        """
+        planner = InternalPlanner(db=self.db)
+
+        # Turno 1: Patrick pede lembrete sem horário claro ("me lembra de pagar o boleto")
+        vague_plan = {
+            "intention": "direct_reminder",
+            "direct_reminder": {
+                "is_direct_reminder": True,
+                "description": "pagar a conta de luz",
+                "remind_at": None
+            }
+        }
+        with patch("reminder_service.reminder_service", self.reminder_svc):
+            plan_out = planner.apply_plan_effects(vague_plan, conversation_id=101)
+
+        self.assertEqual(plan_out.get("needs_clarification"), "direct_reminder_time")
+        self.assertEqual(plan_out.get("clarification_subject"), "pagar a conta de luz")
+
+        # Verifica persistência no estado relacional
+        st = self.db.get_estado_relacional()
+        self.assertIn("pending_direct_reminder", st)
+
+        # Turno 2: Patrick responde fornecendo a hora
+        tomorrow_10 = (datetime.now() + timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
+        mock_msg2 = MagicMock()
+        mock_msg2.message_id = 1002
+        mock_msg2.text = "amanhã às 10h"
+        mock_msg2.reply_to_message = None
+        mock_msg2.from_user.id = 12345
+        mock_msg2.chat.id = 12345
+
+        mock_update2 = MagicMock()
+        mock_update2.message = mock_msg2
+        mock_update2.effective_chat.id = 12345
+
+        with patch.object(bot.memory_manager, "db", self.db), \
+             patch.object(bot, "reminder_service", self.reminder_svc), \
+             patch.object(bot, "planner") as mock_plan, \
+             patch.object(bot, "llm_client") as mock_llm, \
+             patch.object(bot, "send_human_messages", return_value=MagicMock(message_id=2001)), \
+             patch.object(bot, "check_and_trigger_memory_consolidation"), \
+             patch("planner.parse_iso_or_relative_datetime", return_value=tomorrow_10.isoformat()):
+
+            mock_plan.plan_message.return_value = {
+                "intention": "chat",
+                "direct_reminder": {"is_direct_reminder": False},
+                "emotional_delta": {}
+            }
+            mock_plan.plan_heuristics.return_value = {
+                "intention": "chat",
+                "direct_reminder": {"is_direct_reminder": False},
+                "emotional_delta": {}
+            }
+            mock_llm.chat.completions.create.return_value = MagicMock(
+                choices=[MagicMock(message=MagicMock(content="Beleza amor, agendado!"))]
+            )
+
+            asyncio.run(bot.process_incoming_batch(
+                update=mock_update2,
+                context=MagicMock(),
+                texto_usuario="amanhã às 10h"
+            ))
+
+        # O pending_direct_reminder deve ter sido limpo
+        st2 = self.db.get_estado_relacional()
+        self.assertNotIn("pending_direct_reminder", st2)
+
+        # O reminder confirmado deve existir
+        active_rems = self.reminder_svc.get_active_reminders()
+        self.assertEqual(len(active_rems), 1)
+        self.assertEqual(active_rems[0]["description"], "pagar a conta de luz")
+        self.assertEqual(active_rems[0]["status"], "confirmed")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
