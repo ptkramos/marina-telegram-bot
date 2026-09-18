@@ -120,6 +120,39 @@ def generate_dynamic_speech(instruction: str, max_tokens: int = 120, temperature
 
 def buscar_web_se_necessario(texto: str) -> str:
     """Pesquisa na web via DuckDuckGo em tempo real se a mensagem envolver fatos, lançamentos, notícias ou busca."""
+    lowered = texto.casefold()
+    if getattr(settings, 'REAL_WORLD_PLACE_LOOKUP_ENABLED', False):
+        from real_world_lookup import HOURS_INTENT, RealWorldLookupService
+
+        if HOURS_INTENT.search(texto):
+            fact = RealWorldLookupService(memory_manager.db).lookup_for_message(texto)
+            if fact and fact['status'] == 'CONFIRMED':
+                return (f"[HORÁRIO VERIFICADO] {fact['entity_name']}: "
+                        f"{fact['value']['opens_at']}–{fact['value']['closes_at']} "
+                        f"para {fact['for_date']}; fonte oficial consultada agora. "
+                        "Se a pergunta for sobre estar aberto neste instante, compare com a hora local.")
+            return '[HORÁRIO NÃO CONFIRMADO] Não há horário confiável para a unidade/data perguntada.'
+    if (getattr(settings, 'FERIADOS_API_ENABLED', False) and 'feriado' in lowered
+            and 'hoje' in lowered and 'amanhã' not in lowered and 'ontem' not in lowered):
+        from real_context_provider import RealContextProvider
+
+        provider = RealContextProvider(memory_manager.db)
+        now = datetime.now()
+        if not provider.cache.get(f'holiday_year:rio:{now.year}', now=now):
+            try:
+                provider.refresh_holidays(now)
+            except Exception:
+                pass
+        holiday = provider.holiday_on(now)
+        if holiday['status'] == 'HOLIDAY':
+            names = ', '.join(f"{item['name']} ({item['scope']})" for item in holiday['holidays'])
+            return f'[FERIADOS VERIFICADOS PARA O RIO HOJE] {names}.'
+        if holiday['status'] == 'OPTIONAL':
+            names = ', '.join(item['name'] for item in holiday['holidays'])
+            return f'[PONTO FACULTATIVO NO RIO HOJE] {names}; não equivale automaticamente a feriado.'
+        if holiday['status'] == 'NONE':
+            return '[FERIADOS VERIFICADOS PARA O RIO HOJE] Nenhum feriado registrado para hoje.'
+        return '[FERIADOS NÃO CONFIRMADOS] Não consegui confirmar o calendário completo do Rio agora.'
     t = texto.lower()
     gatilhos = [
         "pesquis", "procur", "busc", "google", "sabe se", "viu que", "ouviu falar",
@@ -136,8 +169,8 @@ def buscar_web_se_necessario(texto: str) -> str:
         query = texto
 
     try:
-        from ddgs import DDGS
-        results = list(DDGS().text(query, max_results=3))
+        from web_search_adapter import search_text
+        results = search_text(query, max_results=3)
         if not results:
             return ""
         snippets = []

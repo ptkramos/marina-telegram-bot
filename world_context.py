@@ -111,7 +111,9 @@ class WorldContextBuilder:
                               f"{upcoming['activity']} em {upcoming['start_at']}.")
             holiday = calendar.context.get(f'holiday:{now.date().isoformat()}', now=now)
             if holiday and holiday['payload']['date'] == now.date().isoformat():
-                blocks.append('[FERIADO OBSERVADO] '
+                label = ('PONTO FACULTATIVO OBSERVADO' if holiday['payload']['scope'] == 'optional'
+                         else 'FERIADO OBSERVADO')
+                blocks.append(f'[{label}] '
                               f"{holiday['payload']['name']} ({holiday['payload']['scope']}); "
                               f"fonte: {holiday['source_name']}.")
             if getattr(settings, 'ACADEMIC_LIFE_ENABLED', False):

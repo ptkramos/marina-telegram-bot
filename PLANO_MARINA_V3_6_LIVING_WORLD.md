@@ -2438,9 +2438,10 @@ Implementar:
 
 ## v3.6.4 — Real World Context & Calendar Continuity
 
-**Etapa 11 — complemento da grade V2 pendente de validação externa na release 3.6.4.**
-A integração anterior recebeu 271 testes, sem falhas nem pulos
-(`data/calendar_academic_validation.v364.json`). A migration 012
+**Etapa 11 — grade V2 validada; complemento de lookup e feriados BR pendente de validação externa na release 3.6.4.**
+A integração anterior recebeu 271 testes, e a grade V2 recebeu 274 testes,
+sem falhas nem pulos (`data/calendar_academic_validation.v364_grade_v2.json`).
+A migration 012
 estende `eventos_pendentes`, a tabela datada que já alimenta lembretes, com
 dono, intervalo, origem idempotente, confirmação e vínculo opcional à Story
 Thread. `CalendarWorld` reúne compromissos datados e aulas projetadas dos
@@ -2464,6 +2465,15 @@ contexto real guarda origem e expiração; busca de Open-Meteo/Nager.Date é
 opcional e falha para "desconhecido". O prompt recebe calendário e fase de modo
 compacto, omitindo descrições privadas de compromissos. As flags permanecem
 desligadas por padrão; ativação requer bootstrap canônico e configuração explícita.
+
+O complemento de lookup e feriados BR usa a Feriados API para o Rio (IBGE
+3304557), com Nager.Date apenas como fallback nacional e cache com prazo.
+Consultas a horários de lugares identificáveis passam por uma camada pontual
+sobre a busca DDGS existente; fontes incertas retornam `UNKNOWN`. Nenhuma
+consulta de lugares ocorre em tick de rotina ou Story Engine. O calendário
+institucional da PUC continua prevalecendo para aulas de 2026.2. As flags
+`FERIADOS_API_ENABLED` e `REAL_WORLD_PLACE_LOOKUP_ENABLED` ficam desligadas até
+validação externa deste complemento.
 
 Decisões do plano acadêmico: (A/B) integração nesta 3.6.4, com schema 009 já
 existente e migration incremental 012; (C/F) `eventos_pendentes` é a única

@@ -1,8 +1,8 @@
 {
-  "duration_seconds": 155.56,
+  "duration_seconds": 166.48,
   "exit_code": 0,
-  "finished_at": "2026-09-18T11:11:20.990680+00:00",
-  "output_tail": "----------------------------------------------------------------------\nRan 283 tests in 149.771s\n\nOK\n",
+  "finished_at": "2026-09-18T11:08:14.400745+00:00",
+  "output_tail": "----------------------------------------------------------------------\nRan 283 tests in 161.009s\n\nOK\n",
   "python": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\venv\\Scripts\\python.exe",
   "release": "3.6.4",
   "source_check": {
@@ -12,7 +12,7 @@
   },
   "stage": 11,
   "status": "passed",
-  "supplement": "puc_rio_2026_2_grade_v2",
+  "supplement": "real_world_lookup_feriados_br",
   "tests_run": 283,
   "tests_skipped": 0
 }

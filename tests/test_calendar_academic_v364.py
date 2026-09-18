@@ -126,6 +126,29 @@ class TestCalendarAcademicV364(unittest.TestCase):
         self.assertEqual(self.academic.blocks_on(datetime(2026, 9, 18).date()), [])
         self.assertEqual(len(self.academic.blocks_on(datetime(2026, 9, 23).date())), 3)
 
+    def test_civil_holiday_does_not_override_explicit_puc_class_day(self):
+        day = datetime(2026, 9, 23).date()
+        RealContextCache(self.db).put(
+            f'holiday:{day.isoformat()}', 'holiday',
+            {'date': day.isoformat(), 'name': 'Feriado municipal observado',
+             'scope': 'municipal'}, source_name='Feriados API',
+            observed_at=datetime(2026, 9, 18), expires_at=datetime(2026, 9, 24))
+        self.assertEqual(len(self.academic.blocks_on(day)), 3)
+
+    def test_observed_civil_holiday_reaches_world_state_without_creating_event(self):
+        now = datetime(2026, 9, 18, 18)
+        RealContextCache(self.db).put(
+            f'holiday:{now.date().isoformat()}', 'holiday',
+            {'date': now.date().isoformat(), 'name': 'Feriado local', 'scope': 'municipal'},
+            source_name='Feriados API', observed_at=now - timedelta(minutes=1),
+            expires_at=now + timedelta(hours=3))
+        with (patch.object(settings, 'CALENDAR_CONTINUITY_ENABLED', True),
+              patch.object(settings, 'ACADEMIC_LIFE_ENABLED', True)):
+            state = WorldStateManager(self.db).resolve(now, force=True)
+        self.assertEqual(json.loads(state['source_json'])['holiday_scope'], 'municipal')
+        with self.db.get_connection() as conn:
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM life_events').fetchone()[0], 0)
+
     def test_world_state_uses_class_before_routine_when_enabled(self):
         now = datetime(2026, 9, 22, 9)
         with (patch.object(settings, 'CALENDAR_CONTINUITY_ENABLED', True),

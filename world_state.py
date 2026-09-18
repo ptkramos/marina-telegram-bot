@@ -59,6 +59,7 @@ class RoutineEngine:
     def candidates(
         self, now: datetime, *, has_class: Optional[bool] = None,
         heavy_rain: bool = False, energy: float = 0.7,
+        holiday_scope: Optional[str] = None,
     ) -> list[RoutineCandidate]:
         if not 0 <= energy <= 1:
             raise ValueError("energy deve estar entre 0 e 1")
@@ -80,6 +81,13 @@ class RoutineEngine:
             if not activity:
                 continue
             score = float(row["probability"])
+            if holiday_scope and holiday_scope != 'optional':
+                if row["routine_type"] == "university":
+                    score *= 0.25
+                elif row["routine_type"] == "gym":
+                    score *= 0.8  # Opening hours may differ; do not assume closure.
+                elif row["routine_type"] == "home_evening":
+                    score *= 1.1
             if row["routine_type"] == "gym":
                 score *= max(0.2, energy)
                 if heavy_rain:
@@ -160,6 +168,10 @@ class WorldStateManager:
                 observed_weather = calendar.context.get('weather:rio', now=now)
                 if observed_weather:
                     weather = observed_weather['payload']
+            observed_holiday = calendar.context.get(f'holiday:{now.date().isoformat()}', now=now)
+            holiday_scope = (observed_holiday['payload']['scope'] if observed_holiday else None)
+        else:
+            holiday_scope = None
         reason = None
         chosen = None
         if confirmed_commitment and confirmed_commitment.get("start_at") and self._active_plan(confirmed_commitment, now):
@@ -182,6 +194,8 @@ class WorldStateManager:
             plan_expired = previous_plan is not None and not self._active_plan(previous_plan, now)
             if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
                 prior_source = json.loads(previous['source_json'] or '{}')
+                if prior_source.get('holiday_scope') != holiday_scope:
+                    plan_expired = True
                 if prior_source.get('calendar_event_id') or prior_source.get('academic_block_id'):
                     plan_expired = True  # Calendar may have cancelled/rescheduled this occurrence.
             if (timedelta(0) <= age < timedelta(minutes=self.stale_minutes)
@@ -192,6 +206,7 @@ class WorldStateManager:
             heavy_rain = bool(weather and weather.get("heavy_rain"))
             candidates = self.routine.candidates(
                 now, has_class=has_class, heavy_rain=heavy_rain, energy=energy,
+                holiday_scope=holiday_scope,
             )
             selected = self.routine.choose(candidates)
             chosen = {"activity": selected.activity, "place_key": selected.place_key}
@@ -209,6 +224,7 @@ class WorldStateManager:
             "weather_context_json": dict(weather) if weather else None,
             "current_plan_json": dict(chosen) if reason in ("confirmed_commitment", "explicit_plan") else None,
             "source_json": {"truth_type": "system", "reason": reason,
+                            "holiday_scope": holiday_scope,
                             "calendar_event_id": chosen.get('calendar_event_id'),
                             "academic_block_id": chosen.get('academic_block_id')},
         })

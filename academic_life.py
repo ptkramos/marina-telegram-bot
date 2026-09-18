@@ -228,7 +228,13 @@ class AcademicLife:
             return []
         holiday = self.context.get(f'holiday:{day.isoformat()}',
                                    now=datetime.combine(day, datetime.min.time()))
-        if holiday and holiday['payload']['date'] == day.isoformat():
+        # The official 2026.2 PUC calendar wins over civil holidays. For
+        # simulated future terms, a confirmed non-optional civil holiday may
+        # suppress the projected class until an institutional calendar exists.
+        if (holiday and holiday['payload']['date'] == day.isoformat()
+                and (holiday['payload']['scope'] == 'campus'
+                     or (term['term_key'] != '2026.2'
+                         and holiday['payload']['scope'] != 'optional'))):
             return []
         with self.db.get_connection() as conn:
             rows = conn.execute('''SELECT b.*,c.display_name FROM academic_schedule_blocks b

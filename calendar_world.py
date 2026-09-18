@@ -33,7 +33,7 @@ class RealContextCache:
     def put(self, context_key: str, kind: str, payload: Mapping, *, source_name: str,
             observed_at: datetime, expires_at: datetime) -> None:
         observed_at, expires_at = local_time(observed_at), local_time(expires_at)
-        if kind not in ('weather', 'holiday') or not context_key or not source_name:
+        if kind not in ('weather', 'holiday', 'holiday_year', 'place_fact', 'place_negative') or not context_key or not source_name:
             raise ValueError('Context needs a key, source and reviewed kind')
         if len(source_name) > 80 or any(ord(ch) < 32 for ch in source_name):
             raise ValueError('Invalid context source label')
@@ -50,8 +50,8 @@ class RealContextCache:
                 raise ValueError('Invalid temperature')
             if 'condition' in value and value['condition'] not in ('clear', 'cloudy', 'rain', 'storm', 'unknown'):
                 raise ValueError('Unknown weather condition')
-        else:
-            if set(value) - {'date', 'name', 'scope'} or not value.get('date'):
+        elif kind == 'holiday':
+            if set(value) - {'date', 'name', 'scope', 'holidays'} or not value.get('date'):
                 raise ValueError('Unexpected holiday field')
             try:
                 date.fromisoformat(value['date'])
@@ -60,8 +60,22 @@ class RealContextCache:
             if (not isinstance(value.get('name'), str) or len(value['name']) > 100
                     or any(ord(ch) < 32 for ch in value['name'])):
                 raise ValueError('Invalid holiday name')
-            if value.get('scope') not in ('national', 'state', 'municipal', 'campus'):
+            if value.get('scope') not in ('national', 'state', 'municipal', 'campus', 'optional'):
                 raise ValueError('Holiday scope must be explicit')
+            if 'holidays' in value and (not isinstance(value['holidays'], list)
+                    or any(not isinstance(item, dict) or set(item) != {'name', 'scope'}
+                           for item in value['holidays'])):
+                raise ValueError('Invalid holiday list')
+        elif kind == 'holiday_year':
+            if (set(value) != {'year', 'coverage', 'holidays'} or not isinstance(value['year'], int)
+                    or value['coverage'] not in ('RIO_ALL', 'NATIONAL_ONLY')
+                    or not isinstance(value['holidays'], list)):
+                raise ValueError('Invalid annual holiday cache')
+        elif kind in ('place_fact', 'place_negative'):
+            if (set(value) - {'entity_key', 'entity_name', 'fact_type', 'value', 'source_url', 'source_type',
+                              'confidence', 'status', 'for_date'} or not value.get('entity_key')
+                    or value.get('status') not in ('CONFIRMED', 'UNKNOWN')):
+                raise ValueError('Invalid place context')
         with self.db.get_connection() as conn:
             conn.execute('''INSERT INTO real_context_cache
                 (context_key,kind,payload_json,source_name,observed_at,expires_at)
