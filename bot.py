@@ -2015,9 +2015,9 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
 # --- VONTADE PRÓPRIA & INICIATIVA ÍNTIMA (DIRECIONADA APENAS AO PATRICK) ---
 
 async def autonomous_routine(application: Application):
-    # A proatividade v3.5 inventa situações sem consultar o WorldState.
-    # Reativar na etapa específica de integração de proatividade v3.6.
     if getattr(settings, "LIVING_WORLD_ENABLED", False):
+        if getattr(settings, 'RELATIONSHIP_WORLD_ENABLED', False):
+            await autonomous_routine_v36(application)
         return
     if not settings.TARGET_CHAT_ID:
         return
@@ -2127,6 +2127,71 @@ async def autonomous_routine(application: Application):
                 )
     except Exception as e:
         logger.error(f"Erro na rotina autônoma de Marina: {e}", exc_info=True)
+
+
+async def autonomous_routine_v36(application: Application):
+    """Grounded initiative; commit follow-ups and disclosure only after delivery."""
+    if not settings.TARGET_CHAT_ID or not getattr(settings, 'KNOWLEDGE_PRIVACY_ENABLED', False):
+        return
+    try:
+        now = datetime.now()
+        if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
+            from calendar_world import CalendarWorld
+
+            if CalendarWorld(memory_manager.db).current(
+                    now, include_academic=getattr(settings, 'ACADEMIC_LIFE_ENABLED', False)):
+                return
+        should_run, _ = proactivity_service.should_trigger(now)
+        if not should_run:
+            return
+        candidate = proactivity_service.determine_living_world_candidate(now)
+        reason = candidate['reason']
+        event_id = candidate.get('event_id')
+        loop_id = candidate.get('loop_id')
+        if reason == 'share_worthy_event':
+            from knowledge_dialogue import PrivacyReply
+            from relationship_world import RelationshipWorld
+
+            subject_id = candidate['subject_id']
+            current = RelationshipWorld(memory_manager.db).shareable_events(now)
+            if not any(row['id'] == subject_id for row in current):
+                return
+            text = f"Amor, queria te contar uma coisa: {candidate['detail']}"
+            reply = PrivacyReply('event', subject_id, text, 'details')
+            await send_registered_privacy_replies(
+                settings.TARGET_CHAT_ID, application.bot, [reply], db=memory_manager.db)
+        else:
+            detail = candidate.get('detail')
+            if reason == 'pending_event_followup':
+                text = f"Amor, lembrei do seu compromisso: {detail}. Como foi?"
+            elif reason == 'open_loop_checkin':
+                text = f"Amor, como estão as coisas com {detail}?"
+            elif reason == 'shared_topic_callback':
+                text = f"Fiquei pensando naquilo que a gente conversou sobre {detail}. Como você está vendo isso agora?"
+            else:
+                # A thought of Patrick is not evidence of a new world event.
+                options = (
+                    "Oi, amor. Como você tá?",
+                    "Passei pra te dar um oi, amor 💕",
+                    "Pensei em você agora. Como tá seu dia?",
+                    "Amor, queria saber como você tá hoje.",
+                )
+                text = options[(now.toordinal() + now.hour // 4
+                                + proactivity_service.get_autonomous_count_today(now)) % len(options)]
+            sent = await application.bot.send_message(chat_id=settings.TARGET_CHAT_ID, text=text)
+            if not isinstance(getattr(sent, 'message_id', None), int) or sent.message_id <= 0:
+                raise RuntimeError('Telegram did not confirm proactive message')
+        if event_id:
+            proactivity_service.db.concluir_evento_pendente(event_id)
+        if loop_id:
+            next_check = (now + timedelta(days=3)).isoformat(timespec='seconds')
+            proactivity_service.db.atualizar_open_loop_touch(loop_id, next_check_after=next_check)
+        memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
+        proactivity_service.record_autonomous_sent(
+            reason=reason,
+            topic=str(candidate['subject_id']) if reason == 'shared_topic_callback' else None)
+    except Exception as exc:
+        logger.error('Erro na proatividade Living World: %s', exc, exc_info=True)
 
 async def reminders_routine(application: Application):
     """Job de alta frequência para disparo de reminders confirmados no horário exato (Release 3.5.1 / P1.2)."""

@@ -2438,9 +2438,11 @@ Implementar:
 
 ## v3.6.4 — Real World Context & Calendar Continuity
 
-**Etapa 11 — grade V2 validada; complemento de lookup e feriados BR pendente de validação externa na release 3.6.4.**
-A integração anterior recebeu 271 testes, e a grade V2 recebeu 274 testes,
-sem falhas nem pulos (`data/calendar_academic_validation.v364_grade_v2.json`).
+**Etapa 11 concluída e validada na release 3.6.4.**
+A integração anterior recebeu 271 testes, a grade V2 recebeu 274, e o
+complemento de lookup e feriados BR recebeu 283, sem falhas nem pulos
+(`data/calendar_academic_validation.v364_grade_v2.json` e
+`data/real_world_lookup_validation.v364.json`).
 A migration 012
 estende `eventos_pendentes`, a tabela datada que já alimenta lembretes, com
 dono, intervalo, origem idempotente, confirmação e vínculo opcional à Story
@@ -2472,8 +2474,9 @@ Consultas a horários de lugares identificáveis passam por uma camada pontual
 sobre a busca DDGS existente; fontes incertas retornam `UNKNOWN`. Nenhuma
 consulta de lugares ocorre em tick de rotina ou Story Engine. O calendário
 institucional da PUC continua prevalecendo para aulas de 2026.2. As flags
-`FERIADOS_API_ENABLED` e `REAL_WORLD_PLACE_LOOKUP_ENABLED` ficam desligadas até
-validação externa deste complemento.
+`FERIADOS_API_ENABLED` e `REAL_WORLD_PLACE_LOOKUP_ENABLED` permanecem desligadas
+por padrão até ativação explícita. A validação externa da suíte usa respostas
+simuladas para a API; não registra uma chamada real com credenciais.
 
 Decisões do plano acadêmico: (A/B) integração nesta 3.6.4, com schema 009 já
 existente e migration incremental 012; (C/F) `eventos_pendentes` é a única
@@ -2499,6 +2502,14 @@ Implementar:
 ---
 
 ## v3.6.5 — Relationship & Proactivity Integration
+
+**Etapa 12 — implementação em validação externa.** A migration 014 armazena
+somente cultura do casal com evidência de conversas recebidas. O histórico do
+que Patrick já ouviu continua derivado de `knowledge_shares`; eventos
+compartilháveis precisam passar pela política individual de privacidade. A
+proatividade Living World usa ranking e só altera o estado após envio
+confirmado. `RELATIONSHIP_WORLD_ENABLED` começa desligada. Handoff em
+`VALIDACAO_ETAPA_12.md`.
 
 Implementar:
 

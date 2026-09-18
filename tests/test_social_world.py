@@ -95,7 +95,7 @@ class TestSocialWorld(unittest.TestCase):
                 c.execute(f'DROP TABLE {table}')
             c.execute('DELETE FROM schema_version WHERE version>=10')
         upgrade(self.db.db_path)
-        self.assertEqual(self.db.get_schema_version(),13)
+        self.assertEqual(self.db.get_schema_version(),14)
         self.assertEqual(len(self.social.graph()),9)
         for day in range(1,5):
             self.social.record(f'v{day}',place_key='bodytech_sao_clemente',occurred_at=f'2026-01-{day:02d}',valence=1)

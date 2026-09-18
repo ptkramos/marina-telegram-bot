@@ -148,6 +148,17 @@ class WorldContextBuilder:
         social = self._social_context(user_message)
         if social:
             blocks += ["[RELAÇÕES CANÔNICAS RELEVANTES — não implica compartilhar intimidades]", *social]
+        if getattr(settings, 'RELATIONSHIP_WORLD_ENABLED', False):
+            from relationship_world import RelationshipWorld
+
+            relationship = RelationshipWorld(self.db)
+            culture = relationship.culture_context(now=now)
+            if culture:
+                blocks.append('[CULTURA DO CASAL — evidência repetida] ' + '; '.join(culture))
+            shared = relationship.shared_history(limit=2)
+            if shared:
+                blocks.append('[JÁ CONTADO A PATRICK — não apresentar como novidade] '
+                              + '; '.join(item['title'] for item in shared))
         with self.db.get_connection() as conn:
             learned = conn.execute("""SELECT p.category,COALESCE(w.name,p.value) AS value,p.preference_type
                 FROM character_preferences p LEFT JOIN world_places w ON p.category='place' AND w.canonical_key=p.value

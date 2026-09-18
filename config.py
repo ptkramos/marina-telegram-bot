@@ -107,6 +107,7 @@ class Settings:
     RESPONSE_RHYTHM_ENABLED: bool = os.getenv("RESPONSE_RHYTHM_ENABLED", "false").lower() in ("true", "1", "yes")
     STORY_SEED_LIBRARY_ENABLED: bool = os.getenv("STORY_SEED_LIBRARY_ENABLED", "false").lower() in ("true", "1", "yes")
     KNOWLEDGE_PRIVACY_ENABLED: bool = os.getenv("KNOWLEDGE_PRIVACY_ENABLED", "false").lower() in ("true", "1", "yes")
+    RELATIONSHIP_WORLD_ENABLED: bool = os.getenv("RELATIONSHIP_WORLD_ENABLED", "false").lower() in ("true", "1", "yes")
     # Living World v3.6.2: Cadência de novos Story Events calibrada para ~89% de dias banais (longo prazo).
     # Com STORY_THREAD_DORMANT_DAYS=7 e STORY_EVENT_CADENCE_THRESHOLD=0.60, a simulação de 1.095 dias
     # produz ~11% de novos eventos e ~89% de dias banais, preservando cooldowns e limites.
@@ -162,6 +163,8 @@ class Settings:
     @classmethod
     def validate(cls) -> list[str]:
         errors = []
+        if cls.RELATIONSHIP_WORLD_ENABLED and not (cls.LIVING_WORLD_ENABLED and cls.KNOWLEDGE_PRIVACY_ENABLED):
+            errors.append('RELATIONSHIP_WORLD_ENABLED exige LIVING_WORLD_ENABLED e KNOWLEDGE_PRIVACY_ENABLED')
         try:
             cls().memory_weights()
         except ValueError as exc:

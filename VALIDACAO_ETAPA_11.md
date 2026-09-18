@@ -25,9 +25,14 @@ Depois da validação, com o bot parado, atualizar um banco já iniciado na grad
 ### Ajuste de integração resolvido (idempotência de migração)
 Na revisão do primeiro resultado, a recuperação de `duplicate column name` foi restringida à migration 012 e às sete colunas conhecidas de `eventos_pendentes`; outras falhas de schema continuam interrompendo a migração. O Gemini repetiu a suíte depois dessa alteração, com os 271 testes aprovados.
 
-## Complemento Real-World Lookup + Feriados BR — pendente
+## Complemento Real-World Lookup + Feriados BR — validado
 
-O Gemini deve executar, com o mesmo ambiente local e sem expor credenciais:
+O Gemini executou a validação externa em 18/09/2026: **283 testes, 0 falhas,
+0 pulos** (`data/real_world_lookup_validation.v364.json`). O resultado
+inclui a verificação do snapshot oficial da grade (9 turmas e SHA-256) e
+encerra a validação de código da etapa 11, release 3.6.4. O Codex conferiu o
+artefato sem repetir a suíte, conforme combinado. Para reproduzir no
+Antigravity, sem expor credenciais:
 
 ```powershell
 & .\venv\Scripts\python.exe scripts\run_external_stage11_lookup_validation.py
@@ -37,5 +42,7 @@ O resultado separado fica em `data/real_world_lookup_validation.v364.json`.
 A suíte inclui contrato da Feriados API por respostas simuladas, fallback
 Nager.Date, cache, escopos nacional/estadual/municipal/facultativo, prioridade
 do calendário PUC e lookup pontual de horários com fontes oficiais. A chave
-fica apenas em `.env`, sob `FERIADOS_API_KEY`, e as duas flags novas começam
-desligadas. O runtime não precisa de MCP nem de pesquisas periódicas de lugares.
+fica apenas em `.env`, sob `FERIADOS_API_KEY`, e as duas flags novas permanecem
+desligadas por padrão até a ativação explícita. O runtime não precisa de MCP
+nem de pesquisas periódicas de lugares. A suíte valida o contrato com respostas
+simuladas; o artefato não comprova chamada ao serviço externo com a chave real.

@@ -68,6 +68,9 @@ class ProactivityService:
 
         dt = now or datetime.now()
 
+        living = (getattr(settings, 'LIVING_WORLD_ENABLED', False)
+                  and getattr(settings, 'RELATIONSHIP_WORLD_ENABLED', False))
+
         # 1. Janela de sono
         if self.check_sleep_window(dt):
             return False, "sleep_window"
@@ -92,6 +95,15 @@ class ProactivityService:
             if minutos_desde_auto < settings.AUTONOMOUS_COOLDOWN_MINUTES:
                 return False, "autonomous_cooldown_active"
 
+        if living:
+            candidate = self.determine_living_world_candidate(dt)
+            if candidate['rank'] >= 70:
+                return True, candidate['reason']
+            # A relationship thought need not become a message. Low-priority
+            # callbacks and affection remain occasional, not clock-driven.
+            probability = settings.AUTONOMOUS_TRIGGER_CHANCE * (0.35 if candidate['rank'] >= 40 else 0.12)
+            return (True, candidate['reason']) if random.random() < probability else (False, 'living_world_quiet')
+
         # 4. Verifica se há evento pendente vencido para follow-up imediato
         eventos_vencidos = self.db.get_eventos_pendentes_para_followup(dt.isoformat())
         if eventos_vencidos:
@@ -108,6 +120,11 @@ class ProactivityService:
             return True, "stochastic_trigger"
 
         return False, "stochastic_miss"
+
+    def determine_living_world_candidate(self, now: Optional[datetime] = None) -> dict:
+        from relationship_world import RelationshipWorld
+
+        return RelationshipWorld(self.db).ranked_candidate(now or datetime.now())
 
     def determine_proactive_prompt(self, now: Optional[datetime] = None, auto_complete: bool = False) -> Dict[str, Any]:
         """

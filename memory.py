@@ -36,6 +36,17 @@ class MemoryManager:
         is_init = 1 if user_msg.startswith("[Iniciativa da Marina") else 0
         u_id = self.db.adicionar_mensagem(role="user", content=user_msg, is_initiative=bool(is_init))
         b_id = self.db.adicionar_mensagem(role="assistant", content=bot_msg, is_initiative=bool(is_init))
+        if not is_init:
+            from config import settings
+
+            if getattr(settings, 'LIVING_WORLD_ENABLED', False) and getattr(settings, 'RELATIONSHIP_WORLD_ENABLED', False):
+                from relationship_world import RelationshipWorld
+
+                try:
+                    RelationshipWorld(self.db).observe_explicit_user_culture(
+                        user_msg, conversation_id=u_id)
+                except (ValueError, RuntimeError) as exc:
+                    logger.warning('Cultura do casal ignorada: %s', exc)
         return u_id, b_id
 
     def get_historico_recente(self, limit: int = 10) -> list[dict]:
