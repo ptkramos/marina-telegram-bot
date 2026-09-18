@@ -1,0 +1,166 @@
+{
+  "by_category": {
+    "academic": 2,
+    "daily_practical": 1,
+    "embarrassment": 1,
+    "family": 1,
+    "friendship": 3,
+    "home": 1,
+    "invitation": 1,
+    "leisure": 1,
+    "minor_success": 2,
+    "misunderstanding": 2,
+    "mobility": 1,
+    "pet": 1,
+    "professional": 2,
+    "romantic": 1,
+    "schedule_conflict": 2,
+    "self_care": 1,
+    "shopping": 1,
+    "small_inconvenience": 1,
+    "social_light": 1
+  },
+  "by_causal_shape": {
+    "effort_recovery": 1,
+    "effort_result": 4,
+    "offer_decision": 3,
+    "plan_revision": 5,
+    "routine_disruption": 5,
+    "social_repair": 4,
+    "social_support": 4
+  },
+  "by_source_family": {
+    "dailydialog": 21,
+    "empathetic_dialogues": 21,
+    "gutenberg_dialogue": 4,
+    "marina_curated": 13,
+    "rocstories": 23
+  },
+  "deduplicated_to": {},
+  "excluded_for_weak_support": [
+    "unexpected_message"
+  ],
+  "library_version": 1,
+  "seed_count": 26,
+  "seed_support": {
+    "academic_feedback": {
+      "dailydialog": 2,
+      "empathetic_dialogues": 1,
+      "rocstories": 91
+    },
+    "father_check_in": {},
+    "forgot_item": {
+      "dailydialog": 343,
+      "empathetic_dialogues": 319,
+      "gutenberg_dialogue": 19,
+      "rocstories": 2683
+    },
+    "forgotten_commitment": {
+      "dailydialog": 10,
+      "empathetic_dialogues": 6,
+      "rocstories": 17
+    },
+    "friend_plan_cancelled": {
+      "dailydialog": 4,
+      "empathetic_dialogues": 8,
+      "rocstories": 32
+    },
+    "home_task_disrupted": {
+      "dailydialog": 8,
+      "empathetic_dialogues": 4,
+      "rocstories": 41
+    },
+    "leisure_plan_changed": {
+      "dailydialog": 7,
+      "empathetic_dialogues": 9,
+      "rocstories": 35
+    },
+    "minor_embarrassment": {
+      "dailydialog": 25,
+      "empathetic_dialogues": 78,
+      "gutenberg_dialogue": 11,
+      "rocstories": 622
+    },
+    "minor_help_received": {
+      "dailydialog": 19,
+      "empathetic_dialogues": 45,
+      "rocstories": 596
+    },
+    "minor_purchase_problem": {
+      "dailydialog": 3,
+      "empathetic_dialogues": 2,
+      "rocstories": 14
+    },
+    "missed_transport_connection": {
+      "dailydialog": 2,
+      "rocstories": 30
+    },
+    "partner_small_gesture": {},
+    "pet_minor_mischief": {
+      "dailydialog": 3,
+      "empathetic_dialogues": 18,
+      "rocstories": 114
+    },
+    "positive_feedback": {
+      "dailydialog": 43,
+      "empathetic_dialogues": 13,
+      "rocstories": 317
+    },
+    "professional_feedback": {
+      "dailydialog": 2,
+      "empathetic_dialogues": 3,
+      "rocstories": 12
+    },
+    "project_deadline_change": {
+      "dailydialog": 1,
+      "rocstories": 1
+    },
+    "schedule_conflict": {
+      "dailydialog": 40,
+      "empathetic_dialogues": 18,
+      "rocstories": 117
+    },
+    "self_care_pause": {},
+    "small_disagreement": {
+      "dailydialog": 39,
+      "empathetic_dialogues": 29,
+      "gutenberg_dialogue": 1,
+      "rocstories": 345
+    },
+    "small_favor_requested": {
+      "empathetic_dialogues": 1,
+      "rocstories": 79
+    },
+    "small_misunderstanding": {
+      "dailydialog": 58,
+      "empathetic_dialogues": 9,
+      "rocstories": 356
+    },
+    "small_success": {
+      "empathetic_dialogues": 1,
+      "rocstories": 11
+    },
+    "support_for_friend": {
+      "dailydialog": 1,
+      "empathetic_dialogues": 21,
+      "rocstories": 102
+    },
+    "unexpected_invitation": {
+      "dailydialog": 184,
+      "empathetic_dialogues": 86,
+      "gutenberg_dialogue": 4,
+      "rocstories": 1545
+    },
+    "unexpected_work_opportunity": {
+      "dailydialog": 3,
+      "empathetic_dialogues": 18,
+      "rocstories": 37
+    },
+    "weather_changes_plan": {
+      "dailydialog": 10,
+      "empathetic_dialogues": 9,
+      "rocstories": 130
+    }
+  },
+  "selection_rule": "curated seeds retained; additional shapes need at least two approved source families; identical structures collapse to curated-first canonical key"
+}

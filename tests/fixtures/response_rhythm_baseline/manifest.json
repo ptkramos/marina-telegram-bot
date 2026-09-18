@@ -1,0 +1,22 @@
+[
+  {
+    "Path": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\tests\\fixtures\\response_rhythm_baseline\\bot.py",
+    "Hash": "8A3EB0391C5ED3FEF1539DC67CB4A3F309671E4C94232CFBD7F660C2010CFC35"
+  },
+  {
+    "Path": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\tests\\fixtures\\response_rhythm_baseline\\context_builder.py",
+    "Hash": "DDAA6437ED1262753B55D495EB7A13B6A7496417EE37A7366C9A29876ACCDB23"
+  },
+  {
+    "Path": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\tests\\fixtures\\response_rhythm_baseline\\prompts.py",
+    "Hash": "B5A71BA20FADB4D50130F2F786BCE9B9FE8D99A1EDCEE1BC6A5E104DE7DE3BB1"
+  },
+  {
+    "Path": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\tests\\fixtures\\response_rhythm_baseline\\style_engine.py",
+    "Hash": "406C0054A10F79980716C127A237C774BD5E4428274585F08FF359587A6AB0C2"
+  },
+  {
+    "Path": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\tests\\fixtures\\response_rhythm_baseline\\world_context.py",
+    "Hash": "494E9878D98D96ABEFE0FD44190EF3E887391205A6521EF6247DC4655C5B8324"
+  }
+]

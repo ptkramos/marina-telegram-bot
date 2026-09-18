@@ -142,6 +142,56 @@ def parse_iso_or_relative_datetime(
     # Caso contrário, retorna None (evita converter frases descritivas em timestamps falsos)
     return None
 
+def parse_direct_reminder_datetime(raw_val: Any, reference_dt: Optional[datetime] = None) -> Optional[str]:
+    """Aceita apenas hora informada ou intervalo relativo preciso para lembretes diretos."""
+    if isinstance(raw_val, datetime):
+        return raw_val.strftime("%Y-%m-%dT%H:%M:%S")
+    if not raw_val:
+        return None
+
+    text = str(raw_val).strip().lower()
+    has_clock = bool(re.search(
+        r"\b(?:[aà]s\s*\d{1,2}(?:[:h]\d{1,2})?|\d{1,2}(?::\d{2}|h(?:oras?|rs?)?(?:\d{2})?))\b",
+        text,
+    ))
+    has_iso_clock = bool(re.search(r"^\d{4}-\d{2}-\d{2}[t ]\d{2}:\d{2}(?::\d{2})?$", text))
+    has_precise_delta = bool(re.search(r"\b(?:daqui\s+a|em)\s*\d+\s*(?:horas?|minutos?)\b", text))
+    if not (has_clock or has_iso_clock or has_precise_delta):
+        return None
+    return parse_iso_or_relative_datetime(raw_val, reference_dt=reference_dt, default_offset_hours=None)
+
+
+def detect_explicit_scheduled_event(text: str, reference_dt: Optional[datetime] = None) -> Optional[dict]:
+    """Recognize an affirmative, concrete future appointment with an explicit clock time."""
+    if not text:
+        return None
+    normalized = text.strip().lower()
+    if re.search(r"\b(?:n[aã]o|nem|nunca|cancelei|cancelado|era|tinha|talvez|se)\b", normalized):
+        return None
+    if not re.search(r"\b(?:tenho|vou ter|marquei|agendei)\b", normalized):
+        return None
+    if re.search(r"\bdia\s+\d{1,2}\b|\b\d{1,2}/\d{1,2}\b", normalized):
+        return None  # This parser does not resolve calendar dates written by number.
+    event_types = {
+        "reunião": "trabalho", "reuniao": "trabalho", "consulta": "medico",
+        "dentista": "medico", "médico": "medico", "medico": "medico",
+        "prova": "estudo", "exame": "estudo", "entrevista": "trabalho",
+        "voo": "viagem", "audiência": "compromisso", "audiencia": "compromisso",
+    }
+    event_type = next((kind for word, kind in event_types.items() if re.search(rf"\b{word}\b", normalized)), None)
+    if not event_type:
+        return None
+    now = reference_dt or datetime.now()
+    event_at = parse_direct_reminder_datetime(text, reference_dt=now)
+    if not event_at or datetime.fromisoformat(event_at) <= now:
+        return None
+    description = re.sub(r"^.*?\b(?:tenho|vou ter|marquei|agendei)\b\s*", "", text.strip(), flags=re.IGNORECASE)
+    description = re.sub(
+        r"\s*\b(?:hoje|amanh[aã]|depois de amanh[aã])?\s*(?:[aà]s)\s*\d{1,2}(?:[:h]\d{1,2})?\b.*$",
+        "", description, flags=re.IGNORECASE,
+    ).strip(" .!?,")
+    return {"event_type": event_type, "description": description or text.strip(), "event_at": event_at}
+
 def detect_direct_reminder_intent(text: str) -> tuple[bool, Optional[str]]:
     """
     Analisa se o texto é uma ordem/pedido afirmativo e imperativo de lembrete direto futuro.
@@ -390,7 +440,7 @@ class InternalPlanner:
         # Pedidos diretos óbvios de lembrete (P1 - Rodada 3 / P0 - Rodada 4)
         is_direct, subject = detect_direct_reminder_intent(user_message)
         if is_direct and subject:
-            parsed_time = parse_iso_or_relative_datetime(subject, default_offset_hours=None)
+            parsed_time = parse_direct_reminder_datetime(subject)
             is_valid_future = bool(parsed_time and datetime.fromisoformat(parsed_time) > datetime.now())
             plan_res = {
                 "intent": "direct_reminder",
@@ -410,6 +460,21 @@ class InternalPlanner:
                 plan_res["needs_clarification"] = "direct_reminder_time"
                 plan_res["clarification_subject"] = subject
             return plan_res
+
+        explicit_event = detect_explicit_scheduled_event(user_message)
+        if explicit_event:
+            return {
+                "intent": "planning_future",
+                "tone": "carinhosa",
+                "response_goal": "Apoiar Patrick no compromisso e oferecer um lembrete antes",
+                "reaction_emoji": None,
+                "creates_event": True,
+                "event_details": explicit_event,
+                "reminder_candidate": True,
+                "should_offer_reminder": True,
+                "recommended_reminder_offset_minutes": 30,
+                "emotional_deltas": {},
+            }
 
         return None
 
@@ -476,11 +541,14 @@ class InternalPlanner:
                             data["intent"] = "casual_chat"
                     else:
                         rem_desc = dir_rem.get("description") or detected_subj or "seu compromisso"
-                        raw_rem_time = dir_rem.get("remind_at")
-                        rem_time_iso = parse_iso_or_relative_datetime(raw_rem_time, default_offset_hours=None)
+                        rem_time_iso = parse_direct_reminder_datetime(user_message)
                         if not rem_time_iso or datetime.fromisoformat(rem_time_iso) <= datetime.now():
+                            dir_rem["remind_at"] = None
                             data["needs_clarification"] = "direct_reminder_time"
                             data["clarification_subject"] = rem_desc
+                        else:
+                            # O horário vem da fala do usuário; a LLM não pode completá-lo por conta própria.
+                            dir_rem["remind_at"] = rem_time_iso
 
                 return data
             except Exception as e:
@@ -579,10 +647,14 @@ class InternalPlanner:
                         if existing_rem.get("status") == "offered":
                             plan["offered_reminder_id"] = existing_rem["id"]
                     else:
-                        offset = int(plan.get("recommended_reminder_offset_minutes") or 30)
+                        offset = max(1, int(plan.get("recommended_reminder_offset_minutes") or 30))
                         ev_dt = datetime.fromisoformat(event_at_iso)
+                        now_dt = datetime.now()
+                        if ev_dt - timedelta(minutes=offset) <= now_dt and ev_dt - now_dt > timedelta(minutes=2):
+                            # Keep a near-term reminder useful rather than silently dropping the offer.
+                            offset = max(1, int((ev_dt - now_dt).total_seconds() // 120))
                         remind_at_iso = (ev_dt - timedelta(minutes=offset)).strftime("%Y-%m-%dT%H:%M:%S")
-                        if datetime.fromisoformat(remind_at_iso) > datetime.now():
+                        if datetime.fromisoformat(remind_at_iso) > now_dt:
                             from reminder_service import reminder_service
                             offered_id = reminder_service.offer_reminder(
                                 event_id=event_row_id,
@@ -609,7 +681,7 @@ class InternalPlanner:
                     else:
                         raw_rem_time = dir_rem.get("remind_at")
                         # P1.5 / P2: Exigir horário explícito e futuro, sem default_offset_hours implícito
-                        rem_time_iso = parse_iso_or_relative_datetime(raw_rem_time, default_offset_hours=None)
+                        rem_time_iso = parse_direct_reminder_datetime(raw_rem_time)
                         if rem_time_iso:
                             rem_dt = datetime.fromisoformat(rem_time_iso)
                             if rem_dt > datetime.now():

@@ -1,0 +1,8 @@
+{
+  "citation": "https://aclanthology.org/2021.eacl-main.11/",
+  "dataset_key": "gutenberg_dialogue",
+  "license": "MIT repository; user approved offline abstract preprocessing without raw redistribution",
+  "license_status": "user_approved_official_source",
+  "note": "Only offline abstract preprocessing; raw data is never distributed or read at runtime.",
+  "reference": "https://github.com/ricsinaruto/gutenberg-dialog/blob/master/LICENSE"
+}

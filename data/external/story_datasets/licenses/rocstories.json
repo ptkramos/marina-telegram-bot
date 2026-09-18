@@ -1,0 +1,8 @@
+{
+  "citation": "https://aclanthology.org/N16-1098/",
+  "dataset_key": "rocstories",
+  "license": "User-provided official access notice requires citation; no raw redistribution permission stated",
+  "license_status": "user_provided_access_terms",
+  "note": "Only offline abstract preprocessing; raw data is never distributed or read at runtime.",
+  "reference": "https://cs.rochester.edu/nlp/rocstories/"
+}

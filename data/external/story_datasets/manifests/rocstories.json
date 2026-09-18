@@ -1,0 +1,22 @@
+{
+  "dataset_key": "rocstories",
+  "display_name": "ROCStories",
+  "download_url": null,
+  "downloaded_at": null,
+  "ingestion_status": "processed",
+  "last_processed_at": "2026-09-18T04:46:12.753499+00:00",
+  "license_file": "../licenses/rocstories.json",
+  "license_status": "user_provided_access_terms",
+  "pipeline_version": 2,
+  "raw_files": [
+    "ROCStories_spring2016.csv",
+    "ROCStories_winter2017.csv"
+  ],
+  "sha256": {
+    "ROCStories_spring2016.csv": "e179331d90b1de1a82da2ffa7b3edbba4c700077e1a6ca3ea19f502d2fa97d8a",
+    "ROCStories_winter2017.csv": "beadc8cdddc21d18e9d2b7273f817ac833e96ce837cc9661bb74829a67da1c4f"
+  },
+  "source_origin": "https://cs.rochester.edu/nlp/rocstories/",
+  "source_type": "manual_download",
+  "source_version": null
+}

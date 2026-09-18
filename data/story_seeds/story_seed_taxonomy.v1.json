@@ -1,0 +1,31 @@
+{
+  "categories": [
+    "academic",
+    "daily_practical",
+    "embarrassment",
+    "family",
+    "friendship",
+    "home",
+    "invitation",
+    "leisure",
+    "minor_success",
+    "misunderstanding",
+    "mobility",
+    "pet",
+    "professional",
+    "romantic",
+    "schedule_conflict",
+    "self_care",
+    "shopping",
+    "small_inconvenience",
+    "social_light"
+  ],
+  "intensities": [
+    "BANAL",
+    "LOW",
+    "MEDIUM",
+    "HIGH",
+    "SIGNIFICANT"
+  ],
+  "library_version": 1
+}

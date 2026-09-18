@@ -52,6 +52,8 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
+# httpx includes the Telegram bot token in request URLs at INFO level.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger("MarinaBot")
 
 llm_client = OpenAI(
@@ -81,10 +83,19 @@ def is_authorized(update: Update) -> bool:
 
 def generate_dynamic_speech(instruction: str, max_tokens: int = 120, temperature: float = 0.72) -> str:
     """Gera uma fala espontânea e orgânica da Marina usando a LLM com temperatura equilibrada anti-glitch."""
+    if getattr(settings, "LIVING_WORLD_ENABLED", False):
+        system_prompt = context_builder.build_system_prompt(user_message=instruction)
+    else:
+        system_prompt = f"{MARIN_SYSTEM_PROMPT}\n{memory_manager.get_contexto_emocional()}\n[MOMENTO ATUAL DO DIA: {get_temporal_greeting()}]"
+    if settings.RESPONSE_RHYTHM_ENABLED:
+        from response_rhythm import apply_policy, select_policy
+        policy = select_policy(instruction)
+        system_prompt = apply_policy(system_prompt, policy)
+        max_tokens = max(max_tokens, policy.token_budget)
     messages = [
         {
             "role": "system",
-            "content": f"{MARIN_SYSTEM_PROMPT}\n{memory_manager.get_contexto_emocional()}\n[MOMENTO ATUAL DO DIA: {get_temporal_greeting()}]"
+            "content": system_prompt
         },
         {"role": "user", "content": instruction}
     ]
@@ -95,7 +106,11 @@ def generate_dynamic_speech(instruction: str, max_tokens: int = 120, temperature
             max_tokens=max_tokens,
             temperature=temperature
         )
-        return completion.choices[0].message.content.strip().strip('"').strip("'")
+        spoken = completion.choices[0].message.content.strip().strip('"').strip("'")
+        if settings.VOICE_PROSODY_ENABLED:
+            from voice_prosody import sanitize_display_text
+            spoken = sanitize_display_text(spoken)
+        return spoken
     except Exception as e:
         logger.error(f"Erro ao gerar fala dinâmica da LLM: {e}")
         return ""
@@ -144,16 +159,20 @@ def build_messages_payload(
     user_message: str = "",
     vision_context: str = "",
     planner_tone: Optional[str] = None,
-    planner_goal: Optional[str] = None
+    planner_goal: Optional[str] = None,
+    privacy_subjects: Optional[list[tuple[str, int]]] = None,
 ) -> list[dict]:
-    if settings.SMART_MEMORY_ENABLED:
+    if getattr(settings, "KNOWLEDGE_PRIVACY_ENABLED", False) and not getattr(settings, "LIVING_WORLD_ENABLED", False):
+        raise RuntimeError("Knowledge Privacy requires Living World context")
+    if settings.SMART_MEMORY_ENABLED or getattr(settings, "LIVING_WORLD_ENABLED", False):
         return context_builder.build(
             user_message=user_message,
             quoted_context=quoted_context,
             web_context=web_search_context,
             vision_context=vision_context,
             planner_tone=planner_tone,
-            planner_goal=planner_goal
+            planner_goal=planner_goal,
+            privacy_subjects=privacy_subjects,
         )
     contexto_momento = f"\n[MOMENTO ATUAL DO DIA: {get_temporal_greeting()}]"
     contexto_quote = f"\n{quoted_context}" if quoted_context else ""
@@ -166,6 +185,29 @@ def build_messages_payload(
         messages.append({"role": item["role"], "content": item["content"]})
 
     return messages
+
+
+async def send_registered_privacy_replies(chat_id: int, bot, replies, *, reply_to_message_id: int | None = None,
+                                          db=None) -> list[int]:
+    """Send each reviewed subject separately; ledger only successful Telegram sends."""
+    from knowledge_privacy import KnowledgePrivacy
+
+    privacy = KnowledgePrivacy(db or memory_manager.db)
+    sent_ids = []
+    for reply in replies:
+        sent = await bot.send_message(chat_id=chat_id, text=reply.text,
+                                      reply_to_message_id=reply_to_message_id)
+        message_id = getattr(sent, 'message_id', None)
+        if not isinstance(message_id, int) or message_id <= 0:
+            raise RuntimeError('Telegram did not confirm a message ID')
+        sent_ids.append(message_id)
+        if reply.disclosed_level:
+            privacy.record_confirmed_share(
+                reply.subject_type, reply.subject_id, 'marina', 'patrick_ramos',
+                detail_level=reply.disclosed_level,
+                evidence_key=f'telegram:{chat_id}:{message_id}:{reply.subject_type}:{reply.subject_id}',
+            )
+    return sent_ids
 
 
 # Lock de concorrência global para consolidação de memória
@@ -371,12 +413,21 @@ def is_time_clarification_question(text: str) -> bool:
     padrao = r"(?:\b(quando|que horas|qual hor[aá]rio|qual hora|que dia)\b.*?\?|\b(a que horas|em que momento)\b.*?\?)"
     return bool(re.search(padrao, t_clean, re.DOTALL))
 
-async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_message_id: int = None):
+async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_message_id: int = None, response_policy=None):
     """Envia a mensagem em balões curtos sucessivos com animação realista de digitação e rastreia IDs."""
+    if settings.VOICE_PROSODY_ENABLED:
+        from voice_prosody import sanitize_display_text
+        full_text = sanitize_display_text(full_text)
     if chat_id not in ULTIMAS_MENSAGENS_MARINA:
         ULTIMAS_MENSAGENS_MARINA[chat_id] = []
 
-    bubbles = [b for b in split_into_human_bubbles(full_text) if b]
+    if settings.RESPONSE_RHYTHM_ENABLED:
+        from response_rhythm import segment, select_policy
+        bubbles = segment(full_text, response_policy or select_policy())
+    else:
+        bubbles = [b for b in split_into_human_bubbles(full_text) if b]
+    if not bubbles:
+        return None
     
     if len(bubbles) > 1:
         for idx, bubble in enumerate(bubbles):
@@ -396,7 +447,7 @@ async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_messag
         await asyncio.sleep(random.uniform(0.8, 1.5))
         await bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         await asyncio.sleep(tempo_digitacao)
-        sent_msg = await bot.send_message(chat_id=chat_id, text=full_text, reply_to_message_id=reply_to_message_id)
+        sent_msg = await bot.send_message(chat_id=chat_id, text=bubbles[0], reply_to_message_id=reply_to_message_id)
         ULTIMAS_MENSAGENS_MARINA[chat_id].append({"message_id": sent_msg.message_id, "text": full_text})
 
     if len(ULTIMAS_MENSAGENS_MARINA[chat_id]) > 8:
@@ -404,6 +455,45 @@ async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_messag
     return sent_msg
 
 # --- SISTEMA DE REAÇÕES (VIA DE MÃO DUPLA) ---
+
+_reaction_capabilities: dict[int, set[str] | None] = {}
+_invalid_reactions: set[tuple[int, str]] = set()
+_reaction_aliases = {
+    "💘": "❤️", "😘": "❤️", "😍": "🥰", "🤣": "😂",
+    "🎉": "👍", "👌": "👍", "⏰": "👍",
+}
+_safe_reactions = {"❤️", "🥰", "😂", "👍", "🔥"}
+
+
+async def set_safe_message_reaction(bot, chat_id: int, message_id: int, emoji: str) -> bool:
+    """React only when this chat allows the emoji; stop retrying rejected reactions."""
+    emoji = _reaction_aliases.get(emoji, emoji)
+    if emoji not in _safe_reactions or (chat_id, emoji) in _invalid_reactions:
+        return False
+    if chat_id not in _reaction_capabilities:
+        try:
+            chat = await bot.get_chat(chat_id)
+            available = chat.available_reactions
+            _reaction_capabilities[chat_id] = None if available is None else {
+                reaction.emoji for reaction in available if hasattr(reaction, "emoji")
+            }
+        except Exception as exc:
+            logger.warning(f"Não foi possível verificar reações do chat: {exc}")
+            return False
+    allowed = _reaction_capabilities[chat_id]
+    if allowed is not None and emoji not in allowed:
+        return False
+    try:
+        await bot.set_message_reaction(
+            chat_id=chat_id, message_id=message_id,
+            reaction=[ReactionTypeEmoji(emoji=emoji)],
+        )
+        return True
+    except Exception as exc:
+        if "Reaction_invalid" in str(exc):
+            _invalid_reactions.add((chat_id, emoji))
+        logger.warning(f"Falha ao reagir com {emoji}: {type(exc).__name__}")
+        return False
 
 def choose_reaction_for_text(text: str) -> str | None:
     """Seleciona uma reação contextual válida para o Telegram (apenas emojis suportados)."""
@@ -417,6 +507,18 @@ def choose_reaction_for_text(text: str) -> str | None:
     if any(w in t for w in ["bora", "fechou", "combinado", "partiu", "show", "top", "maravilha", "certeza"]):
         return random.choice(["👍", "🎉", "👌"])
     return None
+
+
+def suppress_direct_reminder_after_offer_decision(plan: dict | None) -> dict:
+    """A reply to an existing offer must not create a second, direct reminder request."""
+    plan = plan or {}
+    plan["direct_reminder"] = None
+    plan["creates_event"] = False
+    plan["should_offer_reminder"] = False
+    plan.pop("needs_clarification", None)
+    plan.pop("clarification_subject", None)
+    plan.pop("clarification_hour_only", None)
+    return plan
 
 async def handle_reaction(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manipula quando o Patrick reage com emojis a mensagens/fotos da Marina (Via 2)."""
@@ -453,11 +555,7 @@ async def handle_reaction(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_human_messages(chat_id, context.bot, fala)
         else:
             try:
-                await context.bot.set_message_reaction(
-                    chat_id=chat_id,
-                    message_id=reaction_update.message_id,
-                    reaction=[ReactionTypeEmoji(emoji="❤️")]
-                )
+                await set_safe_message_reaction(context.bot, chat_id, reaction_update.message_id, "❤️")
             except Exception:
                 pass
 
@@ -1209,7 +1307,23 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     # 1. Aprendizado dinâmico do estilo linguístico do Patrick (risadas, emojis, gírias, cadência)
     style_engine.processar_mensagem_patrick(texto_usuario)
 
+    if getattr(settings, 'KNOWLEDGE_PRIVACY_ENABLED', False):
+        if not getattr(settings, 'LIVING_WORLD_ENABLED', False):
+            raise RuntimeError('Knowledge Privacy requires Living World context')
+        from knowledge_dialogue import KnowledgeDialogue
+
+        dialogue = KnowledgeDialogue(memory_manager.db)
+        topics = dialogue.resolve(texto_usuario)
+        if topics:
+            replies = dialogue.prepare_replies(topics)
+            await send_registered_privacy_replies(
+                chat_id, context.bot, replies, reply_to_message_id=msg_id,
+                db=memory_manager.db,
+            )
+            return
+
     # 1.1 Resolução de esclarecimento para pedido direto de lembrete pendente (P2 / Rodada 3)
+    pending_hour_subject = None
     pending_direct_rem = memory_manager.db.get_estado_relacional("pending_direct_reminder")
     if pending_direct_rem:
         try:
@@ -1264,12 +1378,20 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                     # 4. Consumo legítimo de horário vs resposta desconexa / outro assunto (P1 - Rodada 4)
                     if pending_data:
                         if has_clarif_context:
-                            from planner import parse_iso_or_relative_datetime, is_pure_time_specification
+                            from planner import parse_direct_reminder_datetime, parse_iso_or_relative_datetime, is_pure_time_specification
                             pending_desc = pending_data.get("description", "seu compromisso")
                             is_valid_time_reply = is_pure_time_specification(texto_usuario, pending_desc)
 
                             if is_valid_time_reply:
-                                parsed_time = parse_iso_or_relative_datetime(texto_usuario, default_offset_hours=None)
+                                time_text = texto_usuario
+                                # Preserva o dia dito no primeiro turno quando a resposta traz só a hora.
+                                has_reply_day = re.search(r"\b(?:hoje|amanh[aã]|segunda|ter[çc]a|quarta|quinta|sexta|s[aá]bado|domingo)\b", texto_usuario, re.IGNORECASE)
+                                has_relative_delta = re.search(r"\b(?:daqui\s+a|em)\s*\d+\s*(?:horas?|minutos?)\b", texto_usuario, re.IGNORECASE)
+                                if not has_reply_day and not has_relative_delta:
+                                    prior_day = parse_iso_or_relative_datetime(pending_desc, default_offset_hours=None)
+                                    if prior_day and not parse_direct_reminder_datetime(pending_desc):
+                                        time_text = f"{pending_desc} {texto_usuario}"
+                                parsed_time = parse_direct_reminder_datetime(time_text)
                                 if parsed_time and datetime.fromisoformat(parsed_time) > datetime.now():
                                     rem_id = reminder_service.create_direct_reminder(
                                         description=pending_desc,
@@ -1279,6 +1401,9 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                                     )
                                     memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
                                     logger.info(f"Lembrete direto pendente '{pending_desc}' agendado com sucesso para {parsed_time} (ID {rem_id}).")
+                                elif not parsed_time and parse_iso_or_relative_datetime(texto_usuario, default_offset_hours=None):
+                                    # O dia foi informado, mas a hora continua indefinida.
+                                    pending_hour_subject = pending_desc
                                 elif is_immediate_next_turn and not is_reply_to_clarif:
                                     logger.info("Patrick informou especificação temporal inválida ou no passado. Descartando pendência.")
                                     memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
@@ -1305,7 +1430,14 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     else:
         plan = planner.plan_heuristics(texto_usuario) or {}
 
+    if pending_hour_subject:
+        plan = plan or {}
+        plan["needs_clarification"] = "direct_reminder_time"
+        plan["clarification_subject"] = pending_hour_subject
+        plan["clarification_hour_only"] = True
+
     # 2.1 Verificação de consentimento para oferta recente de lembrete com atribuição estrita (Release 3.5.1 / P0/P1.3)
+    reminder_decision_text = None
     if getattr(settings, "SMART_REMINDERS_ENABLED", True):
         last_offered = reminder_service.get_last_offered_reminder(max_age_minutes=60)
         if last_offered:
@@ -1326,22 +1458,28 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
             has_context = is_reply_to_offer or is_immediate_next_turn
             confirmation = reminder_service.parse_confirmation_response(texto_usuario, has_context=has_context)
             if confirmation["action"] == "confirm":
-                reminder_service.confirm_reminder(last_offered["id"], custom_offset_minutes=confirmation.get("offset_minutes"))
-                logger.info(f"Oferta de lembrete {last_offered['id']} confirmada pelo Patrick com offset {confirmation.get('offset_minutes')}m.")
+                if reminder_service.confirm_reminder(last_offered["id"], custom_offset_minutes=confirmation.get("offset_minutes")):
+                    plan = suppress_direct_reminder_after_offer_decision(plan)
+                    confirmed = reminder_service.db.get_reminder(last_offered["id"])
+                    if confirmed:
+                        when = datetime.fromisoformat(confirmed["remind_at"]).strftime("%d/%m às %H:%M")
+                        reminder_decision_text = (
+                            f"Combinado, amor! Lembrete confirmado para {when}: "
+                            f"{confirmed['description']}. Vou te avisar por mensagem aqui no Telegram. 💕"
+                        )
+                    logger.info(f"Oferta de lembrete {last_offered['id']} confirmada pelo Patrick com offset {confirmation.get('offset_minutes')}m.")
             elif confirmation["action"] == "decline":
-                reminder_service.decline_reminder(last_offered["id"])
-                logger.info(f"Oferta de lembrete {last_offered['id']} recusada pelo Patrick.")
+                if reminder_service.decline_reminder(last_offered["id"]):
+                    plan = suppress_direct_reminder_after_offer_decision(plan)
+                    reminder_decision_text = "Tudo bem, amor. Não vou te mandar esse lembrete. 💕"
+                    logger.info(f"Oferta de lembrete {last_offered['id']} recusada pelo Patrick.")
 
     # 3. Reação espontânea da Marina no balão de mensagem do Patrick (prioriza emoji do planner)
     planner_emoji = plan.get("reaction_emoji") if plan else None
     reacao_emoji = planner_emoji or choose_reaction_for_text(texto_usuario)
     if reacao_emoji and (planner_emoji or random.random() < 0.50):
         try:
-            await context.bot.set_message_reaction(
-                chat_id=chat_id,
-                message_id=msg_id,
-                reaction=[ReactionTypeEmoji(emoji=reacao_emoji)]
-            )
+            await set_safe_message_reaction(context.bot, chat_id, msg_id, reacao_emoji)
         except Exception as e:
             logger.warning(f"Erro ao setar reação na mensagem do Patrick: {e}")
 
@@ -1433,6 +1571,11 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
         planner_tone=plan.get("tone") if plan else None,
         planner_goal=plan.get("response_goal") if plan else None
     )
+    response_policy = None
+    if settings.RESPONSE_RHYTHM_ENABLED:
+        from response_rhythm import select_policy, apply_policy
+        response_policy = select_policy(texto_usuario, plan=plan, voice=pediu_audio)
+        messages[0]['content'] = apply_policy(messages[0]['content'], response_policy)
     if plan and plan.get("should_offer_reminder"):
         event_desc = plan.get("event_details", {}).get("description") or "compromisso"
         messages.append({
@@ -1471,7 +1614,7 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
         completion = llm_client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=messages,
-            max_tokens=160,
+            max_tokens=response_policy.token_budget if response_policy else 160,
             temperature=0.80,
             frequency_penalty=0.30,
             presence_penalty=0.25
@@ -1486,7 +1629,7 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                 completion = llm_client.chat.completions.create(
                     model=fallback_model,
                     messages=messages,
-                    max_tokens=220,
+                    max_tokens=response_policy.token_budget if response_policy else 220,
                     temperature=0.72,
                     frequency_penalty=0.40,
                     presence_penalty=0.35
@@ -1542,6 +1685,12 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     # Limpa tags/rubricas antes de gravar memória e enviar
     queria_audio = bool(re.search(r'\[MANDAR_AUDIO\]|\[AUDIO\]', resposta_marin, flags=re.IGNORECASE))
     fala_limpa = limpar_fala_marina(resposta_marin)
+    if settings.VOICE_PROSODY_ENABLED:
+        from voice_prosody import sanitize_display_text
+        fala_limpa = sanitize_display_text(fala_limpa)
+    if reminder_decision_text:
+        fala_limpa = reminder_decision_text
+        queria_audio = False
 
     # P1.3 / Rodada 3: Garante deterministicamente que a pergunta interrogativa de oferta de lembrete esteja na fala enviada
     if plan and plan.get("should_offer_reminder"):
@@ -1552,14 +1701,23 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
 
     # P1 / P2 / Rodada 3: Garante pergunta de esclarecimento caso o Patrick tenha pedido lembrete sem horário
     if plan and plan.get("needs_clarification") == "direct_reminder_time":
-        if not is_time_clarification_question(fala_limpa):
+        hour_only = plan.get("clarification_hour_only", False)
+        has_hour_question = bool(re.search(r"\b(?:a que horas|que horas|qual hor[aá]rio|qual hora)\b.*?\?", fala_limpa, re.IGNORECASE | re.DOTALL))
+        if (hour_only and not has_hour_question) or (not hour_only and not is_time_clarification_question(fala_limpa)):
             subj = plan.get("clarification_subject") or "disso"
-            pergunta_tempo = f"\nQuando você quer que eu te lembre de {subj}, amor? Me diz o horário certinho! 💕"
+            if hour_only:
+                pergunta_tempo = f"\nA que horas você quer que eu te lembre de {subj}, amor? 💕"
+            else:
+                pergunta_tempo = f"\nQuando você quer que eu te lembre de {subj}, amor? Me diz o horário certinho! 💕"
             fala_limpa = f"{fala_limpa.strip()}{pergunta_tempo}"
 
     # Chance espontânea adicional: ~6% de mandar áudio por vontade própria em mensagens carinhosas (apenas se não for pedido de foto)
-    if not pediu_foto and not pediu_audio and not queria_audio and random.random() < 0.06 and len(fala_limpa) > 30:
+    if not reminder_decision_text and not pediu_foto and not pediu_audio and not queria_audio and random.random() < 0.06 and len(fala_limpa) > 30:
         queria_audio = True
+
+    if response_policy:
+        from response_rhythm import log_output
+        log_output(fala_limpa, response_policy, voice=pediu_audio or queria_audio)
 
     # Registra na memória a fala já limpa (sem tags/rubricas) e aplica efeitos do plano
     u_id, b_id = memory_manager.registrar_interacao(texto_usuario, fala_limpa if fala_limpa else resposta_marin)
@@ -1587,7 +1745,10 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                 user_text=texto_usuario,
                 is_proactive=False
             )
-            audio_path = await voice_engine.synthesize(fala_limpa, context=voice_ctx)
+            if settings.VOICE_PROSODY_ENABLED:
+                audio_path = await voice_engine.synthesize(fala_limpa, context=voice_ctx, response_policy=response_policy)
+            else:
+                audio_path = await voice_engine.synthesize(fala_limpa, context=voice_ctx)
             if audio_path and audio_path.exists():
                 with open(audio_path, "rb") as vf:
                     sent_voice = await context.bot.send_voice(
@@ -1607,7 +1768,10 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     # Se não mandou áudio (nem aviso de falha), manda texto (balões)
     sent_text_msg = None
     if not audio_enviado and not aviso_audio_ja_enviado and fala_limpa:
-        sent_text_msg = await send_human_messages(chat_id, context.bot, fala_limpa, reply_to_message_id=reply_to_id)
+        if response_policy:
+            sent_text_msg = await send_human_messages(chat_id, context.bot, fala_limpa, reply_to_message_id=reply_to_id, response_policy=response_policy)
+        else:
+            sent_text_msg = await send_human_messages(chat_id, context.bot, fala_limpa, reply_to_message_id=reply_to_id)
 
     # P1.3 / Rodada 3: Registra message_id do Telegram da oferta para permitir atribuição estrita de resposta
     sent_mid = getattr(sent_text_msg, "message_id", None)
@@ -1758,11 +1922,7 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
         if reacao_emoji:
             try:
-                await context.bot.set_message_reaction(
-                    chat_id=chat_id,
-                    message_id=msg_id,
-                    reaction=[ReactionTypeEmoji(emoji=reacao_emoji)]
-                )
+                await set_safe_message_reaction(context.bot, chat_id, msg_id, reacao_emoji)
             except Exception as e:
                 logger.warning(f"Erro ao setar reação em foto: {e}")
 
@@ -1815,6 +1975,10 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
 # --- VONTADE PRÓPRIA & INICIATIVA ÍNTIMA (DIRECIONADA APENAS AO PATRICK) ---
 
 async def autonomous_routine(application: Application):
+    # A proatividade v3.5 inventa situações sem consultar o WorldState.
+    # Reativar na etapa específica de integração de proatividade v3.6.
+    if getattr(settings, "LIVING_WORLD_ENABLED", False):
+        return
     if not settings.TARGET_CHAT_ID:
         return
 
@@ -1837,7 +2001,7 @@ async def autonomous_routine(application: Application):
         proactive_info = proactivity_service.determine_proactive_prompt()
         decision_prompt = build_autonomous_decision_prompt(custom_situation=proactive_info.get("instruction", ""))
         
-        if settings.SMART_MEMORY_ENABLED:
+        if settings.SMART_MEMORY_ENABLED or getattr(settings, "LIVING_WORLD_ENABLED", False):
             system_prompt = context_builder.build_system_prompt()
         else:
             system_prompt = f"{MARIN_SYSTEM_PROMPT}\n{memory_manager.get_contexto_emocional()}"

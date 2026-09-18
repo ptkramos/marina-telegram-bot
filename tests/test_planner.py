@@ -4,13 +4,16 @@ Testes Automatizados Offline para o InternalPlanner da Marina Seltin.
 import sys
 import unittest
 import tempfile
+from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
 from db import DatabaseManager
 from planner import InternalPlanner
+from reminder_service import ReminderService
 
 
 class TestInternalPlanner(unittest.TestCase):
@@ -38,6 +41,37 @@ class TestInternalPlanner(unittest.TestCase):
         self.assertEqual(plan["intent"], "flirting")
         self.assertEqual(plan["reaction_emoji"], "❤️")
         self.assertIn("affection", plan["emotional_deltas"])
+
+    def test_explicit_future_meeting_survives_llm_failure(self):
+        from planner import detect_explicit_scheduled_event
+        real_case = detect_explicit_scheduled_event(
+            "Hoje as 18h tenho uma reunião de teste", reference_dt=datetime(2026, 9, 17, 17, 38)
+        )
+        self.assertEqual(real_case["event_at"], "2026-09-17T18:00:00")
+        self.planner.llm = unittest.mock.MagicMock()
+        plan = self.planner.plan_message("Amanhã às 18h tenho uma reunião de teste")
+        self.assertTrue(plan["creates_event"])
+        self.assertTrue(plan["should_offer_reminder"])
+        self.assertIn("reunião", plan["event_details"]["description"])
+        self.planner.llm.chat.completions.create.assert_not_called()
+        self.assertIsNone(self.planner.plan_heuristics("Amanhã às 18h não tenho reunião"))
+        self.assertIsNone(self.planner.plan_heuristics("Se amanhã às 18h tenho uma reunião"))
+
+    def test_near_term_meeting_gets_future_offer_time(self):
+        event_at = (datetime.now() + timedelta(minutes=20)).replace(second=0, microsecond=0)
+        plan = {
+            "creates_event": True,
+            "event_details": {"event_type": "trabalho", "description": "Reunião de teste", "event_at": event_at.isoformat()},
+            "should_offer_reminder": True,
+            "recommended_reminder_offset_minutes": 30,
+        }
+        with patch("reminder_service.reminder_service", ReminderService(db=self.db)):
+            self.planner.apply_plan_effects(plan, conversation_id=None)
+        reminder = self.db.get_reminder(plan["offered_reminder_id"])
+        self.assertEqual(reminder["status"], "offered")
+        self.assertLess(reminder["offset_minutes"], 30)
+        self.assertGreater(datetime.fromisoformat(reminder["remind_at"]), datetime.now())
+        self.assertLess(datetime.fromisoformat(reminder["remind_at"]), event_at)
 
     def test_apply_plan_effects_creates_pending_event(self):
         """Ao aplicar um plano que contém evento futuro, deve criar registro no SQLite."""
@@ -104,6 +138,37 @@ class TestInternalPlanner(unittest.TestCase):
         outro_desc = parse_iso_or_relative_datetime("comprar presente pro Patrick", reference_dt=ref)
         self.assertIsNone(outro_desc)
 
+    def test_direct_reminder_needs_a_chosen_hour(self):
+        """Uma data isolada não autoriza o horário padrão de 14h para lembrete direto."""
+        from datetime import datetime
+        from planner import parse_direct_reminder_datetime
+
+        ref = datetime(2026, 9, 16, 10, 0)
+        self.assertIsNone(parse_direct_reminder_datetime("amanhã", reference_dt=ref))
+        self.assertIsNone(parse_direct_reminder_datetime("2026-09-20", reference_dt=ref))
+        self.assertEqual(
+            parse_direct_reminder_datetime("amanhã às 8h", reference_dt=ref),
+            "2026-09-17T08:00:00",
+        )
+        self.assertEqual(
+            parse_direct_reminder_datetime("daqui a 2 horas", reference_dt=ref),
+            "2026-09-16T12:00:00",
+        )
+
+        plan = self.planner.plan_heuristics("me lembra amanhã de tomar o remédio")
+        self.assertIsNone(plan["direct_reminder"]["remind_at"])
+        self.assertEqual(plan["needs_clarification"], "direct_reminder_time")
+        with patch("reminder_service.reminder_service") as reminder_mock:
+            self.planner.apply_plan_effects(plan, conversation_id=1)
+            reminder_mock.create_direct_reminder.assert_not_called()
+        self.assertIsNotNone(self.db.get_estado_relacional("pending_direct_reminder"))
+
+        explicit = self.planner.plan_heuristics("me lembra amanhã às 8h de tomar o remédio")
+        self.assertEqual(
+            datetime.fromisoformat(explicit["direct_reminder"]["remind_at"]).hour,
+            8,
+        )
+
     def test_follow_up_never_scheduled_before_event(self):
         """Valida que o follow-up nunca é agendado no passado ou antes do próprio evento."""
         from datetime import datetime
@@ -168,5 +233,3 @@ class TestInternalPlanner(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
-
-

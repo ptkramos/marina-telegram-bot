@@ -143,7 +143,7 @@ class VoiceEngine:
 
         return clean_text
 
-    async def _synthesize_novita_minimax(self, clean_text: str, out_ogg: Path, profile: VoiceProfile | None = None) -> bool:
+    async def _synthesize_novita_minimax(self, clean_text: str, out_ogg: Path, profile: VoiceProfile | None = None, voice_plan=None) -> bool:
         """
         Sintetiza via Novita MiniMax Speech 2.8 HD com o perfil vocal da Marina.
         Retorno de áudio binário direto via HEX com streaming instantâneo e sem delay de S3.
@@ -178,6 +178,10 @@ class VoiceEngine:
             "language_boost": "Portuguese",
             "output_format": "hex"
         }
+        if voice_plan is not None:
+            payload['voice_setting']['speed'] = max(.94, min(1.06, active_profile.speed * voice_plan.speed))
+            payload['voice_setting'].update({k:v for k,v in voice_plan.provider_options.items() if k=='emotion'})
+            payload['continuous_sound'] = voice_plan.continuous_sound
 
         loop = asyncio.get_running_loop()
         temp_mp3 = out_ogg.with_suffix(".mp3")
@@ -212,9 +216,9 @@ class VoiceEngine:
                 else:
                     logger.warning(f"MiniMax não retornou dados de áudio em HEX: {data}")
             else:
-                logger.warning(f"Novita MiniMax retornou status {res.status_code}: {res.text[:150]}")
+                logger.warning(f"Novita MiniMax retornou status {res.status_code}.")
         except Exception as e:
-            logger.warning(f"Exceção ao chamar Novita MiniMax: {e}")
+            logger.warning(f"Exceção ao chamar Novita MiniMax: {type(e).__name__}")
 
         return False
 
@@ -262,7 +266,7 @@ class VoiceEngine:
                 logger.info("Áudio ElevenLabs gerado com sucesso!")
                 return True
         except Exception as e:
-            logger.warning(f"Exceção ao chamar ElevenLabs: {e}")
+            logger.warning(f"Exceção ao chamar ElevenLabs: {type(e).__name__}")
         return False
 
     async def _synthesize_gemini(self, clean_text: str, out_ogg: Path) -> bool:
@@ -330,7 +334,7 @@ class VoiceEngine:
                                 logger.info("Áudio da Marina (Gemini Leda) gerado com sucesso!")
                                 return True
             except Exception as e:
-                logger.warning(f"Exceção no Gemini {model}: {e}")
+                logger.warning(f"Exceção no Gemini {model}: {type(e).__name__}")
 
         return False
 
@@ -338,7 +342,8 @@ class VoiceEngine:
         self,
         text: str,
         profile: str | VoiceProfile = "auto",
-        context: VoiceSelectionContext | dict | None = None
+        context: VoiceSelectionContext | dict | None = None,
+        response_policy=None
     ) -> Path | None:
         """
         Sintetiza texto em áudio nativo do Telegram (.ogg Opus com waveform).
@@ -349,7 +354,11 @@ class VoiceEngine:
         3. Fallback de Provedor (ElevenLabs -> Google Gemini TTS Leda).
            - Se VOICE_ALLOW_CROSS_PROFILE_FALLBACK=False, NÃO troca de perfil Novita na falha!
         """
-        clean_text = self._clean_text_for_speech(text)
+        if settings.VOICE_PROSODY_ENABLED:
+            from voice_prosody import sanitize_display_text
+            clean_text = sanitize_display_text(text)
+        else:
+            clean_text = self._clean_text_for_speech(text)
         if not clean_text:
             return None
 
@@ -371,7 +380,18 @@ class VoiceEngine:
         planner_tone = getattr(context, "tone", "") if context else ""
         if isinstance(context, dict):
             planner_tone = context.get("tone", "")
-        clean_text = self._apply_expression_tags(clean_text, selected_profile, planner_tone=planner_tone)
+        voice_plan = None
+        if settings.VOICE_PROSODY_ENABLED:
+            from voice_prosody import select_voice_prosody, render_voice, capabilities_for
+            if not hasattr(self, '_last_prosody_tag'):
+                self._last_prosody_tag = None
+            prosody = select_voice_prosody(clean_text,response_policy,last_sound_tag=self._last_prosody_tag)
+            voice_plan = render_voice(clean_text,prosody,capabilities_for('novita',self.novita_voice_model))
+            clean_text = voice_plan.render_text
+            self._last_prosody_tag = '(chuckle)' if '(chuckle)' in clean_text else None
+            logger.info('voice.prosody.selected reason_code=%s profile=%s',prosody.reason_code,selected_profile.name)
+        else:
+            clean_text = self._apply_expression_tags(clean_text, selected_profile, planner_tone=planner_tone)
 
         logger.info(f"🎙️ Voice Profile selecionado: {selected_profile.name} (motivo: {reason})")
 
@@ -379,7 +399,9 @@ class VoiceEngine:
         out_ogg = TEMP_AUDIO_DIR / f"voice_{uid}.ogg"
 
         # 2. Novita MiniMax Voice Cloning com o perfil selecionado (PRIORIDADE OFICIAL)
-        if await self._synthesize_novita_minimax(clean_text, out_ogg, profile=selected_profile):
+        if await self._synthesize_novita_minimax(clean_text, out_ogg, profile=selected_profile, voice_plan=voice_plan):
+            if voice_plan is not None:
+                self._log_actual_duration(out_ogg)
             return out_ogg
 
         # Se Novita falhou e cross-profile fallback estiver expressamente permitido:
@@ -388,19 +410,45 @@ class VoiceEngine:
             alt_profile = get_voice_profile(alt_profile_name)
             if alt_profile.voice_id != selected_profile.voice_id:
                 logger.info(f"Tentando perfil Novita cruzado ({alt_profile.name}) por fallback configurado...")
-                if await self._synthesize_novita_minimax(clean_text, out_ogg, profile=alt_profile):
+                if await self._synthesize_novita_minimax(clean_text, out_ogg, profile=alt_profile, voice_plan=voice_plan):
+                    if voice_plan is not None:
+                        self._log_actual_duration(out_ogg)
                     return out_ogg
 
         # 3. ElevenLabs (Fallback de Provedor)
-        if await self._synthesize_elevenlabs(clean_text, out_ogg):
+        fallback_text = clean_text
+        if voice_plan is not None:
+            from voice_prosody import render_voice, capabilities_for
+            fallback_text = render_voice(voice_plan.display_text,prosody,capabilities_for('fallback')).render_text
+            logger.info('voice.prosody.fallback provider=elevenlabs')
+        if await self._synthesize_elevenlabs(fallback_text, out_ogg):
+            if voice_plan is not None:
+                self._log_actual_duration(out_ogg)
             return out_ogg
 
         # 4. Google Gemini TTS Leda (Fallback de Provedor)
-        if await self._synthesize_gemini(clean_text, out_ogg):
+        if await self._synthesize_gemini(fallback_text, out_ogg):
+            if voice_plan is not None:
+                self._log_actual_duration(out_ogg)
             return out_ogg
 
         logger.error("Falha em todos os motores de voz (MiniMax, ElevenLabs, Gemini).")
         return None
+
+    @staticmethod
+    def _log_actual_duration(audio_path: Path) -> None:
+        if not audio_path.exists():
+            return
+        try:
+            result = subprocess.run(
+                ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                 '-of', 'default=noprint_wrappers=1:nokey=1', str(audio_path)],
+                capture_output=True, text=True, timeout=10,
+            )
+            if result.returncode == 0:
+                logger.info('voice.duration_actual seconds=%.2f', float(result.stdout.strip()))
+        except (OSError, ValueError, subprocess.TimeoutExpired):
+            logger.debug('voice.duration_actual unavailable')
 
 
 voice_engine = VoiceEngine()

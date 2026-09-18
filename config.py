@@ -101,6 +101,37 @@ class Settings:
     MEMORY_HYGIENE_ENABLED: bool = os.getenv("MEMORY_HYGIENE_ENABLED", "false").lower() in ("true", "1", "yes")
     MEMORY_HYGIENE_INTERVAL_HOURS: int = int(os.getenv("MEMORY_HYGIENE_INTERVAL_HOURS", "24"))
     SESSION_REFLECTION_IDLE_MINUTES: int = int(os.getenv("SESSION_REFLECTION_IDLE_MINUTES", "90"))
+
+    # Living World v3.6: infraestrutura pronta, integração liberada por etapa.
+    LIVING_WORLD_ENABLED: bool = os.getenv("LIVING_WORLD_ENABLED", "false").lower() in ("true", "1", "yes")
+    RESPONSE_RHYTHM_ENABLED: bool = os.getenv("RESPONSE_RHYTHM_ENABLED", "false").lower() in ("true", "1", "yes")
+    STORY_SEED_LIBRARY_ENABLED: bool = os.getenv("STORY_SEED_LIBRARY_ENABLED", "false").lower() in ("true", "1", "yes")
+    KNOWLEDGE_PRIVACY_ENABLED: bool = os.getenv("KNOWLEDGE_PRIVACY_ENABLED", "false").lower() in ("true", "1", "yes")
+    # Living World v3.6.2: Cadência de novos Story Events calibrada para ~89% de dias banais (longo prazo).
+    # Com STORY_THREAD_DORMANT_DAYS=7 e STORY_EVENT_CADENCE_THRESHOLD=0.60, a simulação de 1.095 dias
+    # produz ~11% de novos eventos e ~89% de dias banais, preservando cooldowns e limites.
+    STORY_EVENT_CADENCE_THRESHOLD: float = float(os.getenv("STORY_EVENT_CADENCE_THRESHOLD", "0.60"))
+    STORY_THREAD_DORMANT_DAYS: int = int(os.getenv("STORY_THREAD_DORMANT_DAYS", "7"))
+    VOICE_PROSODY_ENABLED: bool = os.getenv("VOICE_PROSODY_ENABLED", "false").lower() in ("true", "1", "yes")
+    VOICE_PROSODY_EMOTION_ENABLED: bool = os.getenv("VOICE_PROSODY_EMOTION_ENABLED", "false").lower() in ("true", "1", "yes")
+    VOICE_PROSODY_PAUSES_ENABLED: bool = os.getenv("VOICE_PROSODY_PAUSES_ENABLED", "false").lower() in ("true", "1", "yes")
+    VOICE_PROSODY_SOUND_TAGS_ENABLED: bool = os.getenv("VOICE_PROSODY_SOUND_TAGS_ENABLED", "false").lower() in ("true", "1", "yes")
+    VOICE_PROSODY_FILLERS_ENABLED: bool = os.getenv("VOICE_PROSODY_FILLERS_ENABLED", "false").lower() in ("true", "1", "yes")
+    VOICE_PROSODY_CONTINUOUS_SOUND_ENABLED: bool = os.getenv("VOICE_PROSODY_CONTINUOUS_SOUND_ENABLED", "false").lower() in ("true", "1", "yes")
+    VOICE_PROSODY_MAX_SOUND_TAGS: int = int(os.getenv("VOICE_PROSODY_MAX_SOUND_TAGS", "2"))
+    RESPONSE_DEFAULT_MAX_BUBBLES: int = int(os.getenv("RESPONSE_DEFAULT_MAX_BUBBLES", "2"))
+    RESPONSE_CASUAL_SOFT_CHARS: int = int(os.getenv("RESPONSE_CASUAL_SOFT_CHARS", "180"))
+    RESPONSE_NORMAL_SOFT_CHARS: int = int(os.getenv("RESPONSE_NORMAL_SOFT_CHARS", "420"))
+    RESPONSE_LONG_SOFT_CHARS: int = int(os.getenv("RESPONSE_LONG_SOFT_CHARS", "900"))
+    VOICE_CASUAL_SOFT_SECONDS: int = int(os.getenv("VOICE_CASUAL_SOFT_SECONDS", "15"))
+    VOICE_NORMAL_SOFT_SECONDS: int = int(os.getenv("VOICE_NORMAL_SOFT_SECONDS", "30"))
+    VOICE_SUPPORTIVE_SOFT_SECONDS: int = int(os.getenv("VOICE_SUPPORTIVE_SOFT_SECONDS", "45"))
+    # Reserved for 3.6.4 calendar projection; storage/seed do not activate behavior.
+    ACADEMIC_LIFE_ENABLED: bool = os.getenv("ACADEMIC_LIFE_ENABLED", "false").lower() in ("true", "1", "yes")
+    ACADEMIC_AUTO_TERM_GENERATION: bool = os.getenv("ACADEMIC_AUTO_TERM_GENERATION", "false").lower() in ("true", "1", "yes")
+    WORLD_STATE_DEFAULT_STALE_MINUTES: int = int(os.getenv("WORLD_STATE_DEFAULT_STALE_MINUTES", "60"))
+    PROMPT_CONTROL_LANGUAGE: str = os.getenv("PROMPT_CONTROL_LANGUAGE", "en").strip()
+    MARINA_OUTPUT_LANGUAGE: str = os.getenv("MARINA_OUTPUT_LANGUAGE", "pt-BR").strip()
     VISION_MODEL: str = os.getenv("VISION_MODEL", "google/gemini-2.0-flash-001").strip()
     VISION_ENABLED: bool = os.getenv("VISION_ENABLED", "true").lower() in ("true", "1", "yes")
     STYLE_ENGINE_V2_ENABLED: bool = os.getenv("STYLE_ENGINE_V2_ENABLED", "true").lower() in ("true", "1", "yes")

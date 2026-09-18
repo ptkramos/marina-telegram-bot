@@ -1,0 +1,16 @@
+# Fontes externas para seeds de histórias (build offline)
+
+Os arquivos em `*/raw/`, `*/normalized/` e `*/work/` não entram no Git nem são lidos durante uma conversa. A biblioteca versionada fica em `data/story_seeds/` e contém apenas etiquetas e estruturas escritas para este projeto. O uso não aumenta a frequência de eventos no runtime.
+
+| Fonte | Distribuição | Termos registrados | Estado inicial |
+| --- | --- | --- | --- |
+| DailyDialog | [ConvLab/dailydialog](https://huggingface.co/datasets/ConvLab/dailydialog), transformação identificada do corpus original | CC BY-NC-SA 4.0 conforme card do distribuidor | Processável offline |
+| EmpatheticDialogues | [Repositório oficial](https://github.com/facebookresearch/EmpatheticDialogues) | [CC BY-NC 4.0](https://github.com/facebookresearch/EmpatheticDialogues/blob/main/LICENSE) | Processável offline |
+| ROCStories | [Página oficial com formulário](https://cs.rochester.edu/nlp/rocstories/) | Usuário forneceu aviso oficial de acesso com exigência de [citação do corpus](https://aclanthology.org/N16-1098/); não há permissão de redistribuição dos arquivos brutos | Arquivos manuais preservados e processáveis offline |
+| Gutenberg Dialogue | [Repositório oficial](https://github.com/ricsinaruto/gutenberg-dialog) + livros do [Project Gutenberg](https://www.gutenberg.org/) | MIT e [atribuição do paper](https://aclanthology.org/2021.eacl-main.11/), com uso offline abstrato aprovado pelo usuário | Reconstrução oficial limitada em português processada |
+
+Fluxo: `python scripts/story_datasets/download_story_datasets.py` baixa apenas arquivos públicos com endereço direto, sem sobrescrever arquivos existentes. `python scripts/story_datasets/run_pipeline.py` processa os arquivos locais; `validate_story_seed_library.py` valida a saída. O processo é opt-in e nunca roda no startup do bot. O cache normalizado usa hash dos arquivos + versão do pipeline.
+
+O download oficial de DailyDialog do domínio original deixou de estar disponível; esta integração usa a transformação identificada e hospedada pela equipe ConvLab, com origem e licença anotadas. Quando a licença estiver incerta, o pipeline registra `license_review_required` e não ingere a fonte. Arquivos ROCStories colocados manualmente em `rocstories/raw/` não são renomeados nem excluídos; o aviso de acesso fornecido pelo usuário autoriza o processamento local com a citação acima, sem publicar histórias originais.
+
+Para Gutenberg, o link português pré-processado do [README oficial](https://github.com/ricsinaruto/gutenberg-dialog#download-datasets) retornou `-16` no MEGA. A alternativa do mesmo README foi executada de forma limitada: `python scripts/story_datasets/rebuild_official_gutenberg_pt.py --max-books 30`. O script lê metadados e o extrator `Pt` do clone oficial em `.runtime/story_datasets/gutenberg_source`, obtém 30 livros pelo espelho oficial do Project Gutenberg e grava apenas o corpus reconstruído nas pastas ignoradas. O manifest fixa commit, IDs, URL e hashes. Esta amostra não é o arquivo pré-processado publicado nem o dataset completo. Se o arquivo publicado vier a ficar acessível, ele pode ser colocado sem renomear em `gutenberg_dialogue/raw/`; nenhum corpus homônimo não aprovado é usado.

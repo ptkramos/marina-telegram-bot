@@ -13,6 +13,10 @@ ENV/
 *.sqlite
 *.sqlite3
 marin_memory.db
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
 
 # Python caches
 __pycache__/
@@ -25,6 +29,7 @@ __pycache__/
 log.txt
 *.log
 scratch/
+backups/
 test_ping.txt
 
 # Temporary audio files
@@ -38,6 +43,11 @@ marina_dev_nsfw_calibrada.png
 marina_teste_calibrada.png
 marina_primeira_foto_oficial.png
 *.png
+
+# External story datasets (provenance and abstract library remain versioned)
+/data/external/story_datasets/*/raw/*
+/data/external/story_datasets/*/normalized/*
+/data/external/story_datasets/*/work/*
 
 # IDE & OS
 .vscode/

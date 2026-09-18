@@ -2066,7 +2066,74 @@ construída organicamente a partir da nova continuidade v3.6.
 
 # 35. Estratégia de implementação em releases
 
+## Encaixe do Academic Life Engine complementar
+
+O [plano complementar acadêmico](PLANO_COMPLEMENTAR_MARINA_3_6_ACADEMIC_LIFE_ENGINE.md)
+faz parte da v3.6. A v3.6.0 ainda está aberta até concluir o
+`CLEAN_CANONICAL_START`, portanto sua fundação entra antes de fechar essa release:
+
+- migration incremental e repository de perfil, termos, disciplinas e blocos semanais;
+- seed idempotente do perfil e da primeira grade canônica `2026.2`;
+- feature flag acadêmica desligada até existir a projeção de calendário;
+- nenhuma aula recorrente duplicada como centenas de eventos futuros.
+
+Fundação implementada em `009_academic_foundation.sql`, `academic_repository.py`
+e `seed_academic_v36.py`. O bootstrap deve chamar `seed_academic(db)` após
+`seed_world_bible(db)`, antes de marcar o início canônico como concluído.
+O seed é explícito e transacional; sua repetição não reinicia a progressão.
+Grade inicial: terça 08–12 projeto; quarta 08–10 cultura visual e 10–12 materiais;
+quinta 08–12 ateliê; sexta 10–12 representação visual (14h/semana).
+Dias usam segunda=0. O campus referencia a chave existente `puc_rio`.
+Datas do semestre permanecem nulas até validação na integração de calendário.
+As duas flags acadêmicas têm default desligado e ainda não ativam comportamento.
+
+A grade `2026.2` usará a estratégia curricular híbrida: tipos e horários
+plausíveis, com nomes de componentes controlados pelo projeto, sem afirmar que
+reproduzem a matriz oficial vigente da PUC-Rio. Sua densidade deve seguir o
+complemento: 3–4 dias presenciais, 4–6 componentes, predominância de manhã e
+início da tarde e espaço para trabalhos de modelo.
+
+O comportamento completo entra na **v3.6.4**, junto de calendário e continuidade
+temporal: resolução de aula atual/próxima, exceções, fases do semestre,
+progressão, geração idempotente de novos termos e lazy catch-up. `life_events`
+registra ocorrências excepcionais confirmadas da vida da Marina;
+`academic_schedule_blocks` guarda apenas o padrão semanal. Um único resolvedor
+de calendário projeta ambos para `WorldStateManager`, onde compromisso confirmado
+vence rotina probabilística. Os `eventos_pendentes` e `reminders` da v3.5 sobre
+Patrick não viram automaticamente compromissos acadêmicos da Marina.
+
 ## v3.6.0 — World Bible & Core State
+
+### Acompanhamento das etapas de implementação
+
+- Release 3.6.0 · etapa 5 concluída: World Bible e WorldState no Context Builder, atrás da flag.
+- Release 3.6.0 · complemento entre 5 e 6 concluído: fundação acadêmica e grade canônica 2026.2.
+- Release 3.6.0 · etapa 6 concluída: `bootstrap_v36.py` implementa o CLEAN_CANONICAL_START offline.
+  Backup SQLite completo precede migrations; limpeza, seeds e estado inicial são
+  preparados e validados em staging antes da publicação. Falhas de preparação
+  deixam o banco ativo intacto. Tabelas desconhecidas abortam a operação.
+  O marcador impede novo reset e preserva a continuidade criada depois dele.
+  A operação exige o bot parado e uma âncora do Cycle Manager considerada confiável.
+  FTS é limpo junto às memórias; schema, histórico técnico de patches e ciclo são
+  preservados. Configurações externas e providers não são alterados.
+  Aplicado ao banco local em 2026-09-17, schema 8 → 9; auditoria em `backups/v36/`.
+  Flag Living World continua desligada; esta etapa não inicia o bot.
+
+- Release 3.6.0 · etapa 7 concluída: revisão de aceite offline e integração real
+  bootstrap → MemoryRetriever → ContextBuilder em `tests/test_v360_acceptance.py`.
+  Os dois testes passaram: memória antiga e FTS limpos, memória nova recuperável
+  após repetição do bootstrap, identidade/idade canônicas, controle en/pt-BR,
+  delegação ao Cycle Manager existente e fallback legado sem avançar WorldState.
+  A suíte anterior completa passou com 199 testes executados e 3 ignorados;
+  esta etapa adicionou e executou os dois testes integrados, sem alterar runtime.
+
+Status da 3.6.0: implementação e aceite offline concluídos. Naturalidade de
+respostas geradas em pt-BR permanece pendente de avaliação com o modelo antes
+da ativação final; testes de instruções do prompt não comprovam esse critério.
+As flags continuam desligadas e o bot permanece parado durante a implementação.
+Próxima etapa de implementação: release 3.6.1 · etapa 8 — Social Graph, Places
+& Preferences. Nas atualizações, informar sempre release e etapa; a numeração
+das etapas não é a numeração das releases.
 
 Implementar:
 
@@ -2101,6 +2168,112 @@ Implementar:
 
 ## v3.6.1 — Social Graph, Places & Preferences
 
+### Release 3.6.1 · etapa 8 — implementação
+
+Implementados `010_social_world.sql`, `social_world.py` e a atualização aditiva
+`upgrade_social_v361.py`. O banco existente recebe backup e staging; não há
+novo CLEAN_CANONICAL_START. Novos bootstraps também incluem o seed social.
+
+- Nove vínculos canônicos com Marina, incluindo Patrick como romantic_primary;
+  associações de Carol à academia, Theo/Júlia/Helena à PUC e Lívia à agência.
+- Encontros explícitos persistidos por chave de evidência única; repetição não
+  conta novamente e reutilização conflitante aborta. Janela de 30 dias para
+  frequência, interações positivas e tensão; proximidade/confiança são estados
+  internos, não probabilidades factuais nem mudanças da personalidade.
+- NPC novo começa ephemeral; 3 dias distintos com interação positiva relevante
+  permitem secondary, 6 permitem recurring. Não há promoção automática a close_npc
+  nem alteração do vínculo canônico. Os limiares são parâmetros iniciais do projeto.
+- Lugares novos preservam metadados de fonte/data ou indicação de ficção interna.
+  Familiaridade dinâmica fica separada do canon: known após 2 dias, habitual após
+  4 dias com ao menos 3 positivos, favorite após 6 dias positivos e preferência
+  reforçada. Habitual pode virar occasional após 90 dias sem visita registrada.
+- Preferências current_interest/discovered_preference reforçadas por dias distintos;
+  core_like permanece bloqueado. Context Builder inclui até 3 preferências reforçadas
+  e até 3 relações canônicas pertinentes à mensagem, sem expor o estado privado dos NPCs.
+
+A etapa disponibiliza registro e evolução a partir de ocorrências explícitas;
+não inventa encontros nem gera histórias para alimentar contadores. Geração de
+ocorrências fica para a 3.6.2; controle completo de circulação de informação para
+a 3.6.3. Não há afirmação de avaliação de naturalidade com modelo nesta etapa.
+Bot parado e feature flags desligadas durante a implementação.
+
+Antes da etapa 9, implementar o complemento transversal de naturalidade abaixo.
+
+### Release 3.6.1 · complemento após etapa 8 — naturalidade conversacional
+
+O [plano complementar de naturalidade](PLANO_COMPLEMENTAR_MARINA_3_6_CONVERSATIONAL_NATURALNESS.md)
+entra agora, antes da release 3.6.2 · etapa 9. Não reabre o bootstrap e não muda
+a numeração das etapas já concluídas. Núcleo implementado em `response_rhythm.py`,
+integrado ao Context Builder, à resposta principal, à fala dinâmica, ao envio
+Telegram e ao conteúdo enviado ao TTS. A flag `RESPONSE_RHYTHM_ENABLED` permanece
+desligada durante a implementação geral do bot.
+
+O [plano complementar de prosódia](PLANO_COMPLEMENTAR_MARINA_3_6_VOICE_PROSODY.md)
+entra no mesmo complemento, após a política de ritmo. `voice_prosody.py` separa
+texto exibido e texto de síntese, escolhe interpretação com padrão neutro e usa
+capacidades por endpoint. O Speech 2.8 HD síncrono da Novita é o endpoint real
+configurado; ElevenLabs e Gemini continuam como fallback com texto sanitizado.
+`VOICE_PROSODY_ENABLED` e flags específicas de recursos ficam desligadas por padrão.
+VoiceRouter e Planner permanecem únicos. O ciclo não seleciona emotion.
+
+Benchmark DeepSeek/OpenRouter `deepseek/deepseek-chat`, cenários sintéticos sem
+Telegram nem memória de produção: A=legado capturado antes da alteração, B=3.6
+sem política, C=3.6 com política. 56 cenários, 168 saídas válidas. Medianas
+de caracteres A/B/C: 173 / 235,5 / 178; bolhas médias 2,25 / 1,96 / 1,00.
+A política foi refinada em rodadas focadas: no subconjunto casual/piada/apoio
+(12 saídas), mediana 118,5 caracteres, p90 153 e pergunta em 7/12. São
+amostras estocásticas; não representam taxa real de uso nem benchmark histórico
+da v3.4.3. Explicações detalhadas continuam permitidas. Resultados brutos e
+reprodução ficam em `.runtime/response_rhythm/benchmark*.json` e
+`benchmark_response_rhythm.py`; o snapshot inicial está em
+`tests/fixtures/response_rhythm_baseline/`.
+
+Novita aceitou 10 áudios curtos com as duas vozes e mais 10 áudios comparativos
+com as mesmas palavras (cru/emotion/pausa/sound tag/combinação). Arquivos e
+durações reais estão em `.runtime/voice_prosody/` e
+`.runtime/voice_prosody_compare/`. O usuário ouviu quatro amostras representativas
+e preferiu **com efeitos**. Isso orienta a calibração, mas não identifica sozinho
+qual capability ou intensidade melhorou o resultado. Aceitação HTTP/arquivo e
+duração não provam qualidade auditiva; manter as flags desligadas até a avaliação
+dos efeitos individuais e o restante da implementação da release.
+
+Regressão inicial do complemento: 219 testes executados, 3 ignorados; testes focados
+de ritmo e prosódia passaram após os últimos ajustes. Prompts de storytelling ainda podem
+inventar detalhes mesmo com instrução explícita; manter a flag desligada e
+reavaliar após a release 3.6.2 fornecer eventos confirmados.
+
+Motivo: o splitter atual separa parágrafos com mais de 160 caracteres por frases;
+o Style Engine tem fallback de cadência em múltiplos balões; o prompt legado
+combina concisão rígida por balão e instruções de fragmentação. São mecanismos
+atuais que podem contribuir para a fragmentação, não uma comprovação retrospectiva
+da causa do comportamento observado na 3.4.3.
+
+Ordem deste complemento:
+1. Preservar e medir baseline antes de alterar o comportamento. Distinguir versão
+   legada disponível de uma reprodução histórica da 3.4.3, que exige snapshot exato.
+2. Criar ResponseStylePolicy determinística e configurável, usando as decisões do
+   Planner existente e o Style Engine; sem chamada LLM adicional para selecionar modo.
+3. Integrar a mesma policy ao Context Builder, texto e conteúdo destinado ao TTS,
+   inclusive falas dinâmicas. VoiceRouter continua sendo o único roteador vocal.
+4. Ajustar o segmentador: uma bolha como preferência casual, nenhuma divisão apenas
+   para parecer humana; preservar frases e permitir respostas maiores quando cabíveis.
+   Limites de transporte são distintos dos limites suaves de estilo.
+5. Remover instruções conflitantes dos caminhos habilitados, sem obrigar perguntas,
+   conselhos, validação ou exposição do WorldState. Não transformar concisão em
+   cortes cegos nem impor orçamento casual a assunto sério ou explicação solicitada.
+6. Adicionar logs e testes determinísticos/integrados. Retry de concisão deve ser
+   opcional, rara e medida, não uma segunda geração obrigatória por resposta.
+7. Benchmark A/B/C com o ID exato do modelo ativo: baseline legado identificado,
+   3.6 sem ritmo e 3.6 com ritmo. Cobrir 50–100 cenários e validação de 100+ turnos;
+   separar duração estimada de áudio da duração realmente sintetizada.
+
+Os percentuais de bolhas, caracteres e segundos são metas iniciais de calibração,
+não critérios rígidos por turno. Testes locais não comprovam naturalidade: avaliação
+de saídas reais e revisão humana continuam necessárias antes da ativação final.
+Revisitar a policy na 3.6.5 com relacionamento/proatividade e na 3.6.7 com tuning.
+O complemento foi avaliado suficientemente para retomar a release 3.6.2 · etapa 9;
+a ativação das flags permanece pendente de calibração final.
+
 Implementar:
 
 - NPCs canônicos;
@@ -2120,6 +2293,79 @@ Implementar:
 ---
 
 ## v3.6.2 — Story Seeds & Threads
+
+**Etapa 9 concluída em modo offline:** `story_engine.py` contém biblioteca abstrata,
+seleção determinística por dia, dias sem evento, orçamento de intensidade,
+threads com estados `open/dormant/resolved/abandoned`, consequência somente por
+ocorrência explícita e `StoryCoherenceValidator`. O tick é uma entrada explícita
+e idempotente; não está ligado ao bot nem divulga conteúdo no prompt/Telegram
+antes da etapa de conhecimento e privacidade da 3.6.3. Eventos simulados nascem
+com `share_worthy=0`, sem final decidido e sem alterar o cânone.
+
+Aceitação local: a seleção de 100 datas de teste teve maioria de dias sem seed;
+uma thread envelhece para `dormant` e `abandoned` sem evento forçado; budget,
+validação canônica, bloqueio de evento grave e replay conflitante têm cobertura
+focada. A regressão geral mais recente executou 233 testes com sucesso, 3
+ignorados; a tentativa anterior teve 2 erros ambientais de SQLite quando o
+disco temporário encheu, e ambos passaram ao serem repetidos. O código não foi
+conectado ao bot nesta etapa; circulação de informação é trabalho da 3.6.3.
+
+### Release 3.6.2 · complemento de datasets de histórias antes da etapa 10
+
+O [plano complementar de datasets](PLANO_COMPLEMENTAR_MARINA_3_6_STORY_DATASETS.md)
+formaliza a construção offline da biblioteca. `scripts/story_datasets/` baixa
+fontes públicas com endereço direto, registra hashes/manifests/licenças e
+transforma registros em etiquetas de situação por regras. Raw e caches
+normalizados ficam fora do Git. `data/story_seeds/story_seed_library.v1.jsonl`
+contém 26 estruturas abstratas escritas para o projeto, sem prosa ou falas de
+origem; frequências externas não alteram o orçamento narrativo. `story_engine.py`
+usa somente esse arquivo local quando `STORY_SEED_LIBRARY_ENABLED=true`, ainda
+desligado por padrão. Nenhuma etapa consulta os corpora em conversa.
+
+DailyDialog foi obtido da transformação identificada ConvLab porque o domínio
+original não disponibiliza mais o corpus; EmpatheticDialogues veio da URL do
+repositório oficial. Foram processados 13.118 e 99.646 registros, gerando 763
+e 680 unidades candidatas, respectivamente. Dois CSVs ROCStories já estavam na
+pasta manual e foram preservados; o usuário forneceu aviso oficial de acesso e
+citação, permitindo processamento offline sem redistribuir histórias. Foram
+processados 98.161 registros ROCStories em 7.074 unidades candidatas. Para
+Gutenberg Dialogue, o link português pré-processado no MEGA retornou `-16`.
+Em seguida, o código oficial do repositório aprovado (commit
+`30bbf1b055fed961b09af9c6ea045cc5ef98bf47`) reconstruiu uma amostra
+limitada a partir de 30 livros portugueses do Project Gutenberg: 1.074 diálogos,
+5.628 falas avaliadas e 35 unidades candidatas. O manifest registra livros,
+hashes, licença MIT e atribuição. Esta é uma reconstrução parcial, não o arquivo
+pré-processado publicado. Os textos originais continuam fora do Git e do runtime.
+
+Os 10 seeds iniciais serviram para validar o pipeline, mas não foram tomados
+como biblioteca final. A segunda extração acrescentou 13 situações com apoio
+em pelo menos duas fontes aprovadas; uma foi rejeitada por apoio insuficiente.
+Três seeds adicionais, curados para Patrick, Henrique e autocuidado, cobrem as
+lacunas `romantic`, `family` e `self_care` sem exigir apoio de corpus. Há agora
+19 categorias e 7 formas causais, com deduplicação por assinatura estrutural.
+O relatório `data/story_seeds/RELATORIO_COBERTURA.md` e seu detalhamento
+`data/story_seeds/coverage_report.v1.json` discriminam categoria,
+família de origem, forma causal e apoio por seed. Os novos tipos exigem contexto
+observado antes de entrar no pool elegível, e a biblioteca continua desligada
+por padrão até a integração da etapa correspondente.
+
+O terceiro cenário `realistic_context` usa sinais esparsos e reprodutíveis entre
+o baseline e o estresse de todos os sinais. As taxas são hipóteses para
+simulação, não fatos da Marina; necessidade de descanso não é inferida da fase
+do ciclo. O Gemini no Antigravity executou a suíte e os três cenários via
+`scripts/story_datasets/run_external_validation.py`. Nos 1.095 dias, cada
+cenário produziu 86 eventos, 92,1% de dias sem evento novo e nenhum evento
+grave; o cenário realista expôs contexto observado em 555 dias e selecionou 17
+tipos, entre os 4 do baseline e os 22 do estresse. Resultados detalhados em
+`data/story_seeds/simulation_report.v1.json` e
+`data/story_seeds/validation_results.v1.json`.
+Testes focados cobrem download
+idempotente, cache por hash, bloqueio das fontes pendentes, saída abstrata e
+integração local do seletor. A suíte completa é executada em bancos temporários
+para não contaminar o futuro início canônico sem histórico conversacional;
+a validação externa após os reforços passou com 241 testes, zero falhas e zero
+pulados. A biblioteca v1 está validada; a flag de runtime segue desligada por
+padrão até a integração da etapa correspondente.
 
 Implementar:
 
@@ -2141,6 +2387,32 @@ Implementar:
 ---
 
 ## v3.6.3 — Knowledge & Privacy
+
+**Etapa 10 — integração implementada; nova validação externa pendente.** `knowledge_privacy.py`
+usa as tabelas existentes para registrar conhecimento por sujeito opaco,
+`known_by`, cadeia de origem e compartilhamentos confirmados. Observação e cada
+transmissão são explícitas; conhecer não concede permissão de repassar. A fonte
+original pode conceder/revogar permissões e alterar o nível de privacidade;
+alterações de nível alcançam todos os detentores daquela cadeia. Metadados
+seguros aceitam somente enums revisados. O prompt recebe uma decisão de
+divulgação sem conteúdo do segredo, inclusive a instrução de não confirmar nem
+negar palpites. O ledger marca informação já contada a Patrick para não tratá-la
+como novidade.
+
+`KNOWLEDGE_PRIVACY_ENABLED=false` por padrão. Quando ativada junto do Living
+World, a camada exclui retrieval e histórico legado não classificados do
+payload. `knowledge_subjects` associa cada assunto a um ID persistido;
+`knowledge_subject_aliases` guarda frases revisadas. A resolução é determinística,
+com colisões descartadas, e não aceita IDs propostos pela LLM. Para assuntos
+resolvidos, a rota do bot calcula cada decisão individualmente e envia uma
+mensagem por assunto com texto revisado ou resposta genérica segura. Só após o
+Telegram confirmar o `message_id` é que `record_confirmed_share` grava aquele
+assunto e nível no ledger; falhas de envio interrompem a sequência. O Gemini no
+Antigravity validou a versão anterior (251 testes, 0 falhas/pulos). A nova
+integração precisa da rodada externa antes de concluir a release. Pode rodar
+`venv\Scripts\python.exe scripts\run_external_stage10_validation.py`; o
+resultado será salvo em `data/knowledge_privacy_validation.v363_integration.json` para
+revisão sem repetir os testes.
 
 Implementar:
 

@@ -1,0 +1,20 @@
+{
+  "dataset_key": "empathetic_dialogues",
+  "display_name": "EmpatheticDialogues",
+  "download_url": "https://dl.fbaipublicfiles.com/parlai/empatheticdialogues/empatheticdialogues.tar.gz",
+  "downloaded_at": "2026-09-18T04:12:00.552896+00:00",
+  "ingestion_status": "processed",
+  "last_processed_at": "2026-09-18T04:45:32.210583+00:00",
+  "license_file": "../licenses/empathetic_dialogues.json",
+  "license_status": "reviewed_official",
+  "pipeline_version": 2,
+  "raw_files": [
+    "empatheticdialogues.tar.gz"
+  ],
+  "sha256": {
+    "empatheticdialogues.tar.gz": "56f234d77b7dd1f005fd365bb17769cfe346c3c84295b69bc069c8ccb83be03d"
+  },
+  "source_origin": "https://github.com/facebookresearch/EmpatheticDialogues",
+  "source_type": "official_download",
+  "source_version": null
+}

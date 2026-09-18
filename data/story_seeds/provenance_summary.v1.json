@@ -1,0 +1,36 @@
+{
+  "deduplicated_to": {},
+  "derivation": "project-authored abstract templates with source-family evidence; no original text",
+  "excluded_for_weak_support": [
+    "unexpected_message"
+  ],
+  "final_seed_count": 26,
+  "library_version": 1,
+  "pipeline_version": 2,
+  "sources": {
+    "dailydialog": {
+      "candidate_units": 763,
+      "enabled": true,
+      "license_status": "reviewed_metadata",
+      "records_seen": 13118
+    },
+    "empathetic_dialogues": {
+      "candidate_units": 680,
+      "enabled": true,
+      "license_status": "reviewed_official",
+      "records_seen": 99646
+    },
+    "gutenberg_dialogue": {
+      "candidate_units": 35,
+      "enabled": true,
+      "license_status": "user_approved_official_source",
+      "records_seen": 5628
+    },
+    "rocstories": {
+      "candidate_units": 7074,
+      "enabled": true,
+      "license_status": "user_provided_access_terms",
+      "records_seen": 98161
+    }
+  }
+}

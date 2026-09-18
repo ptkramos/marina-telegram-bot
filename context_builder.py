@@ -27,7 +27,9 @@ class ContextBuilder:
         retriever: Optional[MemoryRetriever] = None
     ):
         self.memory_mgr = memory_mgr or memory_manager
-        self.retriever = retriever or memory_retriever
+        self.retriever = retriever or (
+            MemoryRetriever(db=self.memory_mgr.db) if memory_mgr is not None else memory_retriever
+        )
 
     def build_system_prompt(
         self,
@@ -36,9 +38,35 @@ class ContextBuilder:
         web_context: str = "",
         vision_context: str = "",
         planner_tone: Optional[str] = None,
-        planner_goal: Optional[str] = None
+        planner_goal: Optional[str] = None,
+        now: Optional[datetime] = None,
+        privacy_subjects: Optional[list[tuple[str, int]]] = None,
     ) -> str:
         """Monta o system prompt completo com injeção contextual seletiva, estado emocional e diretrizes do planner."""
+        if getattr(settings, "KNOWLEDGE_PRIVACY_ENABLED", False) and not getattr(settings, "LIVING_WORLD_ENABLED", False):
+            raise RuntimeError("Knowledge Privacy requires Living World context")
+        if getattr(settings, "LIVING_WORLD_ENABLED", False):
+            from world_context import WorldContextBuilder
+
+            world = WorldContextBuilder(
+                self.memory_mgr.db,
+                cycle_mgr=self.memory_mgr.cycle_mgr,
+                retriever=self.retriever,
+                stale_minutes=getattr(settings, "WORLD_STATE_DEFAULT_STALE_MINUTES", 60),
+            )
+            result = world.build(
+                now=now, user_message=user_message,
+                quoted_context=quoted_context, web_context=web_context,
+                vision_context=vision_context, planner_tone=planner_tone,
+                planner_goal=planner_goal,
+                control_language=getattr(settings, "PROMPT_CONTROL_LANGUAGE", "en"),
+                output_language=getattr(settings, "MARINA_OUTPUT_LANGUAGE", "pt-BR"),
+                privacy_subjects=privacy_subjects,
+            )
+            if settings.RESPONSE_RHYTHM_ENABLED:
+                from response_rhythm import apply_policy, select_policy
+                result = apply_policy(result, select_policy(user_message, plan={'tone': planner_tone or ''}))
+            return result
         # 1. Recuperação seletiva de fatos, momentos e resumos (Memory Intelligence 3.5.0)
         max_f = getattr(settings, "MEMORY_MAX_FACTS", 5)
         max_m = getattr(settings, "MEMORY_MAX_MOMENTS", 3)
@@ -220,6 +248,9 @@ class ContextBuilder:
 {licoes_str}
 {contexto_momento}{contexto_quote}{contexto_web}{contexto_vision}
 """
+        if settings.RESPONSE_RHYTHM_ENABLED:
+            from response_rhythm import apply_policy, select_policy
+            system_content = apply_policy(system_content, select_policy(user_message, plan={'tone': planner_tone or ''}))
         return system_content
 
     def build(
@@ -231,7 +262,8 @@ class ContextBuilder:
         planner_tone: Optional[str] = None,
         planner_goal: Optional[str] = None,
         recent_history: Optional[List[Dict[str, str]]] = None,
-        max_history_turns: int = 10
+        max_history_turns: int = 10,
+        privacy_subjects: Optional[list[tuple[str, int]]] = None,
     ) -> List[Dict[str, str]]:
         """
         Retorna a lista completa de mensagens no formato exigido pela API da OpenAI/OpenRouter.
@@ -243,13 +275,18 @@ class ContextBuilder:
             web_context=web_context,
             vision_context=vision_context,
             planner_tone=planner_tone,
-            planner_goal=planner_goal
+            planner_goal=planner_goal,
+            privacy_subjects=privacy_subjects,
         )
 
         messages = [{"role": "system", "content": system_text}]
 
         # Histórico recente limitado
-        if recent_history is None:
+        if getattr(settings, "KNOWLEDGE_PRIVACY_ENABLED", False):
+            # Legacy chat turns are unclassified and may contain a third party's
+            # secret. Current user input is supplied separately by the caller.
+            history = []
+        elif recent_history is None:
             history = self.memory_mgr.get_historico_recente(limit=max_history_turns)
         else:
             history = recent_history[-max_history_turns:]
@@ -275,4 +312,3 @@ class ContextBuilder:
 
 
 context_builder = ContextBuilder()
-

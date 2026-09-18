@@ -1,0 +1,12 @@
+{
+  "duration_seconds": 152.28,
+  "exit_code": 0,
+  "finished_at": "2026-09-18T06:55:16.553425+00:00",
+  "output_tail": "----------------------------------------------------------------------\nRan 251 tests in 145.255s\n\nOK\n",
+  "python": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\venv\\Scripts\\python.exe",
+  "release": "3.6.3",
+  "stage": 10,
+  "status": "passed",
+  "tests_run": 251,
+  "tests_skipped": 0
+}

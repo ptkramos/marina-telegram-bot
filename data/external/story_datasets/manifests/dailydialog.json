@@ -1,0 +1,20 @@
+{
+  "dataset_key": "dailydialog",
+  "display_name": "DailyDialog (ConvLab transformation)",
+  "download_url": "https://huggingface.co/datasets/ConvLab/dailydialog/resolve/main/data.zip",
+  "downloaded_at": "2026-09-18T04:11:56.992888+00:00",
+  "ingestion_status": "processed",
+  "last_processed_at": "2026-09-18T04:45:11.087029+00:00",
+  "license_file": "../licenses/dailydialog.json",
+  "license_status": "reviewed_metadata",
+  "pipeline_version": 2,
+  "raw_files": [
+    "convlab_dailydialog_data.zip"
+  ],
+  "sha256": {
+    "convlab_dailydialog_data.zip": "b1f38f3bf5431f9384107011a943f1a3446027721292e3a248a894b7766fa9d3"
+  },
+  "source_origin": "https://huggingface.co/datasets/ConvLab/dailydialog",
+  "source_type": "attributed_distribution",
+  "source_version": null
+}

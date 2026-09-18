@@ -1,0 +1,31 @@
+{
+  "finished_at": "2026-09-18T06:31:30.375165+00:00",
+  "python": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\venv\\Scripts\\python.exe",
+  "started_at": "2026-09-18T06:28:04.342353+00:00",
+  "status": "passed",
+  "steps": {
+    "isolated_test_suite": {
+      "duration_seconds": 113.77,
+      "exit_code": 0,
+      "output_tail": "----------------------------------------------------------------------\nRan 243 tests in 100.443s\n\nOK\n",
+      "tests_run": 243,
+      "tests_skipped": 0
+    },
+    "library_validator": {
+      "duration_seconds": 0.45,
+      "exit_code": 0,
+      "output_tail": "26 abstract seeds validated\n"
+    },
+    "long_simulation": {
+      "duration_seconds": 91.78,
+      "exit_code": 0,
+      "output_tail": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\data\\story_seeds\\simulation_report.v1.json\n",
+      "simulation_checks": {
+        "context_increases_variety_without_event_pressure": true,
+        "no_major_events": true,
+        "ordinary_days_predominate": true,
+        "realistic_observation_exposure_between_extremes": true
+      }
+    }
+  }
+}

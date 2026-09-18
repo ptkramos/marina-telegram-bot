@@ -12,6 +12,7 @@ Sistema 100% autônomo sem dependência de arquivos JSON.
 import sqlite3
 import json
 import logging
+import os
 from contextlib import closing, contextmanager
 from threading import local
 from datetime import datetime, date, timedelta
@@ -21,7 +22,7 @@ from typing import Optional, Union
 logger = logging.getLogger("MarinaDB")
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_FILE = BASE_DIR / "marin_memory.db"
+DB_FILE = Path(os.environ["MARINA_DB_PATH"]).expanduser().resolve() if os.environ.get("MARINA_DB_PATH") else BASE_DIR / "marin_memory.db"
 MIGRATIONS_DIR = BASE_DIR / "migrations"
 
 class _ManagedConnection:

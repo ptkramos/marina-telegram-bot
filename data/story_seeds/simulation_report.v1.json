@@ -1,0 +1,396 @@
+{
+  "baseline": {
+    "1095": {
+      "active_threads": 1,
+      "banal_day_ratio": 0.89,
+      "events": 120,
+      "major_events": 0,
+      "observed_context_days": 0,
+      "observed_signal_days": {},
+      "seed_repetition": {
+        "forgot_item": 30,
+        "pet_minor_mischief": 29,
+        "small_misunderstanding": 30,
+        "unexpected_invitation": 31
+      }
+    },
+    "30": {
+      "active_threads": 1,
+      "banal_day_ratio": 0.9,
+      "events": 3,
+      "major_events": 0,
+      "observed_context_days": 0,
+      "observed_signal_days": {},
+      "seed_repetition": {
+        "forgot_item": 1,
+        "small_misunderstanding": 1,
+        "unexpected_invitation": 1
+      }
+    },
+    "365": {
+      "active_threads": 0,
+      "banal_day_ratio": 0.893,
+      "events": 39,
+      "major_events": 0,
+      "observed_context_days": 0,
+      "observed_signal_days": {},
+      "seed_repetition": {
+        "forgot_item": 10,
+        "pet_minor_mischief": 9,
+        "small_misunderstanding": 10,
+        "unexpected_invitation": 10
+      }
+    },
+    "90": {
+      "active_threads": 1,
+      "banal_day_ratio": 0.9,
+      "events": 9,
+      "major_events": 0,
+      "observed_context_days": 0,
+      "observed_signal_days": {},
+      "seed_repetition": {
+        "forgot_item": 2,
+        "pet_minor_mischief": 2,
+        "small_misunderstanding": 3,
+        "unexpected_invitation": 2
+      }
+    }
+  },
+  "checks": {
+    "context_increases_variety_without_event_pressure": true,
+    "no_major_events": true,
+    "ordinary_days_predominate": true,
+    "realistic_observation_exposure_between_extremes": true
+  },
+  "contextual_stress": {
+    "1095": {
+      "active_threads": 1,
+      "banal_day_ratio": 0.89,
+      "events": 120,
+      "major_events": 0,
+      "observed_context_days": 1095,
+      "observed_signal_days": {
+        "academic_feedback_observed": 1095,
+        "disagreement_observed": 1095,
+        "embarrassment_observed": 1095,
+        "father_contact_observed": 1095,
+        "favor_request_observed": 1095,
+        "feedback_observed": 1095,
+        "forgotten_commitment_observed": 1095,
+        "friend_needs_support": 1095,
+        "help_received_observed": 1095,
+        "home_issue_observed": 1095,
+        "leisure_change_observed": 1095,
+        "partner_gesture_observed": 1095,
+        "plan_cancelled_observed": 1095,
+        "professional_feedback_observed": 1095,
+        "rest_need_observed": 1095,
+        "weather_disruption_observed": 1095
+      },
+      "seed_repetition": {
+        "academic_feedback": 5,
+        "father_check_in": 4,
+        "forgot_item": 1,
+        "forgotten_commitment": 5,
+        "friend_plan_cancelled": 5,
+        "home_task_disrupted": 10,
+        "leisure_plan_changed": 9,
+        "minor_embarrassment": 7,
+        "minor_help_received": 4,
+        "partner_small_gesture": 6,
+        "pet_minor_mischief": 3,
+        "positive_feedback": 8,
+        "professional_feedback": 4,
+        "project_deadline_change": 8,
+        "self_care_pause": 5,
+        "small_disagreement": 1,
+        "small_favor_requested": 8,
+        "small_misunderstanding": 4,
+        "support_for_friend": 5,
+        "unexpected_invitation": 6,
+        "unexpected_work_opportunity": 5,
+        "weather_changes_plan": 7
+      }
+    },
+    "30": {
+      "active_threads": 1,
+      "banal_day_ratio": 0.9,
+      "events": 3,
+      "major_events": 0,
+      "observed_context_days": 30,
+      "observed_signal_days": {
+        "academic_feedback_observed": 30,
+        "disagreement_observed": 30,
+        "embarrassment_observed": 30,
+        "father_contact_observed": 30,
+        "favor_request_observed": 30,
+        "feedback_observed": 30,
+        "forgotten_commitment_observed": 30,
+        "friend_needs_support": 30,
+        "help_received_observed": 30,
+        "home_issue_observed": 30,
+        "leisure_change_observed": 30,
+        "partner_gesture_observed": 30,
+        "plan_cancelled_observed": 30,
+        "professional_feedback_observed": 30,
+        "rest_need_observed": 30,
+        "weather_disruption_observed": 30
+      },
+      "seed_repetition": {
+        "positive_feedback": 1,
+        "self_care_pause": 1,
+        "small_misunderstanding": 1
+      }
+    },
+    "365": {
+      "active_threads": 0,
+      "banal_day_ratio": 0.893,
+      "events": 39,
+      "major_events": 0,
+      "observed_context_days": 365,
+      "observed_signal_days": {
+        "academic_feedback_observed": 365,
+        "disagreement_observed": 365,
+        "embarrassment_observed": 365,
+        "father_contact_observed": 365,
+        "favor_request_observed": 365,
+        "feedback_observed": 365,
+        "forgotten_commitment_observed": 365,
+        "friend_needs_support": 365,
+        "help_received_observed": 365,
+        "home_issue_observed": 365,
+        "leisure_change_observed": 365,
+        "partner_gesture_observed": 365,
+        "plan_cancelled_observed": 365,
+        "professional_feedback_observed": 365,
+        "rest_need_observed": 365,
+        "weather_disruption_observed": 365
+      },
+      "seed_repetition": {
+        "academic_feedback": 3,
+        "father_check_in": 2,
+        "forgotten_commitment": 2,
+        "friend_plan_cancelled": 1,
+        "home_task_disrupted": 3,
+        "leisure_plan_changed": 2,
+        "minor_embarrassment": 4,
+        "minor_help_received": 1,
+        "partner_small_gesture": 1,
+        "pet_minor_mischief": 2,
+        "positive_feedback": 2,
+        "professional_feedback": 1,
+        "project_deadline_change": 1,
+        "self_care_pause": 3,
+        "small_favor_requested": 2,
+        "small_misunderstanding": 1,
+        "support_for_friend": 1,
+        "unexpected_invitation": 2,
+        "unexpected_work_opportunity": 2,
+        "weather_changes_plan": 3
+      }
+    },
+    "90": {
+      "active_threads": 1,
+      "banal_day_ratio": 0.9,
+      "events": 9,
+      "major_events": 0,
+      "observed_context_days": 90,
+      "observed_signal_days": {
+        "academic_feedback_observed": 90,
+        "disagreement_observed": 90,
+        "embarrassment_observed": 90,
+        "father_contact_observed": 90,
+        "favor_request_observed": 90,
+        "feedback_observed": 90,
+        "forgotten_commitment_observed": 90,
+        "friend_needs_support": 90,
+        "help_received_observed": 90,
+        "home_issue_observed": 90,
+        "leisure_change_observed": 90,
+        "partner_gesture_observed": 90,
+        "plan_cancelled_observed": 90,
+        "professional_feedback_observed": 90,
+        "rest_need_observed": 90,
+        "weather_disruption_observed": 90
+      },
+      "seed_repetition": {
+        "academic_feedback": 2,
+        "leisure_plan_changed": 1,
+        "positive_feedback": 1,
+        "self_care_pause": 2,
+        "small_misunderstanding": 1,
+        "support_for_friend": 1,
+        "unexpected_invitation": 1
+      }
+    }
+  },
+  "realistic_context": {
+    "1095": {
+      "active_threads": 1,
+      "banal_day_ratio": 0.89,
+      "events": 120,
+      "major_events": 0,
+      "observed_context_days": 555,
+      "observed_signal_days": {
+        "academic_feedback_observed": 27,
+        "disagreement_observed": 21,
+        "embarrassment_observed": 29,
+        "father_contact_observed": 212,
+        "favor_request_observed": 46,
+        "feedback_observed": 66,
+        "forgotten_commitment_observed": 10,
+        "friend_needs_support": 25,
+        "help_received_observed": 36,
+        "home_issue_observed": 20,
+        "leisure_change_observed": 18,
+        "partner_gesture_observed": 57,
+        "plan_cancelled_observed": 16,
+        "professional_feedback_observed": 7,
+        "rest_need_observed": 146,
+        "weather_disruption_observed": 40
+      },
+      "seed_repetition": {
+        "father_check_in": 5,
+        "forgot_item": 17,
+        "friend_plan_cancelled": 1,
+        "home_task_disrupted": 1,
+        "minor_help_received": 3,
+        "minor_purchase_problem": 2,
+        "missed_transport_connection": 3,
+        "partner_small_gesture": 1,
+        "pet_minor_mischief": 19,
+        "positive_feedback": 1,
+        "project_deadline_change": 13,
+        "schedule_conflict": 4,
+        "self_care_pause": 3,
+        "small_favor_requested": 3,
+        "small_misunderstanding": 19,
+        "small_success": 6,
+        "support_for_friend": 2,
+        "unexpected_invitation": 12,
+        "unexpected_work_opportunity": 3,
+        "weather_changes_plan": 2
+      }
+    },
+    "30": {
+      "active_threads": 1,
+      "banal_day_ratio": 0.9,
+      "events": 3,
+      "major_events": 0,
+      "observed_context_days": 16,
+      "observed_signal_days": {
+        "disagreement_observed": 1,
+        "embarrassment_observed": 1,
+        "father_contact_observed": 6,
+        "favor_request_observed": 3,
+        "feedback_observed": 1,
+        "friend_needs_support": 1,
+        "leisure_change_observed": 2,
+        "rest_need_observed": 5,
+        "weather_disruption_observed": 2
+      },
+      "seed_repetition": {
+        "forgot_item": 1,
+        "small_misunderstanding": 1,
+        "small_success": 1
+      }
+    },
+    "365": {
+      "active_threads": 0,
+      "banal_day_ratio": 0.893,
+      "events": 39,
+      "major_events": 0,
+      "observed_context_days": 180,
+      "observed_signal_days": {
+        "academic_feedback_observed": 12,
+        "disagreement_observed": 7,
+        "embarrassment_observed": 7,
+        "father_contact_observed": 74,
+        "favor_request_observed": 17,
+        "feedback_observed": 20,
+        "forgotten_commitment_observed": 2,
+        "friend_needs_support": 7,
+        "help_received_observed": 11,
+        "home_issue_observed": 3,
+        "leisure_change_observed": 10,
+        "partner_gesture_observed": 19,
+        "plan_cancelled_observed": 4,
+        "professional_feedback_observed": 2,
+        "rest_need_observed": 52,
+        "weather_disruption_observed": 18
+      },
+      "seed_repetition": {
+        "father_check_in": 3,
+        "forgot_item": 4,
+        "minor_help_received": 2,
+        "minor_purchase_problem": 1,
+        "missed_transport_connection": 2,
+        "partner_small_gesture": 1,
+        "pet_minor_mischief": 7,
+        "project_deadline_change": 5,
+        "self_care_pause": 1,
+        "small_favor_requested": 1,
+        "small_misunderstanding": 7,
+        "small_success": 1,
+        "unexpected_invitation": 3,
+        "unexpected_work_opportunity": 1
+      }
+    },
+    "90": {
+      "active_threads": 1,
+      "banal_day_ratio": 0.9,
+      "events": 9,
+      "major_events": 0,
+      "observed_context_days": 42,
+      "observed_signal_days": {
+        "academic_feedback_observed": 1,
+        "disagreement_observed": 1,
+        "embarrassment_observed": 3,
+        "father_contact_observed": 17,
+        "favor_request_observed": 6,
+        "feedback_observed": 4,
+        "friend_needs_support": 2,
+        "help_received_observed": 1,
+        "leisure_change_observed": 5,
+        "partner_gesture_observed": 1,
+        "plan_cancelled_observed": 1,
+        "rest_need_observed": 12,
+        "weather_disruption_observed": 8
+      },
+      "seed_repetition": {
+        "forgot_item": 1,
+        "partner_small_gesture": 1,
+        "pet_minor_mischief": 1,
+        "project_deadline_change": 1,
+        "self_care_pause": 1,
+        "small_misunderstanding": 2,
+        "small_success": 1,
+        "unexpected_work_opportunity": 1
+      }
+    }
+  },
+  "realistic_context_assumptions": {
+    "academic_period": "weekday in February-June or August-December",
+    "daily_observation_probabilities": {
+      "academic_feedback_observed": 0.047619047619047616,
+      "disagreement_observed": 0.015384615384615385,
+      "embarrassment_observed": 0.022222222222222223,
+      "favor_request_observed": 0.041666666666666664,
+      "feedback_observed": 0.05555555555555555,
+      "forgotten_commitment_observed": 0.01,
+      "friend_needs_support": 0.02857142857142857,
+      "help_received_observed": 0.03571428571428571,
+      "home_issue_observed": 0.014285714285714285,
+      "leisure_change_observed": 0.022222222222222223,
+      "partner_gesture_observed": 0.047619047619047616,
+      "plan_cancelled_observed": 0.022222222222222223,
+      "professional_feedback_observed": 0.022222222222222223,
+      "weather_disruption_observed": 0.03571428571428571
+    },
+    "father_contact": "Tuesday/Sunday, 65 percent of those days",
+    "professional_availability": "Tuesday/Thursday, 65 percent of those days",
+    "relationship_status": "committed; a gesture still requires its own observed signal",
+    "rest_need": "Wednesday/Sunday, 50 percent of those days; never inferred from cycle phase",
+    "status": "illustrative deterministic scenario, not observed personal history"
+  }
+}

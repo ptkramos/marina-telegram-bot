@@ -1,0 +1,8 @@
+{
+  "citation": null,
+  "dataset_key": "empathetic_dialogues",
+  "license": "CC-BY-NC-4.0",
+  "license_status": "reviewed_official",
+  "note": "Only offline abstract preprocessing; raw data is never distributed or read at runtime.",
+  "reference": "https://github.com/facebookresearch/EmpatheticDialogues/blob/main/LICENSE"
+}
