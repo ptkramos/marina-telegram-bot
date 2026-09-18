@@ -150,19 +150,33 @@ class DatabaseManager:
                     try:
                         cursor.executescript(sql_content)
                     except sqlite3.OperationalError as e:
-                        if "duplicate column name" in str(e).lower():
-                            for stmt in sql_content.split(";"):
-                                stmt = stmt.strip()
-                                if not stmt:
-                                    continue
-                                try:
-                                    cursor.execute(stmt)
-                                except sqlite3.OperationalError as stmt_err:
-                                    if "duplicate column name" in str(stmt_err).lower():
-                                        continue
-                                    raise
-                        else:
+                        # Synthetic upgrades may replay migration 012 after some
+                        # of its ALTERs already landed. Keep that recovery local
+                        # to the known calendar columns, never to all migrations.
+                        if version_num != 12 or "duplicate column name" not in str(e).lower():
                             raise
+                        calendar_columns = {
+                            'owner_character_key', 'end_at', 'location_key', 'source_key',
+                            'story_thread_id', 'confirmed', 'metadata_json',
+                        }
+                        for fragment in sql_content.split(";"):
+                            statement = '\n'.join(line for line in fragment.splitlines()
+                                                  if not line.lstrip().startswith('--')).strip()
+                            if not statement:
+                                continue
+                            try:
+                                cursor.execute(statement)
+                            except sqlite3.OperationalError as stmt_err:
+                                tokens = statement.lower().split()
+                                known_alter = (len(tokens) >= 6 and tokens[:5] ==
+                                               ['alter', 'table', 'eventos_pendentes', 'add', 'column']
+                                               and tokens[5] in calendar_columns)
+                                if not (known_alter and "duplicate column name" in str(stmt_err).lower()):
+                                    raise
+                        actual_columns = {row['name'] for row in cursor.execute(
+                            'PRAGMA table_info(eventos_pendentes)').fetchall()}
+                        if not calendar_columns <= actual_columns:
+                            raise RuntimeError('Calendar migration left required columns missing')
                     now_iso = datetime.now().isoformat()
                     cursor.execute(
                         "INSERT INTO schema_version (version, name, applied_at) VALUES (?, ?, ?);",

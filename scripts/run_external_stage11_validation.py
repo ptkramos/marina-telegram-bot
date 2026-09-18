@@ -35,12 +35,6 @@ def main() -> int:
         'python': sys.executable, 'status': status, 'exit_code': exit_code,
         'tests_run': int(count.group(1)) if count else None,
         'tests_skipped': int(skipped.group(1)) if skipped else 0,
-        'resolution_notes': (
-            'Idempotência de colunas adicionadas via ALTER TABLE (tolerância a duplicate column name) '
-            'implementada no runner de migrações em db.py (_run_migrations). Garante que downgrades e upgrades '
-            'sintéticos de schemas anteriores em suítes de teste e migrações parciais não falhem ao reaplicar '
-            'a migration 012_calendar_real_context.sql em tabelas que já possuíam as colunas de calendário.'
-        ),
         'output_tail': output[-5000:],
     }
     RESULT.parent.mkdir(parents=True, exist_ok=True)
