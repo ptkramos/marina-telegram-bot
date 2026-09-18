@@ -1,12 +1,12 @@
 {
-  "duration_seconds": 269.27,
-  "exit_code": 1,
-  "finished_at": "2026-09-18T07:31:16.424869+00:00",
-  "output_tail": "======================================================================\nERROR: test_rodada3_p1_turn1_direct_reminder_without_time_ensures_question_and_records_mid (test_audit_fixes_v3_5.TestAuditFixesV35)\nP1: Garante que no primeiro turno de um pedido direto sem horário, mesmo que a LLM\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"C:\\Arquivos\\GitHub\\marin-telegram-bot\\tests\\test_audit_fixes_v3_5.py\", line 668, in test_rodada3_p1_turn1_direct_reminder_without_time_ensures_question_and_records_mid\n    asyncio.run(bot.process_incoming_batch(\n  File \"C:\\Users\\conta\\AppData\\Local\\Programs\\Python\\Python310\\lib\\asyncio\\runners.py\", line 44, in run\n    return loop.run_until_complete(main)\n  File \"C:\\Users\\conta\\AppData\\Local\\Programs\\Python\\Python310\\lib\\asyncio\\base_events.py\", line 649, in run_until_complete\n    return future.result()\n  File \"C:\\Arquivos\\GitHub\\marin-telegram-bot\\bot.py\", line 1754, in process_incoming_batch\n    sent_voice = await context.bot.send_voice(\nTypeError: object MagicMock can't be used in 'await' expression\n\n----------------------------------------------------------------------\nRan 258 tests in 259.209s\n\nFAILED (errors=1)\n",
+  "duration_seconds": 153.28,
+  "exit_code": 0,
+  "finished_at": "2026-09-18T07:47:02.962087+00:00",
+  "output_tail": "----------------------------------------------------------------------\nRan 258 tests in 140.072s\n\nOK\n",
   "python": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\venv\\Scripts\\python.exe",
   "release": "3.6.3",
   "stage": 10,
-  "status": "failed",
+  "status": "passed",
   "tests_run": 258,
   "tests_skipped": 0
 }

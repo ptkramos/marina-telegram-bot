@@ -40,6 +40,9 @@ class TestAuditFixesV35(unittest.TestCase):
         self.hygiene = MemoryHygieneService(db=self.db)
         self.mock_context = MagicMock()
         self.mock_context.bot = AsyncMock()
+        self._random_patcher = patch.object(bot.random, "random", return_value=1.0)
+        self._random_patcher.start()
+        self.addCleanup(self._random_patcher.stop)
 
     def tearDown(self):
         self.temp_dir.cleanup()
