@@ -147,7 +147,22 @@ class DatabaseManager:
                 if version_num not in applied_versions:
                     logger.info(f"Aplicando migration {version_num}: {mig_name}...")
                     sql_content = mig_file.read_text(encoding="utf-8")
-                    cursor.executescript(sql_content)
+                    try:
+                        cursor.executescript(sql_content)
+                    except sqlite3.OperationalError as e:
+                        if "duplicate column name" in str(e).lower():
+                            for stmt in sql_content.split(";"):
+                                stmt = stmt.strip()
+                                if not stmt:
+                                    continue
+                                try:
+                                    cursor.execute(stmt)
+                                except sqlite3.OperationalError as stmt_err:
+                                    if "duplicate column name" in str(stmt_err).lower():
+                                        continue
+                                    raise
+                        else:
+                            raise
                     now_iso = datetime.now().isoformat()
                     cursor.execute(
                         "INSERT INTO schema_version (version, name, applied_at) VALUES (?, ?, ?);",
