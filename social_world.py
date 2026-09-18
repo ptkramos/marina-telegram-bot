@@ -1,8 +1,11 @@
 """Social continuity from explicit evidence; no event generation or disclosure of secrets."""
+import logging
 import math
 from datetime import datetime, timedelta
 
 from world_repository import WorldBibleRepository, CanonConflictError
+
+logger = logging.getLogger(__name__)
 
 
 RELATIONS = {
@@ -140,5 +143,7 @@ class SocialWorld:
                 c.execute('INSERT INTO preference_evidence VALUES (?,?,?)', (evidence_key,pref['id'],stamp))
                 days = c.execute('SELECT COUNT(DISTINCT substr(occurred_at,1,10)),MIN(occurred_at),MAX(occurred_at) FROM preference_evidence WHERE preference_id=?', (pref['id'],)).fetchone()
                 c.execute('''UPDATE character_preferences SET strength=?,confidence=?,times_reinforced=?,
-                    first_seen_at=?,last_seen_at=? WHERE id=? AND canon_locked=0''',
+                    first_seen_at=?,last_seen_at=?,active=1 WHERE id=? AND canon_locked=0''',
                     (min(.9,.3+days[0]*.1),min(.95,.4+days[0]*.1),days[0],days[1],days[2],pref['id']))
+                if preference_type == 'current_interest':
+                    logger.info('PREFERENCE_REINFORCED preference_id=%s value=%s', pref['id'], value)

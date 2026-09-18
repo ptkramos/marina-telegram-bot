@@ -109,6 +109,15 @@ class Settings:
     KNOWLEDGE_PRIVACY_ENABLED: bool = os.getenv("KNOWLEDGE_PRIVACY_ENABLED", "false").lower() in ("true", "1", "yes")
     RELATIONSHIP_WORLD_ENABLED: bool = os.getenv("RELATIONSHIP_WORLD_ENABLED", "false").lower() in ("true", "1", "yes")
     CAMERA_WORLD_CONTINUITY_ENABLED: bool = os.getenv("CAMERA_WORLD_CONTINUITY_ENABLED", "false").lower() in ("true", "1", "yes")
+    WORLD_HYGIENE_ENABLED: bool = os.getenv("WORLD_HYGIENE_ENABLED", "false").lower() in ("true", "1", "yes")
+    WORLD_DISCOVERY_PROMOTION_THRESHOLD: int = int(os.getenv("WORLD_DISCOVERY_PROMOTION_THRESHOLD", "3"))
+    WORLD_PREFERENCE_PROMOTION_THRESHOLD: int = int(os.getenv("WORLD_PREFERENCE_PROMOTION_THRESHOLD", "4"))
+    INTEREST_FADING_DAYS: int = int(os.getenv("INTEREST_FADING_DAYS", "14"))
+    INTEREST_DORMANT_DAYS: int = int(os.getenv("INTEREST_DORMANT_DAYS", "45"))
+    INTEREST_FADING_STRENGTH_STEP: float = float(os.getenv("INTEREST_FADING_STRENGTH_STEP", "0.08"))
+    INTEREST_DORMANT_STRENGTH: float = float(os.getenv("INTEREST_DORMANT_STRENGTH", "0.15"))
+    EVENT_COMPACTION_DAYS: int = int(os.getenv("EVENT_COMPACTION_DAYS", "90"))
+    EVENT_COMPACTION_MAX_IMPORTANCE: float = float(os.getenv("EVENT_COMPACTION_MAX_IMPORTANCE", "0.35"))
     # Living World v3.6.2: Cadência de novos Story Events calibrada para ~89% de dias banais (longo prazo).
     # Com STORY_THREAD_DORMANT_DAYS=7 e STORY_EVENT_CADENCE_THRESHOLD=0.60, a simulação de 1.095 dias
     # produz ~11% de novos eventos e ~89% de dias banais, preservando cooldowns e limites.
@@ -168,6 +177,14 @@ class Settings:
             errors.append('RELATIONSHIP_WORLD_ENABLED exige LIVING_WORLD_ENABLED e KNOWLEDGE_PRIVACY_ENABLED')
         if cls.CAMERA_WORLD_CONTINUITY_ENABLED and not cls.LIVING_WORLD_ENABLED:
             errors.append('CAMERA_WORLD_CONTINUITY_ENABLED exige LIVING_WORLD_ENABLED')
+        if cls.WORLD_HYGIENE_ENABLED and not cls.LIVING_WORLD_ENABLED:
+            errors.append('WORLD_HYGIENE_ENABLED exige LIVING_WORLD_ENABLED')
+        if cls.WORLD_DISCOVERY_PROMOTION_THRESHOLD < 2:
+            errors.append('WORLD_DISCOVERY_PROMOTION_THRESHOLD deve ser >= 2')
+        if cls.WORLD_PREFERENCE_PROMOTION_THRESHOLD < 2:
+            errors.append('WORLD_PREFERENCE_PROMOTION_THRESHOLD deve ser >= 2')
+        if cls.INTEREST_FADING_DAYS <= 0 or cls.INTEREST_DORMANT_DAYS <= cls.INTEREST_FADING_DAYS:
+            errors.append('INTEREST_DORMANT_DAYS deve ser maior que INTEREST_FADING_DAYS')
         try:
             cls().memory_weights()
         except ValueError as exc:

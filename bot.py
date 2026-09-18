@@ -1259,6 +1259,27 @@ async def cancelar_lembrete_command(update: Update, context: ContextTypes.DEFAUL
     msg = await context.bot.send_message(chat_id=chat_id, text=texto, parse_mode="Markdown")
     asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=10.0))
 
+async def worlddebug_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Debug Living World sem chain-of-thought nem conteúdo confidencial."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+    if not getattr(settings, 'LIVING_WORLD_ENABLED', False):
+        msg = await context.bot.send_message(chat_id=chat_id, text='Living World desligado.')
+        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=10.0))
+        return
+    from world_hygiene import WorldHygiene
+    snap = WorldHygiene(memory_manager.db).debug_snapshot(datetime.now())
+    text = WorldHygiene(memory_manager.db).format_debug_text(snap)
+    # Telegram soft limit; keep observational only.
+    msg = await context.bot.send_message(chat_id=chat_id, text=text[:3500])
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=20.0))
+
+
 async def memory_hygiene_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /memoryhygiene para disparar manualmente o ciclo de manutenção da memória."""
     if not is_authorized(update):
@@ -2407,6 +2428,7 @@ def main():
     app.add_handler(CommandHandler("cancelarlembrete", cancelar_lembrete_command))
     app.add_handler(CommandHandler("cancelar_lembrete", cancelar_lembrete_command))
     app.add_handler(CommandHandler("memoryhygiene", memory_hygiene_command))
+    app.add_handler(CommandHandler("worlddebug", worlddebug_command))
     app.add_handler(CommandHandler("refletir", refletir_command))
 
     # Reações em tempo real (Via 2 - Patrick reagindo com emojis)

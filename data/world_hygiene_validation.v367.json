@@ -1,0 +1,59 @@
+{
+  "canon_drift_detected": false,
+  "duration_seconds": 178.25,
+  "errors": 0,
+  "event_looping_detected": false,
+  "exit_code": 0,
+  "failures": 0,
+  "finished_at": "2026-09-18T14:08:01.360922+00:00",
+  "output_tail": "----------------------------------------------------------------------\nRan 317 tests in 169.035s\n\nOK\n\nC:\\Arquivos\\GitHub\\marin-telegram-bot\\data\\world_hygiene_simulation.v367.json\n",
+  "preference_decay_anomalies": null,
+  "promotion_anomalies": null,
+  "python": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\venv\\Scripts\\python.exe",
+  "release": "3.6.7",
+  "simulation_30d": {
+    "archived_events": 0,
+    "canon_drift_detected": false,
+    "canon_locked_characters_after": 10,
+    "canon_locked_characters_before": 10,
+    "days": 30,
+    "event_looping_detected": false,
+    "events": 3,
+    "exact_duplicates_marked": 0,
+    "open_threads": 1,
+    "promotion_marks": {
+      "people": 0,
+      "places": 0
+    },
+    "thread_status_sightings": {
+      "dormant": 27,
+      "open": 23
+    }
+  },
+  "simulation_90d": {
+    "archived_events": 0,
+    "canon_drift_detected": false,
+    "canon_locked_characters_after": 10,
+    "canon_locked_characters_before": 10,
+    "days": 90,
+    "event_looping_detected": false,
+    "events": 10,
+    "exact_duplicates_marked": 0,
+    "open_threads": 1,
+    "promotion_marks": {
+      "people": 0,
+      "places": 0
+    },
+    "thread_status_sightings": {
+      "abandoned": 191,
+      "dormant": 179,
+      "open": 75
+    }
+  },
+  "skipped": 0,
+  "stage": 14,
+  "status": "passed",
+  "test_command": "tests/run_isolated.py",
+  "tests_run": 317,
+  "tests_skipped": 0
+}

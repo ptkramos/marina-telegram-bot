@@ -55,6 +55,11 @@ class MemoryHygieneService:
         # 4. Candidatos a reconfirmação
         reconf_cands = self.db.get_memorias_para_reconfirmacao(limit=3)
 
+        world_hygiene = None
+        if getattr(settings, 'WORLD_HYGIENE_ENABLED', False) and getattr(settings, 'LIVING_WORLD_ENABLED', False):
+            from world_hygiene import WorldHygiene
+            world_hygiene = WorldHygiene(self.db).run_cycle(now=now_dt)
+
         result = {
             "timestamp": now_dt.isoformat(),
             "decay": decay_stats,
@@ -62,6 +67,7 @@ class MemoryHygieneService:
             "archived_loops_count": archived_loops,
             "reconfirmation_candidates_count": len(reconf_cands),
             "reconfirmation_candidates": [c["fato"] for c in reconf_cands],
+            "world_hygiene": world_hygiene,
             "status": "completed",
             "success": True
         }

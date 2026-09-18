@@ -164,6 +164,7 @@ class WorldContextBuilder:
                 FROM character_preferences p LEFT JOIN world_places w ON p.category='place' AND w.canonical_key=p.value
                 WHERE p.character_key='marina' AND p.canon_locked=0 AND p.active=1
                 AND p.strength>=0.6 AND p.times_reinforced>=3
+                AND NOT (p.preference_type='current_interest' AND p.strength < 0.35)
                 ORDER BY p.last_seen_at DESC,p.id LIMIT 3""").fetchall()
         if learned:
             blocks += ['[INTERESSES E PREFERÊNCIAS APRENDIDOS — não substituem gostos canônicos]']
