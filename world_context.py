@@ -51,6 +51,10 @@ class WorldContextBuilder:
         privacy_subjects: Optional[list[tuple[str, int]]] = None,
     ) -> str:
         now = now or datetime.now()
+        if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
+            from calendar_world import local_time
+
+            now = local_time(now)
         marina = self.bible.get_character("marina")
         if not marina or marina["canon_locked"] != 1:
             raise RuntimeError("World Bible v3.6 ausente ou não bloqueada; não usar prompt legado")
@@ -70,6 +74,9 @@ class WorldContextBuilder:
         source = json.loads(state["source_json"] or "{}")
         reason = source.get("reason", "unknown")
         certainty = "compromisso/plano explícito" if reason in ("confirmed_commitment", "explicit_plan") else "inferência de rotina"
+        if (getattr(settings, 'KNOWLEDGE_PRIVACY_ENABLED', False)
+                and source.get('calendar_event_id')):
+            location = 'local reservado'
 
         control = CONTROL_EN if control_language == "en" else CONTROL_PT
         blocks = [
@@ -90,6 +97,38 @@ class WorldContextBuilder:
             weather = json.loads(state["weather_context_json"])
             if weather.get("heavy_rain"):
                 blocks.append("Condição contextual: chuva forte; deslocamentos externos menos prováveis.")
+
+        if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
+            from calendar_world import CalendarWorld
+
+            calendar = CalendarWorld(self.db)
+            upcoming = calendar.next(
+                now, include_academic=getattr(settings, 'ACADEMIC_LIFE_ENABLED', False))
+            if upcoming:
+                blocks.append('[PRÓXIMO COMPROMISSO — calendário único] '
+                              f"{upcoming['activity']} em {upcoming['start_at']}.")
+            holiday = calendar.context.get(f'holiday:{now.date().isoformat()}', now=now)
+            if holiday and holiday['payload']['date'] == now.date().isoformat():
+                blocks.append('[FERIADO OBSERVADO] '
+                              f"{holiday['payload']['name']} ({holiday['payload']['scope']}); "
+                              f"fonte: {holiday['source_name']}.")
+            if getattr(settings, 'ACADEMIC_LIFE_ENABLED', False):
+                from academic_life import AcademicLife
+
+                academic = AcademicLife(self.db)
+                term = academic._active_term_on(now.date())
+                phase = academic.phase(now, term)
+                classes = academic.blocks_on(now.date())
+                compact = (f"[VIDA ACADÊMICA] Semestre: {term['term_key'] if term else 'férias'}; "
+                           f"fase: {phase}; aulas hoje: {len(classes)}.")
+                blocks.append(compact)
+            with self.db.get_connection() as conn:
+                reminders = conn.execute("""SELECT COUNT(*) FROM reminders
+                    WHERE status='confirmed'""").fetchone()[0]
+                open_loops = conn.execute("""SELECT COUNT(*) FROM open_loops
+                    WHERE status='open' AND COALESCE(is_archived,0)=0""").fetchone()[0]
+            blocks.append(f'[CONTINUIDADE] {reminders} lembretes confirmados; '
+                          f'{open_loops} assuntos em aberto.')
 
         preferences = self._compact_preferences()
         if preferences:

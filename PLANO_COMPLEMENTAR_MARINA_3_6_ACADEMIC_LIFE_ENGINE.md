@@ -1,7 +1,7 @@
 # PLANO COMPLEMENTAR — MARINA 3.6
 ## Academic Life Engine — Grade Semestral, Progressão Acadêmica e Continuidade até a Formatura
 
-**Status:** proposta complementar ao `PLANO_MARINA_V3_6_LIVING_WORLD.md`  
+**Status:** aprovado; integração da etapa 11 / release 3.6.4 implementada, aguardando validação externa  
 **Objetivo:** definir como a vida universitária da Marina deve funcionar dentro do Living World sem transformar a rotina em agenda rígida, sem criar um segundo calendário e sem exigir definição manual de cada semestre futuro.
 
 ---

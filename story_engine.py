@@ -270,6 +270,9 @@ class StoryEngine:
                 and bool(event['resolved'])==bool(resolved))
 
     def quiet_old_threads(self, now):
+        from calendar_world import local_time
+
+        now = local_time(now)
         dormant_days = getattr(settings, 'STORY_THREAD_DORMANT_DAYS', 7)
         with self.db.get_connection() as c:
             c.execute("UPDATE story_threads SET status='dormant' WHERE status='open' AND last_event_at<?",((now-timedelta(days=dormant_days)).isoformat(),))
@@ -278,5 +281,12 @@ class StoryEngine:
                            AND thread_type NOT IN ('academic', 'professional')
                            AND COALESCE(json_extract(metadata_json, '$.auto_abandonable'), 1) = 1
                            AND COALESCE(json_extract(metadata_json, '$.has_future_commitment'), 0) = 0
-                           AND COALESCE(json_extract(metadata_json, '$.protected'), 0) = 0""",
-                      ((now-timedelta(days=30)).isoformat(),))
+                           AND COALESCE(json_extract(metadata_json, '$.protected'), 0) = 0
+                           AND NOT EXISTS (
+                               SELECT 1 FROM eventos_pendentes e
+                               WHERE e.story_thread_id=story_threads.id
+                                 AND e.owner_character_key='marina'
+                                 AND e.confirmed=1 AND e.status='pending'
+                                 AND e.event_at>?
+                           )""",
+                      ((now-timedelta(days=30)).isoformat(), now.isoformat()))

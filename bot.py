@@ -1322,6 +1322,13 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
             )
             return
 
+    if (getattr(settings, 'LIVING_WORLD_ENABLED', False)
+            and getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False)
+            and getattr(settings, 'REAL_CONTEXT_FETCH_ENABLED', False)):
+        from real_context_provider import RealContextProvider
+
+        await asyncio.to_thread(RealContextProvider(memory_manager.db).refresh, datetime.now())
+
     # 1.1 Resolução de esclarecimento para pedido direto de lembrete pendente (P2 / Rodada 3)
     pending_hour_subject = None
     pending_direct_rem = memory_manager.db.get_estado_relacional("pending_direct_reminder")

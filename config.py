@@ -129,6 +129,8 @@ class Settings:
     # Reserved for 3.6.4 calendar projection; storage/seed do not activate behavior.
     ACADEMIC_LIFE_ENABLED: bool = os.getenv("ACADEMIC_LIFE_ENABLED", "false").lower() in ("true", "1", "yes")
     ACADEMIC_AUTO_TERM_GENERATION: bool = os.getenv("ACADEMIC_AUTO_TERM_GENERATION", "false").lower() in ("true", "1", "yes")
+    CALENDAR_CONTINUITY_ENABLED: bool = os.getenv("CALENDAR_CONTINUITY_ENABLED", "false").lower() in ("true", "1", "yes")
+    REAL_CONTEXT_FETCH_ENABLED: bool = os.getenv("REAL_CONTEXT_FETCH_ENABLED", "false").lower() in ("true", "1", "yes")
     WORLD_STATE_DEFAULT_STALE_MINUTES: int = int(os.getenv("WORLD_STATE_DEFAULT_STALE_MINUTES", "60"))
     PROMPT_CONTROL_LANGUAGE: str = os.getenv("PROMPT_CONTROL_LANGUAGE", "en").strip()
     MARINA_OUTPUT_LANGUAGE: str = os.getenv("MARINA_OUTPUT_LANGUAGE", "pt-BR").strip()

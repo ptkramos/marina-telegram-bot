@@ -24,7 +24,7 @@ class TestLivingWorldStorage(unittest.TestCase):
         expected = {
             "world_characters", "world_places", "world_state", "life_events",
             "story_threads", "knowledge_items", "knowledge_shares",
-            "knowledge_subjects", "knowledge_subject_aliases",
+            "knowledge_subjects", "knowledge_subject_aliases", "real_context_cache",
             "character_preferences", "routine_patterns", "world_decisions",
             "world_bootstrap", "academic_profile", "academic_terms",
             "academic_courses", "academic_schedule_blocks",
@@ -36,7 +36,7 @@ class TestLivingWorldStorage(unittest.TestCase):
             self.assertTrue(expected <= actual)
             legacy_count = conn.execute("SELECT COUNT(*) FROM perfil").fetchone()[0]
             self.assertEqual(conn.execute("PRAGMA integrity_check").fetchone()[0], "ok")
-        self.assertEqual(self.db.get_schema_version(), 11)
+        self.assertEqual(self.db.get_schema_version(), 12)
         DatabaseManager(self.db.db_path)
         with self.db.get_connection() as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM perfil").fetchone()[0], legacy_count)

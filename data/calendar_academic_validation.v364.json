@@ -1,0 +1,12 @@
+{
+  "duration_seconds": 228.69,
+  "exit_code": 1,
+  "finished_at": "2026-09-18T08:22:14.709422+00:00",
+  "output_tail": "======================================================================\nERROR: test_upgrade_from_schema_eight_backed_up_before_migration (test_bootstrap_v36.TestBootstrap)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"C:\\Arquivos\\GitHub\\marin-telegram-bot\\tests\\test_bootstrap_v36.py\", line 64, in test_upgrade_from_schema_eight_backed_up_before_migration\n    result = bootstrap(self.path, **self.kw)\n  File \"C:\\Arquivos\\GitHub\\marin-telegram-bot\\bootstrap_v36.py\", line 83, in bootstrap\n    db = DatabaseManager(stage)\n  File \"C:\\Arquivos\\GitHub\\marin-telegram-bot\\db.py\", line 77, in __init__\n    self._init_db()\n  File \"C:\\Arquivos\\GitHub\\marin-telegram-bot\\db.py\", line 113, in _init_db\n    self._run_migrations()\n  File \"C:\\Arquivos\\GitHub\\marin-telegram-bot\\db.py\", line 150, in _run_migrations\n    cursor.executescript(sql_content)\nsqlite3.OperationalError: duplicate column name: owner_character_key\n\n======================================================================\nERROR: test_upgrade_from_nine_and_habitual_decay (test_social_world.TestSocialWorld)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"C:\\Arquivos\\GitHub\\marin-telegram-bot\\tests\\test_social_world.py\", line 97, in test_upgrade_from_nine_and_habitual_decay\n    upgrade(self.db.db_path)\n  File \"C:\\Arquivos\\GitHub\\marin-telegram-bot\\upgrade_social_v361.py\", line 36, in upgrade\n    db=DatabaseManager(stage)\n  File \"C:\\Arquivos\\GitHub\\marin-telegram-bot\\db.py\", line 77, in __init__\n    self._init_db()\n  File \"C:\\Arquivos\\GitHub\\marin-telegram-bot\\db.py\", line 113, in _init_db\n    self._run_migrations()\n  File \"C:\\Arquivos\\GitHub\\marin-telegram-bot\\db.py\", line 150, in _run_migrations\n    cursor.executescript(sql_content)\nsqlite3.OperationalError: duplicate column name: owner_character_key\n\n----------------------------------------------------------------------\nRan 271 tests in 208.268s\n\nFAILED (errors=2)\n",
+  "python": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\venv\\Scripts\\python.exe",
+  "release": "3.6.4",
+  "stage": 11,
+  "status": "failed",
+  "tests_run": 271,
+  "tests_skipped": 0
+}

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Mapping, Optional
 
 from db import DatabaseManager
+from config import settings
 from world_repository import WorldBibleRepository, WorldStateRepository
 
 
@@ -134,6 +135,29 @@ class WorldStateManager:
     ) -> dict:
         if not 0 <= energy <= 1:
             raise ValueError("energy deve estar entre 0 e 1")
+        if (getattr(settings, 'ACADEMIC_LIFE_ENABLED', False)
+                and not getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False)):
+            raise RuntimeError('Academic Life requires Calendar Continuity')
+        if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
+            from calendar_world import CalendarWorld, local_time
+
+            now = local_time(now)
+            calendar = CalendarWorld(self.db)
+            if getattr(settings, 'ACADEMIC_LIFE_ENABLED', False):
+                from academic_life import AcademicLife
+
+                academic = AcademicLife(self.db)
+                academic.catch_up(now, auto_generate=getattr(
+                    settings, 'ACADEMIC_AUTO_TERM_GENERATION', False))
+                if has_class is None:
+                    has_class = bool(academic.blocks_on(now.date()))
+            if confirmed_commitment is None:
+                confirmed_commitment = calendar.current(
+                    now, include_academic=getattr(settings, 'ACADEMIC_LIFE_ENABLED', False))
+            if weather is None:
+                observed_weather = calendar.context.get('weather:rio', now=now)
+                if observed_weather:
+                    weather = observed_weather['payload']
         reason = None
         chosen = None
         if confirmed_commitment and confirmed_commitment.get("start_at") and self._active_plan(confirmed_commitment, now):
@@ -150,9 +174,14 @@ class WorldStateManager:
         if chosen is None and previous and not force:
             observed = datetime.fromisoformat(previous["observed_at"])
             age = now - observed
-            weather_changed = weather is not None and dict(weather) != json.loads(previous["weather_context_json"] or "null")
+            weather_changed = (dict(weather) if weather is not None else None) != json.loads(
+                previous["weather_context_json"] or "null")
             previous_plan = json.loads(previous["current_plan_json"] or "null")
             plan_expired = previous_plan is not None and not self._active_plan(previous_plan, now)
+            if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
+                prior_source = json.loads(previous['source_json'] or '{}')
+                if prior_source.get('calendar_event_id') or prior_source.get('academic_block_id'):
+                    plan_expired = True  # Calendar may have cancelled/rescheduled this occurrence.
             if (timedelta(0) <= age < timedelta(minutes=self.stale_minutes)
                     and not weather_changed and not plan_expired):
                 return previous
@@ -177,5 +206,7 @@ class WorldStateManager:
             "energy_level": energy,
             "weather_context_json": dict(weather) if weather else None,
             "current_plan_json": dict(chosen) if reason in ("confirmed_commitment", "explicit_plan") else None,
-            "source_json": {"truth_type": "system", "reason": reason},
+            "source_json": {"truth_type": "system", "reason": reason,
+                            "calendar_event_id": chosen.get('calendar_event_id'),
+                            "academic_block_id": chosen.get('academic_block_id')},
         })

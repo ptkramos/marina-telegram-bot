@@ -1,6 +1,6 @@
 # Release 3.6.3 · etapa 10 — handoff de validação
 
-O Gemini validou a primeira implementação em 18/09/2026: **251 testes, 0 falhas, 0 pulos** (`data/knowledge_privacy_validation.v363.json`). A primeira rodada da integração encontrou duas expectativas antigas de schema 10; ambas foram atualizadas para 11. A segunda rodada encontrou um teste legado intermitente: áudio espontâneo aleatório desviou um caso que verificava exclusivamente texto. Esse teste agora fixa o sorteio no caminho de texto. A integração aguarda nova repetição externa. Para o Gemini no Antigravity, na raiz do repositório:
+O Gemini validou a integração final em 18/09/2026: **258 testes, 0 falhas, 0 pulos** (`data/knowledge_privacy_validation.v363_integration.json`). A etapa 10 da release 3.6.3 está concluída. Para reproduzir no Antigravity, na raiz do repositório:
 
 ```powershell
 & .\venv\Scripts\python.exe scripts\run_external_stage10_validation.py

@@ -2388,7 +2388,9 @@ Implementar:
 
 ## v3.6.3 — Knowledge & Privacy
 
-**Etapa 10 — integração implementada; nova validação externa pendente.** `knowledge_privacy.py`
+**Etapa 10 — concluída na release 3.6.3.** A validação externa final do Gemini
+executou 258 testes, sem falhas nem pulos (`data/knowledge_privacy_validation.v363_integration.json`).
+`knowledge_privacy.py`
 usa as tabelas existentes para registrar conhecimento por sujeito opaco,
 `known_by`, cadeia de origem e compartilhamentos confirmados. Observação e cada
 transmissão são explícitas; conhecer não concede permissão de repassar. A fonte
@@ -2408,8 +2410,8 @@ resolvidos, a rota do bot calcula cada decisão individualmente e envia uma
 mensagem por assunto com texto revisado ou resposta genérica segura. Só após o
 Telegram confirmar o `message_id` é que `record_confirmed_share` grava aquele
 assunto e nível no ledger; falhas de envio interrompem a sequência. O Gemini no
-Antigravity validou a versão anterior (251 testes, 0 falhas/pulos). A nova
-integração precisa da rodada externa antes de concluir a release. Pode rodar
+Antigravity validou a versão anterior (251 testes, 0 falhas/pulos) e a integração
+final (258 testes, 0 falhas/pulos). Para reproduzir, pode rodar
 `venv\Scripts\python.exe scripts\run_external_stage10_validation.py`; o
 resultado será salvo em `data/knowledge_privacy_validation.v363_integration.json` para
 revisão sem repetir os testes.
@@ -2434,6 +2436,35 @@ Implementar:
 ---
 
 ## v3.6.4 — Real World Context & Calendar Continuity
+
+**Etapa 11 — implementação aguardando validação externa.** A migration 012
+estende `eventos_pendentes`, a tabela datada que já alimenta lembretes, com
+dono, intervalo, origem idempotente, confirmação e vínculo opcional à Story
+Thread. `CalendarWorld` reúne compromissos datados e aulas projetadas dos
+`academic_schedule_blocks`; não grava uma cópia de cada aula. Evento confirmado
+excepcional vence a grade, grade ativa vence a rotina, e conflitos de modelagem
+com aula exigem resolução explícita. Exceções cancelam somente a ocorrência.
+
+`AcademicLife` completa 2026.2 por janelas de planejamento do projeto (não
+datas oficiais da PUC-Rio), projeta fase/férias, gera próximos termos e grades
+por catálogo híbrido determinístico, verifica pré-requisitos na ativação e faz
+lazy catch-up por termos, sem criar cenas ou dezenas de eventos retroativos.
+Elegibilidade acadêmica pode emergir após progressão mínima; formatura não é
+declarada automaticamente. A grade inicial segue o seed canônico existente.
+
+O Story Engine só abandona thread antiga se **não** houver compromisso futuro,
+confirmado e pendente em `eventos_pendentes` vinculado a ela. Conclusão,
+cancelamento, remarcação para o passado ou desvinculação removem a proteção
+pela própria consulta, sem manter `has_future_commitment` duplicado. O cache de
+contexto real guarda origem e expiração; busca de Open-Meteo/Nager.Date é
+opcional e falha para "desconhecido". O prompt recebe calendário e fase de modo
+compacto, omitindo descrições privadas de compromissos. As flags continuam
+desligadas até o resultado externo.
+
+Decisões do plano acadêmico: (A/B) integração nesta 3.6.4, com schema 009 já
+existente e migration incremental 012; (C/F) `eventos_pendentes` é a única
+autoridade para eventos datados, e a grade é só padrão projetado; (D) currículo
+híbrido autoral, sem alegar grade oficial; (E) seed canônico 2026.2 já existente.
 
 Implementar:
 
