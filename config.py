@@ -1,5 +1,5 @@
 """
-Módulo de configurações e variáveis de ambiente do Bot de Marina Seltin.
+Módulo de configurações e variáveis de ambiente do Bot de Marina Salles (v3.7.0).
 Compatível com OpenAI, OpenRouter e outros provedores sem censura.
 """
 import os
@@ -12,10 +12,10 @@ ENV_FILE = BASE_DIR / ".env"
 load_dotenv(ENV_FILE)
 
 class Settings:
-    APP_NAME: str = "Marina Seltin"
-    APP_VERSION: str = "3.5.3"
+    APP_NAME: str = "Marina Salles"
+    APP_VERSION: str = "3.7.0"
     VERSION: str = APP_VERSION
-    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Reflection & Memory Hygiene)"
+    VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Living Intelligence)"
 
 
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
@@ -118,6 +118,14 @@ class Settings:
     INTEREST_DORMANT_STRENGTH: float = float(os.getenv("INTEREST_DORMANT_STRENGTH", "0.15"))
     EVENT_COMPACTION_DAYS: int = int(os.getenv("EVENT_COMPACTION_DAYS", "90"))
     EVENT_COMPACTION_MAX_IMPORTANCE: float = float(os.getenv("EVENT_COMPACTION_MAX_IMPORTANCE", "0.35"))
+    # v3.7.0 Response Availability — defaults OFF until independent gate + soak.
+    RESPONSE_AVAILABILITY_ENABLED: bool = os.getenv("RESPONSE_AVAILABILITY_ENABLED", "false").lower() in ("true", "1", "yes")
+    HUMAN_REPLY_LATENCY_ENABLED: bool = os.getenv("HUMAN_REPLY_LATENCY_ENABLED", "false").lower() in ("true", "1", "yes")
+    PENDING_CONVERSATION_BATCHING_ENABLED: bool = os.getenv("PENDING_CONVERSATION_BATCHING_ENABLED", "false").lower() in ("true", "1", "yes")
+    RESPONSE_AVAILABILITY_DEBUG: bool = os.getenv("RESPONSE_AVAILABILITY_DEBUG", "false").lower() in ("true", "1", "yes")
+    REAL_USAGE_TELEMETRY_ENABLED: bool = os.getenv("REAL_USAGE_TELEMETRY_ENABLED", "false").lower() in ("true", "1", "yes")
+    RESPONSE_AVAILABILITY_CHECK_SECONDS: int = int(os.getenv("RESPONSE_AVAILABILITY_CHECK_SECONDS", "15"))
+    RESPONSE_AVAILABILITY_PROFILES = None  # optional override; defaults live in response_availability.py
     # Living World v3.6.2: Cadência de novos Story Events calibrada para ~89% de dias banais (longo prazo).
     # Com STORY_THREAD_DORMANT_DAYS=7 e STORY_EVENT_CADENCE_THRESHOLD=0.60, a simulação de 1.095 dias
     # produz ~11% de novos eventos e ~89% de dias banais, preservando cooldowns e limites.
@@ -179,6 +187,12 @@ class Settings:
             errors.append('CAMERA_WORLD_CONTINUITY_ENABLED exige LIVING_WORLD_ENABLED')
         if cls.WORLD_HYGIENE_ENABLED and not cls.LIVING_WORLD_ENABLED:
             errors.append('WORLD_HYGIENE_ENABLED exige LIVING_WORLD_ENABLED')
+        if cls.HUMAN_REPLY_LATENCY_ENABLED and not cls.RESPONSE_AVAILABILITY_ENABLED:
+            errors.append('HUMAN_REPLY_LATENCY_ENABLED exige RESPONSE_AVAILABILITY_ENABLED')
+        if cls.PENDING_CONVERSATION_BATCHING_ENABLED and not cls.HUMAN_REPLY_LATENCY_ENABLED:
+            errors.append('PENDING_CONVERSATION_BATCHING_ENABLED exige HUMAN_REPLY_LATENCY_ENABLED')
+        if cls.RESPONSE_AVAILABILITY_CHECK_SECONDS < 5:
+            errors.append('RESPONSE_AVAILABILITY_CHECK_SECONDS deve ser >= 5')
         if cls.WORLD_DISCOVERY_PROMOTION_THRESHOLD < 2:
             errors.append('WORLD_DISCOVERY_PROMOTION_THRESHOLD deve ser >= 2')
         if cls.WORLD_PREFERENCE_PROMOTION_THRESHOLD < 2:

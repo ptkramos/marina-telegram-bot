@@ -1,6 +1,6 @@
-# 📋 GUIA MESTRE: INFRAESTRUTURA GPU, COMFYUI & LORAS DA MARINA SELTIN
+# 📋 GUIA MESTRE: INFRAESTRUTURA GPU, COMFYUI & LORAS DA MARINA SALLES
 
-Este documento é o **caminho das pedras definitivo** para qualquer desenvolvedor, agente ou conversa futura que precise gerenciar, sincronizar ou debugar a geração de imagens da Marina Seltin.
+Este documento é o **caminho das pedras definitivo** para qualquer desenvolvedor, agente ou conversa futura que precise gerenciar, sincronizar ou debugar a geração de imagens da Marina Salles.
 
 ---
 

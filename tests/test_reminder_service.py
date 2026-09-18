@@ -1,6 +1,6 @@
 """
 Testes unitários e de integração para Smart Reminders (Lembretes Inteligentes com Consentimento).
-Marina Seltin — Release 3.5.1
+Marina Salles — Release 3.7.0
 """
 import sys
 import unittest

@@ -1,5 +1,5 @@
 """
-Script de Verificação de Saúde e Integridade (Healthcheck) da Marina Seltin.
+Script de Verificação de Saúde e Integridade (Healthcheck) da Marina Salles (v3.7.0).
 Valida sintaxe, importações, integridade de SQLite/WAL, configurações essenciais
 e construção de prompts SEM abrir conexões de polling no Telegram.
 
@@ -176,7 +176,7 @@ class HealthChecker:
     def run(self) -> int:
         start_time = datetime.now()
         print(f"==================================================")
-        print(f"   MARINA SELTIN — DIAGNÓSTICO DE SAÚDE DO SISTEMA")
+        print(f"   MARINA SALLES — DIAGNÓSTICO DE SAÚDE DO SISTEMA")
         print(f"   Data: {start_time.strftime('%d/%m/%Y %H:%M:%S')}")
         print(f"==================================================")
 

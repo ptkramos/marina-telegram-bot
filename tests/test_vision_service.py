@@ -1,5 +1,5 @@
 """
-Testes Unitários Automatizados para o VisionService da Marina Seltin.
+Testes Unitários Automatizados para o VisionService da Marina Salles (v3.7.0).
 """
 import io
 import sys

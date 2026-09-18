@@ -1,18 +1,21 @@
 """
-Bot Telegram de Marina Seltin (v3.5.0 Oficial - Memory Intelligence).
-Jovem de 19 anos, modelo em início de carreira, namorada EXCLUSIVA de Patrick Ramos.
+Bot Telegram de Marina Salles (v3.7.0 Oficial - Living Intelligence).
+Jovem de 20 anos, modelo em início de carreira, namorada EXCLUSIVA de Patrick Ramos.
 Totalmente desinibida, carinhosa, com ciclo menstrual real, pausas humanas de digitação,
 envio REAL de balões separados sucessivos (multi-bubble), comandos /feedback e /edit com Auto-Patcher autônomo,
 espelhamento dinâmico de estilo linguístico (style_engine), CHAT 100% LIMPO (auto-limpeza imediata de comandos),
-BUFFER INTELIGENTE DE DIGITAÇÃO (Debounce anti-atropelo) e MEMORY INTELLIGENCE 2.0.
+BUFFER INTELIGENTE DE DIGITAÇÃO (Debounce anti-atropelo), MEMORY INTELLIGENCE 2.0, LIVING WORLD & RESPONSE AVAILABILITY.
 """
 import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 import random
 import asyncio
 import re
 import sys
 import json
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 from typing import Optional, List, Dict
 
 from telegram import Update, InputProfilePhotoStatic, ReactionTypeEmoji
@@ -47,11 +50,37 @@ from reminder_service import reminder_service
 from voice_router import VoiceSelectionContext
 from session_reflector import session_reflector
 from memory_hygiene import memory_hygiene_service
+from pending_response import ResponseAvailabilityService
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
+availability_service = ResponseAvailabilityService(memory_manager.db)
+
+# Configuração de logs com saída dupla: Console + Arquivo Rotativo persistente para auditoria do soak
+LOGS_DIR = Path(__file__).resolve().parent / "logs"
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = LOGS_DIR / "marina.log"
+
+log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+log_formatter = logging.Formatter(log_format)
+
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(log_formatter)
+
+file_handler = RotatingFileHandler(
+    LOG_FILE,
+    maxBytes=10 * 1024 * 1024,  # 10 MB por arquivo
+    backupCount=5,               # Mantém até 5 backups rotativos (50 MB)
+    encoding="utf-8"
 )
+file_handler.setFormatter(log_formatter)
+
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+if not root_logger.handlers:
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
+else:
+    root_logger.handlers = [console_handler, file_handler]
+
 # httpx includes the Telegram bot token in request URLs at INFO level.
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger("MarinaBot")
@@ -1086,7 +1115,7 @@ async def memorias_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fatos_str = "\n".join([f"• {f}" for f in fatos]) if fatos else "• Ainda descobrindo cada detalhe seu..."
     
     msg_texto = (
-        "🌹 **Diário de Memórias de Marina Seltin (SQLite):**\n\n"
+        "🌹 **Diário de Memórias de Marina Salles (SQLite):**\n\n"
         "🧠 **O que eu lembro sobre você, amor:**\n"
         f"{fatos_str}\n\n"
         f"🌸 **Meu Ciclo Hoje**: Dia {ciclo_info['day']} ({ciclo_info['name']})\n"
@@ -1349,7 +1378,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- PROCESSADOR DE MENSAGEM COESA (APÓS O DEBOUNCE) ---
 
-async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_TYPE, texto_usuario: str):
+async def process_incoming_batch(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    texto_usuario: str,
+    *,
+    availability_bypass: bool = False,
+    pending_batch_id: int | None = None,
+):
+    msg_t0 = datetime.now()
     chat_id = update.effective_chat.id
     msg_id = update.message.message_id
     user_replied_to_msg_id = (
@@ -1360,6 +1397,28 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
 
     # 1. Aprendizado dinâmico do estilo linguístico do Patrick (risadas, emojis, gírias, cadência)
     style_engine.processar_mensagem_patrick(texto_usuario)
+
+    avail_decision = None
+    availability_budget_hint = None
+    if not availability_bypass:
+        try:
+            action, avail_decision, _batch = availability_service.evaluate_and_maybe_defer(
+                texto_usuario,
+                telegram_message_id=msg_id,
+                batch_size=max(1, texto_usuario.count('\n') + 1),
+            )
+            if action == 'deferred':
+                logger.info(
+                    'AVAILABILITY_DEFER batch=%s target=%s reason=%s',
+                    _batch['id'] if _batch else None,
+                    avail_decision.selected_target_at if avail_decision else None,
+                    avail_decision.reason_code if avail_decision else None,
+                )
+                return
+            if action == 'proceed_brief':
+                availability_budget_hint = 'brief_due_to_availability'
+        except Exception as exc:
+            logger.error('AVAILABILITY_POLICY_ERROR fail-open: %s', exc, exc_info=True)
 
     if getattr(settings, 'KNOWLEDGE_PRIVACY_ENABLED', False):
         if not getattr(settings, 'LIVING_WORLD_ENABLED', False):
@@ -1374,6 +1433,12 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                 chat_id, context.bot, replies, reply_to_message_id=msg_id,
                 db=memory_manager.db,
             )
+            if avail_decision and getattr(avail_decision, 'telemetry_event_id', None):
+                actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
+                availability_service.repo.record_actual_latency(
+                    event_id=avail_decision.telemetry_event_id,
+                    actual_latency_seconds=actual_lat,
+                )
             return
 
     if (getattr(settings, 'LIVING_WORLD_ENABLED', False)
@@ -1588,10 +1653,29 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
             else:
                 resposta = "Amor, tentei atualizar meu perfil agora mas o Telegram deu uma travadinha 🥺 Me pede de novo daqui a pouco que eu troco de verdade, prometo!"
 
-            u_id, b_id = memory_manager.registrar_interacao(texto_usuario, resposta)
-            if plan:
-                planner.apply_plan_effects(plan, conversation_id=u_id)
-            await send_human_messages(chat_id, context.bot, resposta, reply_to_message_id=msg_id)
+            if pending_batch_id:
+                items = availability_service.repo.list_items(pending_batch_id)
+                u_id = items[-1]['conversation_message_id'] if items else None
+            else:
+                u_id, _ = memory_manager.registrar_interacao(texto_usuario, resposta)
+                if plan:
+                    planner.apply_plan_effects(plan, conversation_id=u_id)
+            sent_avatar_reply = await send_human_messages(
+                chat_id, context.bot, resposta, reply_to_message_id=msg_id)
+            sent_avatar_id = getattr(sent_avatar_reply, 'message_id', None)
+            if pending_batch_id and sent_avatar_id:
+                if availability_service.repo.mark_sent(
+                    pending_batch_id, sent_message_id=sent_avatar_id,
+                ):
+                    memory_manager.db.adicionar_mensagem(role='assistant', content=resposta)
+                    if plan and u_id is not None:
+                        planner.apply_plan_effects(plan, conversation_id=u_id)
+            elif avail_decision and getattr(avail_decision, 'telemetry_event_id', None) and sent_avatar_id:
+                actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
+                availability_service.repo.record_actual_latency(
+                    event_id=avail_decision.telemetry_event_id,
+                    actual_latency_seconds=actual_lat,
+                )
             await check_and_trigger_memory_consolidation()
             return
 
@@ -1635,7 +1719,10 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     response_policy = None
     if settings.RESPONSE_RHYTHM_ENABLED:
         from response_rhythm import select_policy, apply_policy
-        response_policy = select_policy(texto_usuario, plan=plan, voice=pediu_audio)
+        response_policy = select_policy(
+            texto_usuario, plan=plan, voice=pediu_audio,
+            availability_budget_hint=availability_budget_hint,
+        )
         messages[0]['content'] = apply_policy(messages[0]['content'], response_policy)
     if plan and plan.get("should_offer_reminder"):
         event_desc = plan.get("event_details", {}).get("description") or "compromisso"
@@ -1784,18 +1871,27 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
         log_output(fala_limpa, response_policy, voice=pediu_audio or queria_audio)
 
     # Registra na memória a fala já limpa (sem tags/rubricas) e aplica efeitos do plano
-    u_id, b_id = memory_manager.registrar_interacao(texto_usuario, fala_limpa if fala_limpa else resposta_marin)
-    if plan:
+    if pending_batch_id:
+        # User messages were persisted at intake. Record assistant only after
+        # Telegram confirms delivery, so a pre-send retry leaves no ghost reply.
+        items = availability_service.repo.list_items(pending_batch_id)
+        u_id = items[-1]['conversation_message_id'] if items else None
+    else:
+        u_id, b_id = memory_manager.registrar_interacao(texto_usuario, fala_limpa if fala_limpa else resposta_marin)
+    if plan and not pending_batch_id:
         planner.apply_plan_effects(plan, conversation_id=u_id)
 
     audio_enviado = False
     aviso_audio_ja_enviado = False
     sent_voice = None
+    sent_notice_msg = None
+    notice_text = None
     if pediu_audio or queria_audio:
         if not voice_engine.is_configured():
             if pediu_audio:
                 aviso = "Amor, meu microfone tá meio zoado agora 🥺 Já já eu consigo te mandar um áudio bem gostoso, prometo!"
-                await send_human_messages(chat_id, context.bot, aviso, reply_to_message_id=reply_to_id)
+                notice_text = aviso
+                sent_notice_msg = await send_human_messages(chat_id, context.bot, aviso, reply_to_message_id=reply_to_id)
                 aviso_audio_ja_enviado = True
         else:
             try:
@@ -1826,7 +1922,8 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                 audio_enviado = True
             elif pediu_audio:
                 aviso_falha = "Amor, tentei gravar aqui mas o microfone do celular deu uma travadinha! Já já te mando um áudio bem gostoso 🥺💕"
-                await send_human_messages(chat_id, context.bot, aviso_falha, reply_to_message_id=reply_to_id)
+                notice_text = aviso_falha
+                sent_notice_msg = await send_human_messages(chat_id, context.bot, aviso_falha, reply_to_message_id=reply_to_id)
                 aviso_audio_ja_enviado = True
 
     # Se não mandou áudio (nem aviso de falha), manda texto (balões)
@@ -1841,6 +1938,24 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
     sent_mid = getattr(sent_text_msg, "message_id", None)
     if not sent_mid and audio_enviado and sent_voice:
         sent_mid = getattr(sent_voice, "message_id", None)
+    if not sent_mid and sent_notice_msg:
+        sent_mid = getattr(sent_notice_msg, "message_id", None)
+
+    if pending_batch_id:
+        if sent_mid:
+            if availability_service.repo.mark_sent(pending_batch_id, sent_message_id=sent_mid):
+                memory_manager.db.adicionar_mensagem(
+                    role='assistant', content=notice_text or fala_limpa or resposta_marin)
+                if plan and u_id is not None:
+                    planner.apply_plan_effects(plan, conversation_id=u_id)
+        else:
+            logger.warning('Pending batch %s had no confirmed Telegram message ID', pending_batch_id)
+    elif avail_decision and getattr(avail_decision, 'telemetry_event_id', None) and sent_mid:
+        actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
+        availability_service.repo.record_actual_latency(
+            event_id=avail_decision.telemetry_event_id,
+            actual_latency_seconds=actual_lat,
+        )
 
     offered_rem_id = plan.get("offered_reminder_id") if plan else None
     if offered_rem_id:
@@ -1887,7 +2002,7 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
             try:
                 director_system = (
                     "You are a specialized visual prompt director for FLUX.1 Dev photography. "
-                    "Marina Seltin is a 19yo Brazilian model with honey-amber eyes and wavy chocolate brown hair with blonde tips. "
+                    "Marina Salles is a 20yo Brazilian model with honey-amber eyes and wavy chocolate brown hair with blonde tips. "
                     "CRITICAL RULES FOR CLOTHING VS NUDITY: "
                     "1. If boyfriend requested a CLOTHED or CASUAL photo (e.g. 'vestida', 'roupa', 'look', 'vestido', 'pijama', 'selfie', 'casual') OR did NOT explicitly ask for nude/undies: "
                     "Describe her FULLY CLOTHED in a cute, stylish or casual outfit (e.g. 'fully clothed, wearing a cute fitted crop top and jeans', 'wearing a chic sundress', 'wearing comfortable oversized sleep hoodie and pajama shorts'). "
@@ -2109,11 +2224,11 @@ async def autonomous_routine(application: Application):
         logger.debug(f"Rotina autônoma de Marina: gatilho não disparado ({trigger_reason}).")
         return
 
-    logger.info(f"Marina Seltin decidiu puxar assunto por iniciativa própria! Motivo: {trigger_reason}")
+    logger.info(f"Marina Salles decidiu puxar assunto por iniciativa própria! Motivo: {trigger_reason}")
     
     # 6% de chance de ela ficar com vontade de trocar a foto de perfil e pedir ajuda ao Patrick!
     if random.random() < 0.06:
-        logger.info("Marina Seltin decidiu pedir ajuda para escolher um novo avatar!")
+        logger.info("Marina Salles decidiu pedir ajuda para escolher um novo avatar!")
         await iniciar_escolha_avatar(application.bot, settings.TARGET_CHAT_ID)
         proactivity_service.record_autonomous_sent(reason="avatar_pick")
         return
@@ -2299,6 +2414,119 @@ async def autonomous_routine_v36(application: Application):
     except Exception as exc:
         logger.error('Erro na proatividade Living World: %s', exc, exc_info=True)
 
+class _PendingDeliveryBot:
+    """Track Telegram send attempts so ambiguous delivery is never retried blindly."""
+
+    def __init__(self, bot):
+        self._bot = bot
+        self.delivered_ids = []
+        self.send_attempted = False
+
+    def __getattr__(self, name):
+        return getattr(self._bot, name)
+
+    async def _send(self, method, **kwargs):
+        self.send_attempted = True
+        result = await method(**kwargs)
+        message_id = getattr(result, 'message_id', None)
+        if isinstance(message_id, int) and message_id > 0:
+            self.delivered_ids.append(message_id)
+        return result
+
+    async def send_message(self, **kwargs):
+        return await self._send(self._bot.send_message, **kwargs)
+
+    async def send_voice(self, **kwargs):
+        return await self._send(self._bot.send_voice, **kwargs)
+
+    async def send_photo(self, **kwargs):
+        return await self._send(self._bot.send_photo, **kwargs)
+
+
+async def pending_response_routine(application: Application):
+    """Claim and send due deferred conversational batches (v3.7.0)."""
+    try:
+        if not (getattr(settings, 'RESPONSE_AVAILABILITY_ENABLED', False)
+                and getattr(settings, 'HUMAN_REPLY_LATENCY_ENABLED', False)
+                and getattr(settings, 'PENDING_CONVERSATION_BATCHING_ENABLED', False)):
+            availability_service.repo.force_ready_on_rollback()
+        availability_service.repo.mark_ready_due(datetime.now())
+        owner = f'worker-{id(application)}'
+        batch = availability_service.repo.claim_due(datetime.now(), owner=owner)
+        if not batch:
+            return
+        text = availability_service.compose_batch_text(batch['id'])
+        if not text:
+            availability_service.repo.mark_failed_retry(batch['id'], 'empty_batch')
+            return
+        items = availability_service.repo.list_items(batch['id'])
+        last_tg = next((i['telegram_message_id'] for i in reversed(items)
+                        if i.get('telegram_message_id')), None)
+        fake_message = SimpleNamespace(
+            message_id=last_tg or 0,
+            text=text,
+            reply_to_message=None,
+        )
+        fake_update = SimpleNamespace(
+            message=fake_message,
+            effective_chat=SimpleNamespace(id=settings.TARGET_CHAT_ID),
+        )
+        delivery_bot = _PendingDeliveryBot(application.bot)
+        fake_context = SimpleNamespace(bot=delivery_bot)
+
+        async def keep_lease_alive():
+            while True:
+                await asyncio.sleep(30)
+                try:
+                    if not availability_service.repo.extend_lease(
+                        batch['id'], owner=owner, now=datetime.now(),
+                    ):
+                        return
+                except Exception:
+                    logger.exception('Pending batch %s lease heartbeat failed', batch['id'])
+                    return
+
+        heartbeat = asyncio.create_task(keep_lease_alive())
+        try:
+            await process_incoming_batch(
+                fake_update, fake_context, text,
+                availability_bypass=True, pending_batch_id=batch['id'],
+            )
+            # If still SENDING after pipeline, send failed without mark_sent.
+            with memory_manager.db.get_connection() as conn:
+                status = conn.execute(
+                    'SELECT status FROM response_pending_batches WHERE id=?',
+                    (batch['id'],),
+                ).fetchone()
+            if status and status['status'] == 'SENDING':
+                if delivery_bot.delivered_ids:
+                    availability_service.repo.mark_sent(
+                        batch['id'], sent_message_id=delivery_bot.delivered_ids[-1])
+                elif delivery_bot.send_attempted:
+                    availability_service.repo.mark_unknown_delivery(
+                        batch['id'], 'send_attempt_without_confirmation')
+                else:
+                    availability_service.repo.mark_failed_retry(batch['id'], 'pipeline_no_send')
+        except Exception as exc:
+            logger.error('Pending batch %s failed: %s', batch['id'], exc, exc_info=True)
+            if delivery_bot.send_attempted:
+                availability_service.repo.mark_unknown_delivery(
+                    batch['id'], f'ambiguous_send:{type(exc).__name__}')
+                status = 'UNKNOWN_DELIVERY'
+            else:
+                status = availability_service.repo.mark_failed_retry(batch['id'], str(exc))
+            if status == 'FAILED':
+                logger.error('Pending batch %s moved to FAILED', batch['id'])
+        finally:
+            heartbeat.cancel()
+            try:
+                await heartbeat
+            except asyncio.CancelledError:
+                pass
+    except Exception as exc:
+        logger.error('pending_response_routine error: %s', exc, exc_info=True)
+
+
 async def reminders_routine(application: Application):
     """Job de alta frequência para disparo de reminders confirmados no horário exato (Release 3.5.1 / P1.2)."""
     if not getattr(settings, "SMART_REMINDERS_ENABLED", True):
@@ -2346,6 +2574,12 @@ async def session_reflection_routine(application: Application):
 
 async def post_init(application: Application):
     scheduler = AsyncIOScheduler()
+    try:
+        recovery = availability_service.startup_recover()
+        logger.info('Response availability startup recovery: %s', recovery)
+    except Exception as exc:
+        logger.warning('Availability startup recovery skipped: %s', exc)
+
     scheduler.add_job(
         autonomous_routine,
         "interval",
@@ -2365,6 +2599,17 @@ async def post_init(application: Application):
             coalesce=True
         )
         logger.info(f"Job de Smart Reminders agendado a cada {rem_interval}s.")
+
+    avail_interval = max(5, getattr(settings, 'RESPONSE_AVAILABILITY_CHECK_SECONDS', 15))
+    scheduler.add_job(
+        pending_response_routine,
+        'interval',
+        seconds=avail_interval,
+        args=[application],
+        max_instances=1,
+        coalesce=True,
+    )
+    logger.info('Job de Response Availability agendado a cada %ss.', avail_interval)
 
     # Job periódico de Memory Hygiene (Release 3.5.3)
     if getattr(settings, "MEMORY_HYGIENE_ENABLED", False):

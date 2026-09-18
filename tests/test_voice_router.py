@@ -1,7 +1,7 @@
 """
-tests/test_voice_router.py — Suíte de Testes do Roteador Adaptativo de Voz (Release 3.5.2).
+tests/test_voice_router.py — Suíte de Testes do Roteador Adaptativo de Voz (Release 3.7.0).
 
-Valida todas as regras arquiteturais de voz da Marina 3.5.2:
+Valida todas as regras arquiteturais de voz da Marina Salles (Release 3.7.0):
 - Roteamento contextual (conversational vs intimate)
 - Regra de lembretes sempre em voz natural
 - Prioridade de apoio emocional sobre afeto alto

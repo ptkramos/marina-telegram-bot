@@ -1,5 +1,5 @@
 """
-Serviço de Visão Computacional Multimodal da Marina Seltin (Vision Service).
+Serviço de Visão Computacional Multimodal da Marina Salles (Vision Service v3.7.0).
 Permite que a Marina veja, interprete e reaja com carinho e naturalidade de namorada
 às fotos enviadas pelo Patrick no Telegram (selfies, refeições, pets, lugares, objetos).
 """
@@ -16,7 +16,7 @@ from config import settings
 
 logger = logging.getLogger("VisionService")
 
-VISION_PROMPT = """Você é o Sistema de Percepção Visual da namorada Marina Seltin.
+VISION_PROMPT = """Você é o Sistema de Percepção Visual da namorada Marina Salles.
 Analise a foto que Patrick Ramos (namorado da Marina) acabou de enviar e retorne ESTRITAMENTE um JSON estruturado com os elementos reais e concretos visíveis na imagem.
 
 ESTRUTURA OBRIGATÓRIA (JSON puro):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI Oficial para Gestão da GPU Novita AI e ComfyUI da Marina Seltin.
+CLI Oficial para Gestão da GPU Novita AI e ComfyUI da Marina Salles (v3.7.0).
 Permite iniciar, pausar, verificar status, inspecionar modelos e sincronizar LoRAs da Civitai.
 
 Uso:
@@ -41,7 +41,7 @@ NOVITA_HEADERS = {
 OFFICIAL_LORAS = [
     {
         "name": "marina_flux.safetensors",
-        "desc": "Identidade Marina Seltin (LoRA Principal)",
+        "desc": "Identidade Marina Salles (LoRA Principal)",
         "api_url": None
     },
     {
@@ -271,7 +271,7 @@ def cmd_sync_loras():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Gestor Oficial da GPU Novita AI / ComfyUI (Marina Seltin)")
+    parser = argparse.ArgumentParser(description="Gestor Oficial da GPU Novita AI / ComfyUI (Marina Salles)")
     parser.add_argument("command", choices=["status", "start", "stop", "list-loras", "sync-loras"], help="Comando a executar")
     args = parser.parse_args()
 

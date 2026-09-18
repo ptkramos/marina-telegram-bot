@@ -1,7 +1,7 @@
 """
-tests/test_reflection_hygiene.py — Suíte de Testes para Session Reflection & Memory Hygiene (Release 3.5.3).
+tests/test_reflection_hygiene.py — Suíte de Testes para Session Reflection & Memory Hygiene (Release 3.7.0).
 
-Valida todas as novas funcionalidades da Release 3.5.3:
+Valida todas as novas funcionalidades da Release 3.7.0:
 - Migration 007 e schema version >= 7
 - Confidence Decay diferenciado por volatilidade ('volatile', 'medium', 'stable', 'core')
 - Identificação e reconfirmação de memórias enfraquecidas

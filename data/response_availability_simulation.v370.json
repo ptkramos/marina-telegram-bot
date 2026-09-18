@@ -1,0 +1,73 @@
+{
+  "finished_at": "2026-09-18T17:56:22.607347Z",
+  "release": "3.7.0",
+  "simulations": {
+    "24h": {
+      "batch_merges_events": 4,
+      "decisions": {
+        "DEFER": 8,
+        "REPLY_BRIEFLY": 5,
+        "REPLY_NOW": 12
+      },
+      "deferred_messages": 13,
+      "deferred_messages_delivered": 13,
+      "duplicate_replies": 0,
+      "guardrail_exceeded": false,
+      "hours": 24,
+      "inflight_successor_checked": true,
+      "lost_messages": 0,
+      "max_pending_age_seconds": 5400.0,
+      "pass": true,
+      "sent_batches": 9,
+      "stuck_pending": 0,
+      "urgent_override_events": 1,
+      "user_messages": 26,
+      "users_persisted_on_defer_path": 13
+    },
+    "72h": {
+      "batch_merges_events": 14,
+      "decisions": {
+        "DEFER": 24,
+        "REPLY_BRIEFLY": 15,
+        "REPLY_NOW": 36
+      },
+      "deferred_messages": 39,
+      "deferred_messages_delivered": 39,
+      "duplicate_replies": 0,
+      "guardrail_exceeded": false,
+      "hours": 72,
+      "inflight_successor_checked": true,
+      "lost_messages": 0,
+      "max_pending_age_seconds": 5400.0,
+      "pass": true,
+      "sent_batches": 25,
+      "stuck_pending": 0,
+      "urgent_override_events": 3,
+      "user_messages": 76,
+      "users_persisted_on_defer_path": 39
+    },
+    "7d": {
+      "batch_merges_events": 33,
+      "decisions": {
+        "DEFER": 56,
+        "REPLY_BRIEFLY": 35,
+        "REPLY_NOW": 84
+      },
+      "deferred_messages": 90,
+      "deferred_messages_delivered": 90,
+      "duplicate_replies": 0,
+      "guardrail_exceeded": false,
+      "hours": 168,
+      "inflight_successor_checked": true,
+      "lost_messages": 0,
+      "max_pending_age_seconds": 12600.0,
+      "pass": true,
+      "sent_batches": 57,
+      "stuck_pending": 0,
+      "urgent_override_events": 7,
+      "user_messages": 176,
+      "users_persisted_on_defer_path": 90
+    }
+  },
+  "status": "passed"
+}

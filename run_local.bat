@@ -1,9 +1,9 @@
 @echo off
-title Marina Seltin Bot - Inicializador Local
+title Marina Salles Bot - Inicializador Local
 cd /d "%~dp0"
 
 echo ===================================================
-echo    Iniciando Marina Seltin Telegram AI Bot...
+echo    Iniciando Marina Salles Telegram AI Bot...
 echo ===================================================
 
 if not exist venv (

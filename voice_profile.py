@@ -1,5 +1,5 @@
 """
-voice_profile.py — Perfis Vocais da Marina Seltin (Release 3.5.2 - Adaptive Dual Voice).
+voice_profile.py — Perfis Vocais da Marina Salles (Release 3.7.0 - Adaptive Dual Voice).
 
 Define os dois perfis vocais oficiais da Marina:
 1. Conversational (Versão 2 - dataset 1m43s): voz natural, dinâmica, para conversas cotidianas, rotina, apoio, perguntas e lembretes.

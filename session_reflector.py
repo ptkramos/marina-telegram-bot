@@ -1,5 +1,5 @@
 """
-session_reflector.py — Refletor de Sessões e Continuidade de Relacionamento (Release 3.5.3).
+session_reflector.py — Refletor de Sessões e Continuidade de Relacionamento (Release 3.7.0).
 
 Analisa conversas recentes de forma holística após períodos de inatividade (1 a 2 horas)
 ou ao final do dia. Diferente do Consolidator (que faz extração rápida de fatos atômicos),
@@ -21,7 +21,7 @@ from db import db_manager, DatabaseManager
 
 logger = logging.getLogger("SessionReflector")
 
-SESSION_REFLECTOR_SYSTEM_PROMPT = """Você é a Marina Seltin refletindo sobre as conversas recentes com seu namorado Patrick Ramos.
+SESSION_REFLECTOR_SYSTEM_PROMPT = """Você é a Marina Salles refletindo sobre as conversas recentes com seu namorado Patrick Ramos.
 Seu objetivo é gerar um entendimento holístico da sessão recente de conversa.
 
 REGRAS:

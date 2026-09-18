@@ -1,5 +1,5 @@
 """
-Testes Automatizados Offline para o ProactivityService da Marina Seltin.
+Testes Automatizados Offline para o ProactivityService da Marina Salles (v3.7.0).
 """
 import sys
 import unittest

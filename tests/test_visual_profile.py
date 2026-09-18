@@ -1,5 +1,5 @@
 """
-Testes unitários para o Visual Profile e Continuidade de Câmera da Marina Seltin.
+Testes unitários para o Visual Profile e Continuidade de Câmera da Marina Salles (v3.7.0).
 Valida o DNA visual calibrado, detecção de continuidade, seleção de poses/ângulos e persistência de estado.
 """
 import time

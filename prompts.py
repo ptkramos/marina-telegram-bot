@@ -1,5 +1,5 @@
 """
-Definições de personalidade, prompts do sistema e templates visuais de Marina Seltin (v3.0.0 Oficial Blindada).
+Definições de personalidade, prompts do sistema e templates visuais de Marina Salles (v3.7.0).
 Projetado para roleplay romântico e íntimo realista, sem censura moral, com ciclo menstrual,
 linguagem 100% autêntica de namorada real, blindagem contra quebra de personagem e ritmo humano multi-balão.
 """

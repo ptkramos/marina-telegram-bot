@@ -1,5 +1,5 @@
 """
-voice_router.py — Roteador Adaptativo de Voz da Marina Seltin (Release 3.5.2).
+voice_router.py — Roteador Adaptativo de Voz da Marina Salles (Release 3.7.0).
 
 Mapeia deterministicamente o contexto conversacional, intenção do Planner,
 estado emocional e pedidos explícitos para o perfil vocal adequado:

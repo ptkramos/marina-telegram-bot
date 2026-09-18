@@ -28,6 +28,7 @@ __pycache__/
 .runtime/
 log.txt
 *.log
+logs/
 scratch/
 backups/
 test_ping.txt

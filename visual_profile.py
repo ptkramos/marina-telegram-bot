@@ -1,5 +1,5 @@
 """
-Módulo de Perfil Visual & Continuidade de Câmera da Marina Seltin.
+Módulo de Perfil Visual & Continuidade de Câmera da Marina Salles (v3.7.0).
 Centraliza o DNA visual calibrado da Marina baseado na referência oficial (marina_teste_calibrada.png)
 e gerencia o estado e a continuidade de cena/look quando o Patrick pede 'mais uma', 'outra foto' ou 'de outro ângulo'.
 """
@@ -127,7 +127,7 @@ class CameraState:
 
 
 class VisualProfileManager:
-    """Gerencia o DNA visual da Marina Seltin, continuidade de câmera e construção de prompts."""
+    """Gerencia o DNA visual da Marina Salles, continuidade de câmera e construção de prompts."""
 
     def __init__(self):
         self._current_state: Optional[CameraState] = None

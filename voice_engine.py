@@ -1,5 +1,5 @@
 """
-Módulo de Síntese de Voz e Clonagem da Marina Seltin (v3.0.0 Oficial - Novita MiniMax).
+Módulo de Síntese de Voz e Clonagem da Marina Salles (v3.7.0 Oficial - Novita MiniMax).
 Gera mensagens de voz nativas do Telegram (.ogg Opus com waveform):
 1. Modo Principal: Novita MiniMax Voice Cloning (speech-2.8-hd) com a voz oficial clonada da Marina,
    suporte a Português com language_boost e reações orgânicas (laughs, chuckle, sighs, breath, pant).

@@ -1,5 +1,5 @@
 """
-Módulo de Consolidação de Memória de Longo Prazo (Smart Memory Consolidator 2.0).
+Módulo de Consolidação de Memória de Longo Prazo da Marina Salles (v3.7.0).
 Analisa lotes de conversas de forma assíncrona para extrair fatos permanentes sobre Patrick,
 detectar e resolver contradições, registrar momentos marcantes e gerar resumos temáticos.
 Implementa controle estrito por 'decision', allowlist de candidatos anti-alucinação,
@@ -23,7 +23,7 @@ class MemoryConsolidationError(RuntimeError):
     pass
 
 
-CONSOLIDATOR_SYSTEM_PROMPT = """Extraia fatos permanentes sobre Patrick Ramos para a memória da namorada Marina Seltin a partir do diálogo recente.
+CONSOLIDATOR_SYSTEM_PROMPT = """Extraia fatos permanentes sobre Patrick Ramos para a memória da namorada Marina Salles a partir do diálogo recente.
 REGRAS DE CLASSIFICAÇÃO E INTELIGÊNCIA:
 1. Ignore chitchat casual (oi, kkk, emojis, blz, elogios vazios, saudações). Use decision='ignore' se não houver conteúdo duradouro.
 2. Extraia apenas preferências, rotina, planos futuros, projetos ou fatos relevantes de longo prazo.

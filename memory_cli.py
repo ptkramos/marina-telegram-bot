@@ -1,5 +1,5 @@
 """
-CLI de Auditoria e Gestão de Memória da Marina Seltin (v1.2.0).
+CLI de Auditoria e Gestão de Memória da Marina Salles (v3.7.0).
 Permite que o Patrick (ou o assistente no IDE) visualize, audite e exporte
 todos os dados salvos no SQLite de forma simples e legível.
 
@@ -37,9 +37,9 @@ def show_stats():
     total_gostos = sum(len(itens) for itens in gostos.values())
 
     print("=" * 60)
-    print("🌹 PAINEL DE MEMÓRIA DA MARINA SELTIN (SQLite)")
+    print("🌹 PAINEL DE MEMÓRIA DA MARINA SALLES (SQLite)")
     print("=" * 60)
-    print(f"• Nome: {perfil.get('nome', 'Marina Seltin')} ({perfil.get('idade', '19')} anos)")
+    print(f"• Nome: {perfil.get('nome', 'Marina Salles')} ({perfil.get('idade', '20')} anos)")
     print(f"• Namorado: {perfil.get('namorado', 'Patrick Ramos')}")
     print(f"• Banco de Dados: marin_memory.db ({db_manager.db_path.stat().st_size / 1024:.1f} KB)")
     print(f"• Fase do Ciclo: Dia {ciclo_info['day']} de 28 ({ciclo_info['name']})")
@@ -99,7 +99,7 @@ def export_dump():
         mensagens = cursor.fetchall()
 
     md = []
-    md.append(f"# 🌹 Relatório Completo de Memória — Marina Seltin")
+    md.append(f"# 🌹 Relatório Completo de Memória — Marina Salles")
     md.append(f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M:%S')}\n")
     md.append(f"## 1. Perfil\n- Nome: {perfil.get('nome')}\n- Namorado: {perfil.get('namorado')}\n- Idade: {perfil.get('idade')}\n")
     md.append(f"## 2. Fatos que Lembra do Patrick")

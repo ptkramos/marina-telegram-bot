@@ -31,13 +31,16 @@ class ResponseStylePolicy:
         return 2048 if self.mode in ('serious','explanatory','storytelling') else 512
 
 
-def select_policy(message='', *, plan=None, voice=False, storytelling=False, emotional_context=None, batch_size=1):
+def select_policy(message='', *, plan=None, voice=False, storytelling=False, emotional_context=None, batch_size=1,
+                  availability_budget_hint: str | None = None):
     plan = plan or {}
     text = normalized(message)
     intent = plan.get('intent', '')
     tone = normalized(str(plan.get('tone', '')))
     mode, reason = 'casual_short', 'casual_default'
-    if re.search(r'\b(detalhadamente|passo a passo|em detalhes|explica|explique|analisa|analise)\b', text):
+    if availability_budget_hint == 'brief_due_to_availability':
+        mode, reason = 'casual_short', 'brief_due_to_availability'
+    elif re.search(r'\b(detalhadamente|passo a passo|em detalhes|explica|explique|analisa|analise)\b', text):
         mode, reason = 'explanatory', 'explicit_details'
     elif intent in ('relationship_conflict','serious','urgent') or re.search(r'\b(precisamos conversar|terminar nosso namoro|discussao seria|emergencia|urgente)\b', text):
         mode, reason = 'serious', 'serious_context'
@@ -59,8 +62,14 @@ def select_policy(message='', *, plan=None, voice=False, storytelling=False, emo
         'explanatory': (settings.RESPONSE_LONG_SOFT_CHARS,120,'high',1,3),
     }
     chars, seconds, verbosity, target, maximum = limits[mode]
+    if availability_budget_hint == 'brief_due_to_availability':
+        chars = min(chars, settings.RESPONSE_CASUAL_SOFT_CHARS)
+        target, maximum = 1, 1
+        verbosity = 'low'
     question = 'required_for_action' if plan.get('needs_clarification') or plan.get('should_offer_reminder') else 'optional'
     if plan.get('followup_question') == 'none' and question == 'optional':
+        question = 'not_required'
+    if availability_budget_hint == 'brief_due_to_availability' and question == 'optional':
         question = 'not_required'
     policy = ResponseStylePolicy(mode,verbosity,target,max(1,maximum),max(1,chars),True,question,seconds,reason)
     logger.info('response_policy.selected mode=%s reason_code=%s voice=%s',mode,reason,voice)

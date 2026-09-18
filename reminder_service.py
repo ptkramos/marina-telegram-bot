@@ -1,6 +1,6 @@
 """
 Serviço de Lembretes Inteligentes com Consentimento (Smart Reminders).
-Marina Seltin — Release 3.5.1
+Marina Salles — Release 3.7.0
 
 Filosofia central:
 - Detectar compromisso NÃO É criar reminder.

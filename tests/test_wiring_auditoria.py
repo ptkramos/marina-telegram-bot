@@ -1,5 +1,5 @@
 """
-Testes Automatizados de Wiring e Validações de Auditoria (Release 3.4.1).
+Testes Automatizados de Wiring e Validações de Auditoria da Marina Salles (v3.7.0).
 Impede regressões para os bugs identificados na auditoria técnica (REVISAO_TECNICA_MARINA_V3_4.md).
 """
 import sys

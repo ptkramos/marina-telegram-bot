@@ -1,5 +1,5 @@
 """
-Módulo de Memória Persistente e Evolutiva da Marina Seltin (v1.3.0 - SQLite & Estilo Dinâmico).
+Módulo de Memória Persistente e Evolutiva da Marina Salles (v3.7.0 - SQLite & Estilo Dinâmico).
 Conecta-se ao banco marin_memory.db através do db_manager:
 - Histórico completo infinito no banco relacional
 - Contexto recente dinâmico (mantém a LLM rápida e sem alucinações)

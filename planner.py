@@ -331,7 +331,7 @@ def is_pure_time_specification(text: str, pending_description: str = "") -> bool
     return True
 
 
-PLANNER_SYSTEM_PROMPT = """Você é o Planejador Cognitivo Interno de Marina Seltin.
+PLANNER_SYSTEM_PROMPT = """Você é o Planejador Cognitivo Interno de Marina Salles.
 Sua função é analisar a mensagem de Patrick Ramos (namorado da Marina) e planejar a melhor estratégia de resposta antes da geração final.
 
 Você deve responder ESTRITAMENTE em formato JSON com a seguinte estrutura:

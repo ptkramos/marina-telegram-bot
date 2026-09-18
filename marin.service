@@ -1,5 +1,5 @@
 [Unit]
-Description=Marin Kitagawa Telegram AI Bot
+Description=Marina Salles Telegram AI Bot
 After=network.target
 
 [Service]

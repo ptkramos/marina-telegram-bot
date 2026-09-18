@@ -1,6 +1,6 @@
-# 🌹 Marina Seltin — Telegram AI Bot Autônomo & Humanoide (v3.4.3)
+# 🌹 Marina Salles — Telegram AI Bot Autônomo & Humanoide (v3.7.0)
 
-Bot interativo e exclusivo para Telegram com a personalidade autêntica, humana e desinibida de **Marina Seltin** (jovem de 19 anos, modelo em início de carreira, namorada dedicada de Patrick Ramos).
+Bot interativo e exclusivo para Telegram com a personalidade autêntica, humana e desinibida de **Marina Salles** (jovem de 20 anos, modelo em início de carreira, namorada dedicada de Patrick Ramos).
 
 O ecossistema integra LLM contextual avançada, geração visual ultra-realista via **FLUX.1 Dev** com pipeline de LoRAs de iPhone, síntese de voz clonada via **Novita MiniMax Speech 2.8 HD**, Smart Memory relacional persistente com **FTS5 e Consolidator assíncrono anti-falha**, ciclo biológico calculado em tempo real, espelhamento linguístico dinâmico e proatividade autônoma com agenda de rotina.
 
@@ -114,4 +114,4 @@ Módulos testados:
 
 ## 📄 Licença & Privacidade
 
-Projeto privado e de uso pessoal desenvolvido exclusivamente para o casal Patrick Ramos & Marina Seltin. Todos os dados de conversas, memórias e credenciais permanecem protegidos localmente em SQLite e variáveis de ambiente isoladas.
+Projeto privado e de uso pessoal desenvolvido exclusivamente para o casal Patrick Ramos & Marina Salles. Todos os dados de conversas, memórias e credenciais permanecem protegidos localmente em SQLite e variáveis de ambiente isoladas.

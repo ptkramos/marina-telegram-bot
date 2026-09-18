@@ -1,5 +1,5 @@
 """
-Suite de Testes Automatizados Offline para o Memory Consolidator da Marina Seltin.
+Suite de Testes Automatizados Offline para o Memory Consolidator da Marina Salles (v3.7.0).
 Testa lógica de banco de dados isolada (sem afetar dados de produção)
 e testes de inteligência de extração/filtragem com LLM real.
 """

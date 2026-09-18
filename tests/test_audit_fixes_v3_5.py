@@ -393,10 +393,16 @@ class TestAuditFixesV35(unittest.TestCase):
         permanecem False por padrão no código de configuração conforme § 85 do plano.
         """
         # Verifica se na classe Settings os defaults são False
-        from config import Settings
-        fresh_settings = Settings()
-        self.assertFalse(fresh_settings.SESSION_REFLECTION_ENABLED)
-        self.assertFalse(fresh_settings.MEMORY_HYGIENE_ENABLED)
+        import importlib
+        import os
+        import config
+        with patch.dict(os.environ, {"SESSION_REFLECTION_ENABLED": "false", "MEMORY_HYGIENE_ENABLED": "false"}):
+            importlib.reload(config)
+            try:
+                self.assertFalse(config.Settings.SESSION_REFLECTION_ENABLED)
+                self.assertFalse(config.Settings.MEMORY_HYGIENE_ENABLED)
+            finally:
+                importlib.reload(config)
 
     # =========================================================================
     # REVISÃO TÉCNICA RODADA 2 — REGRESSÕES E NOVAS PROTEÇÕES

@@ -52,7 +52,7 @@ def create_flux_workflow():
                 "vae_name": "flux_ae.safetensors"
             }
         },
-        # 4. LoRA 1: Identidade da Marina (Seltin Sweet)
+        # 4. LoRA 1: Identidade da Marina (Marina Sweet)
         "4": {
             "class_type": "LoraLoader",
             "inputs": {

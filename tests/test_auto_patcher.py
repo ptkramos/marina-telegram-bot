@@ -1,5 +1,5 @@
 """
-Testes unitários para o Auto-Patcher Transacional (v3.4.0) da Marina Seltin.
+Testes unitários para o Auto-Patcher Transacional (v3.7.0) da Marina Salles.
 Valida classificação de arquivos alvos, cálculo de diffs, staging isolado, compilação de sintaxe,
 registro de auditoria no SQLite e mecanismo de rollback seguro.
 """

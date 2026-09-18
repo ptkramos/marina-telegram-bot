@@ -1,5 +1,5 @@
 """
-Testes Unitários Automatizados para o StyleEngine 2.0 e MenstrualCycleManager da Marina Seltin.
+Testes Unitários Automatizados para o StyleEngine 2.0 e MenstrualCycleManager da Marina Salles (v3.7.0).
 """
 import sys
 import unittest

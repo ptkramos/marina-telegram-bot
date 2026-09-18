@@ -1,5 +1,5 @@
 """
-Módulo de Banco de Dados Relacional SQLite para Marina Seltin (v1.3.0).
+Módulo de Banco de Dados Relacional SQLite para Marina Salles (v3.7.0).
 Gerencia a persistência definitiva e exclusiva em marin_memory.db:
 - Histórico completo de conversas (sem limites)
 - Fatos e memórias sobre o Patrick

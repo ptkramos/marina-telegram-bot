@@ -1,5 +1,5 @@
 """
-Cliente assíncrono oficial para geração de fotos da Marina Seltin.
+Cliente assíncrono oficial para geração de fotos da Marina Salles (v3.7.0).
 Executa exclusivamente em infraestrutura com GPU dedicada (RTX 4090 / FLUX.1 Dev FP8)
 com gestão automática do ciclo de vida da GPU (liga sob demanda, renderiza e pausa imediatamente para economizar créditos).
 Inclui pipeline calibrado de LoRAs (marina_flux, NSFW_master, roundassv16, FluxSideboob, Hand_v2).
@@ -200,7 +200,7 @@ class ImageGeneratorClient:
         }
         n += 1
 
-        # 3. LoRA 1: Identidade da Marina (Seltin Sweet) - Peso 1.0 para fidelidade facial/corporal absoluta
+        # 3. LoRA 1: Identidade da Marina (Marina Sweet) - Peso 1.0 para fidelidade facial/corporal absoluta
         marina_id = str(n)
         workflow[marina_id] = {
             "class_type": "LoraLoader",
@@ -555,7 +555,7 @@ class ImageGeneratorClient:
     async def generate_avatar(self, look_style: str = "fofa") -> tuple[io.BytesIO | None, io.BytesIO | None]:
         """
         Gera uma foto de perfil 100% VESTIDA (SFW), com enquadramento perfeito de modelo.
-        Garante zero nudez e foco absoluto no rosto radiante da Marina Seltin.
+        Garante zero nudez e foco absoluto no rosto radiante da Marina Salles.
         """
         if look_style == "estilosa":
             clothing_tag = "wearing a stylish emerald green silk blouse, elegant gold necklace, confident charming smile"

@@ -1,5 +1,5 @@
 """
-Testes Automatizados para o Memory Retriever e Context Builder da Marina Seltin.
+Testes Automatizados para o Memory Retriever e Context Builder da Marina Salles (v3.7.0).
 """
 import sys
 import unittest

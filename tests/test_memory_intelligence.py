@@ -1,5 +1,5 @@
 """
-Suite de Testes Automatizados para a Release 3.5.0 (Memory Intelligence Hardened).
+Suite de Testes Automatizados para a Memory Intelligence da Marina Salles (v3.7.0).
 Cobre os testes obrigatórios 7.1 a 7.16 da REVISAO_TECNICA_MARINA_V3_5_0.md:
 - 7.1: SAME com texto idêntico (confirmação sem perda de memória)
 - 7.2: SAME semanticamente igual com texto diferente
