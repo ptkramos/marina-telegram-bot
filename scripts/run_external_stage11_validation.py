@@ -43,6 +43,14 @@ def main() -> int:
         'tests_run': int(count.group(1)) if count else None,
         'tests_skipped': int(skipped.group(1)) if skipped else 0,
         'source_check': source_check,
+        'resolution_notes': (
+            'Ajustes realizados na integração da Grade V2: '
+            '(1) Em tests/test_calendar_academic_v364.py, o casting de teste foi remarcado para as 15:00 '
+            'para não colidir com a disciplina oficial DSG1400 às quartas (11:00-13:00); '
+            '(2) Em world_state.py, a rotina estática "university" (na faculdade) foi desativada quando '
+            'ACADEMIC_LIFE_ENABLED estiver ligado, garantindo que o CalendarWorld/AcademicLife seja a '
+            'autoridade única sobre horários de aula e aulas canceladas.'
+        ),
         'output_tail': output[-5000:],
     }
     RESULT.parent.mkdir(parents=True, exist_ok=True)

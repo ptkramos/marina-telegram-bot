@@ -5,6 +5,7 @@
   "output_tail": "----------------------------------------------------------------------\nRan 274 tests in 122.720s\n\nOK\n",
   "python": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\venv\\Scripts\\python.exe",
   "release": "3.6.4",
+  "resolution_notes": "Ajustes realizados na integração da Grade V2: (1) Em tests/test_calendar_academic_v364.py, o casting de teste foi remarcado para as 15:00 para não colidir com a disciplina oficial DSG1400 às quartas (11:00-13:00); (2) Em world_state.py, a rotina estática 'university' (na faculdade) foi desativada quando ACADEMIC_LIFE_ENABLED estiver ligado, garantindo que o CalendarWorld/AcademicLife seja a autoridade única sobre horários de aula e aulas canceladas.",
   "source_check": {
     "offerings_validated": 9,
     "snapshot": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\data\\external\\puc_rio\\2026_2\\raw\\HORARIO_DAS_DISCIPLINAS_18092026.csv",
