@@ -11,11 +11,18 @@ from db import DatabaseManager
 
 
 logger = logging.getLogger(__name__)
-GENERATOR_VERSION = 'project_hybrid_v1'
+GENERATOR_VERSION = 'simulated_academic_v2'
+PUC_2026_NON_CLASS_DAYS = frozenset({
+    # Official PUC-Rio 2026 academic calendar (feriados acadêmicos).
+    date(2026, 9, 7), date(2026, 10, 12), date(2026, 10, 15),
+    date(2026, 11, 2), date(2026, 11, 20), date(2026, 12, 8),
+})
 
 
 def term_window(term_key: str) -> tuple[date, date]:
     """Project planning windows, not a claim about the official PUC calendar."""
+    if term_key == '2026.2':
+        return date(2026, 8, 11), date(2026, 12, 14)
     year_text, half_text = term_key.split('.')
     year, half = int(year_text), int(half_text)
     if half == 1:
@@ -83,6 +90,7 @@ class AcademicLife:
                     (term_key, start.isoformat(), end.isoformat(),
                      datetime.now().isoformat(),
                      json.dumps({'generator_version': GENERATOR_VERSION,
+                                 'source': 'SIMULATED_ACADEMIC',
                                  'calendar_dates': 'project_planning_not_official'}))).lastrowid
                 for (course_key, display_name, kind), (weekday, begins, ends) in zip(courses, layout):
                     prereq = [previous_key] if kind == 'PROJECT' and term_key != '2027.1' else []
@@ -92,7 +100,8 @@ class AcademicLife:
                         VALUES (?,?,?,?,?,?,?)''',
                         (term_id, course_key, display_name, kind, 'Corpo e Moda',
                          json.dumps(prereq),
-                         json.dumps({'curriculum_source': 'project_authored_not_official'}))).lastrowid
+                         json.dumps({'curriculum_source': 'simulated_from_design_2023_0',
+                                     'source': 'SIMULATED_ACADEMIC'}))).lastrowid
                     conn.execute('''INSERT INTO academic_schedule_blocks
                         (academic_course_id,weekday,start_time,end_time,location_key)
                         VALUES (?,?,?,?,?)''',
@@ -214,6 +223,8 @@ class AcademicLife:
     def blocks_on(self, day: date) -> list[dict]:
         term = self._active_term_on(day)
         if not term:
+            return []
+        if term['term_key'] == '2026.2' and day in PUC_2026_NON_CLASS_DAYS:
             return []
         holiday = self.context.get(f'holiday:{day.isoformat()}',
                                    now=datetime.combine(day, datetime.min.time()))

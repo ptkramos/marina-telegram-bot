@@ -48,6 +48,7 @@ marina_primeira_foto_oficial.png
 /data/external/story_datasets/*/raw/*
 /data/external/story_datasets/*/normalized/*
 /data/external/story_datasets/*/work/*
+/data/external/puc_rio/*/raw/
 
 # IDE & OS
 .vscode/

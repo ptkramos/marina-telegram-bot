@@ -74,6 +74,8 @@ class RoutineEngine:
                 continue
             if row["routine_type"] == "pet_walk" and has_class and now.hour >= 9:
                 continue
+            if row["routine_type"] == "university" and getattr(settings, 'ACADEMIC_LIFE_ENABLED', False):
+                continue
             activity, place_key = self._ACTIVITIES.get(row["routine_type"], (None, None))
             if not activity:
                 continue

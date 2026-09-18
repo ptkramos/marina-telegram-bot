@@ -2081,17 +2081,18 @@ Fundação implementada em `009_academic_foundation.sql`, `academic_repository.p
 e `seed_academic_v36.py`. O bootstrap deve chamar `seed_academic(db)` após
 `seed_world_bible(db)`, antes de marcar o início canônico como concluído.
 O seed é explícito e transacional; sua repetição não reinicia a progressão.
-Grade inicial: terça 08–12 projeto; quarta 08–10 cultura visual e 10–12 materiais;
-quinta 08–12 ateliê; sexta 10–12 representação visual (14h/semana).
-Dias usam segunda=0. O campus referencia a chave existente `puc_rio`.
-Datas do semestre permanecem nulas até validação na integração de calendário.
+Grade inicial: 2026.2 com nove componentes, 26 créditos e 12 blocos semanais,
+de segunda a quinta; sexta sem aula canônica. Dias usam segunda=0. O campus
+referencia a chave existente `puc_rio`. O período usa datas oficiais da PUC-Rio:
+11/08 a 14/12/2026.
 As duas flags acadêmicas têm default desligado e ainda não ativam comportamento.
 
-A grade `2026.2` usará a estratégia curricular híbrida: tipos e horários
-plausíveis, com nomes de componentes controlados pelo projeto, sem afirmar que
-reproduzem a matriz oficial vigente da PUC-Rio. Sua densidade deve seguir o
-complemento: 3–4 dias presenciais, 4–6 componentes, predominância de manhã e
-início da tarde e espaço para trabalhos de modelo.
+A grade `2026.2` segue o currículo Design 2023 e o snapshot oficial do
+MicroHorário entregue pelo usuário; `DSG1985` é optativa extra de Corpo e Moda
+(`DSG0011`), enquanto `DSG1866` cumpre o grupo `DSG0860`. O currículo lista
+`DSG1814` como componente de projeto do 4º período e a oferta concreta do
+snapshot usa `DSG1400`; ambos ficam relacionados por metadata. Semestre futuro
+sem snapshot oficial permanece explicitamente `SIMULATED_ACADEMIC`.
 
 O comportamento completo entra na **v3.6.4**, junto de calendário e continuidade
 temporal: resolução de aula atual/próxima, exceções, fases do semestre,
@@ -2437,7 +2438,9 @@ Implementar:
 
 ## v3.6.4 — Real World Context & Calendar Continuity
 
-**Etapa 11 — implementação aguardando validação externa.** A migration 012
+**Etapa 11 — complemento da grade V2 pendente de validação externa na release 3.6.4.**
+A integração anterior recebeu 271 testes, sem falhas nem pulos
+(`data/calendar_academic_validation.v364.json`). A migration 012
 estende `eventos_pendentes`, a tabela datada que já alimenta lembretes, com
 dono, intervalo, origem idempotente, confirmação e vínculo opcional à Story
 Thread. `CalendarWorld` reúne compromissos datados e aulas projetadas dos
@@ -2445,12 +2448,13 @@ Thread. `CalendarWorld` reúne compromissos datados e aulas projetadas dos
 excepcional vence a grade, grade ativa vence a rotina, e conflitos de modelagem
 com aula exigem resolução explícita. Exceções cancelam somente a ocorrência.
 
-`AcademicLife` completa 2026.2 por janelas de planejamento do projeto (não
-datas oficiais da PUC-Rio), projeta fase/férias, gera próximos termos e grades
-por catálogo híbrido determinístico, verifica pré-requisitos na ativação e faz
+`AcademicLife` usa as datas oficiais da PUC-Rio para 2026.2, projeta fase/férias, gera próximos termos e grades
+por catálogo simulado determinístico, verifica pré-requisitos na ativação e faz
 lazy catch-up por termos, sem criar cenas ou dezenas de eventos retroativos.
 Elegibilidade acadêmica pode emergir após progressão mínima; formatura não é
-declarada automaticamente. A grade inicial segue o seed canônico existente.
+declarada automaticamente. A grade V2 atual tem nove componentes, 26 créditos,
+quatro dias presenciais e sexta sem aula; migração do seed antigo é explícita
+e protegida contra perda de progresso ou eventos vinculados.
 
 O Story Engine só abandona thread antiga se **não** houver compromisso futuro,
 confirmado e pendente em `eventos_pendentes` vinculado a ela. Conclusão,
@@ -2458,13 +2462,14 @@ cancelamento, remarcação para o passado ou desvinculação removem a proteçã
 pela própria consulta, sem manter `has_future_commitment` duplicado. O cache de
 contexto real guarda origem e expiração; busca de Open-Meteo/Nager.Date é
 opcional e falha para "desconhecido". O prompt recebe calendário e fase de modo
-compacto, omitindo descrições privadas de compromissos. As flags continuam
-desligadas até o resultado externo.
+compacto, omitindo descrições privadas de compromissos. As flags permanecem
+desligadas por padrão; ativação requer bootstrap canônico e configuração explícita.
 
 Decisões do plano acadêmico: (A/B) integração nesta 3.6.4, com schema 009 já
 existente e migration incremental 012; (C/F) `eventos_pendentes` é a única
 autoridade para eventos datados, e a grade é só padrão projetado; (D) currículo
-híbrido autoral, sem alegar grade oficial; (E) seed canônico 2026.2 já existente.
+oficial para 2026.2, simulado para semestres sem snapshot; (E) seed canônico
+2026.2 atualizado conforme a grade V2.
 
 Implementar:
 

@@ -1,0 +1,18 @@
+{
+  "duration_seconds": 130.19,
+  "exit_code": 0,
+  "finished_at": "2026-09-18T10:29:06.618335+00:00",
+  "output_tail": "----------------------------------------------------------------------\nRan 274 tests in 122.720s\n\nOK\n",
+  "python": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\venv\\Scripts\\python.exe",
+  "release": "3.6.4",
+  "source_check": {
+    "offerings_validated": 9,
+    "snapshot": "C:\\Arquivos\\GitHub\\marin-telegram-bot\\data\\external\\puc_rio\\2026_2\\raw\\HORARIO_DAS_DISCIPLINAS_18092026.csv",
+    "source_sha256": "87838c84b0a676dfae025e2f9db2ee25b2dc9bb27dc3920d1051030ce5bf584d"
+  },
+  "stage": 11,
+  "status": "passed",
+  "supplement": "puc_rio_2026_2_grade_v2",
+  "tests_run": 274,
+  "tests_skipped": 0
+}

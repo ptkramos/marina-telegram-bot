@@ -27,7 +27,7 @@ class TestCalendarAcademicV364(unittest.TestCase):
         self.calendar = CalendarWorld(self.db)
 
     def test_grade_projects_into_calendar_and_confirmed_casting_needs_resolution(self):
-        now = datetime(2026, 9, 22, 9)  # Tuesday, canonical project block.
+        now = datetime(2026, 9, 22, 9)  # Tuesday, Linguagem e Estruturas.
         self.academic.catch_up(now)
         current = self.calendar.current(now)
         self.assertIn('faculdade', current['activity'])
@@ -64,7 +64,7 @@ class TestCalendarAcademicV364(unittest.TestCase):
         now = datetime(2026, 9, 18, 11)
         self.academic.catch_up(now)
         event_id = self.academic.schedule_event(
-            course_key='projeto_corpo_moda', event_type='academic_presentation',
+            course_key='DSG1400', event_type='academic_presentation',
             description='apresentação do projeto', start_at=now + timedelta(days=3),
             end_at=now + timedelta(days=3, hours=1), source_key='academic:project:showcase')
         with self.db.get_connection() as conn:
@@ -121,6 +121,11 @@ class TestCalendarAcademicV364(unittest.TestCase):
         self.assertEqual(self.academic.blocks_on(day), [])
         self.assertTrue(self.academic.blocks_on(day + timedelta(days=7)))
 
+    def test_official_puc_holiday_and_friday_have_no_class(self):
+        self.assertEqual(self.academic.blocks_on(datetime(2026, 10, 15).date()), [])
+        self.assertEqual(self.academic.blocks_on(datetime(2026, 9, 18).date()), [])
+        self.assertEqual(len(self.academic.blocks_on(datetime(2026, 9, 23).date())), 3)
+
     def test_world_state_uses_class_before_routine_when_enabled(self):
         now = datetime(2026, 9, 22, 9)
         with (patch.object(settings, 'CALENDAR_CONTINUITY_ENABLED', True),
@@ -159,7 +164,7 @@ class TestCalendarAcademicV364(unittest.TestCase):
                 (old.isoformat(), old.isoformat(), '{}')).lastrowid
         event_id = self.calendar.create_commitment(
             source_key='casting:future', event_type='casting', description='casting confirmado',
-            start_at=now + timedelta(days=12), end_at=now + timedelta(days=12, hours=1),
+            start_at=now + timedelta(days=12, hours=3), end_at=now + timedelta(days=12, hours=4),
             story_thread_id=thread_id)
         self.assertTrue(self.calendar.linked_future_commitment(thread_id, now=now))
         engine = StoryEngine(self.db)
