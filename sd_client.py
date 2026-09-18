@@ -17,8 +17,24 @@ from PIL import Image
 from config import settings
 from prompts import build_flux_prompt
 from visual_profile import visual_profile, MARINA_VISUAL_DNA_BASE
+from dataclasses import dataclass
+from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class PhotoGenerationResult:
+    """Per-call generation metadata — never share across concurrent requests."""
+
+    image: Optional[io.BytesIO]
+    full_prompt: str = ""
+    scene_tags: str = ""
+    is_nsfw: bool = False
+    focus_angle: str = "frontal"
+    place_key: str = ""
+    world_snapshot_id: Optional[int] = None
+
 
 CLOTHED_KEYWORDS = [
     "vestida", "roupa", "com roupa", "de roupa", "vestido", "calça", "short", "shorts",
@@ -386,51 +402,80 @@ class ImageGeneratorClient:
         return workflow, save_id
 
     async def generate_photo(self, scene_description: str, user_intent: str = "") -> io.BytesIO | None:
-        """Gera a foto oficial da Marina Seltin com ciclo de ligar e pausar GPU 100% automático e continuidade de cena."""
+        """Legacy contract: returns image bytes only. Does not persist camera continuity.
+
+        Avatars, failed attempts and callers that never send to Telegram must not
+        mutate camera_last_state. Prefer generate_photo_with_context() when the
+        bot needs metadata and will record after a confirmed send_photo.
+        """
+        result = await self.generate_photo_with_context(scene_description, user_intent=user_intent)
+        return result.image
+
+    async def generate_photo_with_context(
+        self,
+        scene_description: str,
+        user_intent: str = "",
+        *,
+        place_key: str = "",
+        world_snapshot_id: Optional[int] = None,
+        require_world_match: bool = False,
+        current_place_key: Optional[str] = None,
+    ) -> PhotoGenerationResult:
+        """Generate a photo and return per-call metadata without recording continuity."""
         async with self._lock:
             full_prompt, is_nsfw, focus_angle = visual_profile.build_scene_prompt(
                 scene_description=scene_description,
-                user_intent=user_intent
+                user_intent=user_intent,
+                current_place_key=current_place_key if require_world_match else None,
+                require_world_match=require_world_match,
             )
-            logger.info(f"📸 Gerando foto da Marina (FLUX.1 Dev): is_nsfw={is_nsfw} angle={focus_angle} | prompt='{full_prompt[:80]}...'")
+            logger.info(
+                f"📸 Gerando foto da Marina (FLUX.1 Dev): is_nsfw={is_nsfw} "
+                f"angle={focus_angle} | prompt='{full_prompt[:80]}...'"
+            )
 
             img = None
             if settings.IMAGE_ENGINE == "novita" and self.novita_key:
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=300)) as session:
                     try:
-                        # 1. Liga a instância e aguarda ComfyUI ficar pronto
                         ready = await self._ensure_instance_running(session)
                         if not ready:
                             logger.error("Instância GPU não iniciou a tempo.")
-                            return None
+                            return PhotoGenerationResult(
+                                image=None, full_prompt=full_prompt, scene_tags=scene_description,
+                                is_nsfw=is_nsfw, focus_angle=focus_angle,
+                                place_key=place_key, world_snapshot_id=world_snapshot_id,
+                            )
 
-                        # 2. Renderiza a foto no ComfyUI com FLUX Dev + LoRAs
-                        is_mirror = any(kw in scene_description.lower() or kw in user_intent.lower() for kw in MIRROR_SELFIE_KEYWORDS)
+                        is_mirror = any(
+                            kw in scene_description.lower() or kw in user_intent.lower()
+                            for kw in MIRROR_SELFIE_KEYWORDS
+                        )
                         img = await self._generate_novita_comfyui(
                             session,
                             full_prompt,
                             is_nsfw=is_nsfw,
                             focus_angle=focus_angle,
-                            is_mirror_selfie=is_mirror
+                            is_mirror_selfie=is_mirror,
                         )
                     except Exception as e:
                         logger.error(f"Falha na geração ComfyUI Novita: {e}", exc_info=True)
                     finally:
-                        # 3. SEMPRE desliga a instância para economizar créditos
                         await self._stop_instance(session)
 
             if not img:
                 logger.warning("Tentando fallback para SD local...")
                 img = await self._generate_local_sd(full_prompt)
 
-            if img:
-                visual_profile.record_photo_generation(
-                    scene_tags=scene_description,
-                    full_prompt=full_prompt,
-                    is_nsfw=is_nsfw,
-                    focus_angle=focus_angle
-                )
-            return img
+            return PhotoGenerationResult(
+                image=img,
+                full_prompt=full_prompt,
+                scene_tags=scene_description,
+                is_nsfw=is_nsfw,
+                focus_angle=focus_angle,
+                place_key=place_key,
+                world_snapshot_id=world_snapshot_id,
+            )
 
     async def _generate_novita_comfyui(
         self,

@@ -2503,7 +2503,9 @@ Implementar:
 
 ## v3.6.5 — Relationship & Proactivity Integration
 
-**Etapa 12 — implementação em validação externa.** A migration 014 armazena
+**Etapa 12 concluída e validada na release 3.6.5.** A suíte externa aprovou
+291 testes sem falhas nem pulos (`data/relationship_proactivity_validation.v365.json`).
+A migration 014 armazena
 somente cultura do casal com evidência de conversas recebidas. O histórico do
 que Patrick já ouviu continua derivado de `knowledge_shares`; eventos
 compartilháveis precisam passar pela política individual de privacidade. A
@@ -2530,6 +2532,8 @@ Implementar:
 ---
 
 ## v3.6.6 — Camera World Continuity
+
+Roteiro de implementação para outro agente: [handoff da etapa 13](HANDOFF_ETAPA_13_CAMERA_WORLD_3_6_6.md).
 
 Implementar:
 

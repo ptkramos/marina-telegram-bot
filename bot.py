@@ -1642,10 +1642,13 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
         messages.append({
             "role": "system",
             "content": (
-                "[INSTRUÇÃO CRÍTICA DESTE TURNO]: O Patrick acabou de pedir uma foto/selfie/look! "
-                "Você AMA se mostrar pra ele e VAI ENVIAR A FOTO AGORA MESMO. "
-                "NUNCA adie, NUNCA diga 'mais tarde te mando' ou 'tô na cama depois eu mostro'. "
-                "Responda empolgada avisando que tirou ou que está mostrando pra ele agora mesmo!"
+                "[INSTRUÇÃO CRÍTICA DESTE TURNO]: O Patrick pediu uma foto/selfie/look. "
+                "Você AMA se mostrar pra ele e VAI tentar enviar a foto neste turno. "
+                "NUNCA adie com 'mais tarde te mando' ou 'tô na cama depois eu mostro'. "
+                "Responda empolgada dizendo que vai tirar/mostrar agora — "
+                "NÃO afirme que a foto já foi tirada ou enviada antes da confirmação do Telegram. "
+                "Se ele pediu um lugar onde você não está, não invente deslocamento: "
+                "ofereça a foto no local atual ou pergunte se ele quer uma foto antiga/imaginada."
             )
         })
     messages.append({"role": "user", "content": texto_usuario})
@@ -1846,26 +1849,38 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
         try:
             # Detecta se é NSFW considerando EXCLUSIVAMENTE o que o Patrick pediu
             is_nsfw = sd_client.is_nsfw_request(texto_usuario)
-            
-            prompt_cenario = "casual smartphone selfie in apartment, smiling warmly at camera"
+            camera_ctx = None
+            use_camera_world = (
+                getattr(settings, 'CAMERA_WORLD_CONTINUITY_ENABLED', False)
+                and getattr(settings, 'LIVING_WORLD_ENABLED', False)
+            )
+            if use_camera_world:
+                from camera_world import CameraWorldBuilder
+                camera_ctx = CameraWorldBuilder(memory_manager.db).build(
+                    datetime.now(), user_request=texto_usuario)
+
+            prompt_cenario = (
+                camera_ctx.safe_scene_tags if camera_ctx
+                else "casual smartphone selfie in apartment, smiling warmly at camera"
+            )
             try:
+                director_system = (
+                    "You are a specialized visual prompt director for FLUX.1 Dev photography. "
+                    "Marina Seltin is a 19yo Brazilian model with honey-amber eyes and wavy chocolate brown hair with blonde tips. "
+                    "CRITICAL RULES FOR CLOTHING VS NUDITY: "
+                    "1. If boyfriend requested a CLOTHED or CASUAL photo (e.g. 'vestida', 'roupa', 'look', 'vestido', 'pijama', 'selfie', 'casual') OR did NOT explicitly ask for nude/undies: "
+                    "Describe her FULLY CLOTHED in a cute, stylish or casual outfit (e.g. 'fully clothed, wearing a cute fitted crop top and jeans', 'wearing a chic sundress', 'wearing comfortable oversized sleep hoodie and pajama shorts'). "
+                    "NEVER make her naked or in lingerie if he asked for a clothed photo! "
+                    "2. ONLY if boyfriend explicitly requested nudity or lingerie (e.g. 'pelada', 'nua', 'sem roupa', 'seios', 'calcinha', 'lingerie', 'quente'): "
+                    "describe her outfit accordingly (e.g. 'wearing delicate black lace lingerie', 'completely naked on bed wrapped in bedsheet'). "
+                    "Output ONLY concise, photographic English tags separated by commas. No preamble."
+                )
+                if camera_ctx:
+                    director_system = camera_ctx.director_restrictions + "\n\n" + director_system
                 prompt_res = llm_client.chat.completions.create(
                     model=settings.LLM_MODEL,
                     messages=[
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are a specialized visual prompt director for FLUX.1 Dev photography. "
-                                "Marina Seltin is a 19yo Brazilian model with honey-amber eyes and wavy chocolate brown hair with blonde tips. "
-                                "CRITICAL RULES FOR CLOTHING VS NUDITY: "
-                                "1. If boyfriend requested a CLOTHED or CASUAL photo (e.g. 'vestida', 'roupa', 'look', 'vestido', 'pijama', 'selfie', 'casual') OR did NOT explicitly ask for nude/undies: "
-                                "Describe her FULLY CLOTHED in a cute, stylish or casual outfit (e.g. 'fully clothed, wearing a cute fitted crop top and jeans', 'wearing a chic sundress', 'wearing comfortable oversized sleep hoodie and pajama shorts'). "
-                                "NEVER make her naked or in lingerie if he asked for a clothed photo! "
-                                "2. ONLY if boyfriend explicitly requested nudity or lingerie (e.g. 'pelada', 'nua', 'sem roupa', 'seios', 'calcinha', 'lingerie', 'quente'): "
-                                "describe her outfit accordingly (e.g. 'wearing delicate black lace lingerie', 'completely naked on bed wrapped in bedsheet'). "
-                                "Output ONLY concise, photographic English tags separated by commas. No preamble."
-                            )
-                        },
+                        {"role": "system", "content": director_system},
                         {
                             "role": "user",
                             "content": f"Boyfriend asked: '{texto_usuario}'. Marina's mood: '{fala_limpa}'. Generate accurate visual prompt tags."
@@ -1878,6 +1893,11 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
             except Exception as e:
                 logger.warning(f"Falha ao gerar prompt dinâmico de cena: {e}")
 
+            if camera_ctx:
+                from camera_world import CameraWorldBuilder
+                prompt_cenario = CameraWorldBuilder(memory_manager.db).sanitize_scene_tags(
+                    prompt_cenario, camera_ctx)
+
             # Se for NSFW e o usuário pediu nudez explícita
             if is_nsfw and any(w in texto_usuario.lower() for w in ["pelada", "nua", "sem roupa", "nude", "naked", "peito", "seios"]):
                 if not any(kw in prompt_cenario.lower() for kw in ["naked", "nude", "legs open"]):
@@ -1888,24 +1908,64 @@ async def process_incoming_batch(update: Update, context: ContextTypes.DEFAULT_T
                 if not any(kw in prompt_cenario.lower() for kw in ["clothed", "wearing", "dress", "top", "hoodie", "pajama", "shorts", "jeans"]):
                     prompt_cenario += ", fully clothed, wearing casual chic outfit"
 
-            foto_stream = await sd_client.generate_photo(prompt_cenario, user_intent=texto_usuario)
-            if foto_stream:
-                prompt_legenda = (
-                    f"Você acabou de tirar a foto que o Patrick pediu ('{texto_usuario}'). "
-                    f"Cenário/Look: {prompt_cenario}. "
-                    "Escreva UMA frase curta e espontânea de legenda/comentário para acompanhar a foto (ex: provocando, sendo dengosa ou perguntando o que ele achou). "
-                    "Sem introduções longas, apenas a fala da legenda. Sem Ps: nem parênteses de bastidor."
+            if use_camera_world and camera_ctx:
+                gen = await sd_client.generate_photo_with_context(
+                    prompt_cenario,
+                    user_intent=texto_usuario,
+                    place_key=camera_ctx.place_key or "",
+                    world_snapshot_id=camera_ctx.snapshot_id,
+                    require_world_match=True,
+                    current_place_key=camera_ctx.place_key,
                 )
+                foto_stream = gen.image
+            else:
+                gen = await sd_client.generate_photo_with_context(
+                    prompt_cenario, user_intent=texto_usuario)
+                foto_stream = gen.image
+
+            if foto_stream:
+                if camera_ctx:
+                    from camera_world import CameraWorldBuilder
+                    facts = CameraWorldBuilder(memory_manager.db).caption_facts(
+                        camera_ctx, prompt_cenario)
+                    prompt_legenda = (
+                        f"Você está prestes a enviar a foto que o Patrick pediu ('{texto_usuario}'). "
+                        f"Metadados confirmados: {facts}. "
+                        "Escreva UMA frase curta e espontânea de legenda/comentário para acompanhar a foto. "
+                        "Não invente local, roupa ou clima além dos metadados confirmados. "
+                        "Sem introduções longas, apenas a fala da legenda. Sem Ps: nem parênteses de bastidor."
+                    )
+                else:
+                    prompt_legenda = (
+                        f"Você acabou de tirar a foto que o Patrick pediu ('{texto_usuario}'). "
+                        f"Cenário/Look: {prompt_cenario}. "
+                        "Escreva UMA frase curta e espontânea de legenda/comentário para acompanhar a foto (ex: provocando, sendo dengosa ou perguntando o que ele achou). "
+                        "Sem introduções longas, apenas a fala da legenda. Sem Ps: nem parênteses de bastidor."
+                    )
                 legenda_dinamica = generate_dynamic_speech(prompt_legenda, max_tokens=60, temperature=0.72) or "Olha o que eu tirei só pra você, amor... Gostou? 💕"
                 try:
                     await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.UPLOAD_PHOTO)
                 except Exception:
                     pass
-                await context.bot.send_photo(
+                sent_photo = await context.bot.send_photo(
                     chat_id=chat_id,
                     photo=foto_stream,
                     caption=legenda_dinamica
                 )
+                # Continuidade de câmera só após send_photo confirmado (message_id).
+                if getattr(sent_photo, 'message_id', None):
+                    from visual_profile import visual_profile
+                    visual_profile.record_photo_generation(
+                        scene_tags=gen.scene_tags or prompt_cenario,
+                        full_prompt=gen.full_prompt,
+                        is_nsfw=gen.is_nsfw,
+                        focus_angle=gen.focus_angle,
+                        place_key=gen.place_key or (camera_ctx.place_key if camera_ctx else "") or "",
+                        world_snapshot_id=gen.world_snapshot_id if gen.world_snapshot_id is not None
+                        else (camera_ctx.snapshot_id if camera_ctx else None),
+                        location=(camera_ctx.sublocation or camera_ctx.visual_location
+                                  if camera_ctx and camera_ctx.presence_assertable else ""),
+                    )
             else:
                 aviso_foto = "Amor, tentei te mandar a fotinho agora mas a câmera do apê travou 🥺 Me pede de novo daqui a pouco que eu tiro outra pra você!"
                 await send_human_messages(chat_id, context.bot, aviso_foto, reply_to_message_id=reply_to_id)
@@ -2106,19 +2166,44 @@ async def autonomous_routine(application: Application):
 
         if prompt_foto:
             await asyncio.sleep(1.5)
-            foto_stream = await sd_client.generate_photo(prompt_foto)
-            if foto_stream:
+            # Living World: legacy autonomous photo must not skip Camera World when enabled.
+            auto_ctx = None
+            if (getattr(settings, 'CAMERA_WORLD_CONTINUITY_ENABLED', False)
+                    and getattr(settings, 'LIVING_WORLD_ENABLED', False)):
+                from camera_world import CameraWorldBuilder
+                builder = CameraWorldBuilder(memory_manager.db)
+                auto_ctx = builder.build(datetime.now(), user_request=prompt_foto)
+                prompt_foto = builder.sanitize_scene_tags(prompt_foto, auto_ctx)
+            gen = await sd_client.generate_photo_with_context(
+                prompt_foto,
+                place_key=(auto_ctx.place_key or "") if auto_ctx else "",
+                world_snapshot_id=auto_ctx.snapshot_id if auto_ctx else None,
+                require_world_match=bool(auto_ctx),
+                current_place_key=auto_ctx.place_key if auto_ctx else None,
+            )
+            if gen.image:
                 prompt_legenda_auto = (
-                    f"Você acabou de mandar uma foto espontânea sua para o Patrick ('{prompt_foto}'). "
+                    f"Você está prestes a mandar uma foto espontânea para o Patrick. "
+                    f"Tags: {prompt_foto[:160]}. "
                     "Escreva UMA frase curta e espontânea de legenda para acompanhar a foto. "
                     "Apenas a fala curta. Sem Ps: nem parênteses de bastidor."
                 )
                 legenda_auto = generate_dynamic_speech(prompt_legenda_auto, max_tokens=50) or "Tirei essa agora pensando em você... 💕"
-                await application.bot.send_photo(
+                sent_auto = await application.bot.send_photo(
                     chat_id=settings.TARGET_CHAT_ID,
-                    photo=foto_stream,
+                    photo=gen.image,
                     caption=legenda_auto
                 )
+                if getattr(sent_auto, 'message_id', None):
+                    from visual_profile import visual_profile
+                    visual_profile.record_photo_generation(
+                        scene_tags=gen.scene_tags or prompt_foto,
+                        full_prompt=gen.full_prompt,
+                        is_nsfw=gen.is_nsfw,
+                        focus_angle=gen.focus_angle,
+                        place_key=gen.place_key,
+                        world_snapshot_id=gen.world_snapshot_id,
+                    )
             else:
                 await send_human_messages(
                     settings.TARGET_CHAT_ID,

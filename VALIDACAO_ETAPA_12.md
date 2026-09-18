@@ -1,15 +1,17 @@
-# Release 3.6.5 · etapa 12 — handoff de validação
+# Release 3.6.5 · etapa 12 — validação concluída
 
-O código da integração Relationship & Proactivity está pronto para validação
-externa. O Codex **não executou a suíte**, conforme o combinado com o usuário.
-No Antigravity, na raiz do repositório:
+O Gemini concluiu a validação externa em 18/09/2026: **291 testes, 0 falhas,
+0 pulos** (`data/relationship_proactivity_validation.v365.json`). O Codex
+revisou o relatório e as alterações de integração sem repetir a suíte, conforme
+o combinado. Para reproduzir no Antigravity, na raiz do repositório:
 
 ```powershell
 & .\venv\Scripts\python.exe scripts\run_external_stage12_validation.py
 ```
 
-O relatório será escrito em `data/relationship_proactivity_validation.v365.json`.
-Enviar o resultado ao Codex para revisão antes de considerar a release concluída.
+O relatório é escrito em `data/relationship_proactivity_validation.v365.json`.
+O Gemini também ajustou a migration 014 para o replay de bootstrap, incluiu as
+novas tabelas na limpeza canônica e atualizou as expectativas de schema 14.
 
 Verificações centrais:
 
@@ -26,5 +28,5 @@ Verificações centrais:
   compromisso atual do calendário.
 
 Ativação futura: `RELATIONSHIP_WORLD_ENABLED=true` exige
-`LIVING_WORLD_ENABLED=true` e `KNOWLEDGE_PRIVACY_ENABLED=true`. A flag começa
-desligada e deve permanecer assim até validação do resultado externo.
+`LIVING_WORLD_ENABLED=true` e `KNOWLEDGE_PRIVACY_ENABLED=true`. A flag continua
+desligada por padrão até ativação explícita do runtime.

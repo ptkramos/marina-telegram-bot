@@ -99,12 +99,20 @@ class CameraState:
     is_nsfw: bool = False
     full_prompt: str = ""
     timestamp: float = 0.0
+    place_key: str = ""
+    world_snapshot_id: Optional[int] = None
 
     def to_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, d: dict) -> "CameraState":
+        snapshot_id = d.get("world_snapshot_id")
+        if snapshot_id is not None:
+            try:
+                snapshot_id = int(snapshot_id)
+            except (TypeError, ValueError):
+                snapshot_id = None
         return cls(
             scene_tags=d.get("scene_tags", ""),
             outfit=d.get("outfit", ""),
@@ -112,7 +120,9 @@ class CameraState:
             focus_angle=d.get("focus_angle", "frontal"),
             is_nsfw=bool(d.get("is_nsfw", False)),
             full_prompt=d.get("full_prompt", ""),
-            timestamp=float(d.get("timestamp", 0.0))
+            timestamp=float(d.get("timestamp", 0.0)),
+            place_key=d.get("place_key", "") or "",
+            world_snapshot_id=snapshot_id,
         )
 
 
@@ -202,11 +212,15 @@ class VisualProfileManager:
         scene_description: str,
         user_intent: str = "",
         is_nsfw: Optional[bool] = None,
-        focus_angle: Optional[str] = None
+        focus_angle: Optional[str] = None,
+        *,
+        current_place_key: Optional[str] = None,
+        require_world_match: bool = False,
     ) -> tuple[str, bool, str]:
         """
         Monta o prompt FLUX.1 Dev calibrado. Se for detectado pedido de continuidade dentro da janela
         temporal, preserva o outfit e ambiente da foto anterior variando pose/ângulo.
+        Com require_world_match, só reutiliza look/sublocal se o place_key atual coincidir.
         Retorna: (full_prompt, is_nsfw, focus_angle)
         """
         combined_text = f"{scene_description} {user_intent}".strip()
@@ -217,8 +231,18 @@ class VisualProfileManager:
             self._current_state is not None
             and (now - self._current_state.timestamp) <= CONTINUITY_WINDOW_SECONDS
         )
+        world_ok = True
+        if require_world_match and has_recent_state:
+            prev = self._current_state
+            if not current_place_key:
+                world_ok = False
+            elif prev.place_key and prev.place_key != current_place_key:
+                world_ok = False
+            elif not prev.place_key and current_place_key:
+                # Estado legado sem place_key: não afirmar continuidade geográfica.
+                world_ok = False
 
-        if is_continuity and has_recent_state:
+        if is_continuity and has_recent_state and world_ok:
             prev = self._current_state
             logger.info(f"🔄 Continuidade ativada! Reutilizando ambiente '{prev.location}' e look '{prev.outfit}'.")
 
@@ -241,6 +265,8 @@ class VisualProfileManager:
             final_angle = new_angle
             final_nsfw = actual_nsfw
         else:
+            if is_continuity and has_recent_state and not world_ok:
+                logger.info("Continuidade de câmera invalidada: local/contexto do mundo mudou.")
             # Nova sessão de foto
             final_nsfw = self.is_nsfw_text(combined_text) if is_nsfw is None else is_nsfw
             final_angle = self.extract_focus_angle(combined_text, default="frontal") if focus_angle is None else focus_angle
@@ -278,9 +304,11 @@ class VisualProfileManager:
         is_nsfw: bool,
         focus_angle: str = "frontal",
         outfit: str = "",
-        location: str = ""
+        location: str = "",
+        place_key: str = "",
+        world_snapshot_id: Optional[int] = None,
     ):
-        """Registra a geração bem-sucedida de foto para manter a continuidade."""
+        """Registra foto efetivamente enviada; geração pura não deve chamar isto."""
         loc = location or self._infer_location(scene_tags)
         out = outfit or self._infer_outfit(scene_tags, is_nsfw)
         now = time.time()
@@ -292,13 +320,18 @@ class VisualProfileManager:
             focus_angle=focus_angle,
             is_nsfw=is_nsfw,
             full_prompt=full_prompt,
-            timestamp=now
+            timestamp=now,
+            place_key=place_key or "",
+            world_snapshot_id=world_snapshot_id,
         )
 
         try:
             payload = json.dumps(self._current_state.to_dict())
             db_manager.set_estado_relacional("camera_last_state", payload)
-            logger.info(f"📸 Estado de câmera registrado: loc={loc}, outfit={out}, angle={focus_angle}, nsfw={is_nsfw}")
+            logger.info(
+                f"📸 Estado de câmera registrado: loc={loc}, outfit={out}, "
+                f"angle={focus_angle}, nsfw={is_nsfw}, place_key={place_key or '-'}"
+            )
         except Exception as e:
             logger.warning(f"Falha ao persistir camera_last_state no banco: {e}")
 
