@@ -169,9 +169,9 @@ class CameraWorldBuilder:
         now = local_time(now)
         snapshot = self.states.latest()
         commitment = None
-        if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
+        if True:
             commitment = CalendarWorld(self.db).current(
-                now, include_academic=getattr(settings, 'ACADEMIC_LIFE_ENABLED', False))
+                now, include_academic=True)
 
         place_key: Optional[str] = None
         activity: Optional[str] = None
@@ -227,7 +227,7 @@ class CameraWorldBuilder:
         else:
             activity_source = 'absent'
 
-        if weather is None and getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
+        if weather is None and True:
             weather = self._weather_from_cache(now)
 
         sublocation = self._explicit_sublocation(
@@ -473,3 +473,4 @@ class CameraWorldBuilder:
         return place_key in {
             'enseada_botafogo', 'copacabana_beach', 'ipanema_beach', 'leblon_beach',
         }
+

@@ -3,6 +3,9 @@ Engine de Aprendizado e Espelhamento de Estilo Linguístico (v2.0).
 Observa a forma como o Patrick escreve, ri, pontua e usa emojis,
 acumulando contadores estatísticos e médias móveis no SQLite para que a Marina
 espelhe de maneira ponderada e orgânica o vocabulário, as risadas e a cadência do seu namorado.
+
+DEFAULT_PTBR_STYLE may exist as configuration. LEARNED_PATRICK_STYLE only after
+real samples — never seed fake observations into an empty DB.
 """
 import re
 import json
@@ -27,6 +30,14 @@ GIRIAS_CATALOGADAS = [
     "massa", "tranquilo", "vácuo", "sono", "preguiça"
 ]
 
+# Config defaults (not claimed as Patrick observations)
+DEFAULT_PTBR_STYLE = {
+    "risada": "kkkk",
+    "emojis": "🥰, 💕, ❤️, 🥺, 🙈",
+    "girias": "trampo, codar, bora, suave, fechou",
+    "cadencia": "mensagens curtas e ágeis, descontraídas, pontuação leve sem formalidade",
+}
+
 # Regex para captura de emojis Unicode
 REGEX_EMOJIS = re.compile(
     r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251]\uFE0F?'
@@ -38,28 +49,18 @@ MIN_SAMPLES_THRESHOLD = 2
 class StyleEngine:
     def __init__(self, db: Optional[DatabaseManager] = None):
         self.db = db or db_manager
-        self._ensure_default_style()
+        # Intentionally do NOT seed fake learned observations into empty DB.
 
-    def _ensure_default_style(self):
+    def patrick_sample_count(self) -> int:
+        """Total Patrick-message samples reflected in cadence (0 if never learned)."""
         estilo = self.db.get_estilo()
-        if not estilo.get("risada"):
-            self.db.salvar_estilo("risada", "kkkk", {"kkkk": 5, "haha": 0, "rsrs": 0})
-        if not estilo.get("emojis_favoritos"):
-            self.db.salvar_estilo("emojis_favoritos", "🥰, 💕, ❤️, 🥺, 🙈", {"🥰": 3, "💕": 2, "❤️": 2, "🥺": 1, "🙈": 1})
-        if not estilo.get("girias"):
-            self.db.salvar_estilo("girias", "trampo, codar, bora, suave, fechou", {"trampo": 3, "codar": 3, "bora": 3, "suave": 2, "fechou": 2})
-        if not estilo.get("cadencia"):
-            self.db.salvar_estilo("cadencia", "mensagens curtas e ágeis, descontraídas, pontuação leve sem formalidade", {
-                "total_messages": 0,
-                "total_words": 0,
-                "total_chars": 0,
-                "ellipses_count": 0,
-                "exclamation_count": 0,
-                "lowercase_count": 0,
-                "avg_words": 6.0,
-                "ellipses_ratio": 0.0,
-                "exclamation_ratio": 0.0
-            })
+        cad = estilo.get("cadencia", {}).get("exemplos", {})
+        if isinstance(cad, dict):
+            return int(cad.get("total_messages", 0) or 0)
+        return 0
+
+    def has_learned_style(self) -> bool:
+        return self.patrick_sample_count() >= MIN_SAMPLES_THRESHOLD
 
     def get_custom_slang_catalog(self) -> List[str]:
         """Retorna o catálogo completo de gírias (base + customizadas salvas no banco)."""
@@ -84,17 +85,21 @@ class StyleEngine:
             self.db.salvar_estilo("catalogo_girias_custom", ", ".join(custom), custom)
 
     def processar_mensagem_patrick(self, texto: str):
-        """Analisa a mensagem do Patrick acumulando estatísticas para espelhamento ponderado."""
+        """Analisa a mensagem do Patrick acumulando estatísticas para espelhamento ponderado.
+
+        EVIDENCE-ONLY: never persist DEFAULT_PTBR_STYLE values as if they were
+        observed from Patrick. Each dimension stores only what was actually seen.
+        """
         if not texto or len(texto.strip()) < 2:
             return
 
         texto_limpo = texto.strip()
         estilo = self.db.get_estilo()
 
-        # 1. Estatísticas e Rastreio de Risada Acumulada
+        # 1. Laughter tracking — evidence-only, no default seed
         risada_data = estilo.get("risada", {}).get("exemplos", {})
         if not isinstance(risada_data, dict):
-            risada_data = {"kkkk": 5, "haha": 0, "rsrs": 0}
+            risada_data = {}
 
         if REGEX_RISADA_K.search(texto_limpo):
             risada_data["kkkk"] = risada_data.get("kkkk", 0) + 1
@@ -107,10 +112,11 @@ class StyleEngine:
         if total_risadas >= MIN_SAMPLES_THRESHOLD:
             risada_dominante = max(risada_data.items(), key=lambda x: x[1])[0]
         else:
-            risada_dominante = "kkkk"
+            # No observed dominance yet — store empty, NOT a default
+            risada_dominante = ""
         self.db.salvar_estilo("risada", risada_dominante, risada_data)
 
-        # 2. Estatísticas e Rastreio de Emojis Acumulados
+        # 2. Emoji tracking — evidence-only
         emojis_data = estilo.get("emojis_favoritos", {}).get("exemplos", {})
         if not isinstance(emojis_data, dict):
             emojis_data = {}
@@ -121,10 +127,11 @@ class StyleEngine:
             emojis_data[em_key] = emojis_data.get(em_key, 0) + 1
 
         top_emojis = sorted(emojis_data.items(), key=lambda x: x[1], reverse=True)[:8]
-        top_emojis_str = ", ".join([e[0] for e in top_emojis]) if top_emojis else "🥰, 💕, ❤️"
+        # Only store actually observed emojis, never default list
+        top_emojis_str = ", ".join([e[0] for e in top_emojis]) if top_emojis else ""
         self.db.salvar_estilo("emojis_favoritos", top_emojis_str, emojis_data)
 
-        # 3. Estatísticas e Rastreio de Gírias Acumuladas
+        # 3. Slang tracking — evidence-only
         girias_data = estilo.get("girias", {}).get("exemplos", {})
         if not isinstance(girias_data, dict):
             girias_data = {}
@@ -136,10 +143,11 @@ class StyleEngine:
             girias_data[g] = girias_data.get(g, 0) + 1
 
         top_girias = sorted(girias_data.items(), key=lambda x: x[1], reverse=True)[:8]
-        top_girias_str = ", ".join([g[0] for g in top_girias]) if top_girias else "trampo, codar, bora, suave, fechou"
+        # Only store actually observed slang, never default list
+        top_girias_str = ", ".join([g[0] for g in top_girias]) if top_girias else ""
         self.db.salvar_estilo("girias", top_girias_str, girias_data)
 
-        # 4. Médias Móveis de Cadência, Pontuação e Ritmo
+        # 4. Cadence statistics — always tracked (cadence is inherently observational)
         cadencia_data = estilo.get("cadencia", {}).get("exemplos", {})
         if not isinstance(cadencia_data, dict):
             cadencia_data = {
@@ -198,22 +206,94 @@ class StyleEngine:
 
         self.db.salvar_estilo("cadencia", ritmo_desc, cadencia_data)
 
-    def get_style_prompt_injection(self) -> str:
-        """Retorna as instruções de espelhamento para o prompt da Marina."""
+    def _has_observed_data(self, dimension_key: str) -> bool:
+        """Check whether a style dimension has any real observed data (count > 0)."""
         estilo = self.db.get_estilo()
-        risada = estilo.get("risada", {}).get("valor", "kkkk")
-        emojis = estilo.get("emojis_favoritos", {}).get("valor", "💕, 🥰, 🙈")
-        girias = estilo.get("girias", {}).get("valor", "trampo, codar, bora, suave, fechou")
-        cadencia = estilo.get("cadencia", {}).get("valor", "mensagens curtas e ágeis em múltiplos balões")
+        exemplos = estilo.get(dimension_key, {}).get("exemplos", {})
+        if not isinstance(exemplos, dict):
+            return False
+        return sum(exemplos.values()) > 0
 
-        return f"""
-[SINCRONIA LINGUÍSTICA DO CASAL (COMO O PATRICK ESCREVE)]
-- Risada compartilhada do casal: {risada} (ria como ele, nunca use risadas artificiais).
-- Emojis mais trocados entre vocês: {emojis}
-- Gírias e expressões que você pegou dele: {girias}
-- Ritmo de escrita: {cadencia}
-(Espelhe essa mesma descontração e intimidade para a conversa soar 100% autêntica e conectada!).
-"""
+    def get_learned_style_summary(self) -> str:
+        """Evidence-aware style summary for WorldContext consumption.
+
+        Returns empty string if threshold not met or no real observations exist.
+        Only includes dimensions with actual observed evidence — never defaults.
+        """
+        if not self.has_learned_style():
+            return ""
+
+        estilo = self.db.get_estilo()
+        parts = []
+
+        # Laughter — only if actually observed
+        if self._has_observed_data("risada"):
+            valor = estilo.get("risada", {}).get("valor", "")
+            if valor:
+                parts.append(f"Laugh pattern: {valor}")
+
+        # Emojis — only if actually observed
+        if self._has_observed_data("emojis_favoritos"):
+            valor = estilo.get("emojis_favoritos", {}).get("valor", "")
+            if valor:
+                parts.append(f"Frequent emojis: {valor}")
+
+        # Slang — only if actually observed
+        if self._has_observed_data("girias"):
+            valor = estilo.get("girias", {}).get("valor", "")
+            if valor:
+                parts.append(f"Shared slang: {valor}")
+
+        # Cadence — always observational by nature
+        cadencia = estilo.get("cadencia", {}).get("valor", "")
+        if cadencia:
+            parts.append(f"Writing rhythm: {cadencia}")
+
+        if not parts:
+            return ""
+        return "; ".join(parts)
+
+    def get_style_prompt_injection(self) -> str:
+        """Learned Patrick style block only after real samples; else empty string.
+
+        Each dimension only appears if it has real observed evidence (count > 0).
+        """
+        if not self.has_learned_style():
+            return ""
+
+        estilo = self.db.get_estilo()
+        lines = ["[SINCRONIA LINGUÍSTICA DO CASAL (COMO O PATRICK ESCREVE)]"]
+
+        # Laughter — only if actually observed
+        if self._has_observed_data("risada"):
+            risada = estilo.get("risada", {}).get("valor", "")
+            if risada:
+                lines.append(f"- Risada compartilhada do casal: {risada} (ria como ele, nunca use risadas artificiais).")
+
+        # Emojis — only if actually observed
+        if self._has_observed_data("emojis_favoritos"):
+            emojis = estilo.get("emojis_favoritos", {}).get("valor", "")
+            if emojis:
+                lines.append(f"- Emojis mais trocados entre vocês: {emojis}")
+
+        # Slang — only if actually observed
+        if self._has_observed_data("girias"):
+            girias = estilo.get("girias", {}).get("valor", "")
+            if girias:
+                lines.append(f"- Gírias e expressões que você pegou dele: {girias}")
+
+        # Cadence — always observational
+        cadencia = estilo.get("cadencia", {}).get("valor", "")
+        if cadencia:
+            lines.append(f"- Ritmo de escrita: {cadencia}")
+
+        lines.append("(Espelhe essa mesma descontração e intimidade para a conversa soar 100% autêntica e conectada!).")
+
+        if len(lines) <= 2:
+            # Only header + footer, no real data
+            return ""
+
+        return "\n" + "\n".join(lines) + "\n"
 
 
 style_engine = StyleEngine()

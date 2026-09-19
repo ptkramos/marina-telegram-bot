@@ -328,6 +328,7 @@ class CameraWorldMutationGuardTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.db = DatabaseManager(Path(temp.name) / 'guard.db')
         seed_world_bible(self.db)
+        seed_academic(self.db)
         self.now = datetime(2026, 9, 18, 16, 0)
         manager = WorldStateManager(self.db, stale_minutes=60)
         self.first = manager.resolve(self.now, has_class=False,

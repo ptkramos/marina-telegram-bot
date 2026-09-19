@@ -33,21 +33,28 @@ class MemoryManager:
 
     def registrar_interacao(self, user_msg: str, bot_msg: str) -> tuple[int, int]:
         """Registra a interação na tabela 'conversas' do SQLite permanentemente e retorna os IDs."""
+        u_id = self.registrar_mensagem_usuario(user_msg)
+        b_id = self.registrar_mensagem_assistente(bot_msg, is_initiative=user_msg.startswith("[Iniciativa da Marina"))
+        return u_id, b_id
+
+    def registrar_mensagem_usuario(self, user_msg: str) -> int:
+        """Persiste uma entrada recebida e aplica somente efeitos derivados do usuário."""
         is_init = 1 if user_msg.startswith("[Iniciativa da Marina") else 0
         u_id = self.db.adicionar_mensagem(role="user", content=user_msg, is_initiative=bool(is_init))
-        b_id = self.db.adicionar_mensagem(role="assistant", content=bot_msg, is_initiative=bool(is_init))
         if not is_init:
-            from config import settings
+            from relationship_world import RelationshipWorld
 
-            if getattr(settings, 'LIVING_WORLD_ENABLED', False) and getattr(settings, 'RELATIONSHIP_WORLD_ENABLED', False):
-                from relationship_world import RelationshipWorld
+            try:
+                RelationshipWorld(self.db).observe_explicit_user_culture(
+                    user_msg, conversation_id=u_id)
+            except (ValueError, RuntimeError) as exc:
+                logger.warning('Cultura do casal ignorada: %s', exc)
+        return u_id
 
-                try:
-                    RelationshipWorld(self.db).observe_explicit_user_culture(
-                        user_msg, conversation_id=u_id)
-                except (ValueError, RuntimeError) as exc:
-                    logger.warning('Cultura do casal ignorada: %s', exc)
-        return u_id, b_id
+    def registrar_mensagem_assistente(self, bot_msg: str, *, is_initiative: bool = False) -> int:
+        """Persiste apenas uma fala cuja entrega já foi confirmada."""
+        return self.db.adicionar_mensagem(
+            role="assistant", content=bot_msg, is_initiative=is_initiative)
 
     def get_historico_recente(self, limit: int = 10) -> list[dict]:
         """Retorna as últimas N mensagens do banco para alimentar o chat ativo."""
@@ -106,25 +113,23 @@ O Patrick deixou estes pedidos de melhoria. Incorpora de forma NATURAL (sem cita
             bloco_feedback = ""
         
         return f"""
-[SUA MEMÓRIA AFETIVA & O QUE VOCÊ SENTE PELO PATRICK]
-- Seu namorado: Patrick Ramos (você o ama, tem intimidade, carinho e atração intensa).
-- Coisas que você guarda na lembrança com carinho:
+[LEGACY MEMORY CONTEXT — deprecated; not used by Living World / SafeCore production paths]
+- Partner: Patrick Ramos.
+- Remembered facts:
 {fatos}
-Lembranças especiais do namoro:
+Special moments:
 {momentos}
-(ATENÇÃO: Você já sabe todas essas coisas com naturalidade de memória. NUNCA diga 'estava lendo essas informações sobre você'!).
-
-[SEUS GOSTOS PESSOAIS & IDENTIDADE]
-- Músicas que você curte ouvir no apê: {musicas}
-- Coisas que você acha uma delícia / ama: {coisas_ama}
-- Coisas que você acha meio doidas ou difíceis: {coisas_estranha}
-(Quando o Patrick falar de algo novo, use seu bom senso de garota jovem de 19 anos: se achar a vibe legal, se interesse; se achar esquisito/difícil, brinque com ele de forma fofa!).
+[PERSONAL TASTES]
+- Music: {musicas}
+- Loves: {coisas_ama}
+- Finds odd/hard: {coisas_estranha}
+(React with your own taste filter; do not invent a fixed age.)
 {contexto_biologico}
 {contexto_estilo}
 {bloco_feedback}
-[LIÇÕES E CORREÇÕES QUE O PATRICK JÁ ME ENSINOU]
+[CORRECTIONS FROM PATRICK]
 {licoes_str}
-(Atenção: NUNCA repita os erros acima! Fale sempre da forma correta e natural como ele te ensinou).
 """
 
 memory_manager = MemoryManager()
+

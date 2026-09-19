@@ -54,6 +54,7 @@ marina_primeira_foto_oficial.png
 # IDE & OS
 .vscode/
 .idea/
+dist/
 Thumbs.db
 Desktop.ini
 .DS_Store

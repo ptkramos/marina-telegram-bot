@@ -1,5 +1,5 @@
 -- Migration 006: Open Loops & Smart Reminders
--- Marina Seltin Release 3.5.1
+-- Marina Salles Release 3.5.1
 
 -- 1. Tabela de Assuntos em Aberto (Open Loops)
 CREATE TABLE IF NOT EXISTS open_loops (

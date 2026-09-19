@@ -169,7 +169,8 @@ ROUTINES = {
     "milo_morning_walk": ("pet_walk", "daily", "07:00", "10:30", 0.7),
     "gym_weekly": ("gym", "3_to_5_days_per_week", "15:00", "21:00", 0.55),
     "weekday_evening_home": ("home_evening", "weekday", "19:00", "23:59", 0.7),
-    "weekday_sleep": ("sleep", "weekday", "00:00", "01:30", 0.7),
+    "class_day_sleep": ("sleep", "class_day", "00:00", "06:59", 1.0),
+    "light_day_sleep": ("sleep", "light_day", "00:00", "08:29", 1.0),
 }
 
 PREFERENCES = {

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from db import DatabaseManager
 from seed_world_bible_v36 import seed_world_bible
+from seed_academic_v36 import seed_academic
 from social_world import SocialWorld, seed_social
 
 
@@ -14,6 +15,7 @@ class TestSocialWorld(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.db = DatabaseManager(Path(self.temp.name)/'social.db')
         seed_world_bible(self.db)
+        seed_academic(self.db)
         seed_social(self.db)
         self.social = SocialWorld(self.db)
 
@@ -95,7 +97,7 @@ class TestSocialWorld(unittest.TestCase):
                 c.execute(f'DROP TABLE {table}')
             c.execute('DELETE FROM schema_version WHERE version>=10')
         upgrade(self.db.db_path)
-        self.assertEqual(self.db.get_schema_version(), 16)
+        self.assertEqual(self.db.get_schema_version(), 17)
         self.assertEqual(len(self.social.graph()),9)
         for day in range(1,5):
             self.social.record(f'v{day}',place_key='bodytech_sao_clemente',occurred_at=f'2026-01-{day:02d}',valence=1)

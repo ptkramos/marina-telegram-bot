@@ -2,7 +2,7 @@
 Bot Telegram de Marina Salles (v3.7.0 Oficial - Living Intelligence).
 Jovem de 20 anos, modelo em início de carreira, namorada EXCLUSIVA de Patrick Ramos.
 Totalmente desinibida, carinhosa, com ciclo menstrual real, pausas humanas de digitação,
-envio REAL de balões separados sucessivos (multi-bubble), comandos /feedback e /edit com Auto-Patcher autônomo,
+envio REAL de balões separados sucessivos (multi-bubble) e comando /feedback,
 espelhamento dinâmico de estilo linguístico (style_engine), CHAT 100% LIMPO (auto-limpeza imediata de comandos),
 BUFFER INTELIGENTE DE DIGITAÇÃO (Debounce anti-atropelo), MEMORY INTELLIGENCE 2.0, LIVING WORLD & RESPONSE AVAILABILITY.
 """
@@ -18,7 +18,13 @@ from datetime import datetime, timedelta
 from types import SimpleNamespace
 from typing import Optional, List, Dict
 
-from telegram import Update, InputProfilePhotoStatic, ReactionTypeEmoji
+from telegram import (
+    Update,
+    InputProfilePhotoStatic,
+    ReactionTypeEmoji,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
 from telegram.request import HTTPXRequest
 from telegram.constants import ChatAction
 from telegram.ext import (
@@ -26,6 +32,7 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     MessageReactionHandler,
+    CallbackQueryHandler,
     filters,
     ContextTypes,
 )
@@ -33,12 +40,11 @@ from openai import OpenAI
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from config import settings
-from prompts import MARIN_SYSTEM_PROMPT, build_autonomous_decision_prompt, get_temporal_greeting
+from prompts import build_autonomous_decision_prompt
 from sd_client import sd_client
 from memory import memory_manager
 from feedback_manager import feedback_manager
 from style_engine import style_engine
-from auto_patcher import auto_patcher
 from voice_engine import voice_engine
 from context_builder import context_builder
 from memory_consolidator import memory_consolidator
@@ -51,6 +57,17 @@ from voice_router import VoiceSelectionContext
 from session_reflector import session_reflector
 from memory_hygiene import memory_hygiene_service
 from pending_response import ResponseAvailabilityService
+from prompt_policy import (
+    reminder_offer_constraint,
+    reminder_clarification_constraint,
+    TURN_CONSTRAINTS,
+)
+
+PHOTO_UNAVAILABLE_INSTRUCTION = (
+    "Patrick requested a photo, but photo generation is currently unavailable due to maintenance. "
+    "Respond warmly in Portuguese as Marina explaining that you cannot send a photo right now, "
+    "without falsely claiming you already took or sent it, and continue the conversation naturally."
+)
 
 availability_service = ResponseAvailabilityService(memory_manager.db)
 
@@ -102,6 +119,50 @@ async def delete_after_delay(bot, chat_id: int, message_id: int, delay: float = 
     except Exception:
         pass
 
+async def delete_recent_telegram_history(
+    bot,
+    chat_id: int,
+    current_id: int,
+    *,
+    window: int = 300,
+    batch_size: int = 25,
+    consecutive_failure_limit: int = 25,
+) -> dict:
+    """Delete the recent deletable range without letting one old ID abort all batches."""
+    ids = list(range(current_id, max(0, current_id - window), -1))
+    deleted = 0
+    attempted = 0
+    consecutive_failures = 0
+    stopped_at_limit = False
+    for offset in range(0, len(ids), batch_size):
+        chunk = ids[offset:offset + batch_size]
+        attempted += len(chunk)
+        try:
+            await bot.delete_messages(chat_id=chat_id, message_ids=chunk)
+            deleted += len(chunk)
+            consecutive_failures = 0
+            continue
+        except Exception:
+            pass
+
+        for message_id in chunk:
+            try:
+                await bot.delete_message(chat_id=chat_id, message_id=message_id)
+                deleted += 1
+                consecutive_failures = 0
+            except Exception:
+                consecutive_failures += 1
+                if consecutive_failures >= consecutive_failure_limit:
+                    stopped_at_limit = True
+                    break
+        if stopped_at_limit:
+            break
+    return {
+        "attempted": attempted,
+        "deleted": deleted,
+        "stopped_at_limit": stopped_at_limit,
+    }
+
 def is_authorized(update: Update) -> bool:
     """Verifica se quem enviou a mensagem é estritamente o Patrick Ramos."""
     if not settings.TARGET_CHAT_ID or settings.TARGET_CHAT_ID <= 0:
@@ -112,15 +173,11 @@ def is_authorized(update: Update) -> bool:
 
 def generate_dynamic_speech(instruction: str, max_tokens: int = 120, temperature: float = 0.72) -> str:
     """Gera uma fala espontânea e orgânica da Marina usando a LLM com temperatura equilibrada anti-glitch."""
-    if getattr(settings, "LIVING_WORLD_ENABLED", False):
-        system_prompt = context_builder.build_system_prompt(user_message=instruction)
-    else:
-        system_prompt = f"{MARIN_SYSTEM_PROMPT}\n{memory_manager.get_contexto_emocional()}\n[MOMENTO ATUAL DO DIA: {get_temporal_greeting()}]"
-    if settings.RESPONSE_RHYTHM_ENABLED:
-        from response_rhythm import apply_policy, select_policy
-        policy = select_policy(instruction)
-        system_prompt = apply_policy(system_prompt, policy)
-        max_tokens = max(max_tokens, policy.token_budget)
+    system_prompt = context_builder.build_system_prompt(user_message=instruction)
+    from response_rhythm import apply_policy, select_policy
+    policy = select_policy(instruction)
+    system_prompt = apply_policy(system_prompt, policy)
+    max_tokens = min(max_tokens, policy.token_budget)
     messages = [
         {
             "role": "system",
@@ -210,7 +267,7 @@ def buscar_web_se_necessario(texto: str) -> str:
                 snippets.append(f"- {title}: {body}")
         if snippets:
             logger.info(f"🌐 Busca web em tempo real executada para '{query}': {len(snippets)} resultados encontrados!")
-            return "\n[DADOS REAIS PESQUISADOS NO GOOGLE/WEB PELO SEU CELULAR AGORA]:\n" + "\n".join(snippets[:3]) + "\n(Use essas informações reais na sua resposta com naturalidade, sem citar que é uma busca formal!)"
+            return format_web_evidence(snippets[:3])
     except Exception as e:
         logger.warning(f"Aviso na busca web em tempo real: {e}")
     return ""
@@ -224,29 +281,15 @@ def build_messages_payload(
     planner_goal: Optional[str] = None,
     privacy_subjects: Optional[list[tuple[str, int]]] = None,
 ) -> list[dict]:
-    if getattr(settings, "KNOWLEDGE_PRIVACY_ENABLED", False) and not getattr(settings, "LIVING_WORLD_ENABLED", False):
-        raise RuntimeError("Knowledge Privacy requires Living World context")
-    if settings.SMART_MEMORY_ENABLED or getattr(settings, "LIVING_WORLD_ENABLED", False):
-        return context_builder.build(
-            user_message=user_message,
-            quoted_context=quoted_context,
-            web_context=web_search_context,
-            vision_context=vision_context,
-            planner_tone=planner_tone,
-            planner_goal=planner_goal,
-            privacy_subjects=privacy_subjects,
-        )
-    contexto_momento = f"\n[MOMENTO ATUAL DO DIA: {get_temporal_greeting()}]"
-    contexto_quote = f"\n{quoted_context}" if quoted_context else ""
-    contexto_web = f"\n{web_search_context}" if web_search_context else ""
-    contexto_vis = f"\n{vision_context}\n" if vision_context else ""
-    system_content = f"{MARIN_SYSTEM_PROMPT}\n{memory_manager.get_contexto_emocional()}{contexto_momento}{contexto_quote}{contexto_web}{contexto_vis}"
-    messages = [{"role": "system", "content": system_content}]
-
-    for item in memory_manager.get_historico_recente(limit=10):
-        messages.append({"role": item["role"], "content": item["content"]})
-
-    return messages
+    return context_builder.build(
+        user_message=user_message,
+        quoted_context=quoted_context,
+        web_context=web_search_context,
+        vision_context=vision_context,
+        planner_tone=planner_tone,
+        planner_goal=planner_goal,
+        privacy_subjects=privacy_subjects,
+    )
 
 
 async def send_registered_privacy_replies(chat_id: int, bot, replies, *, reply_to_message_id: int | None = None,
@@ -483,11 +526,8 @@ async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_messag
     if chat_id not in ULTIMAS_MENSAGENS_MARINA:
         ULTIMAS_MENSAGENS_MARINA[chat_id] = []
 
-    if settings.RESPONSE_RHYTHM_ENABLED:
-        from response_rhythm import segment, select_policy
-        bubbles = segment(full_text, response_policy or select_policy())
-    else:
-        bubbles = [b for b in split_into_human_bubbles(full_text) if b]
+    from response_rhythm import segment, select_policy
+    bubbles = segment(full_text, response_policy or select_policy())
     if not bubbles:
         return None
     
@@ -515,6 +555,17 @@ async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_messag
     if len(ULTIMAS_MENSAGENS_MARINA[chat_id]) > 8:
         ULTIMAS_MENSAGENS_MARINA[chat_id] = ULTIMAS_MENSAGENS_MARINA[chat_id][-8:]
     return sent_msg
+
+
+async def send_photo_unavailable(chat_id: int, bot, reply_to_message_id: Optional[int] = None):
+    """Envia aviso afetuoso de indisponibilidade temporária de fotos."""
+    fala = generate_dynamic_speech(
+        "Você não conseguiu tirar a foto que o Patrick pediu. Diga com carinho de namorada que não conseguiu mandar agora.",
+        max_tokens=80,
+    )
+    if not fala:
+        fala = "Amor, não consegui tirar sua fotinho agora 🥺 Mais tarde eu tento de novo pra você!"
+    return await send_human_messages(chat_id, bot, fala, reply_to_message_id=reply_to_message_id)
 
 # --- SISTEMA DE REAÇÕES (VIA DE MÃO DUPLA) ---
 
@@ -707,8 +758,9 @@ async def iniciar_escolha_avatar(bot, chat_id: int):
         msg_espera_texto = "Ai amor, com certeza! Vou escolher e tirar uma selfie bem linda agora pro perfil, espera só um segundinho... 🥰📸"
 
     fala_intro_limpa = limpar_fala_marina(msg_espera_texto)
-    await send_human_messages(chat_id, bot, fala_intro_limpa)
-    memory_manager.registrar_interacao("[Pediu pra trocar foto de perfil]", fala_intro_limpa)
+    sent_intro = await send_human_messages(chat_id, bot, fala_intro_limpa)
+    if getattr(sent_intro, "message_id", None):
+        memory_manager.registrar_interacao("[Pediu pra trocar foto de perfil]", fala_intro_limpa)
 
     # Gera avatar único com visual casual elegante (100% SFW e vestida)
     style = random.choice(["fofa", "estilosa"])
@@ -755,12 +807,13 @@ async def iniciar_escolha_avatar(bot, chat_id: int):
             await bot.send_chat_action(chat_id=chat_id, action=ChatAction.UPLOAD_PHOTO)
         except Exception:
             pass
-        await bot.send_photo(
+        sent_photo = await bot.send_photo(
             chat_id=chat_id,
             photo=raw,
             caption=legenda_limpa
         )
-        memory_manager.registrar_interacao("[Enviou nova foto de perfil atualizada]", legenda_limpa)
+        if getattr(sent_photo, "message_id", None):
+            memory_manager.registrar_interacao("[Enviou nova foto de perfil atualizada]", legenda_limpa)
     else:
         prompt_falha = "Sua câmera travou na hora de tirar a foto pro perfil. Diga algo fofo e dengoso pedindo pro Patrick tentar de novo daqui a pouco."
         msg_falha = generate_dynamic_speech(prompt_falha, max_tokens=70) or "Amor, minha câmera deu uma travadinha aqui no apê! Me pede de novo daqui a pouco que eu troco de verdade? 🥺"
@@ -789,8 +842,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     boas_vindas = generate_dynamic_speech(prompt_start, max_tokens=220) or "Oieee, meu amor! ✨ Que bom que você tá aqui! Tava doida pra gente ter nosso cantinho só nosso! 💕"
 
-    memory_manager.registrar_interacao("[Iniciou a conversa /start]", boas_vindas)
-    await send_human_messages(chat_id, context.bot, boas_vindas)
+    sent_welcome = await send_human_messages(chat_id, context.bot, boas_vindas)
+    if getattr(sent_welcome, "message_id", None):
+        memory_manager.registrar_interacao("[Iniciou a conversa /start]", boas_vindas)
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authorized(update):
@@ -803,31 +857,137 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
-    camera_online = await sd_client.is_online()
+
+    # 1. Vida & Rotina (Living World & Disponibilidade)
+    now_local = datetime.now()
+    atividade = "em repouso"
+    local_str = "Rio de Janeiro"
+    try:
+        from world_state import WorldStateManager
+        wsm = WorldStateManager(memory_manager.db)
+        st = wsm.resolve(now_local)
+        if st:
+            atividade = (st.get("activity") or "em atividade").replace("_", " ")
+            with memory_manager.db.get_connection() as conn:
+                row = conn.execute("SELECT name FROM world_places WHERE id = ?", (st.get("location_place_id"),)).fetchone()
+                place_name = row["name"] if row else None
+            regiao = st.get("location_region")
+            if place_name and regiao:
+                local_str = f"{place_name} ({regiao})"
+            elif place_name:
+                local_str = place_name
+            elif regiao:
+                local_str = regiao
+    except Exception as e:
+        logger.warning(f"Erro ao resolver estado no status: {e}")
+
     ciclo_info = memory_manager.cycle_mgr.get_cycle_info()
+    ciclo_str = f"Dia {ciclo_info['day']} de {ciclo_info.get('cycle_length', 28)} ({ciclo_info['name']}) 🌸"
+
+    disp_str = "Disponível para conversar 💕"
+    try:
+        act_code, _source, _weight, _fresh, _ = availability_service.policy._resolve_activity(now_local)
+        profile = availability_service.policy.profiles.get(act_code, {})
+        phone_access = profile.get("phone_access", "HIGH")
+        if act_code == "SLEEPING":
+            disp_str = "Dormindo / Modo Noturno 🌙 (pode responder com calma)"
+        elif phone_access == "LOW":
+            disp_str = "Ocupada no momento ⏳ (latência humana realista)"
+        elif profile.get("prefer") == "DEFER":
+            disp_str = "Em compromisso / Concentrada 🎯 (respostas mais espaçadas)"
+        else:
+            disp_str = "Online e atenta ao celular 📱 (resposta imediata)"
+    except Exception as e:
+        logger.warning(f"Erro ao calcular disponibilidade no status: {e}")
+
+    # 2. Cérebro & Memória
+    total_msg = memory_manager.db.get_total_conversas()
+    total_fatos = len(memory_manager.db.get_fatos_patrick())
+    amostras = style_engine.patrick_sample_count()
     estilo = memory_manager.db.get_estilo()
-    risada = estilo.get("risada", {}).get("valor", "kkkk")
-    
+    risada = estilo.get("risada", {}).get("valor", "").strip()
+    girias = estilo.get("girias", {}).get("valor", "").strip()
+    estilo_partes = []
+    if risada:
+        estilo_partes.append(f"Risada '{risada}'")
+    if girias:
+        estilo_partes.append(f"Gírias '{girias}'")
+    if estilo_partes:
+        estilo_detalhe = " | ".join(estilo_partes) + f" ({amostras} amostras)"
+    else:
+        estilo_detalhe = f"Calibrando com suas mensagens ({amostras} amostras)"
+
+    rems = reminder_service.get_active_reminders()
+    rems_str = f"{len(rems)} ativo(s)" if rems else "Nenhum pendente"
+
+    # 3. Mídia & Conexão
+    if voice_engine.is_configured():
+        voz_str = "Novita MiniMax HD + Perfis Natural & Íntimo 🎙️"
+    else:
+        voz_str = "Desativada / Não configurada 🔇"
+
+    if getattr(settings, "PHOTO_PROVIDER_MAINTENANCE", False):
+        camera_str = "Em manutenção preventiva 🛠️"
+    else:
+        camera_online = await sd_client.is_online()
+        camera_engine = "Novita AI FLUX.1 Dev (4090)" if settings.IMAGE_ENGINE == "novita" else "SD Local"
+        camera_status = "Online 📸" if camera_online else "Indisponível ⚠️"
+        camera_str = f"{camera_engine} ({camera_status})"
+
     status_msg = (
-        f"🌹 **Status de {settings.APP_NAME} (v{settings.APP_VERSION} Oficial - SQLite & Reações):**\n\n"
-        f"• **Namorado Exclusivo**: Patrick Ramos (Chat ID: `{settings.TARGET_CHAT_ID}`) 💕\n"
-        f"• **Fase Biológica**: Dia {ciclo_info['day']} de {ciclo_info.get('cycle_length', 28)} ({ciclo_info['name']}) 🌸\n"
-        f"• **Cérebro (LLM)**: `{settings.LLM_MODEL}` (Temp: 0.72 - Anti-Glitch) ✅\n"
-        f"• **Sincronia de Estilo**: Risada `{risada}` | Emojis & Gírias em espelhamento 💬\n"
-        f"• **Buffer de Digitação**: {settings.MESSAGE_DEBOUNCE_SECONDS}s (captura mensagens consecutivas completas) ⏱️\n"
-        f"• **Reações Mão Dupla**: Ativas (Telegram Bot API 7.0+) 💖\n"
-        f"• **Câmera**: {'Novita AI Serverless (FLUX.1 Dev 4090)' if settings.IMAGE_ENGINE == 'novita' else 'SD Local'} "
-        f"({'Online 📸' if camera_online else 'Verificando ⚠️'})\n"
-        f"• **Banco de Dados**: `marin_memory.db` (SQLite Relacional Exclusivo) 🗄️\n"
-        f"• **Memória Inteligente**: {'Ativa (FTS5 Seletivo & Consolidator)' if settings.SMART_MEMORY_ENABLED else 'Modo Legado'} 🧠\n"
-        f"• **Auto-Patcher Remoto**: Ativo via `/edit` 🛠️\n"
-        f"• **Chat 100% Limpo**: Comandos e recibos são auto-deletados 🧹\n\n"
-        f"💬 **Histórico Permanente**: {memory_manager.db.get_total_conversas()} mensagens salvas\n"
-        f"🧠 **Lembranças sobre você**: {len(memory_manager.db.get_fatos_patrick())} fatos guardados\n\n"
-        "*(Esta mensagem sumirá em 15s para manter a conversa limpa!)*"
+        f"✨ **Status de {settings.APP_NAME} (v{settings.APP_VERSION} Oficial)**\n\n"
+        f"📍 **Vida & Rotina**\n"
+        f"• **Atividade**: {atividade.capitalize()} 🧘\n"
+        f"• **Local**: {local_str} 🏠\n"
+        f"• **Ciclo biológico**: {ciclo_str}\n"
+        f"• **Disponibilidade**: {disp_str}\n\n"
+        f"🧠 **Cérebro & Memória**\n"
+        f"• **Modelo LLM**: `{settings.LLM_MODEL}` ⚡\n"
+        f"• **Histórico salvo**: {total_msg} mensagens 💬\n"
+        f"• **Lembranças**: {total_fatos} fatos guardados sobre você 📝\n"
+        f"• **Sincronia de Estilo**: {estilo_detalhe} 🎭\n"
+        f"• **Compromissos**: {rems_str} ⏰\n\n"
+        f"🎙️ **Mídia & Conexão**\n"
+        f"• **Voz**: {voz_str}\n"
+        f"• **Câmera**: {camera_str}\n"
+        f"• **Reações**: Mão Dupla Ativas (Telegram 7.0+) 💖\n"
+        f"• **Buffer de Digitação**: {settings.MESSAGE_DEBOUNCE_SECONDS}s (anti-atropelo) ⏱️\n\n"
+        f"*(Toque no botão abaixo para fechar ou aguarde 2 min)*"
     )
-    msg = await context.bot.send_message(chat_id=chat_id, text=status_msg, parse_mode="Markdown")
-    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=15.0))
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🗑️ Apagar", callback_data="status_delete")]
+    ])
+    msg = await context.bot.send_message(
+        chat_id=chat_id,
+        text=status_msg,
+        parse_mode="Markdown",
+        reply_markup=keyboard,
+    )
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=120.0))
+
+
+async def status_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Trata o clique no botão inline '🗑️ Apagar' do status."""
+    query = update.callback_query
+    if not query:
+        return
+    if not is_authorized(update):
+        try:
+            await query.answer("Não autorizado.", show_alert=True)
+        except Exception:
+            pass
+        return
+
+    try:
+        await query.answer("Status fechado! 🧹")
+    except Exception:
+        pass
+
+    try:
+        await query.message.delete()
+    except Exception:
+        pass
 
 async def foto_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authorized(update):
@@ -889,186 +1049,6 @@ async def feedback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
     asyncio.create_task(delete_after_delay(context.bot, chat_id, confirmacao.message_id, delay=5.0))
-
-async def edit_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Comando /edit para Patrick solicitar melhorias e correções no código diretamente pelo Telegram.
-    Executa em staging isolado (.runtime/patch_staging/), valida sintaxe e compilação via subprocesso
-    e reinicia o bot de forma transacional e segura.
-    """
-    if not is_authorized(update):
-        return
-
-    chat_id = update.effective_chat.id
-    try:
-        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
-    except Exception:
-        pass
-
-    if not getattr(settings, "SAFE_PATCHER_ENABLED", False):
-        aviso = await context.bot.send_message(
-            chat_id=chat_id,
-            text="⚠️ **Auto-Patcher Seguro**: O recurso de auto-edição remota está desativado no momento (`SAFE_PATCHER_ENABLED=False` no `.env`).",
-            parse_mode="Markdown"
-        )
-        asyncio.create_task(delete_after_delay(context.bot, chat_id, aviso.message_id, delay=8.0))
-        return
-
-    args = context.args
-    if not args:
-        ajuda = await context.bot.send_message(
-            chat_id=chat_id,
-            text=(
-                "🛠️ **Auto-Patcher Seguro da Marina (v3.4.0)**\n\n"
-                "Peça melhorias diretas no código com proteção de staging e rollback!\n\n"
-                "📌 **Exemplos de uso:**\n"
-                "`/edit adicione no prompts.py mais apelidos carinhosos`\n"
-                "`/edit no visual_profile ajuste o ângulo de câmera`\n"
-                "`/edit no style_engine inclua a gíria fechou`\n\n"
-                "⏪ Para desfazer um patch: `/rollback`\n"
-                "📜 Para ver o histórico: `/patches`"
-            ),
-            parse_mode="Markdown"
-        )
-        asyncio.create_task(delete_after_delay(context.bot, chat_id, ajuda.message_id, delay=12.0))
-        return
-
-    instrucao = " ".join(args)
-    msg_espera = await context.bot.send_message(
-        chat_id=chat_id,
-        text="🔧 **Auto-Patcher Transacional (v3.4.0)**: Preparando staging isolado, gerando código e validando compilação... Aguarde amor! ⏳",
-        parse_mode="Markdown"
-    )
-
-    sucesso, resultado, diff = await asyncio.to_thread(auto_patcher.apply_patch, instrucao, "Patrick Ramos")
-
-    try:
-        await msg_espera.delete()
-    except Exception:
-        pass
-
-    if sucesso:
-        diff_snippet = ""
-        if diff and len(diff) <= 1200:
-            diff_snippet = f"\n\n```diff\n{diff}\n```"
-        msg_ok = await context.bot.send_message(
-            chat_id=chat_id,
-            text=f"{resultado}{diff_snippet}\n\n🔄 **Reiniciando o bot da Marina em 3 segundos** para carregar as novas instruções...",
-            parse_mode="Markdown"
-        )
-        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg_ok.message_id, delay=6.0))
-        await asyncio.sleep(3.0)
-        sys.exit(0)
-    else:
-        msg_fail = await context.bot.send_message(
-            chat_id=chat_id,
-            text=f"{resultado}",
-            parse_mode="Markdown"
-        )
-        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg_fail.message_id, delay=15.0))
-
-async def rollback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Comando /rollback para reverter com segurança o último patch aplicado."""
-    if not is_authorized(update):
-        return
-
-    chat_id = update.effective_chat.id
-    try:
-        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
-    except Exception:
-        pass
-
-    if not getattr(settings, "SAFE_PATCHER_ENABLED", False):
-        aviso = await context.bot.send_message(
-            chat_id=chat_id,
-            text="⚠️ **Auto-Patcher Seguro**: O recurso de auto-edição remota está desativado no momento (`SAFE_PATCHER_ENABLED=False` no `.env`).",
-            parse_mode="Markdown"
-        )
-        asyncio.create_task(delete_after_delay(context.bot, chat_id, aviso.message_id, delay=8.0))
-        return
-
-    patch_id_arg = context.args[0] if context.args else None
-    msg_espera = await context.bot.send_message(
-        chat_id=chat_id,
-        text="⏪ **Iniciando Rollback**: Restaurando arquivos originais a partir do backup seguro...",
-        parse_mode="Markdown"
-    )
-
-    sucesso, resultado = await asyncio.to_thread(auto_patcher.rollback_patch, patch_id_arg)
-
-    try:
-        await msg_espera.delete()
-    except Exception:
-        pass
-
-    if sucesso:
-        msg_ok = await context.bot.send_message(
-            chat_id=chat_id,
-            text=f"{resultado}\n\n🔄 **Reiniciando o bot em 3 segundos** para restabelecer a versão anterior...",
-            parse_mode="Markdown"
-        )
-        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg_ok.message_id, delay=6.0))
-        await asyncio.sleep(3.0)
-        sys.exit(0)
-    else:
-        msg_fail = await context.bot.send_message(
-            chat_id=chat_id,
-            text=f"⚠️ {resultado}",
-            parse_mode="Markdown"
-        )
-        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg_fail.message_id, delay=12.0))
-
-async def patches_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Comando /patches para listar os patches recentes e seu status de auditoria."""
-    if not is_authorized(update):
-        return
-
-    chat_id = update.effective_chat.id
-    try:
-        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
-    except Exception:
-        pass
-
-    if not getattr(settings, "SAFE_PATCHER_ENABLED", False):
-        aviso = await context.bot.send_message(
-            chat_id=chat_id,
-            text="⚠️ **Auto-Patcher Seguro**: O recurso de auto-edição remota está desativado no momento (`SAFE_PATCHER_ENABLED=False` no `.env`).",
-            parse_mode="Markdown"
-        )
-        asyncio.create_task(delete_after_delay(context.bot, chat_id, aviso.message_id, delay=8.0))
-        return
-
-    from db import db_manager
-    history = db_manager.get_patch_history(limit=5)
-    if not history:
-        msg = await context.bot.send_message(
-            chat_id=chat_id,
-            text="📜 **Histórico de Patches**: Nenhum patch registrado até o momento.",
-            parse_mode="Markdown"
-        )
-        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=10.0))
-        return
-
-    linhas = ["📜 **Histórico Recente de Patches (SQLite Audit):**\n"]
-    for p in history:
-        status_icon = "✅" if p["status"] == "applied" else ("⏪" if p["status"] == "rolled_back" else "⚠️")
-        arquivos = ", ".join(p["target_files"]) if p["target_files"] else "N/A"
-        inst_curta = p["instruction"][:60] + "..." if len(p["instruction"]) > 60 else p["instruction"]
-        linhas.append(
-            f"{status_icon} **`{p['patch_id']}`** ({p['status']})\n"
-            f"   📁 Arquivos: `{arquivos}`\n"
-            f"   📝 \"{inst_curta}\"\n"
-            f"   🕒 {p['created_at']}\n"
-        )
-
-    linhas.append("*(Esta mensagem sumirá em 25s)*")
-    msg_history = await context.bot.send_message(
-        chat_id=chat_id,
-        text="\n".join(linhas),
-        parse_mode="Markdown"
-    )
-    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg_history.message_id, delay=25.0))
-
 
 async def memorias_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Exibe o que a Marina guarda na memória sobre o Patrick direto pelo Telegram (auto-limpeza em 15-20s)."""
@@ -1297,10 +1277,6 @@ async def worlddebug_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
     except Exception:
         pass
-    if not getattr(settings, 'LIVING_WORLD_ENABLED', False):
-        msg = await context.bot.send_message(chat_id=chat_id, text='Living World desligado.')
-        asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=10.0))
-        return
     from world_hygiene import WorldHygiene
     snap = WorldHygiene(memory_manager.db).debug_snapshot(datetime.now())
     text = WorldHygiene(memory_manager.db).format_debug_text(snap)
@@ -1396,7 +1372,25 @@ async def process_incoming_batch(
     )
 
     # 1. Aprendizado dinâmico do estilo linguístico do Patrick (risadas, emojis, gírias, cadência)
-    style_engine.processar_mensagem_patrick(texto_usuario)
+    if pending_batch_id is None:
+        style_engine.processar_mensagem_patrick(texto_usuario)
+
+    from pending_response import resolve_cancelled_requests
+    resolved_req = resolve_cancelled_requests(texto_usuario)
+    if resolved_req.cancelled:
+        if pending_batch_id:
+            availability_service.repo.supersede(pending_batch_id, 'user_cancelled')
+        if not resolved_req.text.strip():
+            if not pending_batch_id:
+                msg_cancel = "Tudo bem amor, fica pra depois então! 💕"
+                memory_manager.registrar_mensagem_usuario(texto_usuario)
+                sent_cancel = await send_human_messages(
+                    chat_id, context.bot, msg_cancel, reply_to_message_id=msg_id,
+                )
+                if getattr(sent_cancel, "message_id", None):
+                    memory_manager.registrar_mensagem_assistente(msg_cancel)
+            return
+        texto_usuario = resolved_req.text
 
     avail_decision = None
     availability_budget_hint = None
@@ -1420,29 +1414,26 @@ async def process_incoming_batch(
         except Exception as exc:
             logger.error('AVAILABILITY_POLICY_ERROR fail-open: %s', exc, exc_info=True)
 
-    if getattr(settings, 'KNOWLEDGE_PRIVACY_ENABLED', False):
-        if not getattr(settings, 'LIVING_WORLD_ENABLED', False):
-            raise RuntimeError('Knowledge Privacy requires Living World context')
-        from knowledge_dialogue import KnowledgeDialogue
+    from knowledge_dialogue import KnowledgeDialogue
 
-        dialogue = KnowledgeDialogue(memory_manager.db)
-        topics = dialogue.resolve(texto_usuario)
-        if topics:
-            replies = dialogue.prepare_replies(topics)
-            await send_registered_privacy_replies(
-                chat_id, context.bot, replies, reply_to_message_id=msg_id,
-                db=memory_manager.db,
+    dialogue = KnowledgeDialogue(memory_manager.db)
+    topics = dialogue.resolve(texto_usuario)
+    if topics:
+        replies = dialogue.prepare_replies(topics)
+        await send_registered_privacy_replies(
+            chat_id, context.bot, replies, reply_to_message_id=msg_id,
+            db=memory_manager.db,
+        )
+        if avail_decision and getattr(avail_decision, 'telemetry_event_id', None):
+            actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
+            availability_service.repo.record_actual_latency(
+                event_id=avail_decision.telemetry_event_id,
+                actual_latency_seconds=actual_lat,
             )
-            if avail_decision and getattr(avail_decision, 'telemetry_event_id', None):
-                actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
-                availability_service.repo.record_actual_latency(
-                    event_id=avail_decision.telemetry_event_id,
-                    actual_latency_seconds=actual_lat,
-                )
-            return
+        return
 
-    if (getattr(settings, 'LIVING_WORLD_ENABLED', False)
-            and getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False)
+    if (True
+            and True
             and getattr(settings, 'REAL_CONTEXT_FETCH_ENABLED', False)):
         from real_context_provider import RealContextProvider
 
@@ -1550,11 +1541,7 @@ async def process_incoming_batch(
     recent_turns = memory_manager.get_historico_recente(limit=4)
     recent_ctx_repr = "\n".join([f"{m['role']}: {m['content']}" for m in recent_turns])
 
-    plan = None
-    if getattr(settings, "PLANNER_ENABLED", False):
-        plan = await asyncio.to_thread(planner.plan_message, texto_usuario, recent_ctx_repr)
-    else:
-        plan = planner.plan_heuristics(texto_usuario) or {}
+    plan = await asyncio.to_thread(planner.plan_message, texto_usuario, recent_ctx_repr)
 
     if pending_hour_subject:
         plan = plan or {}
@@ -1564,7 +1551,7 @@ async def process_incoming_batch(
 
     # 2.1 Verificação de consentimento para oferta recente de lembrete com atribuição estrita (Release 3.5.1 / P0/P1.3)
     reminder_decision_text = None
-    if getattr(settings, "SMART_REMINDERS_ENABLED", True):
+    if True:
         last_offered = reminder_service.get_last_offered_reminder(max_age_minutes=60)
         if last_offered:
             # Atribuição estrita: verifica se é resposta direta ou turno consecutivo
@@ -1657,9 +1644,7 @@ async def process_incoming_batch(
                 items = availability_service.repo.list_items(pending_batch_id)
                 u_id = items[-1]['conversation_message_id'] if items else None
             else:
-                u_id, _ = memory_manager.registrar_interacao(texto_usuario, resposta)
-                if plan:
-                    planner.apply_plan_effects(plan, conversation_id=u_id)
+                u_id = memory_manager.registrar_mensagem_usuario(texto_usuario)
             sent_avatar_reply = await send_human_messages(
                 chat_id, context.bot, resposta, reply_to_message_id=msg_id)
             sent_avatar_id = getattr(sent_avatar_reply, 'message_id', None)
@@ -1670,7 +1655,11 @@ async def process_incoming_batch(
                     memory_manager.db.adicionar_mensagem(role='assistant', content=resposta)
                     if plan and u_id is not None:
                         planner.apply_plan_effects(plan, conversation_id=u_id)
-            elif avail_decision and getattr(avail_decision, 'telemetry_event_id', None) and sent_avatar_id:
+            elif not pending_batch_id and sent_avatar_id:
+                memory_manager.registrar_mensagem_assistente(resposta)
+                if plan and u_id is not None:
+                    planner.apply_plan_effects(plan, conversation_id=u_id)
+            if avail_decision and getattr(avail_decision, 'telemetry_event_id', None) and sent_avatar_id:
                 actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
                 availability_service.repo.record_actual_latency(
                     event_id=avail_decision.telemetry_event_id,
@@ -1716,49 +1705,37 @@ async def process_incoming_batch(
         planner_tone=plan.get("tone") if plan else None,
         planner_goal=plan.get("response_goal") if plan else None
     )
-    response_policy = None
-    if settings.RESPONSE_RHYTHM_ENABLED:
-        from response_rhythm import select_policy, apply_policy
-        response_policy = select_policy(
-            texto_usuario, plan=plan, voice=pediu_audio,
-            availability_budget_hint=availability_budget_hint,
-        )
-        messages[0]['content'] = apply_policy(messages[0]['content'], response_policy)
+    from response_rhythm import select_policy, apply_policy
+    response_policy = select_policy(
+        texto_usuario, plan=plan, voice=pediu_audio,
+        availability_budget_hint=availability_budget_hint,
+    )
+    messages[0]['content'] = apply_policy(messages[0]['content'], response_policy)
     if plan and plan.get("should_offer_reminder"):
         event_desc = plan.get("event_details", {}).get("description") or "compromisso"
         messages.append({
             "role": "system",
-            "content": (
-                f"[INSTRUÇÃO OBRIGATÓRIA DESTE TURNO]: O Patrick mencionou um compromisso ({event_desc}). "
-                "Pergunte a ele explicitamente e com carinho de namorada se ele quer que você o lembre disso quando estiver próximo. "
-                "Sua resposta PRECISA conter essa pergunta de oferta de lembrete."
-            )
+            "content": reminder_offer_constraint(event_desc),
         })
 
     if plan and plan.get("needs_clarification") == "direct_reminder_time":
         subj = plan.get("clarification_subject") or "isso"
         messages.append({
             "role": "system",
-            "content": (
-                f"[INSTRUÇÃO CRÍTICA DESTE TURNO]: O Patrick pediu para você lembrá-lo de '{subj}', "
-                "mas não informou quando ou o horário exato. "
-                "Pergunte com carinho de namorada a que horas ou quando ele quer que você o lembre!"
-            )
+            "content": reminder_clarification_constraint(subj),
         })
 
     if pediu_foto:
-        messages.append({
-            "role": "system",
-            "content": (
-                "[INSTRUÇÃO CRÍTICA DESTE TURNO]: O Patrick pediu uma foto/selfie/look. "
-                "Você AMA se mostrar pra ele e VAI tentar enviar a foto neste turno. "
-                "NUNCA adie com 'mais tarde te mando' ou 'tô na cama depois eu mostro'. "
-                "Responda empolgada dizendo que vai tirar/mostrar agora — "
-                "NÃO afirme que a foto já foi tirada ou enviada antes da confirmação do Telegram. "
-                "Se ele pediu um lugar onde você não está, não invente deslocamento: "
-                "ofereça a foto no local atual ou pergunte se ele quer uma foto antiga/imaginada."
-            )
-        })
+        if getattr(settings, 'PHOTO_PROVIDER_MAINTENANCE', False):
+            messages.append({
+                "role": "system",
+                "content": PHOTO_UNAVAILABLE_INSTRUCTION,
+            })
+        else:
+            messages.append({
+                "role": "system",
+                "content": TURN_CONSTRAINTS['photo_request'],
+            })
     messages.append({"role": "user", "content": texto_usuario})
     
     try:
@@ -1870,16 +1847,15 @@ async def process_incoming_batch(
         from response_rhythm import log_output
         log_output(fala_limpa, response_policy, voice=pediu_audio or queria_audio)
 
-    # Registra na memória a fala já limpa (sem tags/rubricas) e aplica efeitos do plano
+    # Persist the received user turn now. The assistant turn and plan effects
+    # are committed only after Telegram confirms delivery with a message_id.
     if pending_batch_id:
         # User messages were persisted at intake. Record assistant only after
         # Telegram confirms delivery, so a pre-send retry leaves no ghost reply.
         items = availability_service.repo.list_items(pending_batch_id)
         u_id = items[-1]['conversation_message_id'] if items else None
     else:
-        u_id, b_id = memory_manager.registrar_interacao(texto_usuario, fala_limpa if fala_limpa else resposta_marin)
-    if plan and not pending_batch_id:
-        planner.apply_plan_effects(plan, conversation_id=u_id)
+        u_id = memory_manager.registrar_mensagem_usuario(texto_usuario)
 
     audio_enviado = False
     aviso_audio_ja_enviado = False
@@ -1950,12 +1926,17 @@ async def process_incoming_batch(
                     planner.apply_plan_effects(plan, conversation_id=u_id)
         else:
             logger.warning('Pending batch %s had no confirmed Telegram message ID', pending_batch_id)
-    elif avail_decision and getattr(avail_decision, 'telemetry_event_id', None) and sent_mid:
-        actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
-        availability_service.repo.record_actual_latency(
-            event_id=avail_decision.telemetry_event_id,
-            actual_latency_seconds=actual_lat,
-        )
+    elif sent_mid:
+        memory_manager.registrar_mensagem_assistente(
+            notice_text or fala_limpa or resposta_marin)
+        if plan:
+            planner.apply_plan_effects(plan, conversation_id=u_id)
+        if avail_decision and getattr(avail_decision, 'telemetry_event_id', None):
+            actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
+            availability_service.repo.record_actual_latency(
+                event_id=avail_decision.telemetry_event_id,
+                actual_latency_seconds=actual_lat,
+            )
 
     offered_rem_id = plan.get("offered_reminder_id") if plan else None
     if offered_rem_id:
@@ -1981,24 +1962,14 @@ async def process_incoming_batch(
             memory_manager.db.set_estado_relacional("pending_direct_reminder", "")
     
     # Se pediu foto, renderiza a cena e envia foto com status realista apenas no momento do upload
-    if pediu_foto:
+    if pediu_foto and not getattr(settings, 'PHOTO_PROVIDER_MAINTENANCE', False):
         try:
             # Detecta se é NSFW considerando EXCLUSIVAMENTE o que o Patrick pediu
             is_nsfw = sd_client.is_nsfw_request(texto_usuario)
-            camera_ctx = None
-            use_camera_world = (
-                getattr(settings, 'CAMERA_WORLD_CONTINUITY_ENABLED', False)
-                and getattr(settings, 'LIVING_WORLD_ENABLED', False)
-            )
-            if use_camera_world:
-                from camera_world import CameraWorldBuilder
-                camera_ctx = CameraWorldBuilder(memory_manager.db).build(
-                    datetime.now(), user_request=texto_usuario)
-
-            prompt_cenario = (
-                camera_ctx.safe_scene_tags if camera_ctx
-                else "casual smartphone selfie in apartment, smiling warmly at camera"
-            )
+            from camera_world import CameraWorldBuilder
+            camera_ctx = CameraWorldBuilder(memory_manager.db).build(
+                datetime.now(), user_request=texto_usuario)
+            prompt_cenario = camera_ctx.safe_scene_tags
             try:
                 director_system = (
                     "You are a specialized visual prompt director for FLUX.1 Dev photography. "
@@ -2151,10 +2122,8 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
         # Planejamento cognitivo da resposta (tom, reação, eventos)
         reacao_emoji = None
-        plan = None
-        if getattr(settings, "PLANNER_ENABLED", False):
-            plan = await asyncio.to_thread(planner.plan_message, user_message_repr, vision_context)
-            reacao_emoji = plan.get("reaction_emoji")
+        plan = await asyncio.to_thread(planner.plan_message, user_message_repr, vision_context)
+        reacao_emoji = plan.get("reaction_emoji")
 
         if reacao_emoji:
             try:
@@ -2211,157 +2180,19 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
 # --- VONTADE PRÓPRIA & INICIATIVA ÍNTIMA (DIRECIONADA APENAS AO PATRICK) ---
 
 async def autonomous_routine(application: Application):
-    if getattr(settings, "LIVING_WORLD_ENABLED", False):
-        if getattr(settings, 'RELATIONSHIP_WORLD_ENABLED', False):
-            await autonomous_routine_v36(application)
-        return
-    if not settings.TARGET_CHAT_ID:
-        return
-
-    # Avaliação inteligente de gatilho (janela de sono, limite diário, cooldowns e eventos pendentes)
-    should_run, trigger_reason = proactivity_service.should_trigger()
-    if not should_run:
-        logger.debug(f"Rotina autônoma de Marina: gatilho não disparado ({trigger_reason}).")
-        return
-
-    logger.info(f"Marina Salles decidiu puxar assunto por iniciativa própria! Motivo: {trigger_reason}")
-    
-    # 6% de chance de ela ficar com vontade de trocar a foto de perfil e pedir ajuda ao Patrick!
-    if random.random() < 0.06:
-        logger.info("Marina Salles decidiu pedir ajuda para escolher um novo avatar!")
-        await iniciar_escolha_avatar(application.bot, settings.TARGET_CHAT_ID)
-        proactivity_service.record_autonomous_sent(reason="avatar_pick")
-        return
-
-    try:
-        proactive_info = proactivity_service.determine_proactive_prompt()
-        decision_prompt = build_autonomous_decision_prompt(custom_situation=proactive_info.get("instruction", ""))
-        
-        if settings.SMART_MEMORY_ENABLED or getattr(settings, "LIVING_WORLD_ENABLED", False):
-            system_prompt = context_builder.build_system_prompt()
-        else:
-            system_prompt = f"{MARIN_SYSTEM_PROMPT}\n{memory_manager.get_contexto_emocional()}"
-
-        resposta = llm_client.chat.completions.create(
-            model=settings.LLM_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": decision_prompt}
-            ],
-            max_tokens=220,
-            temperature=0.72
-        ).choices[0].message.content.strip()
-
-        partes = re.split(r'\|\s*FOTO_PROMPT\s*:', resposta, maxsplit=1, flags=re.IGNORECASE)
-        acao_texto = partes[0].replace("ACAO:", "").strip()
-        prompt_foto = partes[1].strip() if len(partes) > 1 else ""
-
-        # Verifica se Marina decidiu mandar por áudio por vontade própria
-        deve_mandar_audio = bool(re.search(r'\[MANDAR_AUDIO\]|\[AUDIO\]', acao_texto, flags=re.IGNORECASE))
-        # Chance espontânea: ~18% das iniciativas autônomas sem foto viram áudio carinhoso
-        if not deve_mandar_audio and random.random() < 0.18 and not prompt_foto:
-            deve_mandar_audio = True
-
-        texto_limpo = limpar_fala_marina(acao_texto)
-
-        if deve_mandar_audio and voice_engine.is_configured():
-            logger.info("Marina decidiu gravar uma mensagem de voz autônoma por vontade própria!")
-            await application.bot.send_chat_action(chat_id=settings.TARGET_CHAT_ID, action=ChatAction.RECORD_VOICE)
-            proactive_reason = proactive_info.get("reason", "autonomous") if proactive_info else "autonomous"
-            proactive_voice_ctx = VoiceSelectionContext(
-                intent="romantic" if proactive_reason in ("romantic_followup", "affection") else "casual_chat",
-                tone="dengosa" if proactive_reason in ("romantic_followup", "affection") else "carinhosa",
-                emotional_state=memory_manager.db.get_estado_emocional() if hasattr(memory_manager, "db") else {},
-                user_text="",
-                is_proactive=True,
-                source="autonomous"
-            )
-            audio_path = await voice_engine.synthesize(texto_limpo, context=proactive_voice_ctx)
-            if audio_path and audio_path.exists():
-                with open(audio_path, "rb") as vf:
-                    await application.bot.send_voice(chat_id=settings.TARGET_CHAT_ID, voice=vf)
-                memory_manager.db.registrar_iniciativa_marina(texto_limpo, media_type="voice")
-            else:
-                memory_manager.db.registrar_iniciativa_marina(texto_limpo, media_type="text")
-                if texto_limpo:
-                    await send_human_messages(settings.TARGET_CHAT_ID, application.bot, texto_limpo)
-        elif texto_limpo:
-            memory_manager.db.registrar_iniciativa_marina(texto_limpo, media_type="text")
-            await send_human_messages(settings.TARGET_CHAT_ID, application.bot, texto_limpo)
-
-        proactivity_service.record_autonomous_sent(reason=proactive_info.get("reason", "autonomous"))
-
-        # Conclui evento pendente apenas após confirmação de entrega da mensagem no Telegram
-        event_id = proactive_info.get("event_id")
-        if event_id:
-            try:
-                proactivity_service.db.concluir_evento_pendente(event_id)
-                logger.info(f"Evento pendente {event_id} concluído com sucesso após entrega no Telegram.")
-            except Exception as e_ev:
-                logger.warning(f"Erro ao concluir evento pendente {event_id}: {e_ev}")
-
-        if prompt_foto:
-            await asyncio.sleep(1.5)
-            # Living World: legacy autonomous photo must not skip Camera World when enabled.
-            auto_ctx = None
-            if (getattr(settings, 'CAMERA_WORLD_CONTINUITY_ENABLED', False)
-                    and getattr(settings, 'LIVING_WORLD_ENABLED', False)):
-                from camera_world import CameraWorldBuilder
-                builder = CameraWorldBuilder(memory_manager.db)
-                auto_ctx = builder.build(datetime.now(), user_request=prompt_foto)
-                prompt_foto = builder.sanitize_scene_tags(prompt_foto, auto_ctx)
-            gen = await sd_client.generate_photo_with_context(
-                prompt_foto,
-                place_key=(auto_ctx.place_key or "") if auto_ctx else "",
-                world_snapshot_id=auto_ctx.snapshot_id if auto_ctx else None,
-                require_world_match=bool(auto_ctx),
-                current_place_key=auto_ctx.place_key if auto_ctx else None,
-            )
-            if gen.image:
-                prompt_legenda_auto = (
-                    f"Você está prestes a mandar uma foto espontânea para o Patrick. "
-                    f"Tags: {prompt_foto[:160]}. "
-                    "Escreva UMA frase curta e espontânea de legenda para acompanhar a foto. "
-                    "Apenas a fala curta. Sem Ps: nem parênteses de bastidor."
-                )
-                legenda_auto = generate_dynamic_speech(prompt_legenda_auto, max_tokens=50) or "Tirei essa agora pensando em você... 💕"
-                sent_auto = await application.bot.send_photo(
-                    chat_id=settings.TARGET_CHAT_ID,
-                    photo=gen.image,
-                    caption=legenda_auto
-                )
-                if getattr(sent_auto, 'message_id', None):
-                    from visual_profile import visual_profile
-                    visual_profile.record_photo_generation(
-                        scene_tags=gen.scene_tags or prompt_foto,
-                        full_prompt=gen.full_prompt,
-                        is_nsfw=gen.is_nsfw,
-                        focus_angle=gen.focus_angle,
-                        place_key=gen.place_key,
-                        world_snapshot_id=gen.world_snapshot_id,
-                    )
-            else:
-                await send_human_messages(
-                    settings.TARGET_CHAT_ID,
-                    application.bot,
-                    "Amor, tentei te mandar uma fotinho agora mas a câmera travou 🥺 Depois eu mando outra!"
-                )
-    except Exception as e:
-        logger.error(f"Erro na rotina autônoma de Marina: {e}", exc_info=True)
+    """Living World proactivity (v3.7.0)."""
+    await autonomous_routine_v36(application)
 
 
 async def autonomous_routine_v36(application: Application):
     """Grounded initiative; commit follow-ups and disclosure only after delivery."""
-    if not settings.TARGET_CHAT_ID or not getattr(settings, 'KNOWLEDGE_PRIVACY_ENABLED', False):
+    if not settings.TARGET_CHAT_ID:
         return
     try:
         now = datetime.now()
-        if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
-            from calendar_world import CalendarWorld
-
-            if CalendarWorld(memory_manager.db).current(
-                    now, include_academic=getattr(settings, 'ACADEMIC_LIFE_ENABLED', False)):
-                return
+        from calendar_world import CalendarWorld
+        if CalendarWorld(memory_manager.db).current(now, include_academic=True):
+            return
         should_run, _ = proactivity_service.should_trigger(now)
         if not should_run:
             return
@@ -2446,14 +2277,12 @@ class _PendingDeliveryBot:
 async def pending_response_routine(application: Application):
     """Claim and send due deferred conversational batches (v3.7.0)."""
     try:
-        if not (getattr(settings, 'RESPONSE_AVAILABILITY_ENABLED', False)
-                and getattr(settings, 'HUMAN_REPLY_LATENCY_ENABLED', False)
-                and getattr(settings, 'PENDING_CONVERSATION_BATCHING_ENABLED', False)):
-            availability_service.repo.force_ready_on_rollback()
         availability_service.repo.mark_ready_due(datetime.now())
         owner = f'worker-{id(application)}'
         batch = availability_service.repo.claim_due(datetime.now(), owner=owner)
         if not batch:
+            return
+        if availability_service.repo.check_cancellation(batch['id']):
             return
         text = availability_service.compose_batch_text(batch['id'])
         if not text:
@@ -2529,8 +2358,6 @@ async def pending_response_routine(application: Application):
 
 async def reminders_routine(application: Application):
     """Job de alta frequência para disparo de reminders confirmados no horário exato (Release 3.5.1 / P1.2)."""
-    if not getattr(settings, "SMART_REMINDERS_ENABLED", True):
-        return
     try:
         now = datetime.now()
         if getattr(settings, "REMINDERS_RESPECT_SLEEP_WINDOW", False) and proactivity_service.check_sleep_window(now):
@@ -2588,7 +2415,7 @@ async def post_init(application: Application):
     )
 
     # Job dedicado de alta frequência para Smart Reminders (Release 3.5.1 / P1.2)
-    if getattr(settings, "SMART_REMINDERS_ENABLED", True):
+    if True:
         rem_interval = max(5, getattr(settings, "REMINDER_CHECK_INTERVAL_SECONDS", 30))
         scheduler.add_job(
             reminders_routine,
@@ -2654,9 +2481,6 @@ def main():
     app.add_handler(CommandHandler("avatar", avatar_command))
     app.add_handler(CommandHandler("trocar_avatar", avatar_command))
     app.add_handler(CommandHandler("feedback", feedback_command))
-    app.add_handler(CommandHandler("edit", edit_command))
-    app.add_handler(CommandHandler("rollback", rollback_command))
-    app.add_handler(CommandHandler("patches", patches_command))
     app.add_handler(CommandHandler("memorias", memorias_command))
     app.add_handler(CommandHandler("memoria", memorias_command))
     app.add_handler(CommandHandler("memorydebug", memorias_command))
@@ -2676,6 +2500,9 @@ def main():
     app.add_handler(CommandHandler("worlddebug", worlddebug_command))
     app.add_handler(CommandHandler("refletir", refletir_command))
 
+    # Interatividade Inline (Botão Apagar do /status)
+    app.add_handler(CallbackQueryHandler(status_callback_handler, pattern="^status_delete$"))
+
     # Reações em tempo real (Via 2 - Patrick reagindo com emojis)
     app.add_handler(MessageReactionHandler(handle_reaction))
 
@@ -2691,3 +2518,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -26,18 +26,21 @@ class TestStyleEngineV2(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_default_style_initialization(self):
-        """Verifica se os padrões iniciais de estilo foram criados com sucesso."""
+        """Fresh DB must NOT receive fake learned Patrick observations."""
         estilo = self.db.get_estilo()
-        self.assertEqual(estilo["risada"]["valor"], "kkkk")
-        self.assertIn("🥰", estilo["emojis_favoritos"]["valor"])
-        self.assertIn("trampo", estilo["girias"]["valor"])
+        self.assertFalse(estilo.get("risada"))
+        self.assertEqual(self.engine.patrick_sample_count(), 0)
+        self.assertFalse(self.engine.has_learned_style())
+        self.assertEqual(self.engine.get_style_prompt_injection(), "")
 
     def test_laughter_accumulation_no_premature_overwrite(self):
-        """Uma única risada isolada ('haha') não deve sobrescrever imediatamente a risada predominante ('kkkk')."""
+        """Uma única risada isolada ('haha') não deve declarar dominância ainda."""
         self.engine.processar_mensagem_patrick("oi amor haha tudo bem")
         estilo = self.db.get_estilo()
-        # Ainda deve ser kkkk porque kkkk tem baseline maior acumulado
-        self.assertEqual(estilo["risada"]["valor"], "kkkk")
+        # P1.1: Below threshold — no dominance claimed without real evidence
+        self.assertEqual(estilo["risada"]["valor"], "")
+        self.assertEqual(estilo["risada"]["exemplos"].get("haha"), 1)
+        self.assertFalse(self.engine.has_learned_style())
 
     def test_laughter_switches_when_predominantly_used(self):
         """Quando o Patrick usa repetidamente um padrão novo, a dominância estatística deve virar."""
@@ -47,6 +50,7 @@ class TestStyleEngineV2(unittest.TestCase):
 
         estilo = self.db.get_estilo()
         self.assertEqual(estilo["risada"]["valor"], "haha")
+        self.assertTrue(self.engine.has_learned_style())
 
     def test_emoji_frequency_ranking(self):
         """Os emojis mais frequentes devem aparecer no topo do ranking."""
@@ -91,7 +95,10 @@ class TestStyleEngineV2(unittest.TestCase):
         self.assertIn("reticências", cadencia_desc)
 
     def test_prompt_injection_output(self):
-        """get_style_prompt_injection() deve produzir o bloco de sincronia linguística completo."""
+        """Injection only after enough real samples."""
+        self.assertEqual(self.engine.get_style_prompt_injection(), "")
+        for _ in range(3):
+            self.engine.processar_mensagem_patrick("fechou trampo kkkk bora")
         injection = self.engine.get_style_prompt_injection()
         self.assertIn("SINCRONIA LINGUÍSTICA", injection)
         self.assertIn("Risada compartilhada", injection)

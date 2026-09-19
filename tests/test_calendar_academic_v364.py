@@ -157,11 +157,11 @@ class TestCalendarAcademicV364(unittest.TestCase):
         self.assertIn('faculdade', state['activity'])
         self.assertEqual(json.loads(state['source_json'])['reason'], 'confirmed_commitment')
 
-    def test_academic_flag_requires_shared_calendar(self):
+    def test_retired_markers_cannot_separate_academic_from_shared_calendar(self):
         with (patch.object(settings, 'ACADEMIC_LIFE_ENABLED', True),
               patch.object(settings, 'CALENDAR_CONTINUITY_ENABLED', False)):
-            with self.assertRaisesRegex(RuntimeError, 'requires Calendar Continuity'):
-                WorldStateManager(self.db).resolve(datetime(2026, 9, 22, 9))
+            state = WorldStateManager(self.db).resolve(datetime(2026, 9, 22, 9))
+        self.assertIn('faculdade', state['activity'])
 
     def test_cancelling_current_class_invalidates_cached_world_state(self):
         now = datetime(2026, 9, 22, 9)

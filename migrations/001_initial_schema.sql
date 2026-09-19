@@ -1,5 +1,5 @@
 -- Migration 001: Initial Database Schema
--- Marina Seltin SQLite Baseline
+-- Marina Salles SQLite Baseline
 
 CREATE TABLE IF NOT EXISTS conversas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

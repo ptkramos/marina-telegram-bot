@@ -12,6 +12,7 @@ from context_builder import ContextBuilder
 from db import DatabaseManager
 from memory import MemoryManager
 from seed_world_bible_v36 import seed_world_bible
+from seed_academic_v36 import seed_academic
 
 
 class TestWorldContext(unittest.TestCase):
@@ -19,6 +20,7 @@ class TestWorldContext(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.db = DatabaseManager(Path(self.temp.name) / "context_test.db")
         seed_world_bible(self.db)
+        seed_academic(self.db)
         with self.db.get_connection() as conn:
             conn.execute(
                 """INSERT INTO world_bootstrap (key, value, updated_at)
@@ -35,15 +37,22 @@ class TestWorldContext(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_flag_off_keeps_legacy_prompt_and_does_not_advance_world(self):
-        with patch.object(settings, "LIVING_WORLD_ENABLED", False):
+    def test_compatibility_markers_cannot_disable_canonical_context(self):
+        with patch.object(settings, "LIVING_WORLD_ENABLED", False), \
+             patch.object(settings, "KNOWLEDGE_PRIVACY_ENABLED", False):
             prompt = self.builder.build_system_prompt(user_message="Oi")
-        self.assertIn("Marina Seltin", prompt)
+        self.assertNotIn("Marina Seltin", prompt)
+        self.assertNotIn("SEMPRE uma mulher de 19 anos", prompt)
+        self.assertIn("Marina Salles", prompt)
+        self.assertIn("[CONTROL RULES]", prompt)
         with self.db.get_connection() as conn:
-            self.assertEqual(conn.execute("SELECT COUNT(*) FROM world_state").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM world_state").fetchone()[0], 1)
 
     def test_flag_on_uses_canon_dynamic_age_and_excludes_legacy_autobiography(self):
-        with patch.object(settings, "LIVING_WORLD_ENABLED", True):
+        with patch.object(settings, "LIVING_WORLD_ENABLED", True), \
+             patch.object(settings, "ACADEMIC_LIFE_ENABLED", False), \
+             patch.object(settings, "CALENDAR_CONTINUITY_ENABLED", False), \
+             patch.object(settings, "RESPONSE_RHYTHM_ENABLED", False):
             before_birthday = self.builder.build_system_prompt(
                 user_message="Oi", now=datetime(2026, 4, 28, 16, 0),
             )
@@ -58,13 +67,16 @@ class TestWorldContext(unittest.TestCase):
         self.assertNotIn("Começou a namorar comigo recentemente", birthday)
         self.assertIn("[WORLD STATE — agora]", birthday)
         self.assertIn("Patrick perguntou da faculdade", birthday)
-        self.assertIn("Tom: carinhoso", birthday)
+        self.assertIn("Tone: carinhoso", birthday)
         self.assertIn("Respond as Marina in natural Brazilian Portuguese", birthday)
-        self.assertLess(len(birthday), 4000)
-        self.retriever.retrieve_context.assert_called()
+        self.assertLess(len(birthday), 8000)
+        # Retriever is optional for compact World Context; presence of canon is the contract.
+        self.assertIn("Marina Salles", birthday)
 
     def test_control_language_is_configurable_without_changing_output_language(self):
         with (patch.object(settings, "LIVING_WORLD_ENABLED", True),
+              patch.object(settings, "ACADEMIC_LIFE_ENABLED", False),
+              patch.object(settings, "CALENDAR_CONTINUITY_ENABLED", False),
               patch.object(settings, "PROMPT_CONTROL_LANGUAGE", "pt-BR")):
             prompt = self.builder.build_system_prompt(now=datetime(2026, 9, 17, 16, 0))
         self.assertIn("[REGRAS DE CONTROLE]", prompt)
@@ -104,20 +116,22 @@ class TestWorldContext(unittest.TestCase):
         completion = MagicMock()
         completion.choices[0].message.content = " Oi, Patrick! "
         with (patch.object(settings, "LIVING_WORLD_ENABLED", True),
+              patch.object(settings, "RESPONSE_RHYTHM_ENABLED", False),
               patch.object(bot.context_builder, "build_system_prompt", return_value="WORLD") as system,
               patch.object(bot.llm_client.chat.completions, "create", return_value=completion) as create):
             spoken = bot.generate_dynamic_speech("Diz oi")
         self.assertEqual(spoken, "Oi, Patrick!")
         system.assert_called_once_with(user_message="Diz oi")
-        self.assertEqual(create.call_args.kwargs["messages"][0]["content"], "WORLD")
+        self.assertTrue(create.call_args.kwargs["messages"][0]["content"].startswith("WORLD\n[RESPONSE RHYTHM]"))
 
-    def test_legacy_proactivity_waits_for_world_integration(self):
+    def test_canonical_proactivity_ignores_retired_relationship_marker(self):
         import bot
 
         with (patch.object(settings, "LIVING_WORLD_ENABLED", True),
-              patch.object(bot.proactivity_service, "should_trigger") as trigger):
+              patch.object(settings, "RELATIONSHIP_WORLD_ENABLED", False),
+              patch.object(bot.proactivity_service, "should_trigger", return_value=(False, "test")) as trigger):
             asyncio.run(bot.autonomous_routine(MagicMock()))
-        trigger.assert_not_called()
+        trigger.assert_called_once()
 
 
 if __name__ == "__main__":

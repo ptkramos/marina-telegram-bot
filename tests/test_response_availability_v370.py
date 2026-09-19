@@ -93,6 +93,19 @@ class AvailabilityPolicyTests(unittest.TestCase):
         delay = (d.selected_target_at - d.earliest_reply_at).total_seconds()
         self.assertLessEqual(delay, 180)
 
+    def test_sleep_routine_never_replies_before_window_ends(self):
+        now = datetime(2026, 9, 19, 2, 45)
+        self._snap(activity='dormindo', reason='light_day_sleep', observed=now)
+        with patch.multiple(settings, CALENDAR_CONTINUITY_ENABLED=False,
+                            CRITICAL_WAKE_POLICY_ENABLED=False):
+            normal = self.policy.evaluate('tá acordada?', now=now, telegram_message_id=51)
+            urgent = self.policy.evaluate('preciso falar contigo', now=now, telegram_message_id=52)
+        expected = datetime(2026, 9, 19, 8, 30)
+        self.assertEqual(normal.decision, 'DEFER')
+        self.assertGreaterEqual(normal.selected_target_at, expected)
+        self.assertEqual(urgent.decision, 'DEFER')
+        self.assertGreaterEqual(urgent.selected_target_at, expected)
+
 
 class PendingBatchTests(unittest.TestCase):
     def setUp(self):
@@ -185,13 +198,6 @@ class PendingBatchTests(unittest.TestCase):
         self.assertGreaterEqual(stats['ready'], 1)
         self.assertGreaterEqual(stats['unknown'], 1)
 
-    def test_rollback_force_ready(self):
-        self.repo.create_batch(self._decision(selected_target_at=self.now + timedelta(hours=2)))
-        n = self.repo.force_ready_on_rollback(self.now)
-        self.assertEqual(n, 1)
-        claimed = self.repo.claim_due(self.now, owner='rb')
-        self.assertIsNotNone(claimed)
-
     def test_inflight_batch_is_frozen_and_new_message_gets_successor(self):
         first, added, _ = self.repo.enqueue_item(
             self._decision(selected_target_at=self.now), message='primeira',
@@ -276,31 +282,6 @@ class PendingBatchTests(unittest.TestCase):
             items = self.repo.list_items(batch['id'])
             self.assertEqual(len(items), 2)
 
-    def test_shadow_mode_never_defers(self):
-        with patch.multiple(
-            settings,
-            RESPONSE_AVAILABILITY_ENABLED=True,
-            HUMAN_REPLY_LATENCY_ENABLED=False,
-            PENDING_CONVERSATION_BATCHING_ENABLED=False,
-        ):
-            action, decision, batch = self.svc.evaluate_and_maybe_defer(
-                'oi', telegram_message_id=1, now=self.now)
-            self.assertIn(action, ('proceed', 'proceed_brief'))
-            self.assertIsNone(batch)
-            self.assertTrue(decision.shadow_only)
-
-    def test_flags_off_legacy(self):
-        with patch.multiple(
-            settings,
-            RESPONSE_AVAILABILITY_ENABLED=False,
-            HUMAN_REPLY_LATENCY_ENABLED=False,
-            PENDING_CONVERSATION_BATCHING_ENABLED=False,
-        ):
-            action, decision, batch = self.svc.evaluate_and_maybe_defer(
-                'oi', telegram_message_id=1, now=self.now)
-            self.assertEqual(action, 'legacy')
-            self.assertIsNone(decision)
-
 
 class BriefRhythmHintTests(unittest.TestCase):
     def test_brief_hint_caps_bubbles(self):
@@ -327,7 +308,7 @@ class PendingDeliveryRoutineTests(unittest.IsolatedAsyncioTestCase):
             activity_type='CLASS', activity_source='WORLD_STATE', reason_code='class_busy',
             earliest_reply_at=self.now, target_window_start=self.now,
             target_window_end=self.now + timedelta(hours=1),
-            selected_target_at=self.now + timedelta(minutes=30),
+            selected_target_at=self.now - timedelta(seconds=1),
             context_snapshot_id=None, world_state_freshness='fresh',
             decision_seed='delivery-test', can_claim_activity=True, shadow_only=False,
         )
@@ -343,16 +324,12 @@ class PendingDeliveryRoutineTests(unittest.IsolatedAsyncioTestCase):
         async def pipeline(_update, context, _text, **_kwargs):
             await context.bot.send_message(chat_id=1, text='confirmed reply')
 
-        with patch.multiple(settings,
-                            RESPONSE_AVAILABILITY_ENABLED=False,
-                            HUMAN_REPLY_LATENCY_ENABLED=False,
-                            PENDING_CONVERSATION_BATCHING_ENABLED=False), \
-             patch.object(bot, 'availability_service', self.svc), \
+        with patch.object(bot, 'availability_service', self.svc), \
              patch.object(bot.memory_manager, 'db', self.db), \
              patch.object(bot, 'process_incoming_batch', side_effect=pipeline):
             await bot.pending_response_routine(SimpleNamespace(bot=fake_bot))
 
-    async def test_rollback_job_drains_and_records_confirmed_send(self):
+    async def test_due_job_drains_and_records_confirmed_send(self):
         await self._run_with_send(AsyncMock(return_value=SimpleNamespace(message_id=902)))
         batch = self.svc.repo.get_batch(self.batch['id'])
         self.assertEqual(batch['status'], 'SENT')
@@ -366,12 +343,11 @@ class PendingDeliveryRoutineTests(unittest.IsolatedAsyncioTestCase):
 
 
 class ConfigGateTests(unittest.TestCase):
-    def test_dependency_validation(self):
+    def test_availability_pipeline_is_canonical(self):
         from config import Settings
-        with patch.object(Settings, 'HUMAN_REPLY_LATENCY_ENABLED', True):
-            with patch.object(Settings, 'RESPONSE_AVAILABILITY_ENABLED', False):
-                errors = Settings.validate()
-                self.assertTrue(any('HUMAN_REPLY_LATENCY' in e for e in errors))
+        self.assertTrue(Settings.RESPONSE_AVAILABILITY_ENABLED)
+        self.assertTrue(Settings.HUMAN_REPLY_LATENCY_ENABLED)
+        self.assertTrue(Settings.PENDING_CONVERSATION_BATCHING_ENABLED)
 
 
 if __name__ == '__main__':

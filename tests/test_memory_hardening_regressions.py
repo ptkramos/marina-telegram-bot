@@ -7,12 +7,16 @@ from unittest.mock import MagicMock, patch, AsyncMock
 from db import DatabaseManager
 from memory_consolidator import MemoryConsolidator, MemoryConsolidationError
 from memory_retriever import MemoryRetriever
+from seed_world_bible_v36 import seed_world_bible
+from seed_academic_v36 import seed_academic
 
 class AuditRegressions(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.db = DatabaseManager(Path(self.tmp.name) / 'audit.db')
+        seed_world_bible(self.db)
+        seed_academic(self.db)
         self.llm = MagicMock()
         self.c = MemoryConsolidator(db=self.db, llm_client=self.llm)
         self.r = MemoryRetriever(db=self.db)
@@ -158,21 +162,30 @@ class AuditRegressions(unittest.TestCase):
 
     def test_context_builder_confidence_boundaries_and_access(self):
         from context_builder import ContextBuilder
+        from config import settings
+        with self.db.get_connection() as conn:
+            conn.execute(
+                """INSERT INTO world_bootstrap (key, value, updated_at)
+                   VALUES ('clean_canonical_start_done', '1', '2026-09-18T00:00:00')"""
+            )
         # Only memory persistence is injected; the real prompt builder is exercised.
         manager = MagicMock(wraps=__import__('memory').memory_manager)
         manager.db = self.db
         builder = ContextBuilder(memory_mgr=manager, retriever=self.r)
         fid = self.db.adicionar_fato_patrick('Chess preference')
-        for value, expected in ((0.49, 'reconfirmar naturalmente'), (0.50, 'tratar com cautela'), (0.79, 'tratar com cautela'), (0.80, None)):
-            with self.subTest(value=value):
-                with self.db.get_connection() as conn:
-                    conn.execute('UPDATE fatos_patrick SET confidence=? WHERE id=?', (value, fid))
-                prompt = builder.build_system_prompt(user_message='Chess')
-                line = next(line for line in prompt.splitlines() if 'Chess preference' in line)
-                if expected:
-                    self.assertIn(expected, line)
-                else:
-                    self.assertEqual(line, '- Chess preference')
+        with patch.object(settings, 'LIVING_WORLD_ENABLED', False), \
+             patch.object(settings, 'KNOWLEDGE_PRIVACY_ENABLED', False), \
+             patch.object(settings, 'RESPONSE_RHYTHM_ENABLED', False):
+            for value, expected in ((0.49, 'reconfirmar naturalmente'), (0.50, 'tratar com cautela'), (0.79, 'tratar com cautela'), (0.80, None)):
+                with self.subTest(value=value):
+                    with self.db.get_connection() as conn:
+                        conn.execute('UPDATE fatos_patrick SET confidence=? WHERE id=?', (value, fid))
+                    prompt = builder.build_system_prompt(user_message='Chess')
+                    line = next(line for line in prompt.splitlines() if 'Chess preference' in line)
+                    if expected:
+                        self.assertIn(expected, line)
+                    else:
+                        self.assertEqual(line, '- Chess preference')
         self.assertEqual(self.db.get_fato_detalhado(fid)['access_count'], 4)
 
     def test_consolidator_candidate_lookup_does_not_track_access(self):
@@ -245,4 +258,3 @@ class AuditRegressions(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-

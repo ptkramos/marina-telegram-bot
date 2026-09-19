@@ -1,5 +1,5 @@
 -- Migration 003: Continuity & Emotional/Relational State
--- Marina Seltin v3.2 Foundation
+-- Marina Salles v3.2 Foundation
 
 -- 1. Eventos Pendentes (Follow-ups contextuais automáticos)
 CREATE TABLE IF NOT EXISTS eventos_pendentes (

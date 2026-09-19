@@ -16,23 +16,23 @@ from config import settings
 
 logger = logging.getLogger("VisionService")
 
-VISION_PROMPT = """Você é o Sistema de Percepção Visual da namorada Marina Salles.
-Analise a foto que Patrick Ramos (namorado da Marina) acabou de enviar e retorne ESTRITAMENTE um JSON estruturado com os elementos reais e concretos visíveis na imagem.
+VISION_PROMPT = """You are Marina Salles' visual perception extraction component.
+Analyze the photo Patrick Ramos just sent and return STRICTLY structured JSON of concrete visible elements.
 
-ESTRUTURA OBRIGATÓRIA (JSON puro):
+REQUIRED JSON:
 {
-  "scene": "descrição clara e concisa do ambiente ou situação geral (ex: prato de almoço em restaurante, selfie do Patrick no espelho, praia ensolarada, monitor com código)",
-  "people": ["descrição curta de pessoas presentes ou 'Patrick' se for selfie/ele"],
-  "objects": ["principais objetos visíveis"],
-  "food": ["itens de comida ou bebida se houver"],
-  "visible_text": ["textos legíveis em placas, telas, camisetas se houver"],
-  "notable_details": ["detalhes marcantes que chamam atenção carinhosa"],
+  "scene": "clear concise description of setting/situation",
+  "people": ["short descriptions or 'Patrick' if selfie"],
+  "objects": ["main visible objects"],
+  "food": ["food/drink items if any"],
+  "visible_text": ["legible text on signs/screens/shirts if any"],
+  "notable_details": ["details worth a caring remark"],
   "uncertain_details": []
 }
 
-REGRAS:
-- Seja factual e objetivo. Não invente nada além do que a imagem mostra.
-- Devolva APENAS o JSON válido, sem tags markdown ou comentários.
+RULES:
+- Be factual. Do not invent beyond the image.
+- Return ONLY valid JSON, no markdown.
 """
 
 
@@ -129,7 +129,7 @@ class VisionService:
         return data
 
     def format_vision_context(self, vision_data: Dict[str, Any], caption: str = "") -> str:
-        """Formata os dados visuais estruturados em um bloco contextual orgânico para o Context Builder."""
+        """Data-only vision evidence for the context builder (no behavioral imperatives)."""
         scene = vision_data.get("scene", "foto enviada pelo Patrick")
         people = vision_data.get("people", [])
         food = vision_data.get("food", [])
@@ -137,26 +137,22 @@ class VisionService:
         text = vision_data.get("visible_text", [])
         notables = vision_data.get("notable_details", [])
 
-        lines = [f"[FOTO RECEBIDA DO PATRICK AGORA]"]
-        lines.append(f"- O que você está vendo na foto: {scene}")
+        lines = ["[VISION EVIDENCE — data only]"]
+        lines.append(f"- scene: {scene}")
         if people:
-            lines.append(f"- Pessoas na foto: {', '.join(people)}")
+            lines.append(f"- people: {', '.join(people)}")
         if food:
-            lines.append(f"- Comida/Bebida visível: {', '.join(food)}")
+            lines.append(f"- food: {', '.join(food)}")
         if objects:
-            lines.append(f"- Objetos/Ambiente: {', '.join(objects[:5])}")
+            lines.append(f"- objects: {', '.join(objects[:5])}")
         if text:
-            lines.append(f"- Textos visíveis na imagem: {', '.join(text[:3])}")
+            lines.append(f"- visible_text: {', '.join(text[:3])}")
         if notables:
-            lines.append(f"- Detalhes marcantes: {', '.join(notables[:3])}")
+            lines.append(f"- notable_details: {', '.join(notables[:3])}")
         if caption:
-            lines.append(f"- Legenda que o Patrick escreveu junto: \"{caption}\"")
-
-        lines.append(
-            "(INSTRUÇÃO DE RESPOSTA: Reaja de forma 100% natural, espontânea e carinhosa como namorada do Patrick ao que você acabou de ver na foto dele! "
-            "NUNCA diga 'vejo na imagem', 'a foto mostra' ou use linguagem robótica; comente diretamente sobre a foto com afeto, como qualquer pessoa real faz no Telegram!)."
-        )
-        return "\n".join(lines)
+            lines.append(f'- caption: "{caption}"')
+        from prompt_policy import format_vision_evidence
+        return format_vision_evidence(lines)
 
 
 vision_service = VisionService()

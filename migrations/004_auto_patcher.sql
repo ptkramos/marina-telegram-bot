@@ -1,5 +1,5 @@
 -- Migration 004: Transactional Auto-Patcher & Audit History
--- Marina Seltin v3.4 Foundation
+-- Marina Salles v3.4 Foundation
 
 CREATE TABLE IF NOT EXISTS patch_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

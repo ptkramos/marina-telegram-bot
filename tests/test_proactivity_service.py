@@ -46,7 +46,7 @@ class TestProactivityService(unittest.TestCase):
 
         should_run, reason = self.service.should_trigger(now=agora)
         self.assertTrue(should_run)
-        self.assertEqual(reason, "pending_event_ready")
+        self.assertEqual(reason, "pending_event_followup")
 
         # Verifica prompt estruturado gerado
         prompt_data = self.service.determine_proactive_prompt(now=agora)

@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import hashlib
 import json
 import logging
+import math
 import re
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -148,9 +149,11 @@ class ResponseAvailabilityPolicy:
         profile = dict(self.profiles.get(activity_type) or self.profiles['UNKNOWN'])
 
         # Soft routine must not drive long DEFER or factual activity claims.
-        if activity_source == 'ROUTINE_PROBABILITY':
+        if activity_source == 'ROUTINE_PROBABILITY' and activity_type != 'SLEEPING':
             profile['soft_delay_max_s'] = min(int(profile['soft_delay_max_s']), 180)
             profile['guardrail_s'] = min(int(profile['guardrail_s']), 300)
+            can_claim = False
+        elif activity_source == 'ROUTINE_PROBABILITY':
             can_claim = False
         if freshness != 'fresh' or activity_type == 'UNKNOWN':
             profile = dict(self.profiles['UNKNOWN'])
@@ -161,25 +164,39 @@ class ResponseAvailabilityPolicy:
         decision, reason = self._choose_decision(profile, urgency, complexity, activity_type)
         seed_value = seed or self._seed(conversation_key, telegram_message_id, now, message)
         delay_s = self._pick_delay_seconds(profile, urgency, decision, seed_value)
+        critical_wake = bool(getattr(settings, 'CRITICAL_WAKE_POLICY_ENABLED', False))
+        sleep_protected = activity_type == 'SLEEPING' and not critical_wake
+        sleep_until = self._routine_sleep_until(snapshot_id, local_naive(now)) if sleep_protected else None
         if activity_type == 'UNKNOWN':
             delay_s = min(delay_s, 120)
         if urgency in ('HIGH', 'CRITICAL') and decision != 'REPLY_NOW':
-            delay_s = min(delay_s, 180 if urgency == 'HIGH' else 30)
+            if not sleep_protected:
+                delay_s = min(delay_s, 180 if urgency == 'HIGH' else 30)
             if urgency == 'CRITICAL':
-                decision = 'REPLY_NOW' if activity_type != 'SLEEPING' else 'REPLY_BRIEFLY'
-                reason = 'critical_override'
-                delay_s = 0 if decision == 'REPLY_NOW' else min(delay_s, 60)
+                if sleep_protected:
+                    # Sleep remains protected — explicit wake policy required
+                    decision = 'DEFER'
+                    reason = 'sleeping_critical_no_wake_policy'
+                    delay_s = int(profile['soft_delay_min_s'])
+                else:
+                    decision = 'REPLY_NOW' if activity_type != 'SLEEPING' else 'REPLY_BRIEFLY'
+                    reason = 'critical_override'
+                    delay_s = 0 if decision == 'REPLY_NOW' else min(delay_s, 60)
+
+        if sleep_protected and sleep_until is not None:
+            delay_s = max(delay_s, math.ceil((sleep_until - local_naive(now)).total_seconds()))
 
         target = local_naive(now) + timedelta(seconds=delay_s)
         window_start = local_naive(now) + timedelta(seconds=max(0, int(profile['soft_delay_min_s'])))
+        if sleep_until is not None and window_start < sleep_until:
+            window_start = sleep_until
         window_end = local_naive(now) + timedelta(seconds=int(profile['guardrail_s']))
         if target > window_end:
             target = window_end
         if target < window_start and decision == 'DEFER':
             target = window_start
 
-        shadow = bool(getattr(settings, 'RESPONSE_AVAILABILITY_ENABLED', False)
-                      and not getattr(settings, 'HUMAN_REPLY_LATENCY_ENABLED', False))
+        shadow = False
 
         result = ResponseAvailabilityDecision(
             decision=decision,
@@ -210,11 +227,11 @@ class ResponseAvailabilityPolicy:
     def _resolve_activity(self, now: datetime) -> tuple[str, str, Optional[int], str, bool]:
         now_naive = local_naive(now)
         commitment = None
-        if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
+        if True:
             from calendar_world import CalendarWorld, local_time
             commitment = CalendarWorld(self.db).current(
                 local_time(now_naive),
-                include_academic=getattr(settings, 'ACADEMIC_LIFE_ENABLED', False),
+                include_academic=True,
             )
         if commitment:
             mapped = self._map_place_activity(
@@ -243,6 +260,35 @@ class ResponseAvailabilityPolicy:
         # Routine / free_time: soft signal only.
         return mapped, 'ROUTINE_PROBABILITY', snapshot['id'], 'fresh', False
 
+    def _routine_sleep_until(self, snapshot_id: Optional[int], now: datetime) -> Optional[datetime]:
+        """Return the first minute outside the active deterministic sleep window."""
+        if snapshot_id is None:
+            return None
+        with self.db.get_connection() as conn:
+            snapshot = conn.execute(
+                'SELECT source_json FROM world_state WHERE id=?', (snapshot_id,)
+            ).fetchone()
+            if not snapshot:
+                return None
+            try:
+                reason = json.loads(snapshot['source_json'] or '{}').get('reason')
+            except (TypeError, ValueError, json.JSONDecodeError):
+                return None
+            row = conn.execute(
+                """SELECT window_end FROM routine_patterns
+                   WHERE canonical_key=? AND routine_type='sleep' AND active=1""",
+                (reason,),
+            ).fetchone()
+        if not row or not row['window_end']:
+            return None
+        try:
+            hour, minute = (int(part) for part in row['window_end'].split(':', 1))
+            boundary = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        except (TypeError, ValueError):
+            return None
+        boundary += timedelta(minutes=1)
+        return boundary if boundary > now else None
+
     def _place_key(self, place_id: Optional[int]) -> Optional[str]:
         if place_id is None:
             return None
@@ -254,29 +300,43 @@ class ResponseAvailabilityPolicy:
 
     def _map_place_activity(self, place_key: Optional[str], activity: str) -> str:
         text = f'{place_key or ""} {activity}'.casefold()
-        if any(x in text for x in ('dorm', 'sleep', 'sono')):
+        act = (activity or '').casefold()
+        # Priority: explicit activity keywords override place heuristic
+        if any(x in act for x in ('dorm', 'sleep', 'sono')):
             return 'SLEEPING'
+        if any(x in act for x in ('trabalh', 'freela', 'codando', 'programando')):
+            return 'WORK'
+        if any(x in act for x in ('uber', 'metrô', 'metro', 'ônibus', 'onibus', 'desloc')):
+            return 'COMMUTE'
+        if any(x in act for x in ('treinando', 'academia', 'musculação')):
+            return 'GYM'
+        if any(x in act for x in ('casting', 'ensaio', 'sessão de foto')):
+            return 'CASTING'
+        if any(x in act for x in ('com amig', 'bar ', 'happy hour', 'balada')):
+            return 'SOCIAL'
+        if any(x in act for x in ('intervalo', 'tomando café', 'tomando cafe')):
+            return 'SOCIAL'
+        # Fallback: place-based heuristic
         if place_key == 'puc_rio' or 'faculdade' in text or 'aula' in text:
             return 'CLASS'
-        if place_key == 'bodytech_sao_clemente' or 'academia' in text or 'treinando' in text:
+        if place_key == 'bodytech_sao_clemente':
             return 'GYM'
-        if place_key == 'boutique_agency' or 'casting' in text or 'ensaio' in text:
+        if place_key == 'boutique_agency':
             return 'CASTING'
-        if any(x in text for x in ('uber', 'metrô', 'metro', 'ônibus', 'onibus', 'desloc')):
-            return 'COMMUTE'
-        if place_key in ('quartinho_bar',) or 'bar' in text or 'com amig' in text:
+        if place_key in ('quartinho_bar',):
             return 'SOCIAL'
         if place_key == 'marina_apartment' or 'casa' in text or 'apartamento' in text:
             return 'HOME_RELAXING'
-        if 'trabalho' in text or 'freela' in text:
-            return 'WORK'
         return 'UNKNOWN'
 
     def _choose_decision(self, profile, urgency, complexity, activity_type) -> tuple[str, str]:
         prefer = profile.get('prefer', 'REPLY_NOW')
         brief_p = float(profile.get('brief_likelihood', 0.1))
+        critical_wake = bool(getattr(settings, 'CRITICAL_WAKE_POLICY_ENABLED', False))
         if urgency == 'CRITICAL' and activity_type != 'SLEEPING':
             return 'REPLY_NOW', 'critical_now'
+        if urgency == 'CRITICAL' and activity_type == 'SLEEPING' and not critical_wake:
+            return 'DEFER', 'sleeping_critical_no_wake_policy'
         if urgency == 'HIGH' and activity_type != 'SLEEPING':
             return ('REPLY_BRIEFLY' if prefer == 'DEFER' else 'REPLY_NOW'), 'high_urgency'
         if activity_type == 'SLEEPING':
@@ -330,19 +390,26 @@ def classify_urgency(message: str, *, plan: Optional[dict] = None) -> str:
     plan = plan or {}
     if plan.get('intent') in ('urgent', 'relationship_conflict') or plan.get('urgency') == 'critical':
         return 'CRITICAL' if 'emerg' in text or 'perigo' in text else 'HIGH'
+    # CRITICAL patterns — evaluated BEFORE short-message fallback
     if re.search(
         r'\b(emerg[eê]ncia|socorro|perigo|me ajuda agora|urgente agora|ligue? (?:pra|para) mim agora)\b',
         text,
     ):
         return 'CRITICAL'
+    # HIGH patterns — pt-BR distress patterns
     if re.search(
         r'\b(preciso falar(?: contigo| com voc[eê])?|aconteceu uma coisa s[eé]ria|'
-        r'temos que conversar|preciso de voc[eê] agora|é s[eé]rio|urgente)\b',
+        r'temos que conversar|preciso de voc[eê] agora|é s[eé]rio|urgente|'
+        r'me ajuda|preciso de ajuda|acidente|hospital|machuquei|me machuquei|'
+        r'passei mal|estou passando mal|t[oô] passando mal|t[oô] mal|'
+        r'é urgente)\b',
         text,
     ):
         return 'HIGH'
+    # LOW — trivial acknowledgements
     if re.search(r'^(kk+|haha+|😂+|🤣+|ok+|valeu+|tmj+)\s*$', text.strip()):
         return 'LOW'
+    # Short messages — only LOW if no distress pattern matched above
     if len(text) < 12 and not text.endswith('?'):
         return 'LOW'
     return 'NORMAL'
@@ -358,3 +425,4 @@ def classify_complexity(message: str, *, plan: Optional[dict] = None, batch_size
     if len(text) < 40 and questions <= 1 and batch_size <= 1:
         return 'SHORT'
     return 'NORMAL'
+

@@ -234,16 +234,6 @@ class MemoryRetriever:
         5. Deduplicação por diversidade e canonical_key
         6. Controle de side-effects de access_count (record_access)
         """
-        # Feature Flag Fallback
-        if not getattr(settings, "MEMORY_INTELLIGENCE_ENABLED", True):
-            return self._retrieve_context_legacy(
-                user_message=user_message,
-                max_facts=max_facts,
-                max_moments=max_moments,
-                max_summaries=max_summaries,
-                record_access=record_access
-            )
-
         keywords = self.extract_keywords(user_message)
         candidates_map: Dict[int, dict] = {}
         lexical_scores: Dict[int, float] = {}

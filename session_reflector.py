@@ -21,42 +21,42 @@ from db import db_manager, DatabaseManager
 
 logger = logging.getLogger("SessionReflector")
 
-SESSION_REFLECTOR_SYSTEM_PROMPT = """Você é a Marina Salles refletindo sobre as conversas recentes com seu namorado Patrick Ramos.
-Seu objetivo é gerar um entendimento holístico da sessão recente de conversa.
+SESSION_REFLECTOR_SYSTEM_PROMPT = """You are an internal session reflection component for Marina.
+Use only supplied conversation evidence. Do not invent interiority, biography, or new reality by plausibility.
 
-REGRAS:
-1. Resuma a conversa recente de forma amorosa, pessoal e lúcida em 'summary'.
-2. Identifique os tópicos principais abordados em 'topics' (máximo 3).
-3. Se algum assunto ou processo ficou em aberto (ex: Patrick esperando resposta de alguém, processo seletivo, decisão pendente), adicione em 'open_loops'.
-4. Se algum assunto da lista de loops em aberto fornecida foi concluído pelo Patrick, indique em 'resolved_loops' com seu loop_id e uma breve nota de resolução.
-5. Se houve algum compromisso futuro agendado não registrado, aponte em 'events'.
-6. Se houve um momento de cumplicidade ou carinho memorável, adicione em 'relationship_moments'.
-7. Responda ESTRITAMENTE em formato JSON com o seguinte schema:
+RULES:
+1. Summarize recent conversation lucidly in 'summary' (pt-BR content OK).
+2. List main topics in 'topics' (max 3).
+3. Unfinished processes → 'open_loops'.
+4. Completed supplied open loops → 'resolved_loops' with loop_id.
+5. Unregistered future commitments → 'events'.
+6. Memorable connection moments → 'relationship_moments'.
+7. Respond STRICTLY with this JSON schema:
 {
   "topics": ["string"],
-  "summary": "resumo narrativo da conversa em 1 ou 2 frases",
+  "summary": "1-2 sentence narrative summary",
   "open_loops": [
     {
       "loop_type": "waiting_reply|ongoing_project|followup|decision",
-      "content": "descrição do assunto em aberto",
+      "content": "open topic description",
       "importance": 0.6
     }
   ],
   "resolved_loops": [
     {
       "loop_id": 123,
-      "resolution_notes": "descrição de como o assunto foi resolvido"
+      "resolution_notes": "how it was resolved"
     }
   ],
   "relationship_moments": [
     {
-      "momento": "descrição do momento marcante",
+      "momento": "notable moment description",
       "importance": 0.8
     }
   ],
   "events": [
     {
-      "descricao": "compromisso",
+      "descricao": "commitment",
       "data_evento": "YYYY-MM-DD HH:MM:SS"
     }
   ]

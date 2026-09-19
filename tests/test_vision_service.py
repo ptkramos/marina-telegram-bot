@@ -41,7 +41,7 @@ class TestVisionService(unittest.TestCase):
             self.assertEqual(h, 512)
 
     def test_format_vision_context_with_details(self):
-        """Verifica se o bloco contextual de visão é gerado com instruções afetivas de namorada."""
+        """Data-only vision evidence — no behavioral imperatives in the channel."""
         vision_data = {
             "scene": "um hambúrguer artesanal com batata frita",
             "people": [],
@@ -54,11 +54,12 @@ class TestVisionService(unittest.TestCase):
         caption = "Olha o meu almoço hoje amor!"
         context_str = self.service.format_vision_context(vision_data, caption=caption)
 
-        self.assertIn("[FOTO RECEBIDA DO PATRICK AGORA]", context_str)
+        self.assertIn("[VISION EVIDENCE — data only]", context_str)
         self.assertIn("hambúrguer artesanal", context_str)
         self.assertIn("hambúrguer duplo com queijo", context_str)
         self.assertIn("Olha o meu almoço hoje amor!", context_str)
-        self.assertIn("INSTRUÇÃO DE RESPOSTA", context_str)
+        self.assertNotIn("INSTRUÇÃO DE RESPOSTA", context_str)
+        self.assertNotIn("NUNCA diga", context_str)
 
     def test_fallback_data(self):
         """Garante retorno de fallback seguro caso ocorra erro ou a visão esteja desabilitada."""

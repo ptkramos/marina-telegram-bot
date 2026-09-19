@@ -125,7 +125,6 @@ class HealthChecker:
             "cycle",
             "style_engine",
             "feedback_manager",
-            "prompts",
             "memory",
             "memory_retriever",
             "memory_consolidator",
@@ -136,7 +135,6 @@ class HealthChecker:
             "proactivity_service",
             "vision_service",
             "visual_profile",
-            "auto_patcher",
             "bot"
         ]
 
@@ -152,22 +150,25 @@ class HealthChecker:
         return all_ok
 
     def check_context_and_prompts(self) -> bool:
-        print("\n--- 5. Verificação de Contexto e Ciclo Biológico ---")
+        print("\n--- 5. Verificação de Prompt Authority ---")
         try:
-            from memory import memory_manager
-            from prompts import get_temporal_greeting, MARIN_SYSTEM_PROMPT
+            from prompt_policy import build_safe_core_prompt, get_daypart, CONTROL_EN
+            from context_builder import context_builder
+            from config import settings
 
-            contexto_emocional = memory_manager.get_contexto_emocional()
-            greeting = get_temporal_greeting()
-            ciclo = memory_manager.cycle_mgr.get_cycle_info()
-
-            if not MARIN_SYSTEM_PROMPT or len(MARIN_SYSTEM_PROMPT) < 100:
-                self.log_fail("System Prompt da Marina", "Prompt base ausente ou corrompido")
+            daypart = get_daypart()
+            safe = build_safe_core_prompt(db=None)
+            if ('Marina ' + 'Seltin') in safe or '19yo' in safe:
+                self.log_fail("SafeCore", "legado pré-v3.6 detectado no fallback")
                 return False
-
-            self.log_pass("System Prompt Base", f"Carregado ({len(MARIN_SYSTEM_PROMPT)} caracteres)")
-            self.log_pass("Ciclo Biológico Atual", f"Dia {ciclo['day']} ({ciclo['name']})")
-            self.log_pass("Contexto Dinâmico", f"Saudação: '{greeting}' | Bloco Emocional: {len(contexto_emocional)} chars")
+            if '[CONTROL RULES]' not in CONTROL_EN:
+                self.log_fail("CONTROL_EN", "ausente")
+                return False
+            ctrl = getattr(settings, 'PROMPT_CONTROL_LANGUAGE', 'en')
+            out = getattr(settings, 'MARINA_OUTPUT_LANGUAGE', 'pt-BR')
+            self.log_pass("SafeCore + daypart", f"daypart={daypart}")
+            self.log_pass("Language policy", f"control={ctrl} output={out}")
+            self.log_pass("Context builder", f"available={context_builder is not None}")
             return True
         except Exception as e:
             self.log_fail("Construção de contexto", str(e))

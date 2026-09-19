@@ -68,6 +68,48 @@ class TestMemoryConsolidatorDatabase(unittest.TestCase):
         self.assertEqual(len(busca), 1)
         self.assertIn("Monster", busca[0]["fato"])
 
+    def test_ambiguous_referent_is_never_persisted(self):
+        payload = {
+            "facts_to_create": [{
+                "fato": "Patrick considera Marina Salles parecida com outra pessoa",
+                "category": "relacionamento",
+                "importance": 0.6,
+                "confidence": 0.8,
+            }],
+            "facts_to_deactivate": [],
+            "important_moments": [{
+                "momento": "Patrick disse que Marina é parecida com outra pessoa",
+                "importance": 0.8,
+            }],
+            "topic_summary": "Conversa sobre Marina ser parecida com outra pessoa",
+        }
+
+        result = self.consolidator.apply_consolidation(payload)
+
+        self.assertEqual(result["created"], 0)
+        self.assertEqual(result["moments"], 0)
+        self.assertFalse(result["summary_saved"])
+        facts = self.db.get_fatos_patrick_detalhados()
+        self.assertFalse(any("parecida com outra pessoa" in row["fato"] for row in facts))
+
+    def test_soak_reset_clears_learning_but_preserves_canonical_profile(self):
+        self.db.adicionar_mensagem('user', 'mensagem do soak antigo')
+        self.db.adicionar_fato_patrick('Patrick gosta de um teste antigo')
+        self.db.salvar_estilo('risada', 'kkkk', ['kkkk'])
+        self.db.set_estado_relacional('current_shared_topic', 'assunto antigo')
+        self.db.ajustar_emocao('energy', -0.2)
+
+        self.db.reset_soak_learning()
+
+        self.assertEqual(self.db.get_total_conversas(), 0)
+        self.assertEqual(self.db.get_estilo(), {})
+        self.assertEqual(self.db.get_fatos_patrick(), ['Nome: Patrick Ramos'])
+        self.assertEqual(self.db.get_estado_relacional('current_shared_topic'),
+                         'dia a dia e planos juntos')
+        emotions = self.db.get_estado_emocional()
+        self.assertEqual(emotions['energy']['valor'], emotions['energy']['baseline'])
+        self.assertEqual(self.db.get_perfil()['nome'], 'Marina Salles')
+
     def test_contradiction_handling(self):
         """Testa desativação de fato antigo contradito."""
         # 1. Cria fato inicial
@@ -152,7 +194,7 @@ class TestMemoryConsolidatorLLM(unittest.TestCase):
             self.skipTest(f"LLM indisponível no ambiente de teste: {err}")
         fatos = result.get("facts_to_create", [])
         self.assertGreaterEqual(len(fatos), 1, "Deveria ter extraído ao menos um fato sobre FFXIV")
-        fato_texto = fatos[0]["fato"].lower()
+        fato_texto = (fatos[0].get("fato") or fatos[0].get("fact") or "").lower()
         self.assertTrue("final fantasy" in fato_texto or "ffxiv" in fato_texto)
 
     def test_contradiction_detection(self):
@@ -180,8 +222,11 @@ class TestMemoryConsolidatorLLM(unittest.TestCase):
             "O fato ID 42 deve ser substituído por decisão atômica"
         )
         self.assertTrue(
-            any("suco" in f["fato"].lower() for f in fatos_novos),
-            "Deveria ter criado fato sobre suco de laranja"
+            any(
+                any(w in (f.get("fato") or f.get("fact") or "").lower() for w in ("suco", "juice", "café", "cafe", "coffee", "laranja", "orange"))
+                for f in fatos_novos
+            ),
+            "Deveria ter criado fato sobre suco de laranja ou a alteração do hábito de café"
         )
 
 

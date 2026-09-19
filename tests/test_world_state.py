@@ -9,6 +9,7 @@ from pathlib import Path
 
 from db import DatabaseManager
 from seed_world_bible_v36 import seed_world_bible
+from seed_academic_v36 import seed_academic
 from world_state import RoutineEngine, WorldStateManager
 
 
@@ -17,6 +18,7 @@ class TestWorldState(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.db = DatabaseManager(Path(self.temp.name) / "world_state_test.db")
         seed_world_bible(self.db)
+        seed_academic(self.db)
         self.routine = RoutineEngine(self.db, random.Random(17))
         self.manager = WorldStateManager(self.db, routine=self.routine, stale_minutes=60)
         self.now = datetime(2026, 9, 17, 16, 0)
@@ -71,6 +73,35 @@ class TestWorldState(unittest.TestCase):
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM life_events").fetchone()[0], 0)
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM story_threads").fetchone()[0], 0)
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM conversas").fetchone()[0], 0)
+
+    def test_sleep_is_default_after_midnight_on_class_and_light_days(self):
+        for moment, has_class in (
+            (datetime(2026, 9, 18, 2, 45), True),
+            (datetime(2026, 9, 19, 2, 45), False),
+        ):
+            with self.subTest(moment=moment, has_class=has_class):
+                candidates = self.routine.candidates(moment, has_class=has_class)
+                self.assertEqual(self.routine.choose(candidates).activity, "dormindo")
+
+    def test_sleep_window_invalidates_cached_soft_awake_state(self):
+        earlier = datetime(2026, 9, 19, 2, 30)
+        with self.db.get_connection() as conn:
+            place = conn.execute(
+                "SELECT id FROM world_places WHERE canonical_key='marina_apartment'"
+            ).fetchone()[0]
+            conn.execute(
+                """INSERT INTO world_state
+                   (state_date,observed_at,location_place_id,location_region,activity,
+                    energy_level,source_json)
+                   VALUES (?,?,?,?,?,?,?)""",
+                (earlier.date().isoformat(), earlier.isoformat(), place, "Botafogo",
+                 "tempo livre em casa", .7,
+                 json.dumps({"reason": "free_time", "truth_type": "system"})),
+            )
+        resolved = self.manager.resolve(
+            earlier + timedelta(minutes=15), has_class=False
+        )
+        self.assertEqual(resolved["activity"], "dormindo")
 
     def test_expired_commitment_does_not_override_routine(self):
         expired = {

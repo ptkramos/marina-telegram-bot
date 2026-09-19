@@ -158,7 +158,7 @@ class RelationshipWorld:
             return {'reason': 'pending_event_followup', 'rank': 90,
                     'event_id': event['id'], 'detail': event['description']}
         from config import settings
-        if getattr(settings, 'OPEN_LOOPS_ENABLED', True):
+        if True:
             loops = self.db.get_open_loops_para_checkin(now.isoformat())
             if loops:
                 loop = loops[0]
@@ -184,3 +184,4 @@ class RelationshipWorld:
                         'subject_id': history[0]['subject_id'],
                         'detail': history[0]['title'], 'shared_at': history[0]['shared_at']}
         return {'reason': 'light_affection', 'rank': 20, 'detail': None}
+

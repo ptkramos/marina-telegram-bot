@@ -11,6 +11,7 @@ from db import DatabaseManager
 from knowledge_privacy import KnowledgePrivacy
 from memory import MemoryManager
 from seed_world_bible_v36 import seed_world_bible
+from seed_academic_v36 import seed_academic
 from world_context import WorldContextBuilder
 
 
@@ -20,6 +21,7 @@ class TestKnowledgePrivacy(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.db = DatabaseManager(Path(temp.name) / 'knowledge.db')
         seed_world_bible(self.db)
+        seed_academic(self.db)
         self.knowledge = KnowledgePrivacy(self.db)
 
     def _bia_secret(self):
@@ -147,18 +149,32 @@ class TestKnowledgePrivacy(unittest.TestCase):
         context = ContextBuilder(memory_mgr=memory, retriever=retriever)
         with (patch.object(settings, 'KNOWLEDGE_PRIVACY_ENABLED', True),
               patch.object(settings, 'LIVING_WORLD_ENABLED', True)):
-            messages = context.build(user_message='E a Bia?')
+            messages = context.build(user_message='E a Bia?', privacy_subjects=[('fact', 1)])
         self.assertEqual(len(messages), 1)
         self.assertNotIn('A frase privada de Bia', messages[0]['content'])
         memory.get_historico_recente.assert_not_called()
 
-    def test_privacy_flag_refuses_legacy_bot_context(self):
+        # Sem sujeito confidencial, o histórico recente é preservado normalmente
+        with (patch.object(settings, 'KNOWLEDGE_PRIVACY_ENABLED', True),
+              patch.object(settings, 'LIVING_WORLD_ENABLED', True)):
+            normal_messages = context.build(user_message='Oi amor, tudo bem?')
+        memory.get_historico_recente.assert_called_once()
+        self.assertEqual(len(normal_messages), 2)
+        self.assertEqual(normal_messages[1]['content'], 'A frase privada de Bia')
+
+    def test_retired_markers_cannot_restore_legacy_bot_context(self):
         import bot
 
+        with self.db.get_connection() as conn:
+            conn.execute("""INSERT INTO world_bootstrap (key,value,updated_at)
+                VALUES ('clean_canonical_start_done','1','2026-09-18T00:00:00')""")
+
         with (patch.object(settings, 'KNOWLEDGE_PRIVACY_ENABLED', True),
-              patch.object(settings, 'LIVING_WORLD_ENABLED', False)):
-            with self.assertRaisesRegex(RuntimeError, 'requires Living World'):
-                bot.build_messages_payload(user_message='Oi')
+              patch.object(settings, 'LIVING_WORLD_ENABLED', False),
+              patch.object(bot, 'context_builder', ContextBuilder(memory_mgr=MemoryManager(db=self.db)))):
+            messages = bot.build_messages_payload(user_message='Oi')
+        self.assertIn('Marina Salles', messages[0]['content'])
+        self.assertIn('[KNOWLEDGE POLICY]', messages[0]['content'])
 
 
 if __name__ == '__main__':

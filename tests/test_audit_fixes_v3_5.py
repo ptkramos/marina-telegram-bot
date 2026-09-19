@@ -27,6 +27,8 @@ from memory_hygiene import MemoryHygieneService
 from session_reflector import SessionReflector
 from reminder_service import ReminderService
 from planner import InternalPlanner
+from seed_world_bible_v36 import seed_world_bible
+from seed_academic_v36 import seed_academic
 import bot
 
 
@@ -35,6 +37,13 @@ class TestAuditFixesV35(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_db_path = Path(self.temp_dir.name) / "test_audit_fixes.db"
         self.db = DatabaseManager(db_path=self.temp_db_path)
+        seed_world_bible(self.db)
+        seed_academic(self.db)
+        with self.db.get_connection() as conn:
+            conn.execute(
+                """INSERT INTO world_bootstrap (key,value,updated_at)
+                   VALUES ('clean_canonical_start_done','1','2026-09-18T00:00:00')"""
+            )
         self.reminder_svc = ReminderService(self.db)
         self.reflector = SessionReflector(db=self.db, llm_client=MagicMock())
         self.hygiene = MemoryHygieneService(db=self.db)
@@ -46,6 +55,38 @@ class TestAuditFixesV35(unittest.TestCase):
 
     def tearDown(self):
         self.temp_dir.cleanup()
+
+    def test_cancelled_pre_send_turn_never_persists_ghost_assistant(self):
+        """A new incoming turn may cancel typing; only delivered replies enter history."""
+        update = MagicMock()
+        update.effective_chat.id = 12345
+        update.message.message_id = 8801
+        update.message.reply_to_message = None
+        plan = {"intent": "casual_chat", "tone": "carinhoso", "emotional_deltas": {}}
+
+        with patch.object(bot.memory_manager, "db", self.db), \
+             patch.object(bot, "planner") as mock_plan, \
+             patch.object(bot, "llm_client") as mock_llm, \
+             patch.object(bot, "send_human_messages", new=AsyncMock(side_effect=asyncio.CancelledError)), \
+             patch.object(bot, "check_and_trigger_memory_consolidation"):
+            mock_plan.plan_message.return_value = plan
+            mock_llm.chat.completions.create.return_value = MagicMock(
+                choices=[MagicMock(message=MagicMock(content="resposta que não chegou"))]
+            )
+            with self.assertRaises(asyncio.CancelledError):
+                asyncio.run(bot.process_incoming_batch(
+                    update, MagicMock(), "mensagem recebida",
+                    availability_bypass=True,
+                ))
+
+        with self.db.get_connection() as conn:
+            rows = conn.execute(
+                "SELECT role,content FROM conversas ORDER BY id"
+            ).fetchall()
+        self.assertEqual([(row['role'], row['content']) for row in rows], [
+            ('user', 'mensagem recebida'),
+        ])
+        mock_plan.apply_plan_effects.assert_not_called()
 
     def test_reaction_is_skipped_when_chat_has_no_available_reactions(self):
         bot._reaction_capabilities.clear()
@@ -642,7 +683,7 @@ class TestAuditFixesV35(unittest.TestCase):
         mock_update.effective_chat.id = 12345
 
         sent_messages_captured = []
-        async def fake_send_human(chat_id, bot_instance, text, reply_to_message_id=None):
+        async def fake_send_human(chat_id, bot_instance, text, reply_to_message_id=None, **kwargs):
             sent_messages_captured.append(text)
             return MagicMock(message_id=9901)
 
@@ -929,7 +970,7 @@ class TestAuditFixesV35(unittest.TestCase):
         mock_update.effective_chat.id = 12345
 
         sent_captured = []
-        async def fake_send_human(chat_id, bot_instance, text, reply_to_message_id=None):
+        async def fake_send_human(chat_id, bot_instance, text, reply_to_message_id=None, **kwargs):
             sent_captured.append(text)
             return MagicMock(message_id=9905)
 
@@ -1441,7 +1482,7 @@ class TestAuditFixesV35(unittest.TestCase):
         update.message.reply_to_message.message_id = 811
 
         sent = []
-        async def fake_send(chat_id, bot_instance, text, reply_to_message_id=None):
+        async def fake_send(chat_id, bot_instance, text, reply_to_message_id=None, **kwargs):
             sent.append(text)
             return MagicMock(message_id=813)
 

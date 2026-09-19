@@ -28,7 +28,6 @@ O ecossistema integra LLM contextual avançada, geração visual ultra-realista 
 - **`style_engine.py`**: Motor de sincronia linguística que espelha padrões de risada (`kkkk`, `haha`), gírias do casal e cadência de digitação.
 - **`cycle.py`**: Ciclo biológico autônomo calculado diariamente (28 dias, 4 fases: folicular, ovulatória, lútea e menstrual), modulando o afeto, a energia e a libido da Marina.
 - **`proactivity_service.py`**: Motor autônomo que monitora a rotina, feriados, sono e eventos pendentes para iniciar conversas espontâneas e carinhosas no Telegram.
-- **`auto_patcher.py`**: Auto-refinamento e patch remoto de código via `/edit` com staging seguro, proteção LIFO de rollback e feature flag `SAFE_PATCHER_ENABLED`.
 
 ---
 
@@ -85,7 +84,6 @@ python -W error::ResourceWarning -m unittest discover tests -v
 ```
 
 Módulos testados:
-- `test_auto_patcher.py`: Staging, aplicação transacional e proteção LIFO de rollback.
 - `test_context_builder.py`: Limites de contexto, injeção de emoções e diretrizes do planner.
 - `test_memory_cursor.py`: Persistência de cursor no SQLite, anti-falha e lock de concorrência.
 - `test_planner.py`: Planejamento heurístico, parser temporal e ordenação cronológica de eventos.
@@ -107,8 +105,6 @@ Módulos testados:
 | `/audio` ou `/voz` | Recebe uma mensagem de voz com síntese ultra-realista via Novita MiniMax. |
 | `/memorias` | Visualiza os fatos, preferências e lembranças que a Marina registrou sobre você. |
 | `/feedback [nota]` | Registra instruções, correções de comportamento e alinhamentos no SQLite. |
-| `/edit [instrução]` | Aprimoramento assistido de código com staging seguro e reinício controlado. |
-| `/rollback` | Reverte o último patch aplicado de forma segura (ordem LIFO). |
 
 ---
 

@@ -1,0 +1,116 @@
+{
+  "release": "3.7.0-round3-prompt-authority",
+  "finished_at": "2026-09-19T16:37:26.388116+00:00",
+  "contracts": {
+    "forbidden_legacy_tokens": "pass",
+    "deprecated_prompts_not_owner": "pass",
+    "safecore_clean_start_gating": "pass",
+    "web_vision_data_only": "pass",
+    "control_language_en": "pass",
+    "no_fake_learned_style_init": "pass",
+    "no_legacy_proactivity_second_engine": "pass",
+    "no_runtime_eventos_owner": "pass",
+    "style_evidence_behavioral": "pass",
+    "canon_ownership": "pass",
+    "urgency_distress_coverage": "pass"
+  },
+  "system_prompt_sites": [
+    {
+      "file": "benchmark_response_rhythm.py",
+      "kind": "role=system",
+      "line": 71
+    },
+    {
+      "file": "bot.py",
+      "kind": "role=system",
+      "line": 183
+    },
+    {
+      "file": "bot.py",
+      "kind": "role=system",
+      "line": 1717
+    },
+    {
+      "file": "bot.py",
+      "kind": "role=system",
+      "line": 1724
+    },
+    {
+      "file": "bot.py",
+      "kind": "role=system",
+      "line": 1731
+    },
+    {
+      "file": "bot.py",
+      "kind": "role=system",
+      "line": 1736
+    },
+    {
+      "file": "bot.py",
+      "kind": "role=system",
+      "line": 1990
+    },
+    {
+      "file": "context_builder.py",
+      "kind": "role=system",
+      "line": 91
+    },
+    {
+      "file": "memory_consolidator.py",
+      "kind": "constant",
+      "snippet": "SYSTEM_PROMPT = \"\"\"Extract durable facts about P"
+    },
+    {
+      "file": "memory_consolidator.py",
+      "kind": "role=system",
+      "line": 140
+    },
+    {
+      "file": "planner.py",
+      "kind": "constant",
+      "snippet": "SYSTEM_PROMPT = \"\"\"You are Marina Salles' intern"
+    },
+    {
+      "file": "planner.py",
+      "kind": "role=system",
+      "line": 486
+    },
+    {
+      "file": "prompts.py",
+      "kind": "constant",
+      "snippet": "SYSTEM_PROMPT = None  # retired; use context_bui"
+    },
+    {
+      "file": "session_reflector.py",
+      "kind": "constant",
+      "snippet": "SYSTEM_PROMPT = \"\"\"You are an internal session r"
+    },
+    {
+      "file": "session_reflector.py",
+      "kind": "role=system",
+      "line": 109
+    },
+    {
+      "file": "vision_service.py",
+      "kind": "constant",
+      "snippet": "_PROMPT = \"\"\"You are Marina Salles' visual perce"
+    },
+    {
+      "file": "vision_service.py",
+      "kind": "role=system",
+      "line": 76
+    },
+    {
+      "file": "scripts/audit_prompt_authority.py",
+      "kind": "constant",
+      "snippet": "SYSTEM_PROMPT = None' not in prompts:         fa"
+    },
+    {
+      "file": "scripts/run_soak_live_gate.py",
+      "kind": "role=system",
+      "line": 88
+    }
+  ],
+  "failed_contracts": [],
+  "status": "passed"
+}

@@ -3,7 +3,13 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from config import settings
-from response_rhythm import select_policy, segment, apply_policy
+from response_rhythm import (
+    apply_policy,
+    needs_verbosity_retry,
+    segment,
+    select_policy,
+    verbosity_retry_constraint,
+)
 
 
 class TestResponseRhythm(unittest.TestCase):
@@ -34,6 +40,26 @@ class TestResponseRhythm(unittest.TestCase):
         self.assertEqual(''.join(parts),text)
         self.assertTrue(all(len(p.encode('utf-16-le'))//2<=4096 for p in parts))
 
+    def test_excited_plain_text_can_use_two_semantic_bubbles(self):
+        policy = select_policy('finalmente deu certo!!')
+        self.assertEqual(policy.mode, 'excited')
+        self.assertEqual(
+            segment('Não acredito que deu certo! Tô feliz demais com isso.', policy),
+            ['Não acredito que deu certo!', 'Tô feliz demais com isso.'],
+        )
+
+    def test_token_ceiling_tracks_character_budget_and_retry_is_rare(self):
+        casual = select_policy('oi')
+        explanatory = select_policy('me explica detalhadamente')
+        self.assertEqual(casual.soft_char_limit, 180)
+        self.assertLessEqual(casual.token_budget, 128)
+        self.assertGreater(explanatory.token_budget, casual.token_budget)
+        self.assertFalse(needs_verbosity_retry('x' * 360, casual))
+        self.assertTrue(needs_verbosity_retry('x' * 361, casual))
+        constraint = verbosity_retry_constraint('texto longo', casual)
+        self.assertIn('180 characters', constraint)
+        self.assertIn('Return only the replacement message', constraint)
+
     def test_prompt_overrides_only_rhythm(self):
         original='Identidade canônica.\nRitmo: múltiplos balões\nRisada: kkkk'
         result=apply_policy(original,select_policy())
@@ -44,24 +70,21 @@ class TestResponseRhythm(unittest.TestCase):
         self.assertIn('usually finish without a question',result)
         self.assertEqual(apply_policy(result,select_policy()).count('[RESPONSE RHYTHM]'),1)
 
-    def test_telegram_one_message_and_flag_off_legacy(self):
+    def test_telegram_transport_always_uses_canonical_rhythm(self):
         import bot
         fake=MagicMock(send_message=AsyncMock(),send_chat_action=AsyncMock())
         text='Primeira frase um pouco maior. '*10
-        with patch.object(settings,'RESPONSE_RHYTHM_ENABLED',True),patch('bot.asyncio.sleep',new=AsyncMock()):
+        with patch('bot.asyncio.sleep',new=AsyncMock()):
             asyncio.run(bot.send_human_messages(987,fake,text,response_policy=select_policy()))
         self.assertEqual(fake.send_message.await_count,1)
         self.assertEqual(fake.send_message.call_args.kwargs['text'],text.strip())
-        fake.send_message.reset_mock()
-        with patch.object(settings,'RESPONSE_RHYTHM_ENABLED',False),patch('bot.asyncio.sleep',new=AsyncMock()):
-            asyncio.run(bot.send_human_messages(987,fake,text))
-        self.assertEqual(fake.send_message.await_count,2)
 
     def test_dynamic_generation_gets_policy_without_extra_llm(self):
         import bot
         response=MagicMock()
         response.choices[0].message.content='kkkk'
-        with patch.object(settings,'RESPONSE_RHYTHM_ENABLED',True),patch.object(settings,'LIVING_WORLD_ENABLED',False),patch.object(bot.llm_client.chat.completions,'create',return_value=response) as create:
+        with patch.object(bot.context_builder,'build_system_prompt',return_value='[CANONICAL WORLD]'),patch.object(bot.llm_client.chat.completions,'create',return_value=response) as create:
             self.assertEqual(bot.generate_dynamic_speech('oi'),'kkkk')
         create.assert_called_once()
         self.assertIn('[RESPONSE RHYTHM]',create.call_args.kwargs['messages'][0]['content'])
+        self.assertLessEqual(create.call_args.kwargs['max_tokens'], 120)

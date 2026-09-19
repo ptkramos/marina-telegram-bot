@@ -26,7 +26,7 @@ class TestBootstrap(unittest.TestCase):
             self.assertEqual(c.execute("SELECT COUNT(*) FROM conversas WHERE content='OLD_SENTINEL'").fetchone()[0], 1)
         with self.db.get_connection() as c:
             self.assertEqual(c.execute('SELECT COUNT(*) FROM conversas').fetchone()[0], 0)
-            self.assertEqual(c.execute('SELECT COUNT(*) FROM academic_courses').fetchone()[0], 9)
+            self.assertEqual(c.execute('SELECT COUNT(*) FROM academic_courses').fetchone()[0], 13)
             self.assertEqual(c.execute('SELECT COUNT(*) FROM world_state').fetchone()[0], 1)
             self.assertEqual(c.execute('SELECT COUNT(*) FROM knowledge_subjects').fetchone()[0], 2)
             self.assertEqual(c.execute('SELECT data_inicio_ciclo FROM ciclo_biologico').fetchone()[0], '2026-09-02')
@@ -63,6 +63,6 @@ class TestBootstrap(unittest.TestCase):
             c.execute('DELETE FROM schema_version WHERE version>=9')
         result = bootstrap(self.path, **self.kw)
         self.assertEqual(result['source_schema'], 8)
-        self.assertEqual(self.db.get_schema_version(), 16)
+        self.assertEqual(self.db.get_schema_version(), 17)
         with sqlite3.connect(result['backup']) as c:
             self.assertEqual(c.execute('SELECT MAX(version) FROM schema_version').fetchone()[0], 8)

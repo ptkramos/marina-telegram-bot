@@ -16,6 +16,8 @@ from context_builder import ContextBuilder
 from memory import MemoryManager
 from planner import InternalPlanner
 from config import settings
+from seed_world_bible_v36 import seed_world_bible
+from seed_academic_v36 import seed_academic
 
 
 class TestOpenLoops(unittest.TestCase):
@@ -23,6 +25,8 @@ class TestOpenLoops(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = Path(self.temp_dir.name) / "test_open_loops.db"
         self.db = DatabaseManager(db_path=self.db_path)
+        seed_world_bible(self.db)
+        seed_academic(self.db)
         self.memory_mgr = MemoryManager(db=self.db)
         self.context_builder = ContextBuilder(memory_mgr=self.memory_mgr)
         self.planner = InternalPlanner(db=self.db)
@@ -100,13 +104,22 @@ class TestOpenLoops(unittest.TestCase):
 
     def test_context_builder_injects_open_loops(self):
         """Verifica se open loops ativos são injetados de forma estruturada no System Prompt."""
+        from unittest.mock import patch
+        from config import settings
+        with self.db.get_connection() as conn:
+            conn.execute(
+                """INSERT INTO world_bootstrap (key, value, updated_at)
+                   VALUES ('clean_canonical_start_done', '1', '2026-09-18T00:00:00')"""
+            )
         self.db.adicionar_open_loop(
             loop_type="story",
             content="Patrick contou que o amigo dele vai se casar mês que vem",
             importance=0.9
         )
 
-        sys_prompt = self.context_builder.build_system_prompt()
+        with patch.object(settings, 'LIVING_WORLD_ENABLED', False), \
+             patch.object(settings, 'RESPONSE_RHYTHM_ENABLED', False):
+            sys_prompt = self.context_builder.build_system_prompt()
         self.assertIn("[ASSUNTOS AINDA EM ABERTO COM O PATRICK]", sys_prompt)
         self.assertIn("amigo dele vai se casar", sys_prompt)
 

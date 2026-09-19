@@ -28,7 +28,9 @@ class TestVisualProfile(unittest.TestCase):
     def test_visual_dna_constants(self):
         """Valida que o DNA visual possui os traços marcantes calibrados da Marina."""
         self.assertIn("marina_reference", MARINA_VISUAL_DNA_BASE)
-        self.assertIn("19yo woman", MARINA_VISUAL_DNA_BASE)
+        self.assertIn("young adult Brazilian woman", MARINA_VISUAL_DNA_BASE)
+        self.assertNotIn("19yo", MARINA_VISUAL_DNA_BASE)
+        self.assertNotIn("20yo", MARINA_VISUAL_DNA_BASE)
         self.assertIn("honey-amber eyes", MARINA_VISUAL_DNA_BASE)
         self.assertIn("chocolate brown hair with golden blonde tips", MARINA_VISUAL_DNA_BASE)
         self.assertIn("athletic model physique", MARINA_PHYSIQUE_DNA)

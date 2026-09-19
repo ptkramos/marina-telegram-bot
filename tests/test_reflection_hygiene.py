@@ -26,6 +26,8 @@ from memory import MemoryManager
 from context_builder import ContextBuilder
 from memory_hygiene import MemoryHygieneService
 from session_reflector import SessionReflector
+from seed_world_bible_v36 import seed_world_bible
+from seed_academic_v36 import seed_academic
 
 
 class TestReflectionAndMemoryHygiene(unittest.TestCase):
@@ -33,6 +35,8 @@ class TestReflectionAndMemoryHygiene(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_db_path = Path(self.temp_dir.name) / "test_hygiene.db"
         self.db = DatabaseManager(db_path=self.temp_db_path)
+        seed_world_bible(self.db)
+        seed_academic(self.db)
         self.hygiene = MemoryHygieneService(db=self.db)
         self.reflector = SessionReflector(db=self.db)
 
@@ -293,6 +297,11 @@ class TestReflectionAndMemoryHygiene(unittest.TestCase):
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
+                """INSERT INTO world_bootstrap (key, value, updated_at)
+                   VALUES ('clean_canonical_start_done', '1', ?)""",
+                (now_iso,),
+            )
+            cursor.execute(
                 """
                 INSERT INTO fatos_patrick
                 (fato, category, importance, confidence, memory_tier, volatility, canonical_key, active, needs_reconfirmation, created_at, updated_at)
@@ -304,7 +313,11 @@ class TestReflectionAndMemoryHygiene(unittest.TestCase):
 
         mgr = MemoryManager(db=self.db)
         cb = ContextBuilder(memory_mgr=mgr)
-        prompt = cb.build_system_prompt()
+        from unittest.mock import patch
+        from config import settings
+        with patch.object(settings, 'LIVING_WORLD_ENABLED', False), \
+             patch.object(settings, 'RESPONSE_RHYTHM_ENABLED', False):
+            prompt = cb.build_system_prompt()
         self.assertIn("[OPORTUNIDADE DE RECONFIRMAÇÃO SUTIL]", prompt)
         self.assertIn("Patrick ainda está cursando Engenharia de Software", prompt)
 

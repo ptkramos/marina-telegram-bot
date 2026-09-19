@@ -1,5 +1,5 @@
--- Migration 002: Smart Memory Schema & FTS5 Virtual Tables
--- Marina Seltin v3.1 Foundation
+-- Migration 002: Smart Memory & Facts Baseline
+-- Marina Salles v3.1 Foundation
 
 ALTER TABLE fatos_patrick ADD COLUMN category TEXT DEFAULT 'geral';
 ALTER TABLE fatos_patrick ADD COLUMN importance REAL DEFAULT 0.5;

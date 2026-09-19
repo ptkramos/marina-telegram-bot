@@ -1,10 +1,11 @@
 """Persistent pending conversational batches for v3.7.0 Response Availability."""
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 import json
 import logging
+import re
 import sqlite3
 from typing import Optional
 
@@ -21,6 +22,64 @@ from response_availability import (
 logger = logging.getLogger(__name__)
 ACTIVE_STATUSES = ('PENDING', 'READY')
 CONVERSATION_KEY = 'patrick_marina'
+
+
+@dataclass(frozen=True)
+class ResolvedRequests:
+    text: str
+    cancelled: bool
+
+
+# Match complete cancellation clauses, not incidental words in conversation.
+# In particular, "não esquece de sorrir" and "não precisa de pressa" are not
+# cancellations. Split debounce bursts as well as separately persisted messages.
+_CANCEL = re.compile(
+    r'^(?:(?:amor|vida|marina)[, ]+)?'
+    r'(?:deixa pra l[aá]|esquece|n[aã]o precisa|pode deixar|cancela|'
+    r'n[aã]o manda mais|deixa quieto|n[aã]o quero mais)'
+    r'(?:\s+(?:(?:d[ao]|[ao]|esse|essa|aquele|aquela)\s+)?'
+    r'(?:foto|fotinha|selfie|nude|[aá]udio|voz|avatar|lembrete|pedido|isso|disso|tudo))?'
+    r'(?:[, ]+(?:amor|vida|por favor))?$', re.IGNORECASE,
+)
+_ACTION = re.compile(
+    r'\b(?:manda|mande|envia|envie|quero|queria|pode|troca|troque|muda|mude|'
+    r'atualiza|atualize|gera|gere|cria|crie|lembra|lembre|avisa|avise|'
+    r'tira|tire|grava|grave|fala|fale|coloca|coloque|ver)\b', re.I,
+)
+_OBJECT = re.compile(r'\b(?:foto|fotinha|selfie|nude|[aá]udio|voz|avatar|perfil|lembrete)\b', re.I)
+
+
+def resolve_cancelled_requests(text: str) -> ResolvedRequests:
+    """Remove withdrawn action requests while preserving conversational turns.
+
+    Original messages remain intact in SQLite. Only the execution input changes.
+    Later explicit requests are retained, so users can change their mind again.
+    """
+    clauses = re.split(r'\n+|[;.!?]+\s*|,\s*(?=(?:deixa|esquece|cancela|n[aã]o precisa|me conta|manda|agora)\b)', text)
+    kept: list[str] = []
+    cancelled = False
+    for clause in clauses:
+        clause = clause.strip()
+        if not clause:
+            continue
+        if _CANCEL.fullmatch(clause):
+            target = _OBJECT.search(clause)
+            target_word = target.group().casefold() if target else None
+            families = ({'foto', 'fotinha', 'selfie', 'nude'}, {'áudio', 'audio', 'voz'}, {'avatar', 'perfil'}, {'lembrete'})
+            family = next((f for f in families if target_word in f), None)
+            remaining = []
+            for previous in kept:
+                objects = {m.group().casefold() for m in _OBJECT.finditer(previous)}
+                action = bool((_ACTION.search(previous) and (objects or re.search(r'\b(?:lembra|lembre|avisa|avise)\b', previous, re.I)))
+                              or (objects and len(previous.split()) <= 3))
+                if not (action and (family is None or objects & family)):
+                    remaining.append(previous)
+            kept = remaining
+            cancelled = True
+        else:
+            kept.append(clause)
+    # Preserve exact punctuation unless a cancellation actually changed the turn.
+    return ResolvedRequests('\n'.join(kept) if cancelled else text, cancelled)
 
 
 class PendingResponseRepository:
@@ -355,6 +414,23 @@ class PendingResponseRepository:
                 (reason[:500], now_s, batch_id),
             )
 
+    # Deterministic cancellation patterns — no LLM classifier needed
+    _CANCEL_PATTERNS = _CANCEL
+
+    def check_cancellation(self, batch_id: int) -> bool:
+        """Supersede only wholly cancelled batches; preserve other conversation.
+
+        Mixed batches proceed to the pipeline, which resolves their execution
+        input before any planner or media action. Stored history is not rewritten.
+        """
+        text = '\n'.join(i['content'] for i in self.list_items(batch_id)
+                         if i.get('role') == 'user')
+        resolved = resolve_cancelled_requests(text)
+        if resolved.cancelled and not resolved.text:
+            self.supersede(batch_id, 'user_cancelled')
+            return True
+        return False
+
     def recover_on_startup(self, now: datetime) -> dict:
         now_dt = local_naive(now)
         now_s = now_dt.isoformat()
@@ -388,23 +464,10 @@ class PendingResponseRepository:
             ).fetchone()[0]
         return stats
 
-    def force_ready_on_rollback(self, now: Optional[datetime] = None) -> int:
-        """Flags OFF: make pending batches immediately processable."""
-        now_s = local_naive(local_now(now)).isoformat()
-        with self.db.get_connection() as conn:
-            cur = conn.execute(
-                """UPDATE response_pending_batches
-                   SET status='READY', selected_target_at=?, updated_at=?
-                   WHERE status IN ('PENDING','READY')""",
-                (now_s, now_s),
-            )
-            return cur.rowcount
-
     def record_event(self, decision: ResponseAvailabilityDecision, *, batch_id=None,
                      pending_count=0, merged=False, urgent_override=False,
                      actual_latency_seconds=None, error_flag=None) -> Optional[int]:
-        if not getattr(settings, 'REAL_USAGE_TELEMETRY_ENABLED', False) and not getattr(
-                settings, 'RESPONSE_AVAILABILITY_ENABLED', False):
+        if not getattr(settings, 'REAL_USAGE_TELEMETRY_ENABLED', False):
             return None
         target = max(0.0, (decision.selected_target_at - decision.earliest_reply_at).total_seconds())
         with self.db.get_connection() as conn:
@@ -460,13 +523,11 @@ class ResponseAvailabilityService:
 
     @property
     def enabled(self) -> bool:
-        return bool(getattr(settings, 'RESPONSE_AVAILABILITY_ENABLED', False))
+        return True
 
     @property
     def enforce_latency(self) -> bool:
-        return (self.enabled
-                and bool(getattr(settings, 'HUMAN_REPLY_LATENCY_ENABLED', False))
-                and bool(getattr(settings, 'PENDING_CONVERSATION_BATCHING_ENABLED', False)))
+        return True
 
     def evaluate_and_maybe_defer(
         self,
@@ -479,13 +540,9 @@ class ResponseAvailabilityService:
     ) -> tuple[str, Optional[ResponseAvailabilityDecision], Optional[dict]]:
         """
         Returns (action, decision, batch):
-          action in {'proceed', 'proceed_brief', 'deferred', 'legacy'}
-        Fail-open → legacy.
+          action in {'proceed', 'proceed_brief', 'deferred'}
+        Policy errors fail open for delivery, without selecting an older policy.
         """
-        if not self.enabled:
-            if self.repo.get_active_batch():
-                self.repo.force_ready_on_rollback()
-            return 'legacy', None, None
         replay = self.repo.find_telegram_item(telegram_message_id)
         if replay:
             return 'deferred', None, self.repo.get_batch(replay['batch_id'])
@@ -496,16 +553,7 @@ class ResponseAvailabilityService:
             )
         except Exception as exc:
             logger.error('AVAILABILITY_POLICY_ERROR %s', exc, exc_info=True)
-            return 'legacy', None, None
-
-        # Shadow mode: telemetry only, never defer.
-        if decision.shadow_only or not self.enforce_latency:
-            ev_id = self._record_event_safely(decision, pending_count=0)
-            if ev_id is not None:
-                decision = replace(decision, telemetry_event_id=ev_id)
-            if decision.decision == 'REPLY_BRIEFLY':
-                return 'proceed_brief', decision, None
-            return 'proceed', decision, None
+            return 'proceed', None, None
 
         # Active deferred batch: always append + recalculate (never parallel reply).
         active = self.repo.get_active_batch()
@@ -525,7 +573,9 @@ class ResponseAvailabilityService:
                 max_urgency = prev_urgency
             if max_urgency in ('HIGH', 'CRITICAL') and prev_urgency in ('LOW', 'NORMAL'):
                 urgent_override = True
-            if urgent_override or decision.decision != 'DEFER':
+            sleep_protected = (decision.activity_type == 'SLEEPING'
+                               and not getattr(settings, 'CRITICAL_WAKE_POLICY_ENABLED', False))
+            if (urgent_override and not sleep_protected) or decision.decision != 'DEFER':
                 decision = ResponseAvailabilityDecision(
                     decision=decision.decision if decision.decision != 'DEFER' else 'REPLY_BRIEFLY',
                     phone_access=decision.phone_access,

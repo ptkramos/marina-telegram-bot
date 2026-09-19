@@ -15,8 +15,7 @@ import asyncio
 import aiohttp
 from PIL import Image
 from config import settings
-from prompts import build_flux_prompt
-from visual_profile import visual_profile, MARINA_VISUAL_DNA_BASE
+from visual_profile import visual_profile, MARINA_VISUAL_DNA_BASE, build_flux_prompt
 from dataclasses import dataclass
 from typing import Optional
 
@@ -396,7 +395,7 @@ class ImageGeneratorClient:
         save_id = str(n)
         workflow[save_id] = {
             "class_type": "SaveImage",
-            "inputs": {"filename_prefix": "Marina_Seltin_Dev", "images": [decode_id, 0]}
+            "inputs": {"filename_prefix": "Marina_Salles_Dev", "images": [decode_id, 0]}
         }
 
         return workflow, save_id
@@ -422,6 +421,9 @@ class ImageGeneratorClient:
         current_place_key: Optional[str] = None,
     ) -> PhotoGenerationResult:
         """Generate a photo and return per-call metadata without recording continuity."""
+        if getattr(settings, 'PHOTO_PROVIDER_MAINTENANCE', False):
+            logger.info('PHOTO_PROVIDER_MAINTENANCE: generation unavailable; no GPU start attempted')
+            return PhotoGenerationResult(image=None)
         async with self._lock:
             full_prompt, is_nsfw, focus_angle = visual_profile.build_scene_prompt(
                 scene_description=scene_description,

@@ -1,5 +1,5 @@
 -- Migration 005: Memory Intelligence (Core Memories, Volatility, Canonical Key & Confirmations)
--- Marina Seltin Release 3.5.0
+-- Marina Salles Release 3.5.0
 
 ALTER TABLE fatos_patrick ADD COLUMN memory_tier TEXT DEFAULT 'standard';
 ALTER TABLE fatos_patrick ADD COLUMN volatility TEXT DEFAULT 'medium';

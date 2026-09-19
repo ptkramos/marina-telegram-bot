@@ -17,6 +17,30 @@ class Settings:
     VERSION: str = APP_VERSION
     VERSION_NAME: str = f"{APP_NAME} (v{APP_VERSION} Oficial - Living Intelligence)"
 
+    # Deprecated compatibility markers for historical tests and tooling only.
+    # Production code never reads these names; changing them cannot select an
+    # older runtime path. Remove after the legacy test fixtures are retired.
+    SMART_MEMORY_ENABLED = True
+    MEMORY_INTELLIGENCE_ENABLED = True
+    PLANNER_ENABLED = True
+    EMOTIONAL_STATE_ENABLED = True
+    PENDING_EVENTS_ENABLED = True
+    OPEN_LOOPS_ENABLED = True
+    SMART_REMINDERS_ENABLED = True
+    LIVING_WORLD_ENABLED = True
+    RESPONSE_RHYTHM_ENABLED = True
+    KNOWLEDGE_PRIVACY_ENABLED = True
+    RELATIONSHIP_WORLD_ENABLED = True
+    CAMERA_WORLD_CONTINUITY_ENABLED = True
+    RESPONSE_AVAILABILITY_ENABLED = True
+    HUMAN_REPLY_LATENCY_ENABLED = True
+    PENDING_CONVERSATION_BATCHING_ENABLED = True
+    RESPONSE_VERBOSITY_RETRY_ENABLED = True
+    ACADEMIC_LIFE_ENABLED = True
+    ACADEMIC_AUTO_TERM_GENERATION = True
+    CALENDAR_CONTINUITY_ENABLED = True
+    STYLE_ENGINE_V2_ENABLED = True
+
 
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     
@@ -40,6 +64,8 @@ class Settings:
 
     # Motor de Geração de Imagem (novita ou local)
     IMAGE_ENGINE: str = os.getenv("IMAGE_ENGINE", "novita").strip().lower()
+    # Temporary provider outage accepted for the 3.7.0 soak; not a feature rollback.
+    PHOTO_PROVIDER_MAINTENANCE: bool = os.getenv("PHOTO_PROVIDER_MAINTENANCE", "false").lower() in ("true", "1", "yes")
     NOVITA_API_KEY: str = os.getenv("NOVITA_API_KEY", "").strip()
 
     # Ciclo de vontade própria e iniciativa autônoma
@@ -68,10 +94,7 @@ class Settings:
     NOVITA_INTIMATE_SPEED: float = float(os.getenv("NOVITA_INTIMATE_SPEED", "0.96"))
     NOVITA_INTIMATE_PITCH: int = int(os.getenv("NOVITA_INTIMATE_PITCH", "0"))
 
-    # Feature Flags para evolução arquitetural incremental (3.2.0 - 3.5.0)
-    SMART_MEMORY_ENABLED: bool = os.getenv("SMART_MEMORY_ENABLED", "true").lower() in ("true", "1", "yes")
     MEMORY_CONSOLIDATION_ENABLED: bool = os.getenv("MEMORY_CONSOLIDATION_ENABLED", "true").lower() in ("true", "1", "yes")
-    MEMORY_INTELLIGENCE_ENABLED: bool = os.getenv("MEMORY_INTELLIGENCE_ENABLED", "true").lower() in ("true", "1", "yes")
     MEMORY_MAX_FACTS: int = int(os.getenv("MEMORY_MAX_FACTS", "5"))
     MEMORY_MAX_MOMENTS: int = int(os.getenv("MEMORY_MAX_MOMENTS", "3"))
     MEMORY_MAX_SUMMARIES: int = int(os.getenv("MEMORY_MAX_SUMMARIES", "2"))
@@ -85,13 +108,7 @@ class Settings:
     MEMORY_WEIGHT_CORE: float = float(os.getenv("MEMORY_WEIGHT_CORE", "0.10"))
     MEMORY_WEIGHT_ACCESS: float = float(os.getenv("MEMORY_WEIGHT_ACCESS", "0.05"))
 
-    PLANNER_ENABLED: bool = os.getenv("PLANNER_ENABLED", "true").lower() in ("true", "1", "yes")
-    EMOTIONAL_STATE_ENABLED: bool = os.getenv("EMOTIONAL_STATE_ENABLED", "true").lower() in ("true", "1", "yes")
-    PENDING_EVENTS_ENABLED: bool = os.getenv("PENDING_EVENTS_ENABLED", "true").lower() in ("true", "1", "yes")
-    
     # Open Loops & Smart Reminders (Release 3.5.1)
-    OPEN_LOOPS_ENABLED: bool = os.getenv("OPEN_LOOPS_ENABLED", "true").lower() in ("true", "1", "yes")
-    SMART_REMINDERS_ENABLED: bool = os.getenv("SMART_REMINDERS_ENABLED", "true").lower() in ("true", "1", "yes")
     REMINDER_CHECK_INTERVAL_SECONDS: int = int(os.getenv("REMINDER_CHECK_INTERVAL_SECONDS", "30"))
     REMINDERS_RESPECT_SLEEP_WINDOW: bool = os.getenv("REMINDERS_RESPECT_SLEEP_WINDOW", "false").lower() in ("true", "1", "yes")
     MAX_ACTIVE_OPEN_LOOPS_CONTEXT: int = int(os.getenv("MAX_ACTIVE_OPEN_LOOPS_CONTEXT", "2"))
@@ -102,13 +119,7 @@ class Settings:
     MEMORY_HYGIENE_INTERVAL_HOURS: int = int(os.getenv("MEMORY_HYGIENE_INTERVAL_HOURS", "24"))
     SESSION_REFLECTION_IDLE_MINUTES: int = int(os.getenv("SESSION_REFLECTION_IDLE_MINUTES", "90"))
 
-    # Living World v3.6: infraestrutura pronta, integração liberada por etapa.
-    LIVING_WORLD_ENABLED: bool = os.getenv("LIVING_WORLD_ENABLED", "false").lower() in ("true", "1", "yes")
-    RESPONSE_RHYTHM_ENABLED: bool = os.getenv("RESPONSE_RHYTHM_ENABLED", "false").lower() in ("true", "1", "yes")
     STORY_SEED_LIBRARY_ENABLED: bool = os.getenv("STORY_SEED_LIBRARY_ENABLED", "false").lower() in ("true", "1", "yes")
-    KNOWLEDGE_PRIVACY_ENABLED: bool = os.getenv("KNOWLEDGE_PRIVACY_ENABLED", "false").lower() in ("true", "1", "yes")
-    RELATIONSHIP_WORLD_ENABLED: bool = os.getenv("RELATIONSHIP_WORLD_ENABLED", "false").lower() in ("true", "1", "yes")
-    CAMERA_WORLD_CONTINUITY_ENABLED: bool = os.getenv("CAMERA_WORLD_CONTINUITY_ENABLED", "false").lower() in ("true", "1", "yes")
     WORLD_HYGIENE_ENABLED: bool = os.getenv("WORLD_HYGIENE_ENABLED", "false").lower() in ("true", "1", "yes")
     WORLD_DISCOVERY_PROMOTION_THRESHOLD: int = int(os.getenv("WORLD_DISCOVERY_PROMOTION_THRESHOLD", "3"))
     WORLD_PREFERENCE_PROMOTION_THRESHOLD: int = int(os.getenv("WORLD_PREFERENCE_PROMOTION_THRESHOLD", "4"))
@@ -118,14 +129,13 @@ class Settings:
     INTEREST_DORMANT_STRENGTH: float = float(os.getenv("INTEREST_DORMANT_STRENGTH", "0.15"))
     EVENT_COMPACTION_DAYS: int = int(os.getenv("EVENT_COMPACTION_DAYS", "90"))
     EVENT_COMPACTION_MAX_IMPORTANCE: float = float(os.getenv("EVENT_COMPACTION_MAX_IMPORTANCE", "0.35"))
-    # v3.7.0 Response Availability — defaults OFF until independent gate + soak.
-    RESPONSE_AVAILABILITY_ENABLED: bool = os.getenv("RESPONSE_AVAILABILITY_ENABLED", "false").lower() in ("true", "1", "yes")
-    HUMAN_REPLY_LATENCY_ENABLED: bool = os.getenv("HUMAN_REPLY_LATENCY_ENABLED", "false").lower() in ("true", "1", "yes")
-    PENDING_CONVERSATION_BATCHING_ENABLED: bool = os.getenv("PENDING_CONVERSATION_BATCHING_ENABLED", "false").lower() in ("true", "1", "yes")
     RESPONSE_AVAILABILITY_DEBUG: bool = os.getenv("RESPONSE_AVAILABILITY_DEBUG", "false").lower() in ("true", "1", "yes")
     REAL_USAGE_TELEMETRY_ENABLED: bool = os.getenv("REAL_USAGE_TELEMETRY_ENABLED", "false").lower() in ("true", "1", "yes")
     RESPONSE_AVAILABILITY_CHECK_SECONDS: int = int(os.getenv("RESPONSE_AVAILABILITY_CHECK_SECONDS", "15"))
     RESPONSE_AVAILABILITY_PROFILES = None  # optional override; defaults live in response_availability.py
+    # v3.7.0 — CRITICAL urgency during SLEEPING requires explicit wake policy.
+    # When false (default for first soak), sleep remains protected even for CRITICAL messages.
+    CRITICAL_WAKE_POLICY_ENABLED: bool = os.getenv("CRITICAL_WAKE_POLICY_ENABLED", "false").lower() in ("true", "1", "yes")
     # Living World v3.6.2: Cadência de novos Story Events calibrada para ~89% de dias banais (longo prazo).
     # Com STORY_THREAD_DORMANT_DAYS=7 e STORY_EVENT_CADENCE_THRESHOLD=0.60, a simulação de 1.095 dias
     # produz ~11% de novos eventos e ~89% de dias banais, preservando cooldowns e limites.
@@ -145,10 +155,6 @@ class Settings:
     VOICE_CASUAL_SOFT_SECONDS: int = int(os.getenv("VOICE_CASUAL_SOFT_SECONDS", "15"))
     VOICE_NORMAL_SOFT_SECONDS: int = int(os.getenv("VOICE_NORMAL_SOFT_SECONDS", "30"))
     VOICE_SUPPORTIVE_SOFT_SECONDS: int = int(os.getenv("VOICE_SUPPORTIVE_SOFT_SECONDS", "45"))
-    # Reserved for 3.6.4 calendar projection; storage/seed do not activate behavior.
-    ACADEMIC_LIFE_ENABLED: bool = os.getenv("ACADEMIC_LIFE_ENABLED", "false").lower() in ("true", "1", "yes")
-    ACADEMIC_AUTO_TERM_GENERATION: bool = os.getenv("ACADEMIC_AUTO_TERM_GENERATION", "false").lower() in ("true", "1", "yes")
-    CALENDAR_CONTINUITY_ENABLED: bool = os.getenv("CALENDAR_CONTINUITY_ENABLED", "false").lower() in ("true", "1", "yes")
     REAL_CONTEXT_FETCH_ENABLED: bool = os.getenv("REAL_CONTEXT_FETCH_ENABLED", "false").lower() in ("true", "1", "yes")
     FERIADOS_API_ENABLED: bool = os.getenv("FERIADOS_API_ENABLED", "false").lower() in ("true", "1", "yes")
     FERIADOS_API_KEY: str = os.getenv("FERIADOS_API_KEY", "").strip()
@@ -158,8 +164,6 @@ class Settings:
     MARINA_OUTPUT_LANGUAGE: str = os.getenv("MARINA_OUTPUT_LANGUAGE", "pt-BR").strip()
     VISION_MODEL: str = os.getenv("VISION_MODEL", "google/gemini-2.0-flash-001").strip()
     VISION_ENABLED: bool = os.getenv("VISION_ENABLED", "true").lower() in ("true", "1", "yes")
-    STYLE_ENGINE_V2_ENABLED: bool = os.getenv("STYLE_ENGINE_V2_ENABLED", "true").lower() in ("true", "1", "yes")
-    SAFE_PATCHER_ENABLED: bool = os.getenv("SAFE_PATCHER_ENABLED", "false").lower() in ("true", "1", "yes")
     
     # LoRAs de Estética iPhone e Mirror Selfie (FLUX.1 Dev)
     IPHONE_LORAS_ENABLED: bool = os.getenv("IPHONE_LORAS_ENABLED", "false").lower() in ("true", "1", "yes")
@@ -181,16 +185,6 @@ class Settings:
     @classmethod
     def validate(cls) -> list[str]:
         errors = []
-        if cls.RELATIONSHIP_WORLD_ENABLED and not (cls.LIVING_WORLD_ENABLED and cls.KNOWLEDGE_PRIVACY_ENABLED):
-            errors.append('RELATIONSHIP_WORLD_ENABLED exige LIVING_WORLD_ENABLED e KNOWLEDGE_PRIVACY_ENABLED')
-        if cls.CAMERA_WORLD_CONTINUITY_ENABLED and not cls.LIVING_WORLD_ENABLED:
-            errors.append('CAMERA_WORLD_CONTINUITY_ENABLED exige LIVING_WORLD_ENABLED')
-        if cls.WORLD_HYGIENE_ENABLED and not cls.LIVING_WORLD_ENABLED:
-            errors.append('WORLD_HYGIENE_ENABLED exige LIVING_WORLD_ENABLED')
-        if cls.HUMAN_REPLY_LATENCY_ENABLED and not cls.RESPONSE_AVAILABILITY_ENABLED:
-            errors.append('HUMAN_REPLY_LATENCY_ENABLED exige RESPONSE_AVAILABILITY_ENABLED')
-        if cls.PENDING_CONVERSATION_BATCHING_ENABLED and not cls.HUMAN_REPLY_LATENCY_ENABLED:
-            errors.append('PENDING_CONVERSATION_BATCHING_ENABLED exige HUMAN_REPLY_LATENCY_ENABLED')
         if cls.RESPONSE_AVAILABILITY_CHECK_SECONDS < 5:
             errors.append('RESPONSE_AVAILABILITY_CHECK_SECONDS deve ser >= 5')
         if cls.WORLD_DISCOVERY_PROMOTION_THRESHOLD < 2:

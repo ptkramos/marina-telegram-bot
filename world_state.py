@@ -75,7 +75,7 @@ class RoutineEngine:
                 continue
             if row["routine_type"] == "pet_walk" and has_class and now.hour >= 9:
                 continue
-            if row["routine_type"] == "university" and getattr(settings, 'ACADEMIC_LIFE_ENABLED', False):
+            if row["routine_type"] == "university" and True:
                 continue
             activity, place_key = self._ACTIVITIES.get(row["routine_type"], (None, None))
             if not activity:
@@ -102,6 +102,12 @@ class RoutineEngine:
         return [candidate for candidate in result if candidate.score > 0]
 
     def choose(self, candidates: list[RoutineCandidate]) -> RoutineCandidate:
+        # Calendar commitments and explicit plans are resolved before routines.
+        # Inside a canonical sleep window, do not let the generic free-time
+        # fallback randomly keep Marina awake in the middle of the night.
+        sleeping = [item for item in candidates if item.activity == "dormindo"]
+        if sleeping:
+            return max(sleeping, key=lambda item: item.score)
         # O fallback permite dias banais sem forçar uma rotina ou um plot.
         options = [*candidates, RoutineCandidate("tempo livre em casa", "marina_apartment", 0.2, "free_time")]
         return self.rng.choices(options, weights=[item.score for item in options], k=1)[0]
@@ -145,33 +151,23 @@ class WorldStateManager:
     ) -> dict:
         if not 0 <= energy <= 1:
             raise ValueError("energy deve estar entre 0 e 1")
-        if (getattr(settings, 'ACADEMIC_LIFE_ENABLED', False)
-                and not getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False)):
-            raise RuntimeError('Academic Life requires Calendar Continuity')
-        if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
-            from calendar_world import CalendarWorld, local_time
+        from calendar_world import CalendarWorld, local_time
+        from academic_life import AcademicLife
 
-            now = local_time(now)
-            calendar = CalendarWorld(self.db)
-            if getattr(settings, 'ACADEMIC_LIFE_ENABLED', False):
-                from academic_life import AcademicLife
-
-                academic = AcademicLife(self.db)
-                academic.catch_up(now, auto_generate=getattr(
-                    settings, 'ACADEMIC_AUTO_TERM_GENERATION', False))
-                if has_class is None:
-                    has_class = bool(academic.blocks_on(now.date()))
-            if confirmed_commitment is None:
-                confirmed_commitment = calendar.current(
-                    now, include_academic=getattr(settings, 'ACADEMIC_LIFE_ENABLED', False))
-            if weather is None:
-                observed_weather = calendar.context.get('weather:rio', now=now)
-                if observed_weather:
-                    weather = observed_weather['payload']
-            observed_holiday = calendar.context.get(f'holiday:{now.date().isoformat()}', now=now)
-            holiday_scope = (observed_holiday['payload']['scope'] if observed_holiday else None)
-        else:
-            holiday_scope = None
+        now = local_time(now)
+        calendar = CalendarWorld(self.db)
+        academic = AcademicLife(self.db)
+        academic.catch_up(now, auto_generate=True)
+        if has_class is None:
+            has_class = bool(academic.blocks_on(now.date()))
+        if confirmed_commitment is None:
+            confirmed_commitment = calendar.current(now, include_academic=True)
+        if weather is None:
+            observed_weather = calendar.context.get('weather:rio', now=now)
+            if observed_weather:
+                weather = observed_weather['payload']
+        observed_holiday = calendar.context.get(f'holiday:{now.date().isoformat()}', now=now)
+        holiday_scope = (observed_holiday['payload']['scope'] if observed_holiday else None)
         reason = None
         chosen = None
         if confirmed_commitment and confirmed_commitment.get("start_at") and self._active_plan(confirmed_commitment, now):
@@ -192,14 +188,26 @@ class WorldStateManager:
                 previous["weather_context_json"] or "null")
             previous_plan = json.loads(previous["current_plan_json"] or "null")
             plan_expired = previous_plan is not None and not self._active_plan(previous_plan, now)
-            if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
-                prior_source = json.loads(previous['source_json'] or '{}')
-                if prior_source.get('holiday_scope') != holiday_scope:
-                    plan_expired = True
-                if prior_source.get('calendar_event_id') or prior_source.get('academic_block_id'):
-                    plan_expired = True  # Calendar may have cancelled/rescheduled this occurrence.
+            prior_source = json.loads(previous['source_json'] or '{}')
+            if prior_source.get('holiday_scope') != holiday_scope:
+                plan_expired = True
+            if prior_source.get('calendar_event_id') or prior_source.get('academic_block_id'):
+                plan_expired = True  # Calendar may have cancelled/rescheduled this occurrence.
+            sleep_now = any(
+                candidate.activity == "dormindo"
+                for candidate in self.routine.candidates(
+                    now, has_class=has_class,
+                    heavy_rain=bool(weather and weather.get("heavy_rain")),
+                    energy=energy, holiday_scope=holiday_scope,
+                )
+            )
+            previous_sleeping = any(
+                token in (previous.get("activity") or "").casefold()
+                for token in ("dorm", "sleep", "sono")
+            )
             if (timedelta(0) <= age < timedelta(minutes=self.stale_minutes)
-                    and not weather_changed and not plan_expired):
+                    and not weather_changed and not plan_expired
+                    and not (sleep_now and not previous_sleeping)):
                 return previous
 
         if chosen is None:
@@ -228,3 +236,4 @@ class WorldStateManager:
                             "calendar_event_id": chosen.get('calendar_event_id'),
                             "academic_block_id": chosen.get('academic_block_id')},
         })
+

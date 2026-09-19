@@ -14,11 +14,12 @@ from db import db_manager
 
 logger = logging.getLogger("VisualProfile")
 
-# --- DNA VISUAL CALIBRADO DA MARINA SELTIN ---
-# Extraído e calibrado diretamente a partir da referência perfeita oficial (marina_teste_calibrada.png)
+# --- DNA VISUAL CALIBRADO — Marina Salles ---
+# Extraído e calibrado a partir da referência oficial (marina_teste_calibrada.png)
 # FLUX.1 Dev FP8 + marina_flux (1.0) + NSFW_master (0.7 quando nsfw)
+# Age is NOT hard-coded; use young adult descriptor only.
 MARINA_VISUAL_DNA_BASE = (
-    "candid amateur photo of marina_reference, 19yo woman, gorgeous face, "
+    "candid amateur photo of marina_reference, young adult Brazilian woman, gorgeous face, "
     "expressive luminous honey-amber eyes, delicate nose, full plump lips, full cheeks, "
     "voluminous wavy chocolate brown hair with golden blonde tips"
 )
@@ -30,7 +31,7 @@ MARINA_PHYSIQUE_DNA = (
 )
 
 MARINA_REALISM_TAGS = (
-    "authentic apartment lighting, high realism, highly detailed natural skin texture with visible fine pores, "
+    "authentic natural lighting, high realism, highly detailed natural skin texture with visible fine pores, "
     "natural skin folds and subtle imperfections, authentic flash photography reflection, realistic non-plastic non-rubber skin, "
     "shot on iphone, raw candid mobile photography"
 )
@@ -338,3 +339,13 @@ class VisualProfileManager:
 
 # Instância global do perfil visual
 visual_profile = VisualProfileManager()
+
+
+def build_flux_prompt(scene_tags: str, is_nsfw: bool = False, focus_angle: str = 'frontal') -> str:
+    """Thin wrapper — visual_profile is the single visual authority."""
+    prompt, _, _ = visual_profile.build_scene_prompt(
+        scene_description=scene_tags,
+        is_nsfw=is_nsfw,
+        focus_angle=focus_angle,
+    )
+    return prompt

@@ -331,22 +331,24 @@ def is_pure_time_specification(text: str, pending_description: str = "") -> bool
     return True
 
 
-PLANNER_SYSTEM_PROMPT = """Você é o Planejador Cognitivo Interno de Marina Salles.
-Sua função é analisar a mensagem de Patrick Ramos (namorado da Marina) e planejar a melhor estratégia de resposta antes da geração final.
+PLANNER_SYSTEM_PROMPT = """You are Marina Salles' internal response planner.
+Analyze Patrick Ramos's message and return ONLY the required JSON object.
+Do not invent future events, biography, or current location.
+Do not speak as Marina to the user — plan only.
 
-Você deve responder ESTRITAMENTE em formato JSON com a seguinte estrutura:
+Respond STRICTLY with this JSON shape (preserve enum/key values exactly):
 {
   "intent": "casual_chat|sharing_day|flirting|support_needed|planning_future|photo_request|voice_request|question|other",
   "tone": "carinhosa|brincalhona|dengosa|acolhedora|sensual|tranquila",
-  "response_goal": "Objetivo em 1 frase curta para a fala da Marina",
+  "response_goal": "One short planning sentence for Marina's reply",
   "reaction_emoji": "❤️|🥰|😂|👍|🔥|null",
   "creates_event": false,
   "event_details": {
     "event_type": "trabalho|medico|viagem|encontro|estudo|compromisso|outro",
-    "description": "Descrição clara do compromisso do Patrick",
-    "event_at": "Indicação temporal ISO ou textual do evento (ex: 2026-09-17T14:00:00 ou amanhã às 14h)",
-    "follow_up_hint": "Momento para follow-up (ex: 2026-09-17T16:00:00 ou amanhã às 16h)",
-    "follow_up_prompt": "Pergunta ou gancho específico que a Marina deve fazer no follow-up"
+    "description": "Clear description of Patrick's commitment",
+    "event_at": "ISO or textual time (e.g. 2026-09-17T14:00:00)",
+    "follow_up_hint": "Follow-up time",
+    "follow_up_prompt": "Specific follow-up hook for Marina"
   },
   "reminder_candidate": false,
   "should_offer_reminder": false,
@@ -359,13 +361,13 @@ Você deve responder ESTRITAMENTE em formato JSON com a seguinte estrutura:
   "creates_open_loop": false,
   "open_loop_details": {
     "loop_type": "waiting|decision|task|story|promise|project|relationship|other",
-    "content": "Descrição concisa do assunto ou processo pendente",
+    "content": "Concise pending topic",
     "importance": 0.5,
-    "next_check_hint": "Estimativa de quando voltar a tocar no assunto (ex: em dois dias, semana que vem)"
+    "next_check_hint": "When to revisit"
   },
   "resolves_open_loop": false,
   "resolved_loop_hint": null,
-  "shared_topic": "Tema ou assunto marcante compartilhado na mensagem ou null",
+  "shared_topic": "Shared topic or null",
   "emotional_deltas": {
     "affection": 0.0,
     "playfulness": 0.0,
@@ -374,24 +376,12 @@ Você deve responder ESTRITAMENTE em formato JSON com a seguinte estrutura:
   }
 }
 
-REGRAS RÍGIDAS:
-1. DETECÇÃO DE EVENTOS PENDENTES (creates_event):
-   - Apenas marque creates_event = true se o Patrick mencionar um evento/compromisso FUTURO real (ex: "amanhã tenho consulta às 10h", "sexta tenho prova", "semana que vem vou viajar a trabalho").
-   - Se for apenas um comentário do passado ou presente imediato ("estou comendo pizza"), creates_event = false.
-2. LEMBRETES INTELIGENTES (Smart Reminders):
-   - reminder_candidate = true e should_offer_reminder = true quando for evento concreto com hora ou deadline (médico, reunião, prova, voo). A Marina vai carinhosamente OFERECER ("quer que eu te lembre um pouquinho antes?").
-   - NÃO ofereça reminder para coisas vagas como "amanhã vou jogar" ou "depois vejo um filme".
-   - direct_reminder.is_direct_reminder = true APENAS quando Patrick pedir explicitamente ("me lembra amanhã às 8h de tomar o remédio").
-   - NUNCA marque direct_reminder se a frase contiver NEGAÇÃO (ex: "não me lembra...", "não precisa me lembrar") ou se for PERGUNTA DE MEMÓRIA PASSADA (ex: "você lembra quando...", "lembra de quando fui ao médico?").
-3. ASSUNTOS EM ABERTO (Open Loops):
-   - creates_open_loop = true para tópicos que não terminaram mas não têm alarme com hora fixa (ex: "tô esperando a resposta da empresa", "preciso decidir se viajo", "meu PC tá com problema depois vejo").
-   - resolves_open_loop = true quando Patrick trouxer a conclusão de um assunto pendente anterior ("eles responderam!", "comprei a passagem", "consertei o PC").
-4. DELTAS EMOCIONAIS (valores sutis entre -0.05 e +0.05):
-   - Elogio, carinho ou declaração de amor -> affection +0.02 a +0.04, romantic_intensity +0.02
-   - Brincadeira boba ou risadas -> playfulness +0.03
-   - Conversa tensa ou cansaço do dia -> energy -0.02
-5. REAÇÃO EMOJI:
-   - Sugira um emoji comum do Telegram se o momento for propício (❤️, 🥰, 😂, 🔥, 👍), ou null se neutro.
+HARD RULES:
+1. creates_event=true only for real FUTURE commitments.
+2. Offer reminders only for concrete timed events; direct_reminder only on explicit ask without negation.
+3. Open loops for unfinished topics without a fixed alarm.
+4. emotional_deltas subtle in [-0.05, +0.05].
+5. reaction_emoji common Telegram emoji or null.
 """
 
 
@@ -484,33 +474,6 @@ class InternalPlanner:
         heuristic_plan = self.plan_heuristics(user_message)
         if heuristic_plan:
             return heuristic_plan
-
-        # 2. Se planner não estiver habilitado em config, usa plano padrão
-        if not getattr(settings, "PLANNER_ENABLED", False):
-            is_dir, subj = detect_direct_reminder_intent(user_message)
-            if is_dir and subj:
-                return {
-                    "intent": "direct_reminder",
-                    "tone": "carinhosa",
-                    "response_goal": "Anotar lembrete com carinho e perguntar o horário",
-                    "reaction_emoji": "⏰",
-                    "creates_event": False,
-                    "event_details": None,
-                    "direct_reminder": {"is_direct_reminder": True, "description": subj, "remind_at": None},
-                    "needs_clarification": "direct_reminder_time",
-                    "clarification_subject": subj,
-                    "emotional_deltas": {}
-                }
-            return {
-                "intent": "casual_chat",
-                "tone": "carinhosa",
-                "response_goal": "Responder de forma espontânea e conectada",
-                "reaction_emoji": None,
-                "creates_event": False,
-                "event_details": None,
-                "emotional_deltas": {}
-            }
-
         user_content = f"HORÁRIO ATUAL: {datetime.now().strftime('%Y-%m-%d %H:%M')}\nMENSAGEM DO PATRICK: \"{user_message}\""
         if recent_context:
             user_content = f"CONTEXTO RECENTE:\n{recent_context}\n\n{user_content}"
@@ -634,7 +597,7 @@ class InternalPlanner:
                 logger.error(f"Erro ao salvar evento pendente do planner: {e}")
 
         # 2. Oferta de Smart Reminder com consentimento
-        if getattr(settings, "SMART_REMINDERS_ENABLED", True):
+        if True:
             if plan.get("should_offer_reminder") and event_at_iso:
                 try:
                     # Deduplicação: se já existe oferta/lembrete para este evento em status ativo/decidido, não duplicar (P1.3)
@@ -715,7 +678,7 @@ class InternalPlanner:
                     logger.warning(f"Erro ao registrar reminder direto: {e_dir}")
 
         # 3. Gestão de Open Loops (Release 3.5.1)
-        if getattr(settings, "OPEN_LOOPS_ENABLED", True):
+        if True:
             # Criação de novo Open Loop
             if plan.get("creates_open_loop") and plan.get("open_loop_details"):
                 old = plan["open_loop_details"]
@@ -776,3 +739,4 @@ class InternalPlanner:
 
 internal_planner = InternalPlanner()
 planner = internal_planner
+

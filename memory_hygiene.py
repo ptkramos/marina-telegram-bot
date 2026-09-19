@@ -56,7 +56,7 @@ class MemoryHygieneService:
         reconf_cands = self.db.get_memorias_para_reconfirmacao(limit=3)
 
         world_hygiene = None
-        if getattr(settings, 'WORLD_HYGIENE_ENABLED', False) and getattr(settings, 'LIVING_WORLD_ENABLED', False):
+        if getattr(settings, 'WORLD_HYGIENE_ENABLED', False) and True:
             from world_hygiene import WorldHygiene
             world_hygiene = WorldHygiene(self.db).run_cycle(now=now_dt)
 
@@ -87,3 +87,4 @@ class MemoryHygieneService:
 
 
 memory_hygiene_service = MemoryHygieneService()
+

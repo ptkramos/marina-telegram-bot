@@ -21,8 +21,24 @@ from datetime import datetime
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.append(str(BASE_DIR))
 
+from typing import Optional
+
 from db import db_manager
 from cycle import MenstrualCycleManager
+
+
+def _age_from_birth_date(birth_date: Optional[str], *, ref: Optional[datetime] = None) -> str:
+    """Derive age from birth_date; never invent a hardcoded annual fallback."""
+    if not birth_date:
+        return "unknown/not available"
+    try:
+        b = datetime.fromisoformat(str(birth_date)[:10]).date()
+        today = (ref or datetime.now()).date()
+        age = today.year - b.year - ((today.month, today.day) < (b.month, b.day))
+        return str(age)
+    except Exception:
+        return "unknown/not available"
+
 
 def show_stats():
     total_msgs = db_manager.get_total_conversas()
@@ -35,11 +51,20 @@ def show_stats():
     ciclo_info = cycle_mgr.get_cycle_info()
 
     total_gostos = sum(len(itens) for itens in gostos.values())
+    birth = perfil.get("birth_date") or perfil.get("data_nascimento")
+    if not birth:
+        try:
+            from world_repository import WorldBibleRepository
+            marina = WorldBibleRepository(db_manager).get_character("marina") or {}
+            birth = marina.get("birth_date")
+        except Exception:
+            birth = None
+    age_label = _age_from_birth_date(birth)
 
     print("=" * 60)
     print("🌹 PAINEL DE MEMÓRIA DA MARINA SALLES (SQLite)")
     print("=" * 60)
-    print(f"• Nome: {perfil.get('nome', 'Marina Salles')} ({perfil.get('idade', '20')} anos)")
+    print(f"• Nome: {perfil.get('nome', 'Marina Salles')} ({age_label} anos)")
     print(f"• Namorado: {perfil.get('namorado', 'Patrick Ramos')}")
     print(f"• Banco de Dados: marin_memory.db ({db_manager.db_path.stat().st_size / 1024:.1f} KB)")
     print(f"• Fase do Ciclo: Dia {ciclo_info['day']} de 28 ({ciclo_info['name']})")
@@ -101,7 +126,16 @@ def export_dump():
     md = []
     md.append(f"# 🌹 Relatório Completo de Memória — Marina Salles")
     md.append(f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M:%S')}\n")
-    md.append(f"## 1. Perfil\n- Nome: {perfil.get('nome')}\n- Namorado: {perfil.get('namorado')}\n- Idade: {perfil.get('idade')}\n")
+    birth = perfil.get("birth_date") or perfil.get("data_nascimento")
+    if not birth:
+        try:
+            from world_repository import WorldBibleRepository
+            marina_char = WorldBibleRepository(db_manager).get_character("marina") or {}
+            birth = marina_char.get("birth_date")
+        except Exception:
+            birth = None
+    age_label = _age_from_birth_date(birth)
+    md.append(f"## 1. Perfil\n- Nome: {perfil.get('nome')}\n- Namorado: {perfil.get('namorado')}\n- Idade: {age_label}\n")
     md.append(f"## 2. Fatos que Lembra do Patrick")
     for f in fatos:
         md.append(f"- {f}")

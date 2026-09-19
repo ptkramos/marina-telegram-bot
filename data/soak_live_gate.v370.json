@@ -1,0 +1,32 @@
+{
+  "release": "3.7.0",
+  "finished_at": "2026-09-19T13:26:30.704830-03:00",
+  "checks": {
+    "telegram_read_only": {
+      "status": "passed",
+      "detail": "identity, target chat and polling configuration verified; no messages sent"
+    },
+    "conversation_llm": {
+      "status": "passed",
+      "detail": "configured model answered synthetic connectivity prompt; no private context"
+    },
+    "voice_conversational": {
+      "status": "passed",
+      "detail": "native Telegram OGG/Opus generated"
+    },
+    "voice_intimate": {
+      "status": "passed",
+      "detail": "native Telegram OGG/Opus generated"
+    },
+    "photo_flux": {
+      "status": "accepted_unavailable",
+      "detail": "User deferred GPU recovery; dynamic apology path enabled. No generation attempted."
+    },
+    "photo_apology_llm": {
+      "status": "passed",
+      "detail": "configured LLM produced a conversational unavailability reply from synthetic input"
+    }
+  },
+  "telegram_messages_sent": 0,
+  "status": "passed_with_photo_maintenance"
+}

@@ -15,9 +15,8 @@ sys.path.insert(0, str(ROOT))
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="marina_tests_") as temp:
         os.environ["MARINA_DB_PATH"] = str(Path(temp) / "global_test.db")
-        # Regression fixtures predate the production rollout. Keep their
-        # baseline deterministic even when the real .env enables v3.6/3.7;
-        # individual tests opt in with patch.multiple(settings, ...).
+        # Keep only operational/provider switches deterministic. Canonical
+        # release features no longer read these environment variables.
         baseline_off = (
             'LIVING_WORLD_ENABLED', 'STORY_SEED_LIBRARY_ENABLED',
             'KNOWLEDGE_PRIVACY_ENABLED', 'RELATIONSHIP_WORLD_ENABLED',
@@ -32,12 +31,31 @@ def main() -> int:
             'HUMAN_REPLY_LATENCY_ENABLED', 'PENDING_CONVERSATION_BATCHING_ENABLED',
             'REAL_USAGE_TELEMETRY_ENABLED', 'SESSION_REFLECTION_ENABLED',
             'MEMORY_HYGIENE_ENABLED',
+            'PHOTO_PROVIDER_MAINTENANCE',
         )
         for flag in baseline_off:
             os.environ[flag] = 'false'
-        logging.disable(logging.CRITICAL)
-        suite = unittest.defaultTestLoader.discover(str(ROOT / "tests"), pattern="test_*.py")
-        result = unittest.TextTestRunner(verbosity=0).run(suite)
+        # Production cannot run with a half-seeded database. Give singleton
+        # based integration tests the same canonical baseline as the bot.
+        from db import DatabaseManager
+        from seed_world_bible_v36 import seed_world_bible
+        from seed_academic_v36 import seed_academic
+
+        global_db = DatabaseManager(Path(os.environ["MARINA_DB_PATH"]))
+        seed_world_bible(global_db)
+        seed_academic(global_db)
+        with global_db.get_connection() as conn:
+            conn.execute(
+                """INSERT OR REPLACE INTO world_bootstrap (key,value,updated_at)
+                   VALUES ('clean_canonical_start_done','1','2026-09-18T00:00:00')"""
+            )
+        target = sys.argv[1] if len(sys.argv) > 1 else None
+        if target:
+            stem = Path(target).stem
+            suite = unittest.defaultTestLoader.discover(str(ROOT / "tests"), pattern=f"{stem}.py")
+        else:
+            suite = unittest.defaultTestLoader.discover(str(ROOT / "tests"), pattern="test_*.py")
+        result = unittest.TextTestRunner(verbosity=2).run(suite)
         return 0 if result.wasSuccessful() else 1
 
 

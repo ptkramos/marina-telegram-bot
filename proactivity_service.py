@@ -10,7 +10,7 @@ from typing import Optional, Dict, Any, Tuple
 
 from config import settings
 from db import db_manager, DatabaseManager
-from prompts import EVENTOS_COTIDIANO, get_temporal_greeting
+from prompt_policy import get_daypart
 
 logger = logging.getLogger("ProactivityService")
 
@@ -68,12 +68,37 @@ class ProactivityService:
 
         dt = now or datetime.now()
 
-        living = (getattr(settings, 'LIVING_WORLD_ENABLED', False)
-                  and getattr(settings, 'RELATIONSHIP_WORLD_ENABLED', False))
+        living = (True
+                  and True)
 
-        # 1. Janela de sono
+        # 1. Sleep window — WorldState/Calendar is authoritative when Living World is active.
+        #    Hardcoded clock (03:30–08:00) is only a fallback when state is unavailable.
         if self.check_sleep_window(dt):
-            return False, "sleep_window"
+            if living:
+                # Check WorldState: if Marina is explicitly awake, don't block
+                try:
+                    from world_repository import WorldStateRepository
+                    ws_repo = WorldStateRepository(self.db)
+                    snapshot = ws_repo.latest()
+                    if snapshot:
+                        from datetime import timedelta
+                        observed = datetime.fromisoformat(snapshot['observed_at'])
+                        age = dt - observed
+                        is_fresh = (observed.date() == dt.date()
+                                    and timedelta(0) <= age < timedelta(minutes=60))
+                        activity = (snapshot.get('activity') or '').casefold()
+                        is_sleeping = any(x in activity for x in ('dorm', 'sleep', 'sono'))
+                        if is_fresh and not is_sleeping:
+                            # Explicit awake state overrides clock fallback
+                            pass  # do NOT block
+                        else:
+                            return False, "sleep_window"
+                    else:
+                        return False, "sleep_window"
+                except Exception:
+                    return False, "sleep_window"
+            else:
+                return False, "sleep_window"
 
         # 2. Limite diário de proatividade
         count_today = self.get_autonomous_count_today(dt)
@@ -110,7 +135,7 @@ class ProactivityService:
             return True, "pending_event_ready"
 
         # 4.1. Verifica se há Open Loop pronto para check-in (Release 3.5.1)
-        if getattr(settings, "OPEN_LOOPS_ENABLED", True):
+        if True:
             loops_prontos = self.db.get_open_loops_para_checkin(dt.isoformat())
             if loops_prontos:
                 return True, "open_loop_ready"
@@ -135,7 +160,7 @@ class ProactivityService:
         4. Rotina e momento do dia
         """
         dt = now or datetime.now()
-        contexto_tempo = get_temporal_greeting()
+        daypart = get_daypart(dt)
 
         # Prioridade 1: Evento pendente vencido
         eventos_vencidos = self.db.get_eventos_pendentes_para_followup(dt.isoformat())
@@ -148,14 +173,13 @@ class ProactivityService:
                 "reason": "pending_event_followup",
                 "event_id": ev["id"],
                 "instruction": (
-                    f"Agora é {contexto_tempo}. Você acabou de se lembrar com carinho de namorada que o Patrick "
-                    f"tinha o seguinte compromisso: '{desc}'. "
-                    f"Pergunte a ele como foi e como ele está, mostrando interesse genuíno e afeto natural de namorada!"
+                    f"Daypart is {daypart}. You remembered Patrick had this commitment: '{desc}'. "
+                    "Ask how it went with genuine girlfriend affection. Do not invent a location."
                 )
             }
 
         # Prioridade 2: Open Loop pronto para check-in (Release 3.5.1)
-        if getattr(settings, "OPEN_LOOPS_ENABLED", True):
+        if True:
             loops_prontos = self.db.get_open_loops_para_checkin(dt.isoformat())
             if loops_prontos:
                 loop = loops_prontos[0]
@@ -166,10 +190,8 @@ class ProactivityService:
                     "reason": "open_loop_checkin",
                     "loop_id": loop["id"],
                     "instruction": (
-                        f"Agora é {contexto_tempo}. Você lembrou de um assunto que o Patrick comentou recentemente: "
-                        f"'{loop['content']}'. "
-                        "Puxe conversa de forma carinhosa, perguntando se teve alguma novidade ou como estão as coisas sobre isso, "
-                        "com total leveza e afeto de namorada, sem cobrança."
+                        f"Daypart is {daypart}. You remembered something Patrick mentioned: "
+                        f"'{loop['content']}'. Ask lightly if there is any update — no pressure, no invented scene."
                     )
                 }
 
@@ -181,20 +203,18 @@ class ProactivityService:
                 "reason": "topic_followup",
                 "event_id": None,
                 "instruction": (
-                    f"Agora é {contexto_tempo}. Você estava aqui no apê pensando no assunto que vocês conversaram sobre '{shared_topic}'. "
-                    f"Mande uma mensagem espontânea puxando esse assunto com doçura e intimidade!"
+                    f"Daypart is {daypart}. Continue the shared topic '{shared_topic}' with warmth. "
+                    "Do not invent a current apartment scene or fabricated daily event."
                 )
             }
 
-        # Prioridade 4: Momento cotidiano espontâneo
-        evento_aleatorio = random.choice(EVENTOS_COTIDIANO)
+        # Prioridade 4: Neutral affection (no random invented EVENTOS_COTIDIANO)
         return {
-            "reason": "daily_routine",
+            "reason": "neutral_affection",
             "event_id": None,
             "instruction": (
-                f"Agora é {contexto_tempo}. No seu dia a dia, {evento_aleatorio}. "
-                "Você pensou no Patrick com carinho, saudades, empolgação ou vontade de provocar. "
-                "Decida o que você quer mandar para o seu namorado agora com base na sua personalidade espontânea e no seu ciclo biológico."
+                f"Daypart is {daypart}. Send a short spontaneous affectionate check-in to Patrick. "
+                "Do not invent location, outfit, workout, bath, package, or other fabricated daily events."
             )
         }
 
@@ -211,3 +231,4 @@ class ProactivityService:
 
 
 proactivity_service = ProactivityService()
+

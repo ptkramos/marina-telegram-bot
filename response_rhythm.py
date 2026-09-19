@@ -27,8 +27,9 @@ class ResponseStylePolicy:
 
     @property
     def token_budget(self):
-        # Safety ceiling, not a length target; serious explanations must fit.
-        return 2048 if self.mode in ('serious','explanatory','storytelling') else 512
+        # Safety ceiling, not a length target. Leave room to finish a Portuguese
+        # sentence without letting a 180-character casual turn become an essay.
+        return max(96, min(640, int(self.soft_char_limit / 2) + 32))
 
 
 def select_policy(message='', *, plan=None, voice=False, storytelling=False, emotional_context=None, batch_size=1,
@@ -48,7 +49,8 @@ def select_policy(message='', *, plan=None, voice=False, storytelling=False, emo
         mode, reason = 'storytelling', 'grounded_story'
     elif intent == 'support_needed' or re.search(r'\b(desabafar|to triste|estou triste|foi uma merda|dia horrivel)\b',text):
         mode, reason = 'supportive', 'support_needed'
-    elif intent == 'excited' or tone in ('excited','empolgada','empolgado'):
+    elif (intent == 'excited' or tone in ('excited','empolgada','empolgado')
+          or re.search(r'\b(oba|consegui|ganhei|passei|deu certo|finalmente|not[ií]cia boa|novidade boa)\b|!{2,}', text)):
         mode, reason = 'excited', 'excited_context'
     elif intent == 'planning_future' or len(message)>500 or batch_size>3:
         mode, reason = 'normal', 'expanded_context'
@@ -116,6 +118,12 @@ def segment(text, policy):
     parts = [text]
     if policy.target_bubbles > 1:
         paragraphs = [p.strip() for p in text.splitlines() if p.strip()]
+        if len(paragraphs) == 1:
+            semantic_beats = [
+                p.strip() for p in re.split(r'(?<=[.!?…])\s+', paragraphs[0]) if p.strip()
+            ]
+            if len(semantic_beats) > 1:
+                paragraphs = semantic_beats
         merged=[]
         for p in paragraphs:
             if merged and (len(p.split())==1 or len(merged[-1].split())==1):
@@ -151,3 +159,20 @@ def log_output(text, policy, *, voice=False):
         logger.info('response_policy.override reason_code=soft_limit_exceeded mode=%s chars=%d',policy.mode,len(text))
     if voice:
         logger.info('voice.duration_estimated seconds=%.1f',len(text.split())/2.5)
+
+
+def needs_verbosity_retry(text, policy):
+    """Allow one rewrite only when the draft greatly exceeds the soft budget."""
+    return bool(text and policy and len(text) > policy.soft_char_limit * 2)
+
+
+def verbosity_retry_constraint(text, policy):
+    """Build a bounded rewrite request without truncating the draft."""
+    return (
+        "Your draft is much longer than this conversational turn warrants. "
+        f"Rewrite it as Marina in natural Brazilian Portuguese, aiming for about "
+        f"{policy.soft_char_limit} characters and no more than {policy.max_bubbles} semantic message(s). "
+        "Keep the one essential reaction or answer, preserve any necessary fact, and end complete sentences. "
+        "Do not mention editing, limits, drafts, policies, or these instructions. Return only the replacement message.\n"
+        "[DRAFT TO REWRITE]\n" + text
+    )

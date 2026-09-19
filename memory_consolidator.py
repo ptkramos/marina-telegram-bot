@@ -23,37 +23,37 @@ class MemoryConsolidationError(RuntimeError):
     pass
 
 
-CONSOLIDATOR_SYSTEM_PROMPT = """Extraia fatos permanentes sobre Patrick Ramos para a memória da namorada Marina Salles a partir do diálogo recente.
-REGRAS DE CLASSIFICAÇÃO E INTELIGÊNCIA:
-1. Ignore chitchat casual (oi, kkk, emojis, blz, elogios vazios, saudações). Use decision='ignore' se não houver conteúdo duradouro.
-2. Extraia apenas preferências, rotina, planos futuros, projetos ou fatos relevantes de longo prazo.
-3. Se Patrick reafirmar algo que já existe na lista de fatos conhecidos: defina decision='same', existing_fact_id=ID_DO_FATO. NÃO crie um fato duplicado.
-4. Se contradizer ou atualizar fato conhecido: defina decision='update' ou 'contradiction', existing_fact_id=ID_DO_FATO_ANTIGO, supersedes_id=ID_DO_FATO_ANTIGO e descreva o novo fato.
-5. Se for um fato totalmente novo: defina decision='new', existing_fact_id=null, supersedes_id=null.
-6. Se Patrick pedir explicitamente para lembrar ("lembra que...", "guarda isso", "não esquece"): defina memory_tier='core', importance>=0.90, confidence=1.0.
-7. Se Patrick revogar algo explicitamente ("esquece isso", "não guarda mais isso", "isso não vale mais"): inclua em 'keys_to_deactivate' ou 'facts_to_deactivate'.
-8. Associe canonical_key (snake_case, ex: current_main_game, favorite_energy_drink, training_routine) para conceitos atualizáveis.
-9. Defina volatility: 'stable' (família, identidade, gostos fundamentais), 'medium' (jogos atuais, projetos), 'volatile' (rotinas temporárias, horários da semana).
-10. Responda ESTRITAMENTE em JSON:
+CONSOLIDATOR_SYSTEM_PROMPT = """Extract durable facts about Patrick Ramos for girlfriend Marina Salles' memory from recent dialogue.
+CLASSIFICATION AND INTELLIGENCE RULES:
+1. Ignore casual chitchat (hi, lol, emojis, ok, empty compliments, greetings). Use decision='ignore' if there is no durable content.
+2. Extract only preferences, routine, future plans, projects, or relevant long-term facts.
+3. If Patrick reaffirms something that already exists in the known facts list: set decision='same', existing_fact_id=FACT_ID. DO NOT create a duplicate fact.
+4. If it contradicts or updates a known fact: set decision='update' or 'contradiction', existing_fact_id=OLD_FACT_ID, supersedes_id=OLD_FACT_ID and describe the new fact.
+5. If it is a completely new fact: set decision='new', existing_fact_id=null, supersedes_id=null.
+6. If Patrick explicitly asks to remember ("remember that...", "keep this", "don't forget"): set memory_tier='core', importance>=0.90, confidence=1.0.
+7. If Patrick explicitly revokes something ("forget this", "don't keep this anymore", "this is no longer valid"): include in 'keys_to_deactivate' or 'facts_to_deactivate'.
+8. Associate canonical_key (snake_case, e.g. current_main_game, favorite_energy_drink, training_routine) for updatable concepts.
+9. Set volatility: 'stable' (family, identity, fundamental tastes), 'medium' (current games, projects), 'volatile' (temporary routines, weekly schedules).
+10. Respond STRICTLY in JSON (write fato, momento, and topic_summary in Brazilian Portuguese):
 {
   "facts_to_create": [
     {
-      "fato": "string em 3ª pessoa",
+      "fato": "string in 3rd person in Portuguese (pt-BR)",
       "category": "preferencia|rotina|trabalho|projeto|hobby|relacionamento|pessoal|saude|outro",
       "importance": 0.5,
       "confidence": 1.0,
       "memory_tier": "core|standard|contextual",
       "volatility": "stable|medium|volatile",
-      "canonical_key": "string_ou_null",
+      "canonical_key": "string_or_null",
       "decision": "new|same|update|contradiction|ignore",
       "existing_fact_id": null,
       "supersedes_id": null
     }
   ],
   "facts_to_deactivate": [{"existing_fact_id": 1, "reason": "string"}],
-  "keys_to_deactivate": ["canonical_key_se_patrick_revogou"],
-  "important_moments": [{"momento": "string", "importance": 0.8}],
-  "topic_summary": "resumo curto em 1 frase ou null"
+  "keys_to_deactivate": ["canonical_key_if_revoked"],
+  "important_moments": [{"momento": "string in Portuguese (pt-BR)", "importance": 0.8}],
+  "topic_summary": "short one-sentence summary in Portuguese (pt-BR) or null"
 }"""
 
 
@@ -146,6 +146,12 @@ class MemoryConsolidator:
                 )
                 raw_text = response.choices[0].message.content.strip()
                 data = json.loads(raw_text)
+                # Keep the provider payload untouched here. Validation and
+                # alias normalization belong to _validate_payload(), which
+                # runs before any database write. Iterating malformed values
+                # (for example `facts_to_create: null`) in this network-error
+                # block used to turn a contract violation into an empty,
+                # apparently successful consolidation.
                 return {
                     "facts_to_create": data.get("facts_to_create", []),
                     "facts_to_deactivate": data.get("facts_to_deactivate", []),
@@ -180,6 +186,23 @@ class MemoryConsolidator:
                 }
 
     @staticmethod
+    def _is_ambiguous_memory_text(value: Optional[str]) -> bool:
+        """Identifica referências ambíguas ou genéricas que não devem ser persistidas como memória."""
+        if not value or not isinstance(value, str):
+            return False
+        normalized = value.strip().casefold()
+        ambiguous_markers = (
+            "parecida com outra pessoa",
+            "parecido com outra pessoa",
+            "parecidas com outra pessoa",
+            "parecidos com outra pessoa",
+            "outra pessoa",
+            "alguém desconhecido",
+            "pessoa indeterminada",
+        )
+        return any(marker in normalized for marker in ambiguous_markers)
+
+    @staticmethod
     def _validate_payload(payload: dict) -> dict:
         """Valida todo o JSON antes de qualquer escrita; metadados internos são preservados."""
         import math
@@ -210,10 +233,18 @@ class MemoryConsolidator:
                     raise MemoryConsolidationError("Revogação sem ID")
                 text_key = "fato" if name == "facts_to_create" else "momento"
                 if name != "facts_to_deactivate":
+                    if text_key not in row:
+                        alt_keys = ("fact", "description", "content", "text") if text_key == "fato" else ("moment", "description", "content", "text")
+                        for alt in alt_keys:
+                            if alt in row and row[alt]:
+                                row[text_key] = row[alt]
+                                break
                     value = row.get(text_key, "")
                     if not isinstance(value, str):
                         raise MemoryConsolidationError(f"{text_key} deve ser texto")
                     row[text_key] = value.strip()
+                    if MemoryConsolidator._is_ambiguous_memory_text(row[text_key]):
+                        continue
                     for key, default in (("importance", 0.8 if name == "important_moments" else 0.5), ("confidence", 1.0)):
                         value = row.get(key, default)
                         try:
@@ -249,6 +280,9 @@ class MemoryConsolidator:
         summary = payload.get("topic_summary")
         if summary is not None and not isinstance(summary, str):
             raise MemoryConsolidationError("Resumo deve ser texto ou null")
+        if summary and MemoryConsolidator._is_ambiguous_memory_text(summary):
+            summary = None
+        clean["topic_summary"] = summary
         return clean
 
     def apply_consolidation(

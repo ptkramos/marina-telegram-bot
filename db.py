@@ -221,47 +221,26 @@ class DatabaseManager:
             return row["max_v"] if row and row["max_v"] is not None else 0
 
     def _seed_default_profile(self):
-        """Inicializa os dados padrão da Marina caso o banco seja criado do zero."""
+        """Schema-required neutral defaults only — World Bible owns canon autobiography."""
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            
             perfil_base = {
-                "nome": "Marina Seltin",
-                "idade": "19",
-                "ocupacao": "Modelo fotográfica e comercial em início de carreira",
-                "moradia": "Mora sozinha em seu apartamento",
+                "nome": "Marina Salles",
                 "namorado": "Patrick Ramos",
-                "status_relacionamento": "Namorando recentemente, descobrindo o dia a dia juntos com muito amor e paixão",
-                "habitos": "Acorda 8h~10h com preguiça gostosa na cama, treina quando dá vontade, dorme tarde. Adora mandar selfies e fotos de looks/biquínis e fotos íntimas pro Patrick.",
-                "comportamento_sono": "Costuma ir dormir quando o Patrick vai, mas com frequência fica manhosa pedindo pra ele ficar mais 5 minutinhos ou mandando foto dengosa."
+                "status_relacionamento": "Namorando Patrick Ramos",
             }
             for k, v in perfil_base.items():
-                cursor.execute("INSERT OR REPLACE INTO perfil (chave, valor) VALUES (?, ?)", (k, v))
-                
-            cursor.execute("INSERT OR REPLACE INTO ciclo_biologico (id, data_inicio_ciclo, updated_at) VALUES (1, '2026-09-02', ?)", (now_iso,))
-            
-            fatos_base = [
-                "Nome: Patrick Ramos",
-                "Começou a namorar comigo recentemente",
-                "Trabalha e tem sua rotina corrida",
-                "Me apoia e gosta do meu jeito fofo e do meu corpo"
-            ]
-            for f in fatos_base:
-                cursor.execute("INSERT OR IGNORE INTO fatos_patrick (fato, created_at) VALUES (?, ?)", (f, now_iso))
-                
-            cursor.execute("INSERT OR IGNORE INTO momentos_marcantes (momento, created_at) VALUES ('O começo do nosso namoro e a cumplicidade que estamos construindo', ?)", (now_iso,))
-            
-            gostos_base = {
-                "musica": ["The Weeknd", "Billie Eilish", "Pop moderno", "R&B gostosinho", "ouvir som no talo enquanto se arruma"],
-                "estilo_e_moda": ["Looks confortáveis no apê", "Biquínis ousados", "Peças minimalistas elegantes", "Maquiagem glow bem natural"],
-                "coisas_que_ama": ["Gatinhos fofos", "Cafuné demorado", "Comer brigadeiro de colher", "Ver o Patrick concentrado nas coisas dele"],
-                "coisas_que_acha_estranhas_ou_dificeis": ["Jogos de videogame extremamente difíceis/estressantes", "Gente formal demais"]
-            }
-            for cat, itens in gostos_base.items():
-                for it in itens:
-                    cursor.execute("INSERT OR IGNORE INTO gostos_marina (categoria, item, created_at) VALUES (?, ?, ?)", (cat, it, now_iso))
-                    
+                cursor.execute(
+                    "INSERT OR IGNORE INTO perfil (chave, valor) VALUES (?, ?)", (k, v))
+            cursor.execute(
+                "INSERT OR IGNORE INTO ciclo_biologico (id, data_inicio_ciclo, updated_at) VALUES (1, '2026-09-02', ?)",
+                (now_iso,),
+            )
+            cursor.execute(
+                "INSERT OR IGNORE INTO fatos_patrick (fato, created_at) VALUES (?, ?)",
+                ("Nome: Patrick Ramos", now_iso),
+            )
             conn.commit()
 
     # --- MÉTODOS DE CONVERSAS & CURSOR DE CONSOLIDAÇÃO ---
@@ -359,6 +338,83 @@ class DatabaseManager:
             except Exception:
                 pass
             conn.commit()
+
+    def criar_backup(self, prefixo: str = "manual") -> Path:
+        """Cria uma cópia SQLite consistente antes de operações destrutivas."""
+        backup_dir = self.db_path.parent / "backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        safe_prefix = "".join(c for c in prefixo if c.isalnum() or c in "_-") or "manual"
+        destino = backup_dir / f"{safe_prefix}_{datetime.now():%Y%m%d_%H%M%S_%f}.db"
+        with closing(sqlite3.connect(self.db_path, timeout=10.0)) as origem, \
+             closing(sqlite3.connect(destino)) as copia:
+            origem.execute("PRAGMA busy_timeout=10000")
+            origem.backup(copia)
+            check = copia.execute("PRAGMA integrity_check").fetchone()[0]
+            if check != "ok":
+                raise RuntimeError(f"Backup SQLite inválido: {check}")
+        return destino
+
+    def reset_soak_learning(self) -> dict:
+        """Zera aprendizado e estado narrativo, preservando persona e mundo canônicos."""
+        dynamic_tables = (
+            "response_pending_batch_items",
+            "response_pending_batches",
+            "response_availability_events",
+            "relationship_culture_evidence",
+            "relationship_culture",
+            "knowledge_shares",
+            "knowledge_subject_aliases",
+            "knowledge_subjects",
+            "knowledge_items",
+            "reminders",
+            "eventos_pendentes",
+            "open_loops",
+            "preference_evidence",
+            "social_evidence",
+            "social_place_state",
+            "world_hygiene_log",
+            "world_decisions",
+            "life_events_archive",
+            "life_events",
+            "story_threads",
+            "world_state",
+            "feedbacks",
+            "estilo_linguagem",
+            "gostos_marina",
+            "resumos_conversa",
+            "momentos_marcantes",
+            "fatos_patrick",
+            "conversas",
+            "real_context_cache",
+            "estado_relacional",
+        )
+        counts = {}
+        now_iso = datetime.now().isoformat()
+        with self.transaction():
+            with self.get_connection() as conn:
+                for table in dynamic_tables:
+                    counts[table] = conn.execute(f'DELETE FROM "{table}"').rowcount
+                conn.execute(
+                    "INSERT INTO fatos_patrick (fato, created_at) VALUES (?, ?)",
+                    ("Nome: Patrick Ramos", now_iso),
+                )
+                conn.executemany(
+                    "INSERT INTO estado_relacional (chave, valor, updated_at) VALUES (?, ?, ?)",
+                    (
+                        ("current_nickname", "amor", now_iso),
+                        ("closeness_level", "intimo", now_iso),
+                        ("current_shared_topic", "dia a dia e planos juntos", now_iso),
+                    ),
+                )
+                conn.execute(
+                    "UPDATE estado_emocional SET valor=baseline, updated_at=?", (now_iso,)
+                )
+                placeholders = ",".join("?" for _ in dynamic_tables)
+                conn.execute(
+                    f"DELETE FROM sqlite_sequence WHERE name IN ({placeholders})",
+                    dynamic_tables,
+                )
+        return counts
 
     # --- MÉTODOS DE FATOS & MEMÓRIA AFETIVA ---
 

@@ -39,8 +39,6 @@ def run(output, workers=4, variants='ABC', categories=None):
         from memory import MemoryManager
         from response_rhythm import select_policy,apply_policy,segment
         bootstrap(db_manager.db_path,trusted_cycle_anchor='2026-09-02',now=datetime(2026,9,17,16))
-        settings.LIVING_WORLD_ENABLED=True
-        settings.RESPONSE_RHYTHM_ENABLED=False
         builder=ContextBuilder(memory_mgr=MemoryManager(db=db_manager))
         root=Path(__file__).resolve().parent
         baseline=root/'tests/fixtures/response_rhythm_baseline'
@@ -102,3 +100,4 @@ if __name__=='__main__':
     parser.add_argument('--categories',nargs='+',choices=tuple(CASES))
     args=parser.parse_args()
     raise SystemExit(run(args.output,variants=args.variants,categories=args.categories))
+

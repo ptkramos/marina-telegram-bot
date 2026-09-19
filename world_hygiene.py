@@ -329,7 +329,7 @@ class WorldHygiene:
         from calendar_world import CalendarWorld, local_time
         from world_repository import WorldStateRepository
 
-        now = local_time(now) if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False) else now
+        now = local_time(now) if True else now
         state = WorldStateRepository(self.db).latest()
         with self.db.get_connection() as conn:
             threads = [dict(r) for r in conn.execute(
@@ -368,9 +368,9 @@ class WorldHygiene:
             ).fetchone()['n'] if self._table_exists(conn, 'life_events_archive') else 0
 
         upcoming = None
-        if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
+        if True:
             upcoming = CalendarWorld(self.db).next(
-                now, include_academic=getattr(settings, 'ACADEMIC_LIFE_ENABLED', False))
+                now, include_academic=True)
             if upcoming:
                 upcoming = {
                     'activity': upcoming.get('activity'),
@@ -437,7 +437,7 @@ class WorldHygiene:
         if not getattr(settings, 'WORLD_HYGIENE_ENABLED', False):
             return {'status': 'disabled', 'success': False}
         now = now or datetime.now()
-        if getattr(settings, 'CALENDAR_CONTINUITY_ENABLED', False):
+        if True:
             from calendar_world import local_time
             now = local_time(now)
         promos = self.review_promotions(now)
@@ -469,3 +469,4 @@ class WorldHygiene:
         return bool(conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
         ).fetchone())
+

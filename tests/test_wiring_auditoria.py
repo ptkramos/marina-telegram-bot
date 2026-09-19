@@ -14,7 +14,8 @@ sys.path.insert(0, str(BASE_DIR))
 from db import DatabaseManager
 from planner import InternalPlanner
 from context_builder import ContextBuilder
-from auto_patcher import AutoPatcher
+from seed_world_bible_v36 import seed_world_bible
+from seed_academic_v36 import seed_academic
 
 
 class TestWiringAuditoria(unittest.TestCase):
@@ -22,6 +23,13 @@ class TestWiringAuditoria(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_db_path = Path(self.temp_dir.name) / "test_wiring.db"
         self.db = DatabaseManager(db_path=self.temp_db_path)
+        seed_world_bible(self.db)
+        seed_academic(self.db)
+        with self.db.get_connection() as conn:
+            conn.execute(
+                """INSERT INTO world_bootstrap (key, value, updated_at)
+                   VALUES ('clean_canonical_start_done', '1', '2026-09-18T00:00:00')"""
+            )
 
     def tearDown(self):
         self.temp_dir.cleanup()
@@ -35,33 +43,25 @@ class TestWiringAuditoria(unittest.TestCase):
 
     def test_context_builder_injects_emotional_state(self):
         """Valida que o estado emocional do SQLite é injetado no prompt da Marina."""
+        from config import settings
         cb = ContextBuilder(memory_mgr=MagicMock(db=self.db, cycle_mgr=MagicMock(get_prompt_context=lambda: "", get_emotional_multipliers=lambda: {})))
-        prompt = cb.build_system_prompt()
+        with patch.object(settings, 'LIVING_WORLD_ENABLED', False), \
+             patch.object(settings, 'RESPONSE_RHYTHM_ENABLED', False):
+            prompt = cb.build_system_prompt()
         self.assertIn("[SEU ESTADO EMOCIONAL INTERNO ATUAL]", prompt)
         self.assertIn("carinho e afeto", prompt)
         self.assertIn("energia e disposição", prompt)
 
     def test_context_builder_accepts_planner_tone_and_goal(self):
         """Valida que diretrizes estratégicas do planner são incorporadas ao system prompt."""
+        from config import settings
         cb = ContextBuilder(memory_mgr=MagicMock(db=self.db, cycle_mgr=MagicMock(get_prompt_context=lambda: "", get_emotional_multipliers=lambda: {})))
-        prompt = cb.build_system_prompt(planner_tone="dengosa", planner_goal="Acolher com muito dengo")
-        self.assertIn("[INTENÇÃO ESTRATÉGICA DESTE TURNO]", prompt)
+        with patch.object(settings, 'LIVING_WORLD_ENABLED', False), \
+             patch.object(settings, 'RESPONSE_RHYTHM_ENABLED', False):
+            prompt = cb.build_system_prompt(planner_tone="dengosa", planner_goal="Acolher com muito dengo")
+        self.assertIn("[PLANNER 3.5 — TURN INTENT]", prompt)
         self.assertIn("dengosa", prompt)
         self.assertIn("Acolher com muito dengo", prompt)
-
-    def test_auto_patcher_lifo_rollback_protection(self):
-        """Valida que o auto-patcher rejeita rollback de patch antigo fora da ordem LIFO."""
-        patcher = AutoPatcher()
-        # Registra patch 1 e patch 2
-        self.db.registrar_patch("patch_001", "Patrick", "patch 1", ["file1.py"], "diff1", status="applied")
-        self.db.registrar_patch("patch_002", "Patrick", "patch 2", ["file2.py"], "diff2", status="applied")
-
-        # Tentar rollback do patch_001 direto deve ser rejeitado por proteção LIFO
-        with patch("auto_patcher.db_manager", self.db):
-            sucesso, msg = patcher.rollback_patch("patch_001")
-            self.assertFalse(sucesso)
-            self.assertIn("LIFO", msg)
-
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
