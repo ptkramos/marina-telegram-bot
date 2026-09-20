@@ -16,7 +16,7 @@ import sys
 import json
 from datetime import datetime, timedelta
 from types import SimpleNamespace
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 from telegram import (
     Update,
@@ -57,6 +57,7 @@ from voice_router import VoiceSelectionContext
 from session_reflector import session_reflector
 from memory_hygiene import memory_hygiene_service
 from pending_response import ResponseAvailabilityService
+from botafogo_service import botafogo_service
 from prompt_policy import (
     reminder_offer_constraint,
     reminder_clarification_constraint,
@@ -279,6 +280,7 @@ def build_messages_payload(
     vision_context: str = "",
     planner_tone: Optional[str] = None,
     planner_goal: Optional[str] = None,
+    planner_intent: Optional[str] = None,
     privacy_subjects: Optional[list[tuple[str, int]]] = None,
 ) -> list[dict]:
     return context_builder.build(
@@ -288,6 +290,7 @@ def build_messages_payload(
         vision_context=vision_context,
         planner_tone=planner_tone,
         planner_goal=planner_goal,
+        planner_intent=planner_intent,
         privacy_subjects=privacy_subjects,
     )
 
@@ -570,19 +573,48 @@ async def send_photo_unavailable(chat_id: int, bot, reply_to_message_id: Optiona
 # --- SISTEMA DE REAÇÕES (VIA DE MÃO DUPLA) ---
 
 _reaction_capabilities: dict[int, set[str] | None] = {}
-_invalid_reactions: set[tuple[int, str]] = set()
+# Chat/emoji pairs that Telegram rejected recently. Was a permanent set; now
+# a TTL cache so a transient rejection does not ban an emoji forever.
+_invalid_reactions: dict[tuple[int, str], float] = {}
+_INVALID_REACTION_TTL_SECONDS = 24 * 3600
 _reaction_aliases = {
     "💘": "❤️", "😘": "❤️", "😍": "🥰", "🤣": "😂",
     "🎉": "👍", "👌": "👍", "⏰": "👍",
 }
 _safe_reactions = {"❤️", "🥰", "😂", "👍", "🔥"}
+# Values from the LLM planner that mean "no reaction" but come through as
+# truthy strings and used to sneak into set_safe_message_reaction silently.
+_REACTION_SENTINEL_NULLS = {"null", "none", "-", "n/a", ""}
+
+
+def _normalize_planner_emoji(raw: object) -> str | None:
+    """Filter planner emoji output. Returns a safe emoji or None."""
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        return None
+    candidate = raw.strip()
+    if not candidate or candidate.lower() in _REACTION_SENTINEL_NULLS:
+        return None
+    candidate = _reaction_aliases.get(candidate, candidate)
+    return candidate if candidate in _safe_reactions else None
 
 
 async def set_safe_message_reaction(bot, chat_id: int, message_id: int, emoji: str) -> bool:
     """React only when this chat allows the emoji; stop retrying rejected reactions."""
+    import time
+    original = emoji
     emoji = _reaction_aliases.get(emoji, emoji)
-    if emoji not in _safe_reactions or (chat_id, emoji) in _invalid_reactions:
+    if emoji not in _safe_reactions:
+        logger.info(f"reaction.skip reason=not_safe emoji={original!r}")
         return False
+    key = (chat_id, emoji)
+    expiry = _invalid_reactions.get(key)
+    if expiry is not None:
+        if expiry > time.time():
+            logger.info(f"reaction.skip reason=recently_invalid emoji={emoji} remaining_s={int(expiry - time.time())}")
+            return False
+        _invalid_reactions.pop(key, None)
     if chat_id not in _reaction_capabilities:
         try:
             chat = await bot.get_chat(chat_id)
@@ -595,6 +627,7 @@ async def set_safe_message_reaction(bot, chat_id: int, message_id: int, emoji: s
             return False
     allowed = _reaction_capabilities[chat_id]
     if allowed is not None and emoji not in allowed:
+        logger.info(f"reaction.skip reason=chat_disallowed emoji={emoji}")
         return False
     try:
         await bot.set_message_reaction(
@@ -604,7 +637,7 @@ async def set_safe_message_reaction(bot, chat_id: int, message_id: int, emoji: s
         return True
     except Exception as exc:
         if "Reaction_invalid" in str(exc):
-            _invalid_reactions.add((chat_id, emoji))
+            _invalid_reactions[key] = time.time() + _INVALID_REACTION_TTL_SECONDS
         logger.warning(f"Falha ao reagir com {emoji}: {type(exc).__name__}")
         return False
 
@@ -633,15 +666,39 @@ def suppress_direct_reminder_after_offer_decision(plan: dict | None) -> dict:
     plan.pop("clarification_hour_only", None)
     return plan
 
+_last_verbal_reply_to_reaction: dict[int, datetime] = {}
+
+
+def _reaction_verbal_reply_allowed(chat_id: int, now: datetime | None = None) -> bool:
+    """Cooldown gate so a burst of Patrick reactions produces at most one reply."""
+    cooldown_min = getattr(settings, "REACTION_VERBAL_REPLY_COOLDOWN_MINUTES", 15)
+    if cooldown_min <= 0:
+        return True
+    last = _last_verbal_reply_to_reaction.get(chat_id)
+    if last is None:
+        return True
+    now = now or datetime.now()
+    return (now - last) >= timedelta(minutes=cooldown_min)
+
+
+def _record_verbal_reply_to_reaction(chat_id: int, now: datetime | None = None) -> None:
+    _last_verbal_reply_to_reaction[chat_id] = now or datetime.now()
+
+
 async def handle_reaction(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Manipula quando o Patrick reage com emojis a mensagens/fotos da Marina (Via 2)."""
+    """Handle Patrick reactions on Marina's messages/photos.
+
+    Humans usually absorb a reaction silently; verbal replies are rare and
+    always short. Probabilities live in settings; a cooldown prevents a burst
+    of reactions from producing a burst of replies.
+    """
     reaction_update = update.message_reaction
     if not reaction_update:
         return
 
     chat_id = reaction_update.chat.id
     user_id = reaction_update.user.id if reaction_update.user else None
-    
+
     # Exclusividade do Patrick
     if not settings.TARGET_CHAT_ID or settings.TARGET_CHAT_ID <= 0:
         return
@@ -650,48 +707,61 @@ async def handle_reaction(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     new_reactions = reaction_update.new_reaction or []
     emojis = [r.emoji for r in new_reactions if hasattr(r, "emoji") and r.emoji]
-    
+
     if not emojis:
         return
 
     logger.info(f"Patrick reagiu com emoji(s) {emojis} na mensagem {reaction_update.message_id}")
 
-    # 1. Coração / Carinho
-    if any(e in emojis for e in ["❤️", "🥰", "😍", "💖", "💘"]):
-        if random.random() < 0.45:
-            prompt = (
-                "O Patrick (seu namorado) acabou de colocar uma reação de coração ❤️ na mensagem/foto que você mandou. "
-                "Mande uma fala BEM curtinha (1 linha), fofa, dengosa e apaixonada reagindo ao coraçãozinho dele! "
-                "Apenas a fala espontânea."
-            )
-            fala = generate_dynamic_speech(prompt, max_tokens=60) or "Ai amor, vi seu coraçãozinho aqui... me derrete toda! 🥰💕"
-            await send_human_messages(chat_id, context.bot, fala)
-        else:
-            try:
-                await set_safe_message_reaction(context.bot, chat_id, reaction_update.message_id, "❤️")
-            except Exception:
-                pass
+    heart_hit = any(e in emojis for e in ["❤️", "🥰", "😍", "💖", "💘"])
+    fire_hit = any(e in emojis for e in ["🔥", "💋", "🍓"])
+    laugh_hit = any(e in emojis for e in ["😂", "🤣"])
 
-    # 2. Fogo / Provocação
-    elif any(e in emojis for e in ["🔥", "💋", "🍓"]):
-        if random.random() < 0.60:
-            prompt = (
-                "O Patrick reagiu com 🔥 na sua foto ou mensagem provocante. "
-                "Mande uma fala BEM curtinha (1 linha), maliciosa e provocativa de namorada (ex: 'Gostou do que viu amor? 😏🔥'). "
-                "Apenas a fala curta."
-            )
-            fala = generate_dynamic_speech(prompt, max_tokens=60) or "Gostou do que viu, né amor? 😏🔥 Ficou louco por mim?"
-            await send_human_messages(chat_id, context.bot, fala)
+    if not (heart_hit or fire_hit or laugh_hit):
+        return
 
-    # 3. Risada
-    elif any(e in emojis for e in ["😂", "🤣"]):
-        if random.random() < 0.40:
-            prompt = (
-                "O Patrick reagiu rindo 😂 da sua mensagem anterior. "
-                "Mande uma fala bem curtinha (1 linha) rindo junto com ele de forma fofa."
-            )
-            fala = generate_dynamic_speech(prompt, max_tokens=50) or "Sabia que você ia rir disso kkkk te amo amor! 😂"
-            await send_human_messages(chat_id, context.bot, fala)
+    # Default humano: absorver em silêncio.
+    if not _reaction_verbal_reply_allowed(chat_id):
+        logger.info("reaction.verbal_reply skipped reason=cooldown")
+        return
+
+    speech_prompt: str | None = None
+    fallback: str = ""
+    if heart_hit and random.random() < settings.REACT_TO_HEART_REACTION_CHANCE:
+        speech_prompt = (
+            "Patrick acabou de reagir com coração numa mensagem sua. Mande UMA frase "
+            "curta e viva de namorada carioca — sem 'ai amor', sem 'me derrete toda', "
+            "sem clichê. Pode ser um beicinho verbal, um comentário leve ou um agrado "
+            "curto. Máximo 8 palavras."
+        )
+        fallback = "vi seu coração aí 🥺"
+    elif fire_hit and random.random() < settings.REACT_TO_FIRE_REACTION_CHANCE:
+        speech_prompt = (
+            "Patrick reagiu com 🔥 numa foto/mensagem sua. Mande UMA frase curta, "
+            "maliciosa e natural — sem 'gostou do que viu', sem 'ficou louco por mim'. "
+            "Um mini-provoco de namorada. Máximo 8 palavras."
+        )
+        fallback = "kkkk safado"
+    elif laugh_hit and random.random() < settings.REACT_TO_LAUGH_REACTION_CHANCE:
+        speech_prompt = (
+            "Patrick reagiu 😂 numa mensagem sua. Mande UMA frase curta rindo junto "
+            "— sem 'sabia que você ia rir', sem repetir a piada. Máximo 6 palavras."
+        )
+        fallback = "kkkk né amor"
+
+    if speech_prompt is None:
+        # Verbal reply not drawn this time — pure silent absorb.
+        return
+
+    try:
+        fala = generate_dynamic_speech(speech_prompt, max_tokens=40) or fallback
+    except Exception as exc:
+        logger.warning(f"reaction.verbal_reply generate_fail exc={exc}")
+        fala = fallback
+
+    if fala:
+        _record_verbal_reply_to_reaction(chat_id)
+        await send_human_messages(chat_id, context.bot, fala)
 
 # --- BUFFER INTELIGENTE DE DIGITAÇÃO (DEBOUNCE ANTI-ATROPELO) ---
 
@@ -1159,6 +1229,11 @@ async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
         
     chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
     texto = " ".join(context.args).strip() if context.args else ""
     if not texto:
         texto = "Oi meu amor! Tô aqui passando pra te desejar uma boa noite e dizer que tô com saudades de você, lindo! Um beijo bem gostoso 💕"
@@ -1176,6 +1251,11 @@ async def voz_natural_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not is_authorized(update):
         return
     chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
     texto = " ".join(context.args).strip() if context.args else ""
     if not texto:
         texto = "Oi meu amor! Tô gravando na minha voz normal pra você ver como tá soando bem natural."
@@ -1192,6 +1272,11 @@ async def voz_intima_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not is_authorized(update):
         return
     chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
     texto = " ".join(context.args).strip() if context.args else ""
     if not texto:
         texto = "Oi amor... tô aqui na cama pensando em você... com tanta saudade do seu carinho, meu bem..."
@@ -1208,6 +1293,11 @@ async def vozes_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authorized(update):
         return
     chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
     texto = " ".join(context.args).strip() if context.args else ""
     if not texto:
         texto = "Oi meu amor! Só passando pra te mandar esse áudio e saber como você tá hoje."
@@ -1229,6 +1319,11 @@ async def lembretes_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
     rems = reminder_service.get_active_reminders(limit=10)
     if not rems:
         msg_texto = "⏰ **Lembretes da Marina (SQLite):**\n\nNenhum lembrete pendente ou agendado no momento, amor! ❤️\n\n*(Esta mensagem sumirá em 15s)*"
@@ -1250,6 +1345,11 @@ async def cancelar_lembrete_command(update: Update, context: ContextTypes.DEFAUL
         return
 
     chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
     if not context.args:
         msg = await context.bot.send_message(chat_id=chat_id, text="Amor, use `/cancelarlembrete <id>` informando o ID do lembrete que você viu no `/lembretes`!", parse_mode="Markdown")
         asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=10.0))
@@ -1290,6 +1390,11 @@ async def memory_hygiene_command(update: Update, context: ContextTypes.DEFAULT_T
     if not is_authorized(update):
         return
     chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
     stats = await asyncio.to_thread(memory_hygiene_service.run_hygiene_cycle, force=True)
     texto = (
         f"🧹 **Ciclo de Memory Hygiene Executado:**\n\n"
@@ -1308,6 +1413,11 @@ async def refletir_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authorized(update):
         return
     chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
     res = await asyncio.to_thread(session_reflector.check_and_trigger_reflection, force=True)
     if res and res.get("reflection"):
         ref = res["reflection"]
@@ -1325,6 +1435,145 @@ async def refletir_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         texto = "Amor, não havia mensagens recentes suficientes para refletir agora!"
     msg = await context.bot.send_message(chat_id=chat_id, text=texto, parse_mode="Markdown")
     asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=25.0))
+
+# --- ACOMPANHAMENTO AO VIVO DO BOTAFOGO & REAÇÕES ESPONTÂNEAS ---
+
+async def handle_botafogo_reaction(application: Application, event: Dict[str, Any]):
+    """Gera a reação espontânea, íntima e carioca da Marina a um lance capital do Botafogo."""
+    ev_type = event.get("type", "")
+    score = event.get("score", "")
+    desc = event.get("description", "")
+    opponent = event.get("opponent", "adversário")
+    elapsed = event.get("elapsed", 0)
+
+    if ev_type == "gol_botafogo":
+        guidance = "GOL DO BOTAFOGO! Comemore muito com o Patrick, vibre com o lance, mande mensagem super empolgada, aliviada e carinhosa de quem tá vidrada assistindo na TV."
+    elif ev_type == "gol_adversario":
+        guidance = f"O Botafogo tomou gol do {opponent}. Reaja com raiva e frustração autêntica, reclame da zaga ou do azar, comente com o Patrick indignada como isso dá nos nervos."
+    elif ev_type == "intervalo":
+        guidance = f"Fim do primeiro tempo ({score}). Comente rapidamente sobre a primeira etapa com o Patrick, torcendo pra melhorar e virar no 2º tempo."
+    elif ev_type == "inicio_2t":
+        guidance = "Começou o segundo tempo na TV! Dê um toque rápido no Patrick chamando pra continuar torcendo juntos."
+    elif ev_type == "vermelho_botafogo":
+        guidance = "Cartão vermelho pro Botafogo! Reaja indignada com o juiz ou com a burrice do jogador expulso."
+    elif ev_type == "vermelho_adversario":
+        guidance = f"Jogador do {opponent} foi expulso! Comente animada que agora temos vantagem numérica pra pressionar e buscar a vitória."
+    elif ev_type == "fim_jogo":
+        guidance = f"Fim de jogo ({score}). Comente o resultado final com o Patrick de forma carinhosa e torcedora."
+    else:
+        guidance = f"Aconteceu no jogo: {desc}. Comente espontaneamente com o Patrick."
+
+    instruction = (
+        f"[LANCE AO VIVO DO BOTAFOGO NA TV]\n"
+        f"Você está em casa assistindo na TV ao jogo do Botafogo x {opponent} acompanhando com seu namorado Patrick pelo Telegram.\n"
+        f"Situação atual: {desc}\n"
+        f"Diretriz de reação: {guidance}\n"
+        f"Fale como Marina Salles: jovem carioca de 20 anos, namorada do Patrick. "
+        f"Seja SUPER CURTA, viva e direta (máximo 1 a 2 frases curtas no total, estilo WhatsApp real, NUNCA mande textão). "
+        f"Se tiver 2 pensamentos ou frases, separe OBRIGATORIAMENTE com uma quebra de linha ('\\n') para enviar em balões separados de chat (máximo de 2 balões). "
+        f"Use apenas emojis alvinegros (🖤, 🤍, ⭐️, 🔥), NUNCA use corações amarelos (💛)."
+    )
+
+    try:
+        fala = await asyncio.to_thread(generate_dynamic_speech, instruction, 70, 0.75)
+        if fala and fala.strip():
+            await send_human_messages(settings.TARGET_CHAT_ID, application.bot, fala.strip())
+            memory_manager.registrar_mensagem_assistente(fala.strip())
+            logger.info("Reação ao vivo do Botafogo enviada com sucesso: %s", ev_type)
+    except Exception as exc:
+        logger.error("Erro ao gerar/enviar reação do Botafogo: %s", exc, exc_info=True)
+
+
+async def botafogo_match_routine(application: Application):
+    """Job de monitoramento dos jogos do Botafogo ao vivo (API-Sports)."""
+    if not settings.TARGET_CHAT_ID or not getattr(settings, "BOTAFOGO_TRACKING_ENABLED", True):
+        return
+    try:
+        events = await asyncio.to_thread(botafogo_service.check_live_updates)
+        for ev in events:
+            await handle_botafogo_reaction(application, ev)
+    except Exception as exc:
+        logger.error("Erro na rotina de monitoramento do Botafogo: %s", exc, exc_info=True)
+
+
+async def jogo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Mostra status do jogo ao vivo do Botafogo e uso de cota da API."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
+    quota = botafogo_service.get_quota_status()
+    live = botafogo_service.active_fixture
+    if not live:
+        # Se não tiver ativo em cache, busca na API de forma forçada se cota permitir
+        live_data = await asyncio.to_thread(botafogo_service.fetch_live_fixture)
+        if live_data:
+            live = botafogo_service.parse_fixture(live_data)
+            botafogo_service.active_fixture = live
+
+    if live and live.get("status_short") not in ("FT", "AET", "PEN", "PST", "CANC", None):
+        status_map = {
+            "1H": "1º Tempo",
+            "HT": "Intervalo",
+            "2H": "2º Tempo",
+            "ET": "Prorrogação",
+            "P": "Pênaltis",
+            "LIVE": "Ao Vivo"
+        }
+        status_txt = status_map.get(live.get("status_short"), live.get("status_short"))
+        elapsed_txt = f"({live.get('elapsed')}')" if live.get("elapsed") else ""
+        msg_texto = (
+            f"⚽ **Botafogo ao Vivo**\n\n"
+            f"🏆 **{live.get('league_name', 'Campeonato')}**\n"
+            f"⚔️ **{live.get('score_display')}**\n"
+            f"⏱️ **Status:** {status_txt} {elapsed_txt}\n\n"
+            f"📊 Cota da API hoje: `{quota['used_today']}/{quota['safe_max_daily']}` requisições\n\n"
+            f"*(Esta mensagem sumirá em 25s)*"
+        )
+    elif live:
+        msg_texto = (
+            f"⚽ **Última Partida do Botafogo**\n\n"
+            f"⚔️ **{live.get('score_display')}**\n"
+            f"⏱️ **Status:** Partida Encerrada\n\n"
+            f"📊 Cota da API hoje: `{quota['used_today']}/{quota['safe_max_daily']}` requisições\n\n"
+            f"*(Esta mensagem sumirá em 20s)*"
+        )
+    else:
+        msg_texto = (
+            f"⚽ **Botafogo**\n\n"
+            f"Nenhum jogo do Fogão ao vivo no momento, amor! ❤️\n\n"
+            f"📊 Cota da API hoje: `{quota['used_today']}/{quota['safe_max_daily']}` requisições\n"
+            f"💡 Para testar uma comemoração, use `/simular_lance gol_pro`\n\n"
+            f"*(Esta mensagem sumirá em 20s)*"
+        )
+
+    msg = await context.bot.send_message(chat_id=chat_id, text=msg_texto, parse_mode="Markdown")
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=25.0))
+
+
+async def simular_lance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando administrativo de soak para simular lances do Botafogo."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
+    tipo = context.args[0].lower() if context.args else "gol_pro"
+    sim_event = botafogo_service.simulate_event(tipo)
+    notice = await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"⚽ *[SIMULAÇÃO]* Disparando lance: *{sim_event['headline']}*...",
+        parse_mode="Markdown"
+    )
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, notice.message_id, delay=8.0))
+    await handle_botafogo_reaction(context.application, sim_event)
 
 # --- RECEPTOR INICIAL COM BUFFER DE DIGITAÇÃO ---
 
@@ -1411,6 +1660,27 @@ async def process_incoming_batch(
                 return
             if action == 'proceed_brief':
                 availability_budget_hint = 'brief_due_to_availability'
+            # Patch 013: honrar soft-delay do profile de atividade mesmo em
+            # REPLY_NOW/REPLY_BRIEFLY. Sem isso, activity=GYM respondia em ~30s
+            # em vez do target ~120-160s, quebrando a ilusão de ocupação real.
+            # Cap de 25s por segurança do handler; delays maiores ficam pra DEFER.
+            if avail_decision is not None and action in ('proceed', 'proceed_brief'):
+                try:
+                    from response_availability import local_now, local_naive
+                    now_local = local_naive(local_now())
+                    remaining = (
+                        avail_decision.selected_target_at - now_local
+                    ).total_seconds()
+                    activity_type = getattr(avail_decision, 'activity_type', 'UNKNOWN')
+                    if (activity_type in ('GYM', 'CLASS', 'WORK', 'COMMUTE', 'CASTING', 'SOCIAL')
+                            and 0 < remaining <= 25):
+                        logger.info(
+                            'AVAILABILITY_SOFT_DELAY activity=%s delay_s=%.1f',
+                            activity_type, remaining,
+                        )
+                        await asyncio.sleep(remaining)
+                except Exception as exc:
+                    logger.warning('AVAILABILITY_SOFT_DELAY_ERROR: %s', exc)
         except Exception as exc:
             logger.error('AVAILABILITY_POLICY_ERROR fail-open: %s', exc, exc_info=True)
 
@@ -1550,7 +1820,7 @@ async def process_incoming_batch(
         plan["clarification_hour_only"] = True
 
     # 2.1 Verificação de consentimento para oferta recente de lembrete com atribuição estrita (Release 3.5.1 / P0/P1.3)
-    reminder_decision_text = None
+    reminder_decision_instruction = None
     if True:
         last_offered = reminder_service.get_last_offered_reminder(max_age_minutes=60)
         if last_offered:
@@ -1576,23 +1846,28 @@ async def process_incoming_batch(
                     confirmed = reminder_service.db.get_reminder(last_offered["id"])
                     if confirmed:
                         when = datetime.fromisoformat(confirmed["remind_at"]).strftime("%d/%m às %H:%M")
-                        reminder_decision_text = (
-                            f"Combinado, amor! Lembrete confirmado para {when}: "
-                            f"{confirmed['description']}. Vou te avisar por mensagem aqui no Telegram. 💕"
+                        reminder_decision_instruction = (
+                            f"[INSTRUÇÃO DESTE TURNO]: O Patrick confirmou o lembrete para '{confirmed['description']}' ({when}). "
+                            "Confirme com carinho e com suas próprias palavras de namorada que vai avisá-lo, atendendo com afeto e naturalidade ao que ele falou nesta mensagem."
                         )
                     logger.info(f"Oferta de lembrete {last_offered['id']} confirmada pelo Patrick com offset {confirmation.get('offset_minutes')}m.")
             elif confirmation["action"] == "decline":
                 if reminder_service.decline_reminder(last_offered["id"]):
                     plan = suppress_direct_reminder_after_offer_decision(plan)
-                    reminder_decision_text = "Tudo bem, amor. Não vou te mandar esse lembrete. 💕"
+                    reminder_decision_instruction = (
+                        "[INSTRUÇÃO DESTE TURNO]: O Patrick dispensou o lembrete. "
+                        "Aceite com carinho de namorada e sem insistir, respondendo com afeto e naturalidade ao que ele falou nesta mensagem."
+                    )
                     logger.info(f"Oferta de lembrete {last_offered['id']} recusada pelo Patrick.")
 
     # 3. Reação espontânea da Marina no balão de mensagem do Patrick (prioriza emoji do planner)
-    planner_emoji = plan.get("reaction_emoji") if plan else None
+    planner_emoji = _normalize_planner_emoji(plan.get("reaction_emoji") if plan else None)
     reacao_emoji = planner_emoji or choose_reaction_for_text(texto_usuario)
     if reacao_emoji and (planner_emoji or random.random() < 0.50):
         try:
-            await set_safe_message_reaction(context.bot, chat_id, msg_id, reacao_emoji)
+            reacted = await set_safe_message_reaction(context.bot, chat_id, msg_id, reacao_emoji)
+            if not reacted:
+                logger.info(f"reaction.on_patrick skipped emoji={reacao_emoji} planner={bool(planner_emoji)}")
         except Exception as e:
             logger.warning(f"Erro ao setar reação na mensagem do Patrick: {e}")
 
@@ -1703,7 +1978,8 @@ async def process_incoming_batch(
         web_search_context=web_info,
         user_message=texto_usuario,
         planner_tone=plan.get("tone") if plan else None,
-        planner_goal=plan.get("response_goal") if plan else None
+        planner_goal=plan.get("response_goal") if plan else None,
+        planner_intent=plan.get("intent") if plan else None,
     )
     from response_rhythm import select_policy, apply_policy
     response_policy = select_policy(
@@ -1725,6 +2001,12 @@ async def process_incoming_batch(
             "content": reminder_clarification_constraint(subj),
         })
 
+    if reminder_decision_instruction:
+        messages.append({
+            "role": "system",
+            "content": reminder_decision_instruction,
+        })
+
     if pediu_foto:
         if getattr(settings, 'PHOTO_PROVIDER_MAINTENANCE', False):
             messages.append({
@@ -1736,16 +2018,31 @@ async def process_incoming_batch(
                 "role": "system",
                 "content": TURN_CONSTRAINTS['photo_request'],
             })
+    if response_policy and response_policy.mode == "casual_short" and not pediu_foto and not pediu_audio:
+        messages.append({
+            "role": "system",
+            "content": (
+                "[TURN CONSTRAINT — CASUAL CADENCE]\n"
+                "Be concise, authentic and natural as Patrick's 20yo Carioca girlfriend texting on WhatsApp/Telegram:\n"
+                "- Maximum 1 to 2 short sentences total. Never send long walls of text.\n"
+                "- If you have two distinct thoughts or reactions, you MUST separate them with a newline ('\\n') so they are delivered in 2 separate chat bubbles.\n"
+                "- For Botafogo, strictly use black & white / team emojis (🖤, 🤍, ⭐️, 🔥). Never use yellow hearts (💛)."
+            )
+        })
     messages.append({"role": "user", "content": texto_usuario})
     
     try:
+        # v3.7.1 voice split: penalties agressivos matam repetições humanas que
+        # a Marina *deveria* fazer (amor, kkk, ai). Mantemos temperatura alta
+        # para variedade e reduzimos penalties para permitir vocabulário
+        # afetivo característico. Ver PLANO_VOZ_MARINA_V371.md, seção 3 A5.
         completion = llm_client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=messages,
             max_tokens=response_policy.token_budget if response_policy else 160,
-            temperature=0.80,
-            frequency_penalty=0.30,
-            presence_penalty=0.25
+            temperature=0.85,
+            frequency_penalty=0.10,
+            presence_penalty=0.05
         )
         resposta_marin = completion.choices[0].message.content.strip()
     except Exception as e:
@@ -1816,9 +2113,6 @@ async def process_incoming_batch(
     if settings.VOICE_PROSODY_ENABLED:
         from voice_prosody import sanitize_display_text
         fala_limpa = sanitize_display_text(fala_limpa)
-    if reminder_decision_text:
-        fala_limpa = reminder_decision_text
-        queria_audio = False
 
     # P1.3 / Rodada 3: Garante deterministicamente que a pergunta interrogativa de oferta de lembrete esteja na fala enviada
     if plan and plan.get("should_offer_reminder"):
@@ -1840,7 +2134,7 @@ async def process_incoming_batch(
             fala_limpa = f"{fala_limpa.strip()}{pergunta_tempo}"
 
     # Chance espontânea adicional: ~6% de mandar áudio por vontade própria em mensagens carinhosas (apenas se não for pedido de foto)
-    if not reminder_decision_text and not pediu_foto and not pediu_audio and not queria_audio and random.random() < 0.06 and len(fala_limpa) > 30:
+    if not reminder_decision_instruction and not pediu_foto and not pediu_audio and not queria_audio and random.random() < 0.06 and len(fala_limpa) > 30:
         queria_audio = True
 
     if response_policy:
@@ -2138,36 +2432,65 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
             user_message=user_message_repr,
             vision_context=vision_context,
             planner_tone=plan.get("tone") if plan else None,
-            planner_goal=plan.get("response_goal") if plan else None
+            planner_goal=plan.get("response_goal") if plan else None,
+            planner_intent=plan.get("intent") if plan else None,
         )
 
-        # Gera resposta dinâmica da Marina
-        completion = llm_client.chat.completions.create(
-            model=settings.LLM_MODEL,
-            messages=messages,
-            max_tokens=220,
-            temperature=0.72
-        )
-        resposta_raw = completion.choices[0].message.content.strip()
+        # Gera resposta dinâmica da Marina com proteção contra None e fallback
+        resposta_raw = ""
+        try:
+            completion = llm_client.chat.completions.create(
+                model=settings.LLM_MODEL,
+                messages=messages,
+                max_tokens=220,
+                temperature=0.72
+            )
+            content = getattr(completion.choices[0].message, "content", None)
+            resposta_raw = (content or "").strip()
+        except Exception as e_llm:
+            logger.warning(f"Aviso na chamada principal da LLM para foto ({settings.LLM_MODEL}): {e_llm}")
+            fallback_model = "mistralai/mistral-nemo"
+            if settings.LLM_MODEL != fallback_model:
+                try:
+                    logger.info(f"Acionando modelo reserva ({fallback_model}) para foto...")
+                    completion = llm_client.chat.completions.create(
+                        model=fallback_model,
+                        messages=messages,
+                        max_tokens=220,
+                        temperature=0.72
+                    )
+                    content = getattr(completion.choices[0].message, "content", None)
+                    resposta_raw = (content or "").strip()
+                except Exception as e2:
+                    logger.error(f"Erro também no modelo reserva para foto: {e2}")
+
+        if not resposta_raw:
+            resposta_raw = "Que foto legal amor! Adorei ver 🥰"
+
         resposta_limpa = limpar_fala_marina(resposta_raw)
 
-        # Registra interação no banco com media_type='photo' e aplica efeitos do plano
-        u_id = memory_manager.db.adicionar_mensagem(role="user", content=user_message_repr, media_type="photo")
-        b_id = memory_manager.db.adicionar_mensagem(role="assistant", content=resposta_limpa, media_type="text")
-
-        if plan:
-            planner.apply_plan_effects(plan, conversation_id=u_id)
-
-        # Atualiza métricas de estilo se houver legenda
-        if caption:
-            style_engine.processar_mensagem_patrick(caption)
-
-        # Dispara consolidação de memória persistente
-        await check_and_trigger_memory_consolidation()
-
-        # Envia resposta humanizada em balões
+        # Envia resposta humanizada em balões antes de persistir (anti-ghosting Patch 005)
+        sent_msg = None
         if resposta_limpa:
-            await send_human_messages(chat_id, context.bot, resposta_limpa)
+            sent_msg = await send_human_messages(chat_id, context.bot, resposta_limpa)
+
+        sent_mid = getattr(sent_msg, "message_id", None)
+        if isinstance(sent_mid, int) and sent_mid > 0:
+            # Registra interação no banco com media_type='photo' e aplica efeitos do plano
+            u_id = memory_manager.db.adicionar_mensagem(role="user", content=user_message_repr, media_type="photo")
+            b_id = memory_manager.db.adicionar_mensagem(role="assistant", content=resposta_limpa, media_type="text")
+
+            if plan:
+                planner.apply_plan_effects(plan, conversation_id=u_id)
+
+            # Atualiza métricas de estilo se houver legenda
+            if caption:
+                style_engine.processar_mensagem_patrick(caption)
+
+            # Dispara consolidação de memória persistente
+            await check_and_trigger_memory_consolidation()
+        else:
+            logger.warning("Resposta de foto não foi confirmada pelo Telegram; pulando persistência fantasma.")
 
     except Exception as e:
         logger.error(f"Erro ao processar foto recebida do Patrick: {e}", exc_info=True)
@@ -2376,6 +2699,7 @@ async def reminders_routine(application: Application):
             try:
                 await send_human_messages(settings.TARGET_CHAT_ID, application.bot, msg_lembrete)
                 reminder_service.mark_sent(rid)
+                memory_manager.registrar_mensagem_assistente(msg_lembrete)
             except Exception as e_send:
                 logger.error(f"Erro no envio do reminder {rid}: {e_send}")
                 if hasattr(reminder_service, "release_claim"):
@@ -2460,6 +2784,19 @@ async def post_init(application: Application):
         )
         logger.info(f"Job de Session Reflection agendado a cada {refl_mins}min.")
 
+    # Job periódico de acompanhamento do Botafogo ao vivo (API-Sports)
+    if getattr(settings, "BOTAFOGO_TRACKING_ENABLED", True):
+        bota_poll_sec = max(30, getattr(settings, "BOTAFOGO_POLL_INTERVAL_SECONDS", 120))
+        scheduler.add_job(
+            botafogo_match_routine,
+            "interval",
+            seconds=bota_poll_sec,
+            args=[application],
+            max_instances=1,
+            coalesce=True
+        )
+        logger.info(f"Job do Botafogo Live Tracking agendado a cada {bota_poll_sec}s.")
+
     scheduler.start()
     ciclo_info = memory_manager.cycle_mgr.get_cycle_info()
     logger.info(f"Agendador autônomo iniciado! Marina está no Dia {ciclo_info['day']} do Ciclo ({ciclo_info['name']}).")
@@ -2499,6 +2836,10 @@ def main():
     app.add_handler(CommandHandler("memoryhygiene", memory_hygiene_command))
     app.add_handler(CommandHandler("worlddebug", worlddebug_command))
     app.add_handler(CommandHandler("refletir", refletir_command))
+    app.add_handler(CommandHandler("jogo", jogo_command))
+    app.add_handler(CommandHandler("botafogo", jogo_command))
+    app.add_handler(CommandHandler("simular_lance", simular_lance_command))
+    app.add_handler(CommandHandler("simularlance", simular_lance_command))
 
     # Interatividade Inline (Botão Apagar do /status)
     app.add_handler(CallbackQueryHandler(status_callback_handler, pattern="^status_delete$"))

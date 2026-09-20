@@ -65,11 +65,15 @@ class TestWorldContext(unittest.TestCase):
         self.assertIn("Idade hoje: 20 anos", birthday)
         self.assertNotIn("Marina Seltin", birthday)
         self.assertNotIn("Começou a namorar comigo recentemente", birthday)
-        self.assertIn("[WORLD STATE — agora]", birthday)
+        # v3.7.0 renamed the block header; keep this assertion tied to the
+        # canonical current-state block regardless of its exact wording.
+        self.assertIn("[SEU ESTADO ATUAL", birthday)
         self.assertIn("Patrick perguntou da faculdade", birthday)
         self.assertIn("Tone: carinhoso", birthday)
         self.assertIn("Respond as Marina in natural Brazilian Portuguese", birthday)
-        self.assertLess(len(birthday), 8000)
+        # v3.7.1 voice library adds ≤ ~2k chars of few-shots to the end of the
+        # prompt; ceiling raised to 10k to keep sanity check meaningful.
+        self.assertLess(len(birthday), 10000)
         # Retriever is optional for compact World Context; presence of canon is the contract.
         self.assertIn("Marina Salles", birthday)
 
@@ -129,6 +133,7 @@ class TestWorldContext(unittest.TestCase):
 
         with (patch.object(settings, "LIVING_WORLD_ENABLED", True),
               patch.object(settings, "RELATIONSHIP_WORLD_ENABLED", False),
+              patch("calendar_world.CalendarWorld.current", return_value=None),
               patch.object(bot.proactivity_service, "should_trigger", return_value=(False, "test")) as trigger):
             asyncio.run(bot.autonomous_routine(MagicMock()))
         trigger.assert_called_once()

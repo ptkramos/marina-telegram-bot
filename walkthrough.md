@@ -164,6 +164,36 @@ Validação final desta rodada:
 
 - disponibilidade: 21 testes aprovados;
 - estado do mundo: 9 testes aprovados;
+
+## 4. Validação
+- 66/66 testes aprovados (100% OK em todos os módulos).
+- Bot reiniciado com nova instância operacional limpa via `run_local.bat`.
+
+---
+
+# Walkthrough — Patch 011: Padronização do Idioma de Controle e Cadência Natural de Mensagens
+
+## 1. O que foi diagnosticado
+- A instrução do modo `casual_short` em `response_rhythm.py` havia sido inserida temporariamente em português, violando o princípio canônico de Prompt Authority (`PROMPT_CONTROL_LANGUAGE = 'en'`), onde todas as regras de controle do sistema operam em inglês, enquanto o português (`pt-BR`) é estritamente a linguagem de saída e expressão da Marina.
+- O filtro `conflicts` em `response_rhythm.py` expurgava indevidamente instruções válidas por causa de termos genéricos como `balões`.
+
+## 2. Correções Aplicadas
+- **`response_rhythm.py`:**
+  - Convertida a regra `mode_rule['casual_short']` para inglês canônico:
+    `'casual_short': 'Casual WhatsApp cadence: Keep replies short, affectionate and punchy (1 to 2 short sentences total). If you have two distinct thoughts or reactions, you MUST separate them with a newline (\\n) so they are delivered as separate chat bubbles (maximum 2 bubbles). Never write paragraphs or walls of text.'`
+  - Restringido o filtro `conflicts` para remover apenas as chaves legadas exatas (`'ritmo: múltiplos balões'`).
+  - Reduzido o orçamento de tokens para `casual_short` para 75–85 tokens, forçando concisão e impedindo testões.
+- **`bot.py`:**
+  - Padronizada a diretriz de turno `[TURN CONSTRAINT — CASUAL CADENCE]` em inglês canônico, reforçando concisão máxima, quebra em `\n` para múltiplos balões e proibição de emojis amarelos no Botafogo.
+- **`botafogo_service.py`:**
+  - Implementado `is_initial_sync` para silenciar eventos retroativos em cold boot.
+
+## 3. Validação
+- 8/8 testes de `tests.test_response_rhythm` aprovados.
+- 5/5 testes de `tests.test_botafogo_service` aprovados.
+- 19/19 testes de `tests.test_soak_readiness_v370` aprovados.
+- Instância operacional atualizada e rodando ao vivo via `run_local.bat`.
+
 - autoridade de prompt: 19 testes aprovados;
 - memória: 4 testes locais aprovados; 3 testes opcionais de LLM pulados por indisponibilidade de rede;
 - preflight: 37 recursos ativos;

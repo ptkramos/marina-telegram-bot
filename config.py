@@ -40,6 +40,16 @@ class Settings:
     ACADEMIC_AUTO_TERM_GENERATION = True
     CALENDAR_CONTINUITY_ENABLED = True
     STYLE_ENGINE_V2_ENABLED = True
+    VOICE_LIBRARY_ENABLED = True
+    VOICE_LIBRARY_MAX_EXAMPLES = int(os.getenv("VOICE_LIBRARY_MAX_EXAMPLES", "4"))
+
+    # v3.7.1 — Verbal replies when Patrick reacts to Marina's messages. Humans
+    # usually absorb a reaction silently; keep chances low, add a cooldown so a
+    # burst of reactions never produces a burst of "ai amor..." messages.
+    REACT_TO_HEART_REACTION_CHANCE: float = float(os.getenv("REACT_TO_HEART_REACTION_CHANCE", "0.10"))
+    REACT_TO_FIRE_REACTION_CHANCE: float = float(os.getenv("REACT_TO_FIRE_REACTION_CHANCE", "0.15"))
+    REACT_TO_LAUGH_REACTION_CHANCE: float = float(os.getenv("REACT_TO_LAUGH_REACTION_CHANCE", "0.05"))
+    REACTION_VERBAL_REPLY_COOLDOWN_MINUTES: int = int(os.getenv("REACTION_VERBAL_REPLY_COOLDOWN_MINUTES", "15"))
 
 
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
@@ -162,7 +172,7 @@ class Settings:
     WORLD_STATE_DEFAULT_STALE_MINUTES: int = int(os.getenv("WORLD_STATE_DEFAULT_STALE_MINUTES", "60"))
     PROMPT_CONTROL_LANGUAGE: str = os.getenv("PROMPT_CONTROL_LANGUAGE", "en").strip()
     MARINA_OUTPUT_LANGUAGE: str = os.getenv("MARINA_OUTPUT_LANGUAGE", "pt-BR").strip()
-    VISION_MODEL: str = os.getenv("VISION_MODEL", "google/gemini-2.0-flash-001").strip()
+    VISION_MODEL: str = os.getenv("VISION_MODEL", "google/gemini-2.5-flash").strip()
     VISION_ENABLED: bool = os.getenv("VISION_ENABLED", "true").lower() in ("true", "1", "yes")
     
     # LoRAs de Estética iPhone e Mirror Selfie (FLUX.1 Dev)
@@ -170,6 +180,11 @@ class Settings:
     IPHONE_PHOTO_LORA_NAME: str = os.getenv("IPHONE_PHOTO_LORA_NAME", "iphone_photo_flux.safetensors").strip()
     MIRROR_SELFIE_LORA_NAME: str = os.getenv("MIRROR_SELFIE_LORA_NAME", "mirror_selfie_flux.safetensors").strip()
     IPHONE_DEVICE_LORA_NAME: str = os.getenv("IPHONE_DEVICE_LORA_NAME", "iphone16pro_flux.safetensors").strip()
+    # API-Sports / API-Football (Botafogo Live Tracking)
+    APISPORTS_KEY: str = os.getenv("APISPORTS_KEY", "").strip()
+    BOTAFOGO_TRACKING_ENABLED: bool = os.getenv("BOTAFOGO_TRACKING_ENABLED", "true").lower() in ("true", "1", "yes")
+    BOTAFOGO_POLL_INTERVAL_SECONDS: int = int(os.getenv("BOTAFOGO_POLL_INTERVAL_SECONDS", "120"))
+    BOTAFOGO_TEAM_ID: int = int(os.getenv("BOTAFOGO_TEAM_ID", "120"))
 
 
     def memory_weights(self) -> dict[str, float]:

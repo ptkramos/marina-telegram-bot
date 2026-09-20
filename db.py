@@ -993,7 +993,12 @@ class DatabaseManager:
         follow_up_after: Optional[str] = None,
         importance: float = 0.5,
         source_conversation_id: Optional[int] = None,
-        follow_up_prompt: Optional[str] = None
+        follow_up_prompt: Optional[str] = None,
+        end_at: Optional[str] = None,
+        owner_character_key: str = "patrick_ramos",
+        location_key: Optional[str] = None,
+        confirmed: int = 0,
+        metadata_json: Optional[str] = None
     ) -> int:
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
@@ -1001,10 +1006,10 @@ class DatabaseManager:
             cursor.execute(
                 """
                 INSERT INTO eventos_pendentes
-                (event_type, description, event_at, follow_up_after, status, importance, source_conversation_id, created_at, follow_up_prompt)
-                VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?)
+                (event_type, description, event_at, follow_up_after, status, importance, source_conversation_id, created_at, follow_up_prompt, end_at, owner_character_key, location_key, confirmed, metadata_json)
+                VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (event_type, description, event_at, follow_up_after, importance, source_conversation_id, now_iso, follow_up_prompt)
+                (event_type, description, event_at, follow_up_after, importance, source_conversation_id, now_iso, follow_up_prompt, end_at, owner_character_key, location_key, confirmed, metadata_json)
             )
             conn.commit()
             return cursor.lastrowid

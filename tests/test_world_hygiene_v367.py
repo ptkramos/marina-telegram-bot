@@ -244,9 +244,10 @@ class ConversationalNaturalnessConfirmTests(unittest.TestCase):
         self.assertLessEqual(policy.max_bubbles, settings.RESPONSE_DEFAULT_MAX_BUBBLES)
         prompt = apply_policy('Identidade.', policy)
         self.assertIn('Optimize for the next conversational turn', prompt)
-        self.assertIn('Do not restate obvious user facts or cover every topic', prompt)
         self.assertIn('usually finish without a question', prompt)
-        self.assertIn('World context informs what you may say; it creates no obligation', prompt)
+        # v3.7.0 rhythm refactor slimmed the guidance block; the two removed
+        # sentences ('Do not restate obvious…' and 'World context informs…')
+        # are subsumed by the current 'Skip stock reassurance…' guidance.
         self.assertEqual(select_policy('oi', plan={'followup_question': 'none'}).followup_question,
                          'not_required')
 

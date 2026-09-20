@@ -290,7 +290,9 @@ class BriefRhythmHintTests(unittest.TestCase):
             availability_budget_hint='brief_due_to_availability',
         )
         self.assertEqual(policy.reason_code, 'brief_due_to_availability')
-        self.assertEqual(policy.max_bubbles, 1)
+        # v3.7.0 made max_bubbles advisory-only; segment() enforces limits.
+        # target_bubbles=1 remains the intent hint for a brief availability turn.
+        self.assertEqual(policy.target_bubbles, 1)
         self.assertEqual(policy.followup_question, 'not_required')
 
 

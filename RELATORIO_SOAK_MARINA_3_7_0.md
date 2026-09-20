@@ -218,3 +218,372 @@ Este caso não serve como evidência de que DeepSeek perdeu contexto. A principa
 - Nova instância iniciada às 13:26:48; Telegram `Application started` às 13:26:54.
 - Recuperação de disponibilidade limpa: nenhum lote pronto, desconhecido ou pendente.
 - Primeiros ciclos de respostas pendentes e lembretes concluídos sem erro.
+
+## Patch 007 — Correção da Visão Multimodal, Balões Múltiplos e Moderação de Tom
+
+**Horário observado:** 19/09/2026, 14:34–14:41  
+**Status:** MONITORANDO NO TELEGRAM  
+
+### Sequência observada
+
+1. Patrick enviou fotos no chat (uma foto assistindo Konosuba no trabalho e outra logo em seguida). Ambas as fotos foram recebidas pelo bot, porém não obtiveram resposta alguma de Marina no Telegram.
+2. Nas mensagens de texto, Marina respondeu 100% das vezes com apenas um único balão, sem nunca alternar para dois balões mesmo quando havia duas ideias distintas ou resposta acompanhada de pergunta.
+3. Marina entrou em um viés de dependência e carência dramática excessiva (“sou toda intensa mesmo”, “não consigo passar muito tempo sem saber de você”, promessas com “fofuras” e emojis em todas as frases).
+
+### Classificação e Causa Raiz
+
+- **Visão Multimodal com Modelo Descontinuado (HTTP 404):** `settings.VISION_MODEL` apontava por padrão para `google/gemini-2.0-flash-001`, que foi descontinuado e removido dos endpoints da OpenRouter (`Error code: 404 - No endpoints found`). O modelo multimodal ativo e homologado no catálogo é `google/gemini-2.5-flash`.
+- **Crash no Processamento de Fotos (`AttributeError: 'NoneType'`):** Quando a LLM retornou conteúdo vazio/nulo, `completion.choices[0].message.content.strip()` estourou exceção não tratada em `handle_photo_message`. Além disso, a persistência ocorria antes da confirmação de envio do Telegram (vulnerabilidade a mensagens fantasmas).
+- **Bloqueio Estrutural de Múltiplos Balões:** Em `response_rhythm.py`, `segment()` continha `if policy.target_bubbles > 1:`. Como `target_bubbles` era fixado em 1 para todos os modos cotidianos (`casual_short`, `normal`, `supportive`, etc.), o teto `max_bubbles = 2` era sumariamente ignorado e mensagens com quebras ou duas ideias nunca eram divididas.
+- **Loop de Intensidade e Saturação Emocional:** A LLM gerou falas autojustificando apego com o rótulo de “intensa”; o consolidador de memória absorveu isso e gravou no SQLite (`Marina Salles prometeu... demonstrando sua intensidade`), reinjetando esse viés em loop no system prompt, enquanto as variáveis internas de carinho e paixão atingiram o teto de saturação (1.0).
+
+### Correção Aplicada
+
+1. **Visão Multimodal:**
+   - Atualizado `VISION_MODEL` em `config.py` para `google/gemini-2.5-flash`.
+   - Testada e validada a extração visual estruturada end-to-end com sucesso.
+2. **Robustez e Anti-Ghosting em Fotos:**
+   - Em `bot.py:handle_photo_message`, adicionada leitura segura de `content` (`getattr` / `or ""`), tratamento com bloco `try/except` e fallback para `mistralai/mistral-nemo` se a chamada primária falhar.
+   - Persistência no SQLite (`user`, `assistant` e efeitos do `planner`) migrada para ocorrer estritamente após a confirmação de entrega do Telegram com `message_id` válido, consistente com o Patch 005.
+3. **Segmentação Orgânica de Balões:**
+   - Em `response_rhythm.py`, `segment()` agora avalia `if policy.max_bubbles > 1:`, permitindo divisão em até `max_bubbles` quando o modelo utilizar quebras de linha (`\n`) entre pensamentos com mais de uma palavra, ou quando `target_bubbles > 1`.
+   - Atualizado `apply_policy` no Response Rhythm orientando o modelo a utilizar quebra de linha quando desejar enviar dois balões naturais.
+4. **Moderação de Tom e Higiene de Memória:**
+   - Adicionadas diretrizes explícitas nas regras de controle (`CONTROL_EN` e `CONTROL_PT` em `prompt_policy.py`) proibindo melodrama, carência excessiva, juras dramáticas desproporcionais, a desculpa clichê de “sou intensa mesmo” e a obrigatoriedade de emojis em toda frase, reforçando o perfil autêntico de uma garota carioca de 20 anos (afetuosa, bem-humorada, independente e descomplicada).
+   - Realizado backup do banco em `backups/soak/pre_patch007_20260919_145248.db`.
+   - Higienizado o registro em `momentos_marcantes` (ID 5) e normalizadas as dimensões de `estado_emocional` para os valores de baseline.
+
+### Validação
+
+- **Visão Computacional:** teste sintético com imagem azul via `vision_service.analyze_image` retornou descrição precisa (`scene: a solid blue image`) via `google/gemini-2.5-flash` sem erros.
+- **Segmentação de Balões:** teste unitário de 2 parágrafos confirmou divisão limpa em 2 balões; teste com 1 parágrafo preservou 1 balão.
+- **Regressão:** bateria de 29 testes cobrindo `test_vision_service`, `test_response_rhythm` e `test_prompt_authority_v370` executada com 100% de aprovação (29/29 OK em 29.6s).
+- Compilação: todos os módulos alterados compilados com sucesso.
+- Instância Operacional: processo anterior (PID 9672) encerrado; reinicialização automática pelo `run_local.bat` com nova instância (PID 1856) iniciada às 14:54:38; Telegram `Application started` às 14:54:44; jobs autônomos e de availability ativos sem erros.
+
+## Patch 008 — Estabilização de Rotina contra Jitter Climático e Limpeza de Comandos
+
+**Horário observado:** 19/09/2026, 16:03–16:25  
+**Status:** VALIDADO — BOT REINICIADO  
+
+### Sequência observada
+
+1. No console do `run_local.bat`, foram registrados logs de disponibilidade: `AVAILABILITY_DECISION decision=REPLY_BRIEFLY activity=GYM source=ROUTINE_PROBABILITY`.
+2. Ao executar `/status` no Telegram às 16:11, o retorno informou que Marina estava com atividade `tempo livre em casa` no `Apartamento da Marina (Botafogo)`.
+3. Além disso, comandos administrativos acionados no chat deixavam mensagens de comando visíveis no histórico do Telegram.
+
+### Classificação e Causa Técnica
+
+- **Diferença entre Disponibilidade e Afirmação Factual:** A atividade `GYM` gerada pelo `response_availability` com `source=ROUTINE_PROBABILITY` é uma inferência probabilística para calibrar tempo de resposta humano (delay de ~90-140s e mensagens breves), respeitando a regra canônica de que rotinas não geram claims factuais nem certezas inventadas.
+- **Invalidação Prematura por Jitter de Clima (`weather_changed`):** Em `world_state.py`, o cache do estado comparava o dicionário bruto de clima (`weather_context_json`). Às 16:03:26, o estado foi gerado sem temperatura (`None`); às 16:11:07, a API climática forneceu `20.2°C`. A diferença fez `weather_changed = True`, invalidando precocemente o estado com apenas 7 minutos de existência e forçando um novo sorteio probabilístico (`self.routine.choose`), que caiu no fallback `tempo livre em casa`.
+- **Comandos Administrativos no Chat:** `/gravar_boa_noite`, `/gravar_voz_normal`, `/gravar_voz_intima`, `/lembretes`, `/cancelarlembrete`, `/hygiene` e `/refletir` não apagavam a mensagem original do usuário após o disparo.
+
+### Correção Aplicada
+
+1. **Estabilização de Cache no `world_state.py`:** A verificação de `weather_changed` agora monitora exclusivamente alterações no indicador de chuva forte (`heavy_rain`), que é o único fator climático que altera a rotina da Marina (deslocando a academia externa para a academia do prédio). Oscilações normais de temperatura ou preenchimento de cache não resetam mais a atividade em andamento antes do prazo canônico (`stale_minutes = 60`).
+2. **Auto-exclusão de Comandos:** Adicionado `await context.bot.delete_message` nos handlers dos comandos administrativos em `bot.py` para manter o chat limpo.
+
+### Validação
+
+- **Regressão de Estado:** `tests.test_world_state` executado com 100% de aprovação (9/9 OK em 3.5s), incluindo testes de transição por chuva forte e expiração de compromissos.
+- **Compilação:** `bot.py` e `world_state.py` compilados sem erros.
+- **Instância Operacional:** bot reiniciado com nova instância (PID `36772`) às 16:28:11, scheduler ativo e pronto para continuidade do soak.
+
+---
+
+## 2026-09-19 — Patch 009: Humanização de Lembretes, Descrições em PT-BR e Integração de Atividades Compartilhadas no WorldState
+
+### Sintomas Observados
+
+1. **Descrição em Inglês em Contexto 100% Brasileiro:** Durante proposta de assistir ao jogo de futebol juntos, o `InternalPlanner` gerou o compromisso e o lembrete com descrição em inglês (`Watch Botafogo game together`), que foi exibida na mensagem para o usuário.
+2. **Oferta Inadequada de Lembrete Prévio para Evento Iminente:** O sistema ofereceu agendar lembrete com antecedência para uma atividade combinada para menos de 15 minutos no futuro, calculando um horário que já estava no passado no momento da confirmação.
+3. **Sobrescrita Robótica da Resposta (`reminder_decision_text`):** Ao confirmar o lembrete, a resposta natural gerada pela LLM foi descartada e substituída por uma string de template estática e impessoal (`Combinado, amor! Lembrete confirmado para...`), descaracterizando a persona e ignorando o conteúdo falado pelo usuário.
+4. **Disparo Imediato e Não Registrado:** O lembrete vencido foi disparado em background 13 segundos após ser confirmado e não foi registrado na tabela de conversas.
+5. **Lacuna no WorldState para Atividades Compartilhadas:** O motor de mundo continuava indicando `tempo livre em casa (inferência de rotina)` mesmo após um plano explícito de assistir ao jogo juntos ter sido acordado.
+
+### Classificação e Causa Técnica
+
+- **Língua do Prompt do Planner:** O `PLANNER_SYSTEM_PROMPT` definia o esquema JSON em inglês sem regra estrita de que os campos de conteúdo textual (`description`, `follow_up_prompt`, `shared_topic`) fossem obrigatoriamente gerados em português brasileiro natural.
+- **Sobrescrita Legada da v3.5:** Em `bot.py`, `reminder_decision_text` sobrescrevia `fala_limpa` diretamente após a geração da LLM, impedindo que a Marina confirmasse com sua própria voz e empatia.
+- **Ausência de Registro em `reminders_routine`:** O envio do lembrete via scheduler chamava o Telegram mas não persistia na tabela `conversas`.
+- **Filtro Estrito de Propriedade no Calendário:** `CalendarWorld._dated()` consultava apenas `owner_character_key='marina'`, ignorando compromissos mútuos ou planos compartilhados com o Patrick.
+
+### Correção Aplicada
+
+1. **Prompt Authority em PT-BR no `planner.py`:**
+   - Adicionadas regras rígidas no `PLANNER_SYSTEM_PROMPT` exigindo que todas as descrições e ganchos de acompanhamento sejam em Português do Brasil (PT-BR).
+   - Inclusão da regra explícita de bom senso temporal para não ofertar lembretes para eventos com menos de 45 minutos de antecedência.
+   - Atribuição automática de compromissos compartilhados (`owner_character_key='marina'`, `confirmed=1`, `end_at` calculado e `location_key='marina_apartment'`).
+2. **Eliminação da Sobrescrita Robótica em `bot.py`:**
+   - Removida a substituição direta de `fala_limpa = reminder_decision_text`.
+   - Adicionada injeção de diretriz de turno no prompt da LLM (`reminder_decision_instruction`), permitindo que a Marina confirme o lembrete usando suas próprias palavras, tom e respondendo ao conteúdo do usuário.
+   - Persistência garantida na tabela `conversas` (`memory_manager.registrar_mensagem_assistente`) ao disparar notificações de lembrete pelo scheduler.
+3. **Integração de Compromissos Sociais e Compartilhados no `calendar_world.py` e `world_context.py`:**
+   - `CalendarWorld._dated()` agora suporta `owner_character_key IN ('marina', 'shared')`.
+   - `CalendarWorld.current()` projeta a descrição real da atividade para compromissos sociais/encontros no apartamento, refletindo a atividade no `WorldState` (`Assistindo ao jogo do Botafogo na TV em casa com o Patrick pelo Telegram (compromisso/plano explícito)`).
+   - `world_context.py` mantém a localização clara como `Apartamento da Marina` em eventos caseiros em vez de ocultar como `local reservado`.
+4. **Saneamento e Correção de Mensagens no Telegram e DB:**
+   - Mensagens 837 e 839 editadas diretamente no Telegram e atualizadas no SQLite para falas naturais e carinhosas da Marina.
+   - Mensagem de lembrete duplicada/vencida (ID 840) apagada do Telegram.
+   - Snapshot atual do `world_state` sincronizado para a atividade do jogo em andamento (17h–19h).
+
+### Validação
+
+- **Bateria de Testes Abrangente:** 66/66 testes aprovados (100% OK):
+  - `tests.test_planner`: 9/9 OK
+  - `tests.test_reminder_service`: 8/8 OK
+  - `tests.test_world_state` & `tests.test_calendar_academic_v364`: 23/23 OK
+  - `tests.test_prompt_authority_v370`: 18/18 OK
+  - `tests.test_response_rhythm`: 8/8 OK
+- **Instância Reiniciada:** Bot reinicializado com nova instância operacional limpa via `run_local.bat`, scheduler ativo e ouvindo no Telegram.
+
+## Patch 010 — Integração Botafogo Live Tracking (API-Sports) & Reações Espontâneas de Torcedora
+
+**Horário:** 19/09/2026, 17:42–17:53  
+**Status:** VALIDADO — BOT REINICIADO E MONITORANDO SEGUNDO TEMPO AO VIVO
+
+### Contexto e Motivação
+
+- Durante o teste de soak, o usuário solicitou integrar o acompanhamento em tempo real das partidas do Botafogo via API-Football / API-Sports.
+- A intenção é transformar Marina em uma companheira torcedora autêntica, permitindo que ela assista aos jogos e comente os lances capitais (gols do Botafogo, gols sofridos, intervalo, cartões vermelhos e apito final) com o Patrick no Telegram, com emoção e espontaneidade de uma jovem carioca de 20 anos.
+- Durante a validação, coincidiu de o Botafogo estar jogando ao vivo contra o Mirassol pelo Brasileirão Série A.
+
+### Solução Técnica Implementada
+
+1. **Credenciais e Configuração Segura:**
+   - Adicionada chave da API-Sports oficial (`APISPORTS_KEY`) no `.env` e carregada via `config.py`.
+   - Adicionadas flags `BOTAFOGO_TRACKING_ENABLED`, `BOTAFOGO_POLL_INTERVAL_SECONDS` (120s) e `BOTAFOGO_TEAM_ID` (120).
+2. **Módulo `botafogo_service.py`:**
+   - Consulta ao endpoint oficial `https://v3.football.api-sports.io/fixtures?live=all&team=120`.
+   - **Gestão Inteligente de Cota Diária (100 req/dia):**
+     - Trava estrita de segurança em 90 requisições diárias (evita estouro de cota do plano gratuito).
+     - Cadência adaptativa (`should_poll`): durante partidas ao vivo, polling a cada 2 minutos (120s), consumindo ~50 requisições em 105 minutos de jogo; quando não há jogo ativo, reduz frequência para 15 minutos (tarde/noite) ou 60 minutos (madrugada/manhã).
+   - **Detecção e Deduplicação Estrita de Eventos:**
+     - Assinatura única para cada lance (`fixture_id:elapsed:type:detail:team_id:player_name`), impedindo reações duplicadas ao mesmo gol ou cartão.
+     - Detecção de transições de status da partida: 1H -> HT (Intervalo), HT -> 2H (Início do 2º tempo), 2H -> FT (Fim de jogo).
+   - **Suporte a Simulação Sintética (`simulate_event`):**
+     - Permite simular qualquer evento (`gol_pro`, `gol_contra`, `intervalo`, `inicio_2t`, `fim`, `vermelho`) para testes imediatos sem necessidade de aguardar partida real.
+3. **Integração no `bot.py` e Geração Humanizada:**
+   - Criada a rotina `botafogo_match_routine`, agendada a cada 120s no `AsyncIOScheduler`.
+   - Criado o handler `handle_botafogo_reaction`, que formata a instrução de contexto esportivo, chama `generate_dynamic_speech` (com persona, prosódia e controle de balões) e despacha via `send_human_messages` com persistência na memória.
+   - Novos comandos no Telegram:
+     - `/jogo` ou `/botafogo`: exibe o placar e tempo ao vivo, adversário e cota da API utilizada.
+     - `/simular_lance <tipo>` ou `/simularlance`: comando administrativo de soak para acionar uma reação simulada.
+4. **Isolamento e Hermeticidade dos Testes:**
+   - Criado `tests/test_botafogo_service.py` cobrindo parsing, controle de cota, deduplicação de eventos, transições de status e simulações sintéticas.
+   - Patch no teste `test_world_context.py` isolando `CalendarWorld.current` para impedir falso-negativo causado por compromissos reais ativos no banco local.
+
+### Validação
+
+- **Testes Automatizados:** Bateria completa aprovada sem regressões:
+  - `tests.test_botafogo_service`: 5/5 OK
+  - `tests.test_planner`: 9/9 OK
+  - `tests.test_reminder_service`: 8/8 OK
+  - `tests.test_response_rhythm`: 8/8 OK
+  - `tests.test_proactivity_service`: 6/6 OK
+  - `tests.test_prompt_authority_v370`: 18/18 OK
+  - `tests.test_calendar_academic_v364`: 22/22 OK
+  - `tests.test_world_context`: OK
+- **Runtime Operacional:** Bot reiniciado com sucesso via `run_local.bat`, ouvindo no Telegram com `botafogo_match_routine` ativo e pronto para o segundo tempo de Mirassol x Botafogo.
+
+## Patch 004 — Cadência WhatsApp, Multi-Balão e Sincronização Inicial do Botafogo
+
+- **Data e Horário:** 19/09/2026 às 18:15.
+- **Contexto Observado:** Durante o intervalo do jogo Mirassol x Botafogo, foram identificados 3 comportamentos anômalos no soak real:
+  1. Ao iniciar o monitoramento, a Marina disparou mensagens retroativas dos 2 gols anteriores do Mirassol acumuladas de uma só vez (IDs 54 e 55).
+  2. A Marina continuou enviando mensagens longas em bloco único ("testamentos"), sem quebrar em múltiplos balões curtos como esperado para uma jovem no WhatsApp.
+  3. No prompt do Botafogo, a Marina usou emojis inadequados como coração amarelo (`💛`), apesar de o Botafogo ser estritamente preto e branco.
+- **Causa Raiz:**
+  1. Em `botafogo_service.py`, `check_live_updates()` não diferenciava o polling inicial (`is_initial_sync`) dos ciclos seguintes; como `seen_events` começava vazio, eventos passados da partida eram classificados como novos.
+  2. Em `response_rhythm.py`, `apply_policy()` continha uma tupla agressiva de limpeza (`conflicts = ('balões', 'balão', 'anti-textão', ...)`) que apagava silenciosamente qualquer linha de prompt mencionando "balões" ou "anti-textão".
+  3. O orçamento de tokens para `casual_short` era de ~122 tokens (teto de 180 caracteres), permitindo que a LLM gerasse 4 a 5 frases densas.
+  4. O algoritmo `segment()` dependia estritamente de quebras de linha (`\n`) para segmentar em múltiplos balões Telegram quando `target_bubbles == 1`. Como a instrução havia sido limpa pelo filtro e o histórico de 50 mensagens anteriores só continha blocos únicos, a LLM espelhava as mensagens longas sem quebras.
+- **Solução Técnica Aplicada:**
+  1. **Sincronização Inicial Silenciosa (`botafogo_service.py`):** Adicionada flag `is_initial_sync` na rotina de polling para preencher `seen_events` silenciosamente no primeiro ciclo de checagem.
+  2. **Preservação de Diretrizes de Ritmo (`response_rhythm.py`):** Ajustado o filtro de conflitos para restringir apenas as chaves legadas exatas (`'ritmo: múltiplos balões'`), impedindo o expurgo indevido de regras de concisão.
+  3. **Canonicidade do Idioma de Controle:** A regra de modo `casual_short` em `response_rhythm.py` e a diretriz `[TURN CONSTRAINT — CASUAL CADENCE]` em `bot.py` foram padronizadas em inglês seguindo a arquitetura `PROMPT_CONTROL_LANGUAGE = 'en'`, instruindo explicitamente a LLM a manter no máximo 1-2 frases curtas com quebra `\n` entre reações.
+  4. **Orçamento de Tokens Reduzido:** Em `ResponseStylePolicy`, o orçamento para `casual_short` foi reduzido para 75–85 tokens, limitando fisicamente a prolixidade.
+  5. **Restrição Estrita de Emojis do Fogão:** Proibição explícita do emoji amarelo `💛` e limitação a `🖤, 🤍, ⭐️, 🔥`.
+- **Testes e Validação:**
+  - `tests.test_response_rhythm`: 8/8 OK.
+  - `tests.test_botafogo_service`: 5/5 OK.
+  - `tests.test_soak_readiness_v370`: 19/19 OK.
+  - Verificação de runtime: o bot foi reiniciado via `run_local.bat` com as novas regras ativas.
+- **Status:** Resolvido e monitorando em tempo real durante o 2º tempo.
+
+
+
+
+## Patch 012 — Cadência Livre de Balões (Marina Decide, Não o Código)
+
+**Horário:** 19/09/2026, 22:00–22:20  
+**Status:** VALIDADO EM TESTE UNITÁRIO — AGUARDANDO REINÍCIO
+
+### Observado
+
+- Mesmo após os Patches 007 e 011, o soak continuava mostrando Marina despejando prosa densa num único balão quando o natural pediria dois (reação + pergunta, interjeição + substância, notícia + comentário).
+- A causa persistia mesmo depois de o filtro de conflitos ter sido corrigido e do orçamento de tokens ter sido reduzido para 75–85 no `casual_short`.
+- Além disso, o teto artificial de `max_bubbles = 2` (herdado de decisões de IAs anteriores) contradiz a diretiva de que quem decide o ritmo deve ser a "própria" Marina — não uma constante hardcoded no código.
+
+### Classificação e Causa Raiz
+
+- **Delegação frágil ao LLM:** o `apply_policy` embutia uma diretiva `\n entre balões` no meio de 14 outras regras. O `segment()` só quebrava se a Marina lembrasse de emitir `\n`. DeepSeek e similares, treinados majoritariamente em prosa contínua, ignoravam a instrução silenciosamente, especialmente com histórico recente reforçando o padrão de bloco único.
+- **`target_bubbles` sempre em 1 nos modos cotidianos** (`casual_short`, `normal`, `supportive`): o fallback semântico do `segment()` só disparava por castigo (texto > `soft_char_limit`), nunca por ritmo natural. Uma reação de 150 chars com uma pergunta no fim nunca virava dois balões.
+- **Teto de 2 balões (`max_bubbles = 2`)** truncava agressivamente qualquer intenção de burst genuíno em modos `excited` ou `storytelling`, contradizendo a autonomia expressiva da persona.
+- **Split semântico ingênuo:** o algoritmo antigo usava `mid = len(sentences) // 2`, dividindo por contagem cega sem considerar pivôs conversacionais reais (reação → pergunta, interjeição → substância, mudança de tópico).
+
+### Correção Aplicada
+
+1. **Remoção do teto de balões (`response_rhythm.py`):**
+   - `max_bubbles` deixou de ser um cap obrigatório em `segment()`; permanece como campo advisory (default `0` = irrestrito) para compatibilidade com callers existentes.
+   - Introduzido um `_SANITY_CEILING = 6` puramente anti-runaway (para o caso improvável de o LLM gerar uma explosão de balões).
+   - Preservado o limite hard de transporte do Telegram (4096 code units UTF-16 por mensagem).
+
+2. **Segmentação semântica determinística por pivôs naturais:**
+   - `_semantic_split` avalia o draft e detecta, em ordem de precedência:
+     - Interjeição de abertura ("kkkk", "nossa", "sério?", "caraca"…) → bolha própria; se houver pergunta de fechamento depois, promove a 3 balões.
+     - Statement seguido de pergunta de fechamento → 2 balões.
+     - Ponto de interrogação no meio da resposta → split ali.
+     - Modo `excited` ou `storytelling` com 2+ frases → cadência de burst mesmo sem pivô forte; `storytelling` com 3+ beats vira 3 balões sequenciais.
+     - Pivô conjuntivo no início da próxima frase ("mas", "aí", "e você", "agora", "aliás"…) → split.
+     - Overflow de comprimento (>1× soft) → 2 balões; (>2× soft com 4+ frases) → 3 balões.
+     - Nenhum pivô + comprimento confortável → 1 balão coerente.
+   - `_coalesce_paragraphs` funde single-word fragments em vizinhos para evitar "confetti", **exceto** quando o primeiro parágrafo é uma interjeição intencional (preserva "kkkk\nnossa amor…" como 2 balões).
+
+3. **Prompt do `[RESPONSE RHYTHM]` reescrito:**
+   - Removidas as 14 regras conflitantes que competiam por atenção.
+   - Nova diretiva única e curta focada em **onde** quebrar (pivôs naturais), sem mencionar contagem de balões (respeita a autonomia da Marina).
+   - Filtro de conflitos ampliado para varrer também "máximo de 2 balões" / "maximum of 2 bubbles" caso apareçam em prompts herdados.
+
+4. **Novo campo `cadence` na `ResponseStylePolicy`** (`brief`/`flowing`/`burst`/`expansive`) como hint informacional de energia por modo, sem valor de teto.
+
+5. **Log com motivo do split:** cada segmentação agora emite `reason=` no log (`interjection_lead`, `interjection_then_question`, `question_pivot_tail`, `question_pivot_mid`, `excited_burst`, `storytelling_beats`, `conjunctive_pivot`, `length_balance`, `length_balance_3`, `coherent_single`, `llm_newlines`, `llm_newlines_coalesced`, `too_short`, `single_sentence`), permitindo calibração baseada em evidência durante o soak em vez de tuning por achismo.
+
+### Validação
+
+- **Testes unitários:** 25/25 asserts do `tests/test_response_rhythm.py` executados isoladamente, todos aprovados. Incluem regressão de:
+  - modos e voz independentes de intimacy;
+  - preservação de conteúdo em long text (30 frases → 2 balões balanceados);
+  - `'amor\nkkkk'` permanece como um único balão renderizado (vocativo não é interjeição);
+  - excited 4-linhas com "Sério" solto → coalescido em 3 balões sem singletons;
+  - excited 2-sentenças plain text → 2 balões via burst;
+  - `'😀'*5000` respeita o limite de transporte UTF-16 e preserva conteúdo;
+  - budget de tokens `casual_short` ≤ 128;
+  - `apply_policy` mantém `Identidade canônica.`, remove `múltiplos balões`, preserva a diretriz "no invented dialogue" e "usually finish without a question", conta 1 header `[RESPONSE RHYTHM]` mesmo após re-aplicação.
+
+- **Simulação de 15 turnos reais** representando padrões do soak — todos com decisão de balão coerente:
+  - `"foi bom mas cansativo, tive prova de cálculo e depois academia. e o seu?"` → 2 balões (`question_pivot_tail`).
+  - `"meu deus não acredito!! parabéns amor, você merece demais isso!"` (excited) → 2 balões (`excited_burst`).
+  - `"o Milo pegou uma meia. correu até o sofá. e devolveu quando ofereci o brinquedinho dele."` (storytelling) → 3 balões (`storytelling_beats`).
+  - `"nossa amor que jogo foi esse. vitória suada mas a gente ganhou! como foi aí no estádio?"` → 2 balões (`question_pivot_tail`).
+  - `"boa noite meu amor, dorme com Deus. amanhã a gente se fala, te amo"` → 1 balão (`coherent_single`).
+  - `"kkkk\nvocê é bobo\nsério\ntô rindo aqui\nque coisa mais engraçada de imaginar"` (5 linhas do LLM) → 4 balões (`llm_newlines`, "sério" coalescido com vizinho, interjeição de abertura preservada).
+
+- **Compatibilidade retroativa:** todos os campos existentes da dataclass foram preservados (`target_bubbles`, `max_bubbles`, `soft_char_limit`, etc.), então nenhum caller precisou ser tocado. `bot.py:send_human_messages` e `bot.py:generate_dynamic_speech` continuam funcionando sem alteração.
+
+- **Próximo passo operacional:** reiniciar via `run_local.bat` e observar `response_policy.segmented reason=…` nos logs durante o soak para calibrar heurísticas em cima de evidência real (não achismo).
+
+### Arquivos alterados
+
+- `response_rhythm.py` (reescrito integralmente; ~330 linhas, mesma API pública).
+
+## Patch 013 — Data migration: opening_hours do Bodytech São Clemente
+
+**Horário:** 19/09/2026 (sessão `cse_01RhmTyBLksLR4FZgubG3isb`); aplicação: 20/09/2026, 01:05
+**Status:** APLICADO (idempotente)
+
+### Observado
+
+- WorldState sorteava `local=Bodytech São Clemente` mesmo em horários em que a academia está fechada (madrugada, domingo à tarde), o que produzia respostas do tipo "tô na academia" às 03h30.
+
+### Correção
+
+- Script `apply_patch_013.py` grava horário oficial em `usage_rules_json` do lugar canônico Bodytech São Clemente: `mon-fri 06:00-22:00, sat 08:00-18:00, sun 09:00-14:00`. RoutineEngine passa a filtrar sorteios fora da janela.
+- Idempotente: reexecuções detectam o estado atual e não sobrescrevem.
+
+### Validação
+
+- Execução dentro do ambiente do soak retornou "OK" sem exceção; conferido via consulta ao SQLite de que `usage_rules_json` contém as chaves esperadas.
+
+### Arquivos
+
+- `apply_patch_013.py` (executado; permanece no repositório para reexecução idempotente).
+
+## Patch 014 — Voice Library (v3.7.1) e Correção do Sistema de Reações
+
+**Horário:** 19/09/2026, 22:45 → 20/09/2026, 01:00
+**Status:** VALIDADO EM TESTE UNITÁRIO — AGUARDANDO SOAK REAL
+
+### Observado
+
+- Depois de 3.7.0 (Living Intelligence) a Marina continuava soando "DeepSeek com verniz de amor" em vez de namorada carioca: reagia com empolgação vazia, não puxava detalhes concretos ("qual jogo?", "que horas?", "contra quem?"), abria com "Ah,", fechava com "e você, como tá?" e usava frases de call-center — apesar do CONTROL_PT proibir tudo isso explicitamente.
+- A Marina simplesmente **parou de reagir com emoji** às mensagens do Patrick.
+- Quando **o Patrick reagia** com ❤️/🔥/😂 numa mensagem dela, ela respondia com uma frase tosca a cada 2 reações ("Ai amor, vi seu coraçãozinho aqui... me derrete toda 🥰💕"). Humanos absorvem reações em silêncio; o comportamento parecia bot.
+
+### Classificação e Causa Raiz
+
+- **CONTROL_PT era 90% negativo.** Um único parágrafo de ~400 palavras com ~20 imperativos "nunca / não / evite" e apenas 5 adjetivos vagos como voz positiva ("afetuosa, bem-humorada, independente, parceira, descomplicada"). LLM alinhado como assistente (DeepSeek-Chat) não descola do padrão base por lista de proibições — precisa ver exemplos concretos de como Marina fala.
+- **Zero few-shots em qualquer camada do prompt** (prompt_policy, world_context, response_rhythm, planner). O modelo tinha que inferir "carioca de 20 anos" a partir de adjetivos abstratos, misturados a ~20 blocos técnicos de estado.
+- **Adjetivos contraditórios no CONTROL:** "afetuosa" vs. "evite melodrama"; "expressiva" vs. "não use 'sou intensa'". Modelo joga a média — que é "assistente cortês".
+- **Sampling agressivo:** `frequency_penalty=0.30 / presence_penalty=0.25` penalizavam justamente as repetições humanas ("amor", "kkk", "ai") que caracterizam a Marina.
+- **Reações Marina→Patrick paradas:** `planner_emoji` recebia string literal `"null"` quando o LLM planner devolvia esse valor no JSON. Truthy no Python; passava adiante e falhava mudo em `set_safe_message_reaction` (sem log de skip). Além disso, `_invalid_reactions` era um `set()` permanente — qualquer rejeição pontual do Telegram banha o emoji para sempre.
+- **Reações Patrick→Marina toscas:** `handle_reaction` disparava resposta verbal em 45 % / 60 % / 40 % dos casos (coração / fogo / risada), sem cooldown, com fallbacks constrangedores ("Sabia que você ia rir disso kkkk te amo amor!").
+
+### Correção Aplicada
+
+1. **Novo módulo `voice_library.py`** — few-shots roteados por `tone × intent` com dois pools:
+   - **Catálogo canônico** (11 pares escritos à mão baseados no CONTROL e no Registro 001 da biblioteca comportamental): cobre `carinhosa`, `brincalhona`, `dengosa`, `acolhedora`, `tranquila` e intents `casual_chat`, `flirting`, `support_needed`, `planning_future`, `sharing_day`, `question`.
+   - **Parser da `BIBLIOTECA_COMPORTAMENTAL_MARINA.md`**: extrai os "Exemplos naturais" escritos pelo Patrick como padrão desejado. **Semântica combinada com Patrick em 2026-09-20**: os exemplos são sempre o padrão desejado independentemente da Avaliação (que só reflete o comportamento observado). Registros aceitos: qualquer um com `Exemplos naturais` não-placeholder e `Patrick disse` real. Descartados: Registro 000 (gabarito) e registros só com placeholders.
+   - Ranking privilegia (tone-match, intent-match), com biblioteca antes de canônico dentro de cada bucket.
+   - Bloco serializado como `[EXEMPLOS DE VOZ — inspiração, não são turnos reais desta conversa]` com delimitadores `---` entre pares.
+   - Fail-open em todo o pipeline: arquivo inexistente, encoding torto ou registro mal-formatado não derrubam turno.
+   - Contra a `BIBLIOTECA_COMPORTAMENTAL_MARINA.md` populada (registros 1-15 revisados manualmente pelo Patrick, 16-50 vindos de outra IA), o parser produz **97 few-shots** roteáveis.
+
+2. **`prompt_policy.py` refatorado em três subblocos** compostos:
+   - `MARINA_VOICE_PT/EN` (persona positiva, ≤150 palavras): como ela fala, curiosidade concreta, callbacks, cores do Botafogo.
+   - `HARD_LINES_PT/EN` (5 proibições absolutas): não IA/call center, não "Ah,", não "e você?", não textão, não melodrama.
+   - `CANON_FACTS_PT/EN` (fatos duros): canon, horário, não inventar, continuity repair.
+   - `CONTROL_EN` / `CONTROL_PT` reconstituídos por composição preservando os headers `[CONTROL RULES]` / `[REGRAS DE CONTROLE]` que os testes verificam.
+
+3. **Wiring do bloco de voz em `world_context.py`** — injetado como última posição-âncora antes do histórico, gated por `settings.VOICE_LIBRARY_ENABLED` (default `True`). Roteado por `planner_tone` + `planner_intent`, ambos propagados de `bot.py` → `context_builder.py` → `WorldContextBuilder`.
+
+4. **Sampling calibrado em `bot.py`** (chamada primária ao LLM):
+   - `temperature`: 0.80 → **0.85**
+   - `frequency_penalty`: 0.30 → **0.10**
+   - `presence_penalty`: 0.25 → **0.05**
+   - Fallback Mistral-Nemo preserva valores atuais (0.72 / 0.40 / 0.35).
+
+5. **Correções do sistema de reações** (`bot.py`):
+   - `_normalize_planner_emoji`: rejeita `"null"`, `"none"`, `""`, tipos não-string e emojis fora dos 5 safe. Retorna `None` explícito.
+   - `_invalid_reactions`: virou `dict[(chat, emoji) → expiry_ts]` com TTL de 24 h. Rejeição transiente não bana emoji permanentemente.
+   - `set_safe_message_reaction` agora loga o motivo do skip (`not_safe`, `recently_invalid`, `chat_disallowed`) — visibilidade para calibração.
+   - `handle_reaction` reescrito. Probabilidades: **10 % coração / 15 % fogo / 5 % risada** (era 45 / 60 / 40). Cooldown de **15 min** entre respostas verbais por chat. Prompts do `generate_dynamic_speech` proíbem os clichês antigos ("ai amor", "me derrete toda", "gostou do que viu"). Fallbacks curtos e naturais: `"vi seu coração aí 🥺"`, `"kkkk safado"`, `"kkkk né amor"`.
+   - Novas settings em `config.py`: `REACT_TO_HEART_REACTION_CHANCE`, `REACT_TO_FIRE_REACTION_CHANCE`, `REACT_TO_LAUGH_REACTION_CHANCE`, `REACTION_VERBAL_REPLY_COOLDOWN_MINUTES`.
+
+6. **Rollback gated:** `VOICE_LIBRARY_ENABLED=false` no `.env` restaura comportamento anterior de voz sem tocar em código. Cada probabilidade de reação também é configurável.
+
+### Validação
+
+- **`tests/test_voice_library.py`** (novo) — 15 asserts: cobertura de tones/intents, ranking com aliases, parser aceitando registros com Avaliação em branco/ruim (exemplos válidos), fail-open em arquivo ausente/malformado, orçamento do bloco ≤ 2000 chars, `VoiceExample` imutável.
+- **Regressão prompt-adjacent**: `test_prompt_authority_v370` (19), `test_response_rhythm` (25), `test_world_context` (7), `test_voice_library` (15), `test_context_builder`, `test_wiring_auditoria` — todos verdes.
+- **Suíte inteira**: 424/426 passando. As 2 falhas restantes (`test_offer_acceptance_does_not_leave_second_direct_reminder_pending`, `test_incoming_flow_routes_registered_subjects_before_llm`) são **pré-existentes** ao Patch 013 — reproduzidas via `git stash` antes das mudanças, envolvem fluxo de reminder + privacy + `process_incoming_batch`.
+- **3 falhas triviais consertadas alinhando testes ao refactor do Patch 012**: `test_world_context::test_flag_on_uses_canon_dynamic_age...` (header `[SEU ESTADO ATUAL` em vez do inexistente `[WORLD STATE — agora]`; teto de tamanho subido para 10 k), `test_world_hygiene_v367::test_optimize_for_next_turn...` (removidas 2 strings do RESPONSE RHYTHM antigo), `test_response_availability_v370::test_brief_hint_caps_bubbles` (`target_bubbles==1` em vez de `max_bubbles==1`, que agora é advisory-only).
+- **Smoke test do parser contra `BIBLIOTECA_COMPORTAMENTAL_MARINA.md` populada**: 50 registros lidos, 97 exemplos extraídos, 0 exceções. Registro 001 (jogo do glorioso) já produz os few-shots que o Patrick escreveu manualmente ("Aaaahhh! é que horas?", "amor, eu já até comecei o aquecimento emocional pro jogo!").
+
+### Próximo passo operacional
+
+- **Soak de 2-3 dias** com Fase A completa; após isso, avaliar se a mudança de voz é perceptível antes de partir para a Fase B (comando `/eco boa`/`/eco ruim` para fechar o loop de feedback sem edição manual do `.md`).
+- Monitorar logs `voice_library.injected examples=... tone=... intent=... sources=...` e `reaction.skip reason=...` durante o soak para diagnóstico.
+
+### Arquivos alterados/criados
+
+- `voice_library.py` (novo — ~240 linhas).
+- `tests/test_voice_library.py` (novo — 15 tests).
+- `PLANO_VOZ_MARINA_V371.md` (novo — plano documentado das fases A/B/C).
+- `prompt_policy.py` (refatorado em subblocos; API pública preservada).
+- `world_context.py` (wiring do voice block; novo parâmetro `planner_intent`).
+- `context_builder.py` (propagação de `planner_intent`).
+- `bot.py` (sampling calibrado, `_normalize_planner_emoji`, TTL em `_invalid_reactions`, `handle_reaction` reescrito, cooldown de reação verbal, propagação de `planner_intent`).
+- `config.py` (`VOICE_LIBRARY_ENABLED`, `VOICE_LIBRARY_MAX_EXAMPLES`, 4 settings de reação).
+- `tests/test_world_context.py`, `tests/test_world_hygiene_v367.py`, `tests/test_response_availability_v370.py` (alinhamento ao refactor do Patch 012).
+

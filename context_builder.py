@@ -42,6 +42,7 @@ class ContextBuilder:
         vision_context: str = "",
         planner_tone: Optional[str] = None,
         planner_goal: Optional[str] = None,
+        planner_intent: Optional[str] = None,
         now: Optional[datetime] = None,
         privacy_subjects: Optional[list[tuple[str, int]]] = None,
     ) -> str:
@@ -59,12 +60,12 @@ class ContextBuilder:
             now=now, user_message=user_message,
             quoted_context=quoted_context, web_context=web_context,
             vision_context=vision_context, planner_tone=planner_tone,
-            planner_goal=planner_goal,
+            planner_goal=planner_goal, planner_intent=planner_intent,
             control_language=getattr(settings, "PROMPT_CONTROL_LANGUAGE", "en"),
             output_language=getattr(settings, "MARINA_OUTPUT_LANGUAGE", "pt-BR"),
             privacy_subjects=privacy_subjects,
         )
-        return apply_policy(result, select_policy(user_message, plan={'tone': planner_tone or ''}))
+        return apply_policy(result, select_policy(user_message, plan={'tone': planner_tone or '', 'intent': planner_intent or ''}))
     def build(
         self,
         user_message: str = "",
@@ -73,6 +74,7 @@ class ContextBuilder:
         vision_context: str = "",
         planner_tone: Optional[str] = None,
         planner_goal: Optional[str] = None,
+        planner_intent: Optional[str] = None,
         recent_history: Optional[List[Dict[str, str]]] = None,
         max_history_turns: Optional[int] = None,
         privacy_subjects: Optional[list[tuple[str, int]]] = None,
@@ -85,6 +87,7 @@ class ContextBuilder:
             vision_context=vision_context,
             planner_tone=planner_tone,
             planner_goal=planner_goal,
+            planner_intent=planner_intent,
             privacy_subjects=privacy_subjects,
         )
 

@@ -345,10 +345,10 @@ Respond STRICTLY with this JSON shape (preserve enum/key values exactly):
   "creates_event": false,
   "event_details": {
     "event_type": "trabalho|medico|viagem|encontro|estudo|compromisso|outro",
-    "description": "Clear description of Patrick's commitment",
+    "description": "Clear concise commitment description in Brazilian Portuguese (e.g. 'assistir ao jogo do Botafogo juntos', 'reunião com cliente')",
     "event_at": "ISO or textual time (e.g. 2026-09-17T14:00:00)",
     "follow_up_hint": "Follow-up time",
-    "follow_up_prompt": "Specific follow-up hook for Marina"
+    "follow_up_prompt": "Specific follow-up question hook for Marina in Brazilian Portuguese"
   },
   "reminder_candidate": false,
   "should_offer_reminder": false,
@@ -361,7 +361,7 @@ Respond STRICTLY with this JSON shape (preserve enum/key values exactly):
   "creates_open_loop": false,
   "open_loop_details": {
     "loop_type": "waiting|decision|task|story|promise|project|relationship|other",
-    "content": "Concise pending topic",
+    "content": "Concise pending topic in Brazilian Portuguese",
     "importance": 0.5,
     "next_check_hint": "When to revisit"
   },
@@ -378,10 +378,12 @@ Respond STRICTLY with this JSON shape (preserve enum/key values exactly):
 
 HARD RULES:
 1. creates_event=true only for real FUTURE commitments.
-2. Offer reminders only for concrete timed events; direct_reminder only on explicit ask without negation.
+2. Offer reminders only for concrete timed events at least 45 minutes in the future; direct_reminder only on explicit ask without negation.
 3. Open loops for unfinished topics without a fixed alarm.
 4. emotional_deltas subtle in [-0.05, +0.05].
 5. reaction_emoji common Telegram emoji or null.
+6. All descriptions, topics, and follow_up_prompts MUST be in natural Brazilian Portuguese (PT-BR), NEVER in English.
+7. NEVER set should_offer_reminder=true for near-term events (< 45 minutes from current time).
 """
 
 
@@ -574,6 +576,15 @@ class InternalPlanner:
                 if follow_prompt and follow_prompt not in desc:
                     desc = f"{desc} | Follow-up: {follow_prompt}"
 
+                # Atribuição de compromisso compartilhado vs pessoal do Patrick
+                is_shared = ed.get("event_type") in ("encontro", "social") or any(
+                    w in desc.lower() for w in ("juntos", "a gente", "nós", "bora", "comigo", "ver o jogo", "assistir")
+                )
+                owner_key = "marina" if is_shared else "patrick_ramos"
+                is_confirmed = 1 if is_shared else 0
+                expected_end_iso = (datetime.fromisoformat(event_at_iso) + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%S") if event_at_iso else None
+                loc_key = "marina_apartment" if is_shared else None
+
                 # Deduplicação de eventos pendentes idênticos ainda abertos (P1.3)
                 existing_event = None
                 if hasattr(self.db, "buscar_evento_pendente_identico"):
@@ -590,9 +601,13 @@ class InternalPlanner:
                         follow_up_after=follow_up_iso,
                         importance=float(ed.get("importance", 0.5)),
                         source_conversation_id=conversation_id,
-                        follow_up_prompt=follow_prompt
+                        follow_up_prompt=follow_prompt,
+                        end_at=expected_end_iso,
+                        owner_character_key=owner_key,
+                        location_key=loc_key,
+                        confirmed=is_confirmed
                     )
-                    logger.info(f"Novo evento pendente registrado pelo Planner: {desc} (Event: {event_at_iso}, Follow-up: {follow_up_iso})")
+                    logger.info(f"Novo evento pendente registrado pelo Planner: {desc} (Event: {event_at_iso}, End: {expected_end_iso}, Owner: {owner_key})")
             except Exception as e:
                 logger.error(f"Erro ao salvar evento pendente do planner: {e}")
 
@@ -600,6 +615,7 @@ class InternalPlanner:
         if True:
             if plan.get("should_offer_reminder") and event_at_iso:
                 try:
+
                     # Deduplicação: se já existe oferta/lembrete para este evento em status ativo/decidido, não duplicar (P1.3)
                     existing_rem = None
                     if event_row_id and hasattr(self.db, "get_reminder_by_event_id"):

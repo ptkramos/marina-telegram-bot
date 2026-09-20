@@ -1,14 +1,43 @@
-"""Resolução mínima de estado/rotina v3.6, sem stories ou chamadas externas."""
+"""Resolução mínima de estado/rotina v3.7.1 (Patch 013).
+
+Novidades da 3.7.1:
+- Cooldown pós-compromisso: 20 min de "acabou de terminar" antes de qualquer rotina externa.
+- Bloqueio de rotinas externas quando há conversa ativa nos últimos 15 min
+  (Marina avisa antes de sair via anúncio proativo em `proactivity_service`).
+- Horário de funcionamento canônico do local: RoutineEngine consulta
+  `world_places.usage_rules_json['opening_hours']` antes de sortear.
+- Estado `pending_transition`: quando um anúncio de transição já foi enviado,
+  a rotina anunciada vira `explicit_plan` até `transition_at`.
+
+Nenhuma dessas regras adiciona chamadas externas ou dependência de LLM.
+"""
 
 import json
+import logging
 import random
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from typing import Mapping, Optional
 
 from db import DatabaseManager
 from config import settings
 from world_repository import WorldBibleRepository, WorldStateRepository
+
+
+logger = logging.getLogger("WorldState")
+
+# Rotinas com deslocamento externo (não são no apartamento nem no prédio).
+# Usadas para: (a) filtro de conversa ativa; (b) cooldown pós-compromisso;
+# (c) triggers de anúncio proativo de transição.
+EXTERNAL_ROUTINE_TYPES = frozenset({"gym", "pet_walk", "university"})
+
+# Janela de "acabou de terminar um compromisso" durante a qual nenhuma
+# rotina externa é elegível.
+POST_EVENT_COOLDOWN_MINUTES = 20
+
+# Se a última mensagem trocada foi há menos disso, rotinas externas ficam
+# bloqueadas do sorteio (Marina anuncia antes de sair — ver proactivity_service).
+CONVERSATION_ACTIVE_WINDOW_MINUTES = 15
 
 
 @dataclass(frozen=True)
@@ -17,10 +46,49 @@ class RoutineCandidate:
     place_key: str
     score: float
     source_key: str
+    routine_type: str = ""
+
+    @property
+    def is_external(self) -> bool:
+        return self.routine_type in EXTERNAL_ROUTINE_TYPES
+
+
+def _parse_hhmm(value: str) -> time:
+    hour, minute = value.split(":")
+    return time(int(hour), int(minute))
+
+
+def _within_opening_hours(now: datetime, opening_hours: Optional[Mapping]) -> bool:
+    """Valida se `now` cai dentro do horário de funcionamento canônico do local.
+
+    `opening_hours` é um dict {"mon": "06:00-22:00", ..., "sun": "closed"|"09:00-14:00"}.
+    Retorna True se não houver definição (compatibilidade com places antigos).
+    """
+    if not opening_hours:
+        return True
+    weekday_keys = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+    key = weekday_keys[now.weekday()]
+    window = opening_hours.get(key)
+    if not window or window == "closed":
+        return False
+    if window == "24h":
+        return True
+    try:
+        start_str, end_str = window.split("-")
+        start = _parse_hhmm(start_str)
+        end = _parse_hhmm(end_str)
+    except (ValueError, AttributeError):
+        logger.warning("world_state.opening_hours.invalid key=%s value=%r", key, window)
+        return True
+    current = now.time()
+    if start <= end:
+        return start <= current <= end
+    # Janela cruza a meia-noite (raro pra academia, comum pra bar).
+    return current >= start or current <= end
 
 
 class RoutineEngine:
-    """Pontua rotinas canônicas; um calendário futuro informará os dias de aula."""
+    """Pontua rotinas canônicas com validação de horário de funcionamento."""
 
     _ACTIVITIES = {
         "wake": ("acordando e tomando café", "marina_apartment"),
@@ -56,10 +124,29 @@ class RoutineEngine:
             return now.weekday() < 5
         return scope in (None, "daily", "3_to_5_days_per_week")
 
+    def _place_opening_hours(self, place_key: str) -> Optional[Mapping]:
+        """Consulta `world_places.usage_rules_json['opening_hours']` do local."""
+        if not place_key:
+            return None
+        with self.db.get_connection() as conn:
+            row = conn.execute(
+                "SELECT usage_rules_json FROM world_places WHERE canonical_key = ?",
+                (place_key,),
+            ).fetchone()
+        if not row or not row["usage_rules_json"]:
+            return None
+        try:
+            rules = json.loads(row["usage_rules_json"])
+        except (TypeError, ValueError):
+            return None
+        return rules.get("opening_hours") if isinstance(rules, Mapping) else None
+
     def candidates(
         self, now: datetime, *, has_class: Optional[bool] = None,
         heavy_rain: bool = False, energy: float = 0.7,
         holiday_scope: Optional[str] = None,
+        conversation_active: bool = False,
+        post_event_cooldown: bool = False,
     ) -> list[RoutineCandidate]:
         if not 0 <= energy <= 1:
             raise ValueError("energy deve estar entre 0 e 1")
@@ -67,54 +154,89 @@ class RoutineEngine:
             rows = conn.execute(
                 "SELECT * FROM routine_patterns WHERE character_key = 'marina' AND active = 1"
             ).fetchall()
-        result = []
+        result: list[RoutineCandidate] = []
         for row in rows:
+            routine_type = row["routine_type"]
             if not self._day_applies(row["day_scope"], now, has_class):
                 continue
             if not self._within_window(now, row["window_start"], row["window_end"]):
                 continue
-            if row["routine_type"] == "pet_walk" and has_class and now.hour >= 9:
+            if routine_type == "pet_walk" and has_class and now.hour >= 9:
                 continue
-            if row["routine_type"] == "university" and True:
+            if routine_type == "university":
+                # Academic blocks are handled by CalendarWorld, not by routine sorting.
                 continue
-            activity, place_key = self._ACTIVITIES.get(row["routine_type"], (None, None))
+            activity, place_key = self._ACTIVITIES.get(routine_type, (None, None))
             if not activity:
                 continue
+            is_external = routine_type in EXTERNAL_ROUTINE_TYPES
+
+            # Filtro A: horário real de funcionamento do lugar.
+            if is_external and not _within_opening_hours(now, self._place_opening_hours(place_key)):
+                logger.info(
+                    "routine.filtered reason=place_closed type=%s place=%s at=%s",
+                    routine_type, place_key, now.isoformat(timespec="minutes"),
+                )
+                continue
+
+            # Filtro B: cooldown pós-compromisso — rotina externa fica de fora
+            # durante os primeiros minutos após um compromisso terminar.
+            if is_external and post_event_cooldown:
+                logger.info(
+                    "routine.filtered reason=post_event_cooldown type=%s", routine_type,
+                )
+                continue
+
+            # Filtro C: conversa ativa — Marina anuncia antes de sair via
+            # proactivity_service. Enquanto isso ela fica em casa.
+            if is_external and conversation_active:
+                logger.info(
+                    "routine.filtered reason=conversation_active type=%s", routine_type,
+                )
+                continue
+
             score = float(row["probability"])
-            if holiday_scope and holiday_scope != 'optional':
-                if row["routine_type"] == "university":
-                    score *= 0.25
-                elif row["routine_type"] == "gym":
-                    score *= 0.8  # Opening hours may differ; do not assume closure.
-                elif row["routine_type"] == "home_evening":
+            if holiday_scope and holiday_scope != "optional":
+                if routine_type == "gym":
+                    score *= 0.8
+                elif routine_type == "home_evening":
                     score *= 1.1
-            if row["routine_type"] == "gym":
+
+            if routine_type == "gym":
                 score *= max(0.2, energy)
                 if heavy_rain:
+                    # Fallback: academia do prédio (interno, sem deslocamento).
                     result.append(RoutineCandidate(
                         "treinando na academia do prédio", "marina_apartment",
                         min(1.0, score * 1.1), row["canonical_key"] + ":rain_fallback",
+                        routine_type="gym_indoor",
                     ))
                     score *= 0.1
-            elif row["routine_type"] == "pet_walk" and heavy_rain:
+            elif routine_type == "pet_walk" and heavy_rain:
                 score *= 0.25
-            result.append(RoutineCandidate(activity, place_key, score, row["canonical_key"]))
+
+            result.append(RoutineCandidate(
+                activity, place_key, score, row["canonical_key"],
+                routine_type=routine_type,
+            ))
         return [candidate for candidate in result if candidate.score > 0]
 
     def choose(self, candidates: list[RoutineCandidate]) -> RoutineCandidate:
-        # Calendar commitments and explicit plans are resolved before routines.
-        # Inside a canonical sleep window, do not let the generic free-time
-        # fallback randomly keep Marina awake in the middle of the night.
+        # Sleep window locked: never let free-time keep Marina awake at dawn.
         sleeping = [item for item in candidates if item.activity == "dormindo"]
         if sleeping:
             return max(sleeping, key=lambda item: item.score)
-        # O fallback permite dias banais sem forçar uma rotina ou um plot.
-        options = [*candidates, RoutineCandidate("tempo livre em casa", "marina_apartment", 0.2, "free_time")]
+        # Fallback permite dias banais sem forçar rotina ou plot.
+        options = [
+            *candidates,
+            RoutineCandidate("tempo livre em casa", "marina_apartment", 0.2, "free_time",
+                             routine_type="free_time"),
+        ]
         return self.rng.choices(options, weights=[item.score for item in options], k=1)[0]
 
 
 class WorldStateManager:
-    """Compromisso > plano explícito > consequência recebida > rotina > fallback."""
+    """Compromisso > plano explícito > pending_transition > consequência > rotina."""
 
     def __init__(
         self, db: DatabaseManager, *, routine: Optional[RoutineEngine] = None,
@@ -142,6 +264,82 @@ class WorldStateManager:
             return False
         return True
 
+    def _last_conversation_at(self) -> Optional[datetime]:
+        """Retorna o timestamp da última mensagem trocada (user OU assistant)."""
+        try:
+            with self.db.get_connection() as conn:
+                row = conn.execute(
+                    "SELECT timestamp FROM conversas ORDER BY id DESC LIMIT 1"
+                ).fetchone()
+            if row and row["timestamp"]:
+                return datetime.fromisoformat(row["timestamp"])
+        except Exception:
+            logger.exception("world_state.last_conversation.error")
+        return None
+
+    def _recent_commitment_end(self, now: datetime) -> Optional[datetime]:
+        """Fim do compromisso confirmado mais recente que já terminou.
+
+        Usado para calcular o cooldown pós-evento.
+        """
+        try:
+            snapshot = self.states.latest()
+        except Exception:
+            snapshot = None
+        if not snapshot:
+            return None
+        prior_source = json.loads(snapshot.get("source_json") or "{}")
+        if prior_source.get("reason") != "confirmed_commitment":
+            return None
+        current_plan = json.loads(snapshot.get("current_plan_json") or "null")
+        if not current_plan or not current_plan.get("end_at"):
+            return None
+        try:
+            end_at = datetime.fromisoformat(current_plan["end_at"])
+        except (TypeError, ValueError):
+            return None
+        return end_at if end_at <= now else None
+
+    def _pending_transition(self, now: datetime) -> Optional[Mapping]:
+        """Recupera transição anunciada e ainda não efetivada (do estado_relacional)."""
+        try:
+            raw = self.db.get_estado_relacional().get("pending_transition_json")
+        except Exception:
+            return None
+        if not raw:
+            return None
+        try:
+            data = json.loads(raw)
+        except (TypeError, ValueError):
+            return None
+        if not isinstance(data, Mapping):
+            return None
+        transition_at = data.get("transition_at")
+        if not transition_at:
+            return None
+        try:
+            when = datetime.fromisoformat(transition_at)
+        except ValueError:
+            return None
+        if now < when:
+            # Ainda no intervalo entre anúncio e efetivação — Marina anunciou
+            # mas continua em casa até o horário combinado chegar.
+            return {"phase": "announced_awaiting", "data": data, "transition_at": when}
+        end_at = data.get("end_at")
+        if end_at:
+            try:
+                end_dt = datetime.fromisoformat(end_at)
+            except ValueError:
+                end_dt = None
+            if end_dt and now >= end_dt:
+                # Transição já expirou naturalmente — limpar.
+                try:
+                    self.db.set_estado_relacional("pending_transition_json", "")
+                except Exception:
+                    logger.exception("world_state.pending_transition.clear.error")
+                return None
+        return {"phase": "active", "data": data, "transition_at": when}
+
     def resolve(
         self, now: datetime, *, confirmed_commitment: Optional[Mapping] = None,
         explicit_plan: Optional[Mapping] = None,
@@ -163,19 +361,33 @@ class WorldStateManager:
         if confirmed_commitment is None:
             confirmed_commitment = calendar.current(now, include_academic=True)
         if weather is None:
-            observed_weather = calendar.context.get('weather:rio', now=now)
+            observed_weather = calendar.context.get("weather:rio", now=now)
             if observed_weather:
-                weather = observed_weather['payload']
-        observed_holiday = calendar.context.get(f'holiday:{now.date().isoformat()}', now=now)
-        holiday_scope = (observed_holiday['payload']['scope'] if observed_holiday else None)
+                weather = observed_weather["payload"]
+        observed_holiday = calendar.context.get(f"holiday:{now.date().isoformat()}", now=now)
+        holiday_scope = (observed_holiday["payload"]["scope"] if observed_holiday else None)
+
         reason = None
-        chosen = None
+        chosen: Optional[Mapping] = None
+        pending_transition = self._pending_transition(now)
+
         if confirmed_commitment and confirmed_commitment.get("start_at") and self._active_plan(confirmed_commitment, now):
             chosen = confirmed_commitment
             reason = "confirmed_commitment"
         elif self._active_plan(explicit_plan, now):
             chosen = explicit_plan
             reason = "explicit_plan"
+        elif pending_transition and pending_transition["phase"] == "active":
+            # Transição anunciada e horário atingido: Marina agora ESTÁ na atividade
+            # anunciada. Vira `explicit_plan` de fato.
+            data = pending_transition["data"]
+            chosen = {
+                "activity": data.get("activity") or "fora de casa",
+                "place_key": data.get("place_key"),
+                "start_at": data.get("transition_at"),
+                "end_at": data.get("end_at"),
+            }
+            reason = "announced_transition"
         elif self._active_plan(active_consequence, now):
             chosen = active_consequence
             reason = "active_consequence"
@@ -184,15 +396,17 @@ class WorldStateManager:
         if chosen is None and previous and not force:
             observed = datetime.fromisoformat(previous["observed_at"])
             age = now - observed
-            weather_changed = (dict(weather) if weather is not None else None) != json.loads(
-                previous["weather_context_json"] or "null")
+            prev_weather = json.loads(previous["weather_context_json"] or "null")
+            prev_heavy = bool(prev_weather and prev_weather.get("heavy_rain"))
+            curr_heavy = bool(weather and weather.get("heavy_rain"))
+            weather_changed = prev_heavy != curr_heavy
             previous_plan = json.loads(previous["current_plan_json"] or "null")
             plan_expired = previous_plan is not None and not self._active_plan(previous_plan, now)
-            prior_source = json.loads(previous['source_json'] or '{}')
-            if prior_source.get('holiday_scope') != holiday_scope:
+            prior_source = json.loads(previous["source_json"] or "{}")
+            if prior_source.get("holiday_scope") != holiday_scope:
                 plan_expired = True
-            if prior_source.get('calendar_event_id') or prior_source.get('academic_block_id'):
-                plan_expired = True  # Calendar may have cancelled/rescheduled this occurrence.
+            if prior_source.get("calendar_event_id") or prior_source.get("academic_block_id"):
+                plan_expired = True
             sleep_now = any(
                 candidate.activity == "dormindo"
                 for candidate in self.routine.candidates(
@@ -211,16 +425,37 @@ class WorldStateManager:
                 return previous
 
         if chosen is None:
+            # Sinais para o RoutineEngine sobre cooldown e conversa ativa.
+            recent_end = self._recent_commitment_end(now)
+            post_event_cooldown = bool(
+                recent_end and (now - recent_end) < timedelta(minutes=POST_EVENT_COOLDOWN_MINUTES)
+            )
+            last_conv = self._last_conversation_at()
+            conversation_active = bool(
+                last_conv and (now - last_conv) < timedelta(minutes=CONVERSATION_ACTIVE_WINDOW_MINUTES)
+            )
             heavy_rain = bool(weather and weather.get("heavy_rain"))
             candidates = self.routine.candidates(
                 now, has_class=has_class, heavy_rain=heavy_rain, energy=energy,
                 holiday_scope=holiday_scope,
+                conversation_active=conversation_active,
+                post_event_cooldown=post_event_cooldown,
             )
             selected = self.routine.choose(candidates)
-            chosen = {"activity": selected.activity, "place_key": selected.place_key}
-            reason = selected.source_key
 
-        place_key = chosen.get("place_key")
+            # Se o cooldown pós-evento está ativo, marcamos explicitamente
+            # para o world_context descrever o estado como "acabei de X".
+            if post_event_cooldown and selected.source_key == "free_time":
+                reason = "post_event_recovery"
+                chosen = {
+                    "activity": "em casa, ainda relaxando depois do compromisso anterior",
+                    "place_key": "marina_apartment",
+                }
+            else:
+                chosen = {"activity": selected.activity, "place_key": selected.place_key}
+                reason = selected.source_key
+
+        place_key = chosen.get("place_key") if isinstance(chosen, Mapping) else None
         place = self.bible.get_place(place_key) if place_key else None
         return self.states.add_snapshot({
             "state_date": now.date().isoformat(),
@@ -230,10 +465,13 @@ class WorldStateManager:
             "activity": chosen["activity"],
             "energy_level": energy,
             "weather_context_json": dict(weather) if weather else None,
-            "current_plan_json": dict(chosen) if reason in ("confirmed_commitment", "explicit_plan") else None,
-            "source_json": {"truth_type": "system", "reason": reason,
-                            "holiday_scope": holiday_scope,
-                            "calendar_event_id": chosen.get('calendar_event_id'),
-                            "academic_block_id": chosen.get('academic_block_id')},
+            "current_plan_json": dict(chosen) if reason in (
+                "confirmed_commitment", "explicit_plan", "announced_transition",
+            ) else None,
+            "source_json": {
+                "truth_type": "system", "reason": reason,
+                "holiday_scope": holiday_scope,
+                "calendar_event_id": chosen.get("calendar_event_id"),
+                "academic_block_id": chosen.get("academic_block_id"),
+            },
         })
-

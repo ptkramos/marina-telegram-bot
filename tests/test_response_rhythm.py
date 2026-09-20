@@ -24,8 +24,12 @@ class TestResponseRhythm(unittest.TestCase):
         self.assertEqual(select_policy('me lembra',plan={'needs_clarification':'direct_reminder_time'}).followup_question,'required_for_action')
 
     def test_casual_does_not_fragment_or_expand(self):
+        # Long text (>180 chars) now auto-splits into 2 bubbles at sentence boundaries.
         text='Uma frase. '*30
-        self.assertEqual(segment(text,select_policy('oi')),[text.strip()])
+        parts = segment(text,select_policy('oi'))
+        self.assertEqual(len(parts), 2)
+        self.assertEqual(' '.join(parts), text.strip())
+        # Short merged line stays single bubble.
         self.assertEqual(segment('amor\nkkkk',select_policy('oi')),['amor\nkkkk'])
         self.assertEqual(segment('kkkk',select_policy('oi')),['kkkk'])
         self.assertEqual(segment('',select_policy()),[])
@@ -73,11 +77,14 @@ class TestResponseRhythm(unittest.TestCase):
     def test_telegram_transport_always_uses_canonical_rhythm(self):
         import bot
         fake=MagicMock(send_message=AsyncMock(),send_chat_action=AsyncMock())
+        # Long text (>180 chars) auto-splits into 2 bubbles.
         text='Primeira frase um pouco maior. '*10
         with patch('bot.asyncio.sleep',new=AsyncMock()):
             asyncio.run(bot.send_human_messages(987,fake,text,response_policy=select_policy()))
-        self.assertEqual(fake.send_message.await_count,1)
-        self.assertEqual(fake.send_message.call_args.kwargs['text'],text.strip())
+        self.assertEqual(fake.send_message.await_count, 2)
+        # Both bubbles together reconstruct the original content.
+        calls = [c.kwargs['text'] for c in fake.send_message.call_args_list]
+        self.assertEqual(' '.join(calls), text.strip())
 
     def test_dynamic_generation_gets_policy_without_extra_llm(self):
         import bot

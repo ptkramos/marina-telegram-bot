@@ -159,7 +159,7 @@ class CalendarWorld:
     def _dated(self, start: datetime, end: datetime) -> list[dict]:
         with self.db.get_connection() as conn:
             return [dict(row) for row in conn.execute('''SELECT * FROM eventos_pendentes
-                WHERE owner_character_key='marina' AND status='pending' AND confirmed=1
+                WHERE owner_character_key IN ('marina', 'shared') AND status='pending' AND confirmed=1
                   AND event_at<? AND COALESCE(end_at,event_at)>?
                 ORDER BY event_at,id''', (end.isoformat(), start.isoformat()))]
 
@@ -172,9 +172,14 @@ class CalendarWorld:
             row = dated[0]
             # Calendar descriptions can be private. WorldState receives only a
             # generic activity; disclosure uses KnowledgePrivacy separately.
-            activity = ('em um compromisso da faculdade' if row['event_type'] in ACADEMIC_EVENTS
-                        else 'em um compromisso')
-            return {'activity': activity, 'place_key': row['location_key'],
+            if row['event_type'] in ACADEMIC_EVENTS:
+                activity = 'em um compromisso da faculdade'
+            elif row['event_type'] in ('social', 'lazer', 'encontro') and row.get('description'):
+                activity = row['description']
+            else:
+                activity = 'em um compromisso'
+            place_key = row['location_key'] or 'marina_apartment'
+            return {'activity': activity, 'place_key': place_key,
                     'start_at': row['event_at'], 'end_at': row['end_at'],
                     'calendar_event_id': row['id'], 'source_key': row['source_key']}
         if not include_academic:

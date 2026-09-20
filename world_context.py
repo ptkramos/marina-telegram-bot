@@ -23,6 +23,7 @@ class WorldContextBuilder:
         self, *, now: Optional[datetime] = None, user_message: str = "",
         quoted_context: str = "", web_context: str = "", vision_context: str = "",
         planner_tone: Optional[str] = None, planner_goal: Optional[str] = None,
+        planner_intent: Optional[str] = None,
         control_language: str = "en", output_language: str = "pt-BR",
         privacy_subjects: Optional[list[tuple[str, int]]] = None,
     ) -> str:
@@ -49,12 +50,59 @@ class WorldContextBuilder:
         location = self._location_name(state["location_place_id"])
         source = json.loads(state["source_json"] or "{}")
         reason = source.get("reason", "unknown")
-        certainty = "compromisso/plano explícito" if reason in ("confirmed_commitment", "explicit_plan") else "inferência de rotina"
+        # Reason-specific framing so the LLM knows how binding each state is.
+        # confirmed_commitment / explicit_plan / announced_transition são
+        # fatos (você fez isso, combinou, ou avisou o Patrick que faria).
+        # post_event_recovery é o cooldown de 20 min após um compromisso.
+        certainty_map = {
+            "confirmed_commitment": "compromisso confirmado que você aceitou",
+            "explicit_plan": "plano explícito que você combinou",
+            "announced_transition": "atividade que você AVISOU o Patrick que ia fazer",
+            "post_event_recovery": "acabou de terminar o compromisso anterior, ainda em casa relaxando",
+        }
+        certainty = certainty_map.get(reason, "inferência de rotina (probabilística)")
+        binding = reason in ("confirmed_commitment", "explicit_plan", "announced_transition")
         if (True
-                and source.get('calendar_event_id')):
+                and source.get('calendar_event_id') and location != 'Apartamento da Marina'):
             location = 'local reservado'
 
         control = CONTROL_EN if control_language == "en" else CONTROL_PT
+        # Bloco de estado atual: FATO, não descrição. O LLM precisa de instrução
+        # explícita sobre como responder "onde vc tá?"/"o que tá fazendo?" —
+        # antes ele lia certainty="(inferência)" como permissão pra ignorar.
+        location_line = location or state["location_region"] or "não definido"
+        world_state_lines = [
+            "[SEU ESTADO ATUAL — FATO CANÔNICO, NÃO NEGOCIÁVEL]",
+            f"Horário local: {now.isoformat(timespec='minutes')}.",
+            f"Local: {location_line}.",
+            f"Atividade: {state['activity'] or 'não definida'}.",
+            f"Origem: {certainty}.",
+        ]
+        if binding:
+            world_state_lines.append(
+                "Este é o que você ESTÁ fazendo AGORA. Se o Patrick perguntar onde "
+                "você está ou o que está fazendo, responda com estes dados. NUNCA "
+                "diga 'em casa' ou 'aqui' se o local acima não for o seu apartamento. "
+                "NUNCA invente uma atividade diferente por hábito do histórico. Se "
+                "acabou de sair de outro contexto, você pode contextualizar (\"acabei "
+                "de X, agora tô Y\"), mas o Y é o que aparece acima."
+            )
+        elif reason == "post_event_recovery":
+            world_state_lines.append(
+                "Você acabou de terminar o compromisso anterior; ainda está em casa "
+                "relaxando/decantando. Se o Patrick perguntar, é natural dizer "
+                "\"acabou agora, tô aqui em casa ainda\" — não invente que já saiu."
+            )
+        else:
+            world_state_lines.append(
+                "Isto é uma inferência probabilística do sistema de rotinas. Se você "
+                "esteve em conversa com o Patrick nos últimos minutos, é MAIS provável "
+                "que ainda esteja em casa do que tenha saído sem avisar (você teria "
+                "avisado). Responda com honestidade sobre o que faz sentido dado o "
+                "contexto real da conversa — não invente ida a lugar externo que você "
+                "não anunciou."
+            )
+
         blocks = [
             control,
             DATA_CHANNEL_POLICY_EN,
@@ -66,9 +114,7 @@ class WorldContextBuilder:
             "Patrick Ramos é seu primeiro namorado oficial; relacionamento comprometido e importante, sem apagar sua autonomia.",
             "Não há ex-namorados oficiais canônicos. Lacunas do passado permanecem indefinidas.",
             "Traços centrais: expressiva, afetuosa, espontânea, curiosa, independente; humor leve e necessidade ocasional de silêncio.",
-            "[WORLD STATE — agora]",
-            f"Horário local: {now.isoformat(timespec='minutes')}. Local: {location or state['location_region'] or 'não definido'}.",
-            f"Atividade: {state['activity'] or 'não definida'} ({certainty}).",
+            *world_state_lines,
         ]
         if state["weather_context_json"]:
             weather = json.loads(state["weather_context_json"])
@@ -213,6 +259,25 @@ class WorldContextBuilder:
             if memory_lines:
                 blocks.append("[MEMÓRIA — continuidade e fatos relevantes]")
                 blocks.extend(f"- {line}" for line in memory_lines)
+
+        # Voice library — few-shots roteados por tone/intent. Posição-âncora:
+        # última coisa que o modelo lê antes do histórico. É a alavanca #1 de
+        # voz num modelo assistente-tuned como DeepSeek-Chat (ver
+        # PLANO_VOZ_MARINA_V371.md, seção 2).
+        if getattr(settings, 'VOICE_LIBRARY_ENABLED', True):
+            try:
+                from voice_library import build_voice_block
+                voice_block = build_voice_block(
+                    tone=planner_tone,
+                    intent=planner_intent,
+                    limit=int(getattr(settings, 'VOICE_LIBRARY_MAX_EXAMPLES', 4)),
+                )
+                if voice_block:
+                    blocks.append(voice_block)
+            except Exception:
+                # Fail-open: voz é enriquecimento, nunca deve derrubar o turno.
+                pass
+
         return "\n".join(blocks)
 
     def _energy(self) -> float:
