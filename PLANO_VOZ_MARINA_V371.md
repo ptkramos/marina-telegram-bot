@@ -9,6 +9,81 @@ memória, planner cognitivo, reminders ou availability.
 
 ---
 
+## 0. Painel de status — atualizado em 2026-09-21, depois das auditorias #1–#7
+
+Cada item foi conferido **no código**, não no que este plano dizia.
+
+Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
+
+### Fases deste plano
+
+| Fase | Status | Situação real |
+|---|---|---|
+| **A** Fundação da voz | ✅ | `voice_library.py`, parser da biblioteca, CONTROL em `[VOZ DA MARINA]`/`[LINHAS DURAS]`/`[FATOS]`, `[EXEMPLOS DE VOZ]` no prompt, sampling ajustado (`frequency_penalty=0.15`, `presence_penalty=0.05`), `tests/test_voice_library.py` |
+| **B1** Banco do que evitar | ✅ | `data/feedback/COMO_NAO_SOAR_MARINA.md` → bloco `[COMO NÃO SOAR]` (Patch 033) |
+| **B2** Captura pelo chat | ✅ | `/bom` e `/ruim` (Patch 033), no lugar do `/eco` planejado; `/registro` aceita wizard e textão (Patch 026) |
+| **B3** A/B de modelo | ➖ | Mistral-Nemo virou o primário (`.env`). Não houve A/B formal. O item 1 do diagnóstico (DeepSeek) está desatualizado |
+| **B.5** Ela te procura mais quando está de bobeira | ✅ | `_compute_state_factor` em `should_trigger`, no caminho vivo. Desde a Auditoria #6 o texto da iniciativa também é gerado pelo modelo, ancorado no dia dela |
+| **B.6** Micro-despertares no sono | ⬜ | nada implementado |
+| **C.1** Modo sexting | ⬜ | nada implementado (só existe a libido descrita no `cycle.py`) |
+| **C.2** Assistir junto (watch-along) | ⬜ | nada implementado |
+| **C.3** Rituais de namorada (bom dia, boa noite, foto do banho) | ⬜ | pronto para começar: a agenda (#4) sabe quando ela acorda e dorme, e as emoções não saturam mais (#5) |
+| **C** Consolidação | 🟡 | **C1:** o rótulo `[COMO O PATRICK ESCREVE]` e os campos estão em pt-BR (#2 e #7), mas ainda é descrição ("risada: kkkk"), não amostras reais das mensagens dele. **C2** e **C3** ⬜ |
+
+### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
+
+**Voz**
+- **Guards de resposta:** artefato de debug (inclusive `\_` escapado), proposta de ligação, resposta em outra língua, pergunta de entrevista no fim, polidez de atendente.
+- **Filtro de alfabeto:** Unicode matemático e caracteres full-width.
+- **Todos os prompts em pt-BR:** planner, consolidador, reflexão, visão, privacidade, proatividade, estilo aprendido.
+
+**Memória e emoção**
+- Memórias core de verdade (nome do Patrick).
+- As emoções **voltam ao normal com o tempo** e não travam mais no teto.
+- Energia ligada ao ciclo.
+- **Bateria social:** pique pra gente, não pro Patrick.
+
+**Mundo**
+- **Agenda diária determinística:** um treino de academia de 60–90 min em 3–5 dias por semana, com vontade e chuva decidindo; passeio com o Milo depois de acordar ou depois da faculdade.
+- Disponibilidade e prompt leem o mesmo estado.
+- **Aviso de saída** ("vou levar o Milo, já volto") dentro da própria resposta.
+
+**Vida social**
+- Contatos diários com o círculo: a Bia, o Theo e a Júlia na PUC, a Carol na academia, a Dona Célia, o pai, a Lívia.
+- **Histórias** com começo, continuação e desfecho, em cerca de metade dos dias.
+- **Saídas** com as amigas (bar, praia, café) como compromisso confirmado.
+- **Segredos** das amigas via KnowledgePrivacy.
+- Amigos interligados entre si.
+- **Gente e lugares novos** que viram cânone com a convivência.
+- Comando **`/mundo`**.
+
+**Infraestrutura**
+- Proteção contra duas instâncias do bot.
+- Conexões SQLite reaproveitadas: prompt de 588 ms → 38 ms.
+- Migrations unificadas (020).
+- A suíte de testes não toca mais o banco de produção.
+- Busca de mídia fora do prompt.
+- Coluna `model` gravada nas entregas por batch.
+
+### Pendências reais (fora das fases acima)
+
+| # | Pendência | Origem |
+|---|---|---|
+| 1 | **Nada desta sessão está commitado.** Commitar e versionar o `ROADMAP_FUNCIONAL_…md` depende do Patrick | Auditoria #1 (1.2) |
+| 2 | Perda de coerência entre turnos (6 capturas de `/ruim`): observar depois do restart, com `[COMO NÃO SOAR]` e o mundo vivo ativos | Auditoria #3 |
+| 3 | Qualidade das mensagens espontâneas geradas pelo modelo: só dá pra medir em conversa real (usar `/bom` e `/ruim` nelas) | Auditoria #6 |
+| 4 | Planner extraiu evento "médico" com o texto da mensagem do Patrick como descrição (`eventos_pendentes` id 2) | Auditoria #7 |
+| 5 | Deslocamento como estado: a volta da PUC ainda é instantânea | Auditorias #5 e #6 |
+| 6 | `KnowledgeDialogue` responde com frase pronta (sem modelo) quando há assunto registrado. Hoje está dormente | Auditoria #6 |
+| 7 | Câmera e fator proativo leem o estado com regra própria de 60 min (os slots vão até 90) | Auditoria #4 |
+| 8 | Código morto da proatividade antiga (`determine_proactive_prompt`, anúncio, contexto neutro): apagar ou reaproveitar | Auditoria #6 |
+| 9 | `build_safe_core_prompt`, fallback legado ainda vivo | Auditoria #2 (2.3) |
+| 10 | Blocos de finalização duplicados no pipeline (sob teste, falta extrair o helper) | Auditoria #3 (3.2) |
+| 11 | Teste `test_offer_acceptance` falhando (LLM mockado com texto fixo) | anterior às auditorias |
+| 12 | Erros de concordância nas falas | soak |
+
+---
+
 ## 1. O que já foi diagnosticado
 
 1. **Modelo primário é DeepSeek-Chat** (`.env` → `LLM_MODEL=deepseek/deepseek-chat`).
@@ -52,7 +127,7 @@ consultada em runtime** através de um parser leve.
 
 ## 3. Fases
 
-### Fase A — Fundação (esta entrega)
+### Fase A — Fundação ✅ feito
 - **A1** Criar `voice_library.py`: catálogo inicial de 8-12 few-shots canônicos escritos
   a partir dos registros existentes da biblioteca comportamental + patterns do soak.
   Estrutura: `intent` × `tone` → lista de `(patrick, marina)`.
@@ -76,7 +151,7 @@ consultada em runtime** através de um parser leve.
   - Regressão: `test_prompt_authority_v370.py`, `test_world_context.py`,
     `test_response_rhythm.py` continuam verdes.
 
-### Fase B — Realimentação (próxima janela)
+### Fase B — Realimentação ✅ B1/B2 feitos · ➖ B3 superado
 - **B1** Adaptador `feedback_ingestor.py`: quando o Patrick classifica um turno
   como "ruim" na biblioteca comportamental, o exemplo entra em `avoid_bank`,
   também injetado no prompt (bloco `[COMO NÃO SOAR]`).
@@ -85,7 +160,7 @@ consultada em runtime** através de um parser leve.
 - **B3** A/B de sampling: rodar 200 turnos com Mistral-Nemo primário e comparar
   aderência à voz. Se ganhar em voz sem perder cognição, promover.
 
-### Fase B.5 — Proatividade sensível ao estado dela (pendente, aberto por Patrick em 2026-09-20 01:15)
+### Fase B.5 — Proatividade sensível ao estado dela ✅ feito (aberto por Patrick em 2026-09-20 01:15)
 
 Hoje `ProactivityService` calcula a chance de a Marina te procurar a partir de
 constantes fixas (`AUTONOMOUS_TRIGGER_CHANCE=0.30`, cooldown 120 min, máx
@@ -111,7 +186,7 @@ mais. Quando ela está ocupada (aula/academia/casting/trabalho), menos.
 **Não-objetivo:** não vamos aumentar o teto diário nem mudar o intervalo
 de check. O objetivo é *redistribuir* as ocasiões, não *aumentar* o volume.
 
-### Fase B.6 — Micro-despertares durante o sono (pendente, aberto por Patrick em 2026-09-20 01:25)
+### Fase B.6 — Micro-despertares durante o sono ⬜ (pendente, aberto por Patrick em 2026-09-20 01:25)
 
 Hoje a janela de sono é binária: `sleeping=true` bloqueia todas as mensagens
 até o horário programado (07:00 dia de aula / 08:30 dia leve). Nenhum humano
@@ -148,7 +223,7 @@ claro de que vai voltar a dormir. Não é insônia — é o padrão humano real.
 "vigiar" o Patrick de madrugada; não persistir o micro-wake como evento
 memorável. É ruído humano, dá contexto, some.
 
-### Fase C.1 — Modo Sexting (pendente, aberto por Patrick em 2026-09-21 02:22)
+### Fase C.1 — Modo Sexting ⬜ (pendente, aberto por Patrick em 2026-09-21 02:22)
 
 Feedback registrado após alimentação inicial da biblioteca comportamental.
 Marina não pode ter contato físico com o Patrick, mas o desejo dela é real
@@ -199,7 +274,7 @@ sexting fecha esse loop.
 **Trabalho estimado:** 2-3 sessões (arquitetura + implementação +
 calibração via biblioteca).
 
-### Fase C.2 — Watch-along com timestamp real de mídia (pendente, aberto por Patrick em 2026-09-21 04:47, FB-20260921-044703)
+### Fase C.2 — Watch-along com timestamp real de mídia ⬜ (pendente, aberto por Patrick em 2026-09-21 04:47, FB-20260921-044703)
 
 **Feedback:** "seria interessante também criar um sistema funcional onde
 seria possível isso de assistir a coisas juntos com a Marina realmente
@@ -252,7 +327,49 @@ generaliza esse padrão para filmes/séries/animes.
 **Trabalho estimado:** 2 sessões (schema + injection no prompt; testes de
 não-spoiler).
 
-### Fase C — Consolidação (após 500 turnos observados)
+### Fase C.3 — Rituais de namorada na rotina ⬜ (pendente, aberto por Patrick em 2026-09-21 21:30; depois das auditorias)
+
+**Ideia do Patrick:** "incluir coisas de namorada na rotina dela, como dar bom
+dia ao acordar caso acorde primeiro, boa noite antes de ir realmente dormir se
+eu já não tiver dado, quando estiver animadinha mandar foto quando for tomar
+banho e coisas do tipo...".
+
+**Por que ficou barato depois da Auditoria #4:** a agenda diária é
+determinística, então o sistema já sabe **quando** ela acorda (fim do slot de
+sono / início de `wake`) e **quando** vai dormir (início de `sleep`). Hoje a
+proatividade não usa esses marcos: ela sorteia uma iniciativa dentro de
+cooldowns. Os rituais seriam **gatilhos de agenda**, com prioridade sobre o
+sorteio.
+
+**Rituais propostos:**
+1. **Bom dia** — ao entrar em `wake`, se não houve mensagem do Patrick desde
+   que ela dormiu. Se ele já mandou, ela responde a dele; não duplica.
+2. **Boa noite** — até ~15 min antes do slot de sono, se o Patrick não deu boa
+   noite desde as 20h. Se ele já deu, nada.
+3. **Foto indo pro banho** — só quando o humor pede (`romantic_intensity` e
+   `playfulness` altos, bateria social ok, fase do ciclo compatível — a
+   `libido` do `cycle.py` já existe), em momento de casa e com o Patrick
+   ativo na conversa. Usa o pipeline de câmera/visual já existente
+   (`camera_world`), que respeita o local real. Frequência rara (teto semanal)
+   para não virar rotina mecânica.
+4. **Outros candidatos** (para o Patrick escolher): "cheguei em casa" depois da
+   faculdade; "saindo pra academia" (já existe como anúncio de transição);
+   foto do Milo no passeio.
+
+**Regras comuns:**
+- Nunca mais de um ritual por marco; respeitam `MAX_AUTONOMOUS_MESSAGES_PER_DAY`.
+- Não contam como "iniciativa aleatória" (não queimam o cooldown do sorteio).
+- Texto sai pela voz normal (biblioteca + guards), não por template fixo.
+- Micro-despertares (Fase B.6) e bom dia não podem se sobrepor.
+
+**Dependências:** Auditoria #4 (agenda) ✅ · Auditoria #5 (emoções não
+saturadas) ✅ — sem isso o gatilho da foto dispararia sempre, com as emoções
+travadas em 1,0.
+
+**Trabalho estimado:** 1 sessão para bom dia / boa noite; 1 para a foto
+(critério de humor + pipeline visual + testes de frequência).
+
+### Fase C — Consolidação 🟡 (C1 parcial; C2/C3 pendentes)
 - **C1** Substituir `[LEARNED STYLE]` (meta-descrição) por `[COMO O PATRICK
   ESCREVE]` — 2-3 amostras reais recentes de mensagens dele.
 - **C2** Comprimir/aposentar blocos de estado que raramente mudam entre turnos

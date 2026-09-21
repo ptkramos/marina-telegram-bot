@@ -37,6 +37,9 @@ Critérios herdados do `ROADMAP_FUNCIONAL_MARINA_COMPLETO_3_0_A_3_7_V3_CANONICAL
 | 2 | Sistema de memória (3.1 / 3.5.0 / 3.5.3) | 1 🔴 · 1 🟡 · 1 🔵 | ✅ concluída |
 | 3 | Pipeline de resposta (`process_incoming_batch`) | 4 🔴 · 1 🟡 · 1 ⚪ | ✅ concluída |
 | 4 | Estado do mundo — fonte única (3.6.x Living World) | 4 🔴 · 3 🟡 | ✅ concluída |
+| 5 | Estado emocional (inclui bateria social) | 1 🔴 · 3 🟡 · 1 ⚪ | ✅ concluída |
+| 6 | Mundo social — a vida dela acontece | 6 🔴 · 1 🟡 | ✅ concluída |
+| 7 | Infraestrutura do banco (isolamento, conexões, migrations) | 2 🔴 · 3 🟡 | ✅ concluída |
 
 **Ação aberta que depende do Patrick:** versionar o roadmap funcional (achado 1.2).
 
@@ -688,3 +691,406 @@ Semana simulada (21–27/09):
 | Dom | Milo 09:25 | Milo 09:25 | — |
 
 Mais 3 testes em `test_world_agenda_audit4.py`: o passeio em dia de aula fica fora da faculdade e da academia; cansada, ela vai menos à academia; com chuva forte, vai à academia do prédio.
+
+---
+
+# Auditoria #5 — Estado emocional
+
+**Por que esta:** durante a auditoria #4 o Patrick perguntou se conversar deixava a Marina cansada. Para responder, abri o `estado_emocional` e encontrei carinho, brincadeira e intensidade romântica **todos em 1,0**, o máximo da escala. Emoção travada no teto não reage a nada do que o Patrick diz.
+
+## Mapa
+
+| Quem | O que faz |
+|---|---|
+| `planner.apply_plan_effects` | aplica `emotional_deltas` do plano (LLM ou heurística), ±0,05 por turno |
+| `proactivity_service._update_state` | `aplicar_decay_emocional(0,05)`, **o único retorno ao baseline** |
+| `world_context._emotional_context` | lê valor × multiplicador do ciclo e vira rótulo no prompt |
+| `world_state.current_energy` | energia para a rotina (academia) |
+| `proactivity._build_neutral_context` | carinho e bateria social para a mensagem espontânea |
+| `bot.py` (voz) | estado emocional para a prosódia |
+
+## Achado 5.1 🔴 — A emoção só subia
+
+O retorno ao baseline só rodava quando a Marina mandava mensagem espontânea. Em 20–21/09 ela mandou **zero** (48 + 8 turnos do Patrick, 0 iniciativas). Os deltas de conversa carinhosa são quase sempre positivos, e as heurísticas do planner somam +0,01 a +0,04 a cada "oi amor". Sem nada puxando para baixo, bastaram uns 8 turnos para o carinho sair de 0,85 e bater em 1,0, e dali não saiu mais.
+
+**Correção** (`db.py`):
+- **Relaxamento pelo tempo**, com meia-vida de 6h, calculado na leitura a partir do `updated_at`. Não depende mais de a Marina mandar mensagem.
+- **Retorno decrescente perto das bordas:** a menos de 0,30 do teto, um delta positivo rende proporcionalmente menos (o mesmo vale para negativos perto do piso). Um delta negativo perto do teto tem efeito integral, então uma briga derruba mesmo quando ela está no alto.
+- `aplicar_decay_emocional` passou a partir do valor já relaxado; antes, gravar o valor bruto com `updated_at=agora` desfaria o relaxamento. A chamada na proatividade saiu.
+
+Numa conversa carinhosa de 4h30 o carinho ainda sobe perto do máximo, o que é plausível. Depois ele volta sozinho: 0,94 em 3h e 0,88 em 12h.
+
+## Achado 5.2 🟡 — Energia da rotina ignorava o ciclo
+
+O prompt multiplicava a energia pela fase do ciclo (na menstrual, 0,75 × 0,45 vira "baixa"), mas a rotina da auditoria #4 usava o valor cru. Ela diria estar sem energia e iria à academia. `current_energy` agora aplica o mesmo multiplicador. Efeito: em fase de energia baixa, ela pula mais academia (na menstrual, cerca de metade dos dias da cota).
+
+## Achado 5.3 🟡 — `playfulness` aparecia em inglês no prompt
+
+O dicionário de rótulos não tinha `playfulness`, então o prompt recebia literalmente `- playfulness: muito alto / intenso`. Ganhou o rótulo "vontade de brincar e provocar".
+
+## Achado 5.4 ⚪ — Nenhum registro dos deltas
+
+Não havia como medir o viés dos `emotional_deltas`. O planner passa a logar `EMOTIONAL_DELTAS {...}` a cada turno, para uma auditoria futura saber se o Nemo só devolve números positivos.
+
+## Achado 5.5 🟡 — A bateria social não era escrita por ninguém *(resolvido com desenho do Patrick)*
+
+A bateria social ficava parada em 0,9 e o rótulo no prompt dizia "bateria social **para conversar**", o que abria espaço para o modelo interpretar bateria baixa como cansaço do Patrick. O Patrick definiu: é energia para sair e socializar com o círculo dela. Com ele, sobe ou desce conforme o tipo da conversa.
+
+**Implementação** (`social_battery.py`):
+- **Gasta pela agenda real**, a mesma da auditoria #4: aula −0,08/h, rolê/evento/casting −0,10/h.
+- **Recarrega** em casa (+0,04/h), passeando com o Milo (+0,04/h) e dormindo (+0,09/h).
+- **Integração preguiçosa** em `WorldStateManager.resolve()`: amostra a agenda em passos de 15 min desde a última conta, com clamp a cada passo. Um silêncio de 10h à noite conta como sono. A conta dá o mesmo resultado em uma consulta ou em várias. O primeiro rascunho somava tudo antes do clamp, e a noite "recarregava além de 100%" para compensar a aula do dia seguinte: 0,93 contra 0,36.
+- **Com o Patrick:** o planner manda `emotional_deltas.social_battery`. Conversa leve ou carinhosa recarrega; briga, DR ou cobrança gasta. A regra no prompt do planner diz "NUNCA mexa nela pelo tamanho da conversa".
+- A bateria **não relaxa pelo relógio** como as outras emoções: quem a move é o que ela faz.
+- **No prompt**, o rótulo virou "pique pra gente e pra agito — não pro Patrick". Abaixo de 0,40 entra uma linha explícita: "Isso NÃO é cansaço do Patrick — com ele você fica mais caseira, dengosa e quietinha".
+
+Terça simulada (aula 07h–15h): **1,00** ao acordar → 0,84 às 9h → 0,60 ao meio-dia → **0,36 ao chegar em casa** → 0,48 às 18h → 0,68 às 23h → cheia depois de dormir.
+
+Falas de referência adicionadas à biblioteca (Registros 083–085, com autorização do Patrick para eu adicionar minhas sugestões de fala).
+
+**Dívida observada na simulação:** às 15:00 em ponto ela aparece "em casa". A volta da Gávea para Botafogo (45 min) não existe como estado. Candidato para o world state: um estado de deslocamento depois de compromisso fora.
+
+## Testes
+
+`tests/test_emotional_state_audit5.py`, 6 testes:
+- a emoção relaxa com o tempo sem proatividade;
+- uma conversa longa não trava no teto;
+- uma briga derruba o valor mesmo no alto;
+- o decay legado não desfaz o relaxamento;
+- a energia da rotina segue o ciclo;
+- `playfulness` tem rótulo em português.
+
+`tests/test_social_battery_audit5.py`, 5 testes:
+- um dia inteiro na PUC esvazia a bateria e a casa recarrega;
+- a conta não depende de quantas vezes foi consultada;
+- conversa longa sem delta não gasta bateria;
+- a bateria não relaxa pelo relógio;
+- o prompt deixa claro que não é cansaço do Patrick.
+
+`test_planner` foi atualizado: +0,03 sobre 0,85 agora rende 0,865, não 0,88.
+
+Suíte: **538/539**. A única falha é a dívida conhecida.
+
+---
+
+# Auditoria #6 — Mundo social: a vida dela acontece?
+
+**Por que esta:** o Patrick perguntou se a Marina fala com a Bia durante o dia. A resposta era não. As migrations foram adiadas para a #7.
+
+## O que existia
+
+| Peça | Estado encontrado |
+|---|---|
+| Círculo social canônico (9 relações, personalidade, bairro, temas de cada pessoa) | ✅ cadastrado, bem desenhado |
+| `SocialWorld.record` (evidência de interação → proximidade, frequência, último contato) | ❌ nunca chamado; `social_evidence` com 0 linhas |
+| `StoryEngine` (26 sementes, cadência, orçamento narrativo, eventos graves bloqueados) | ❌ nunca chamado; o próprio docstring dizia *"never run from current bot"* |
+| `life_events`, `story_threads` | ❌ 0 linhas |
+| Uso no prompt | só uma linha "Bia: best_friend; região" quando o Patrick citava o nome |
+
+## Achado 6.1 🔴 — O mundo social era cadastro, não vida
+
+"Falou com a Bia hoje?" era improviso do modelo, sem registro. Amanhã ela poderia contradizer. É a mesma perda de coerência das capturas de `/ruim`, agora no mundo social.
+
+## Achado 6.2 🔴 — O StoryEngine, mesmo ligado, quase nunca dispararia
+
+20 das 26 sementes exigem uma precondição observada (`friend_needs_support`, `academic_feedback_observed`...), e **nenhum** componente do sistema fornecia nenhuma delas. Além disso, as histórias sociais nasciam só com `participants=('marina',)`: "um contato conhecido pediu ajuda", sem saber quem.
+
+## Achado 6.3 🔴 — Passeio do Milo marcado dentro do sono *(bug meu, da auditoria #4)*
+
+Em dia sem aula ela dorme até 08:29, mas o slot do passeio podia cair às 07:05. O sono vence no `pick()`, então o passeio simplesmente não acontecia nesses dias. A tabela da semana que mostrei ao Patrick na #4 tinha "Sex: Milo 07:05", o que estava errado. Correção: `_placement` desconta a janela de sono do dia (`_sleep_windows`). Agora é sexta 08:30, sábado 09:45, domingo 09:40.
+
+## Correção — `social_day.py`
+
+O dia social é derivado da data e da agenda, do mesmo jeito que a #4 fez com academia e passeio.
+
+**Encontros presenciais** dependem de onde ela **está**:
+- Theo (75%) e Júlia (60%) na PUC, dentro de um bloco de aula;
+- a professora Helena (50%) nas matérias de Projeto;
+- a Carol na Bodytech, se ela foi mesmo treinar;
+- a Dona Célia no prédio na hora do passeio com o Milo.
+
+"Se foi mesmo" usa a regra do resolvedor: um snapshot de slot cobrindo o horário ou, sem ele, a agenda daquele momento com o filtro de conversa ativa. Se o Patrick estava conversando, ela não saiu, e o encontro não acontece.
+
+**À distância**, depende de quem a pessoa é:
+- a Bia em ~80% dos dias (almoço ou noite);
+- o pai ~2×/semana (ligação ou mensagem, à noite);
+- a Lívia ~1×/semana (dia útil, castings).
+
+Resultado em 8 semanas, por semana: Bia 6,0 · Theo 2,6 · Júlia 2,5 · pai 2,2 · Dona Célia 2,0 · Carol 1,9 · Lívia 1,0 · Helena 0,8.
+
+**Registro:** cada contato vira `life_event` (`social_contact`) + `SocialWorld.record` quando o horário passa. A materialização é preguiçosa em `WorldStateManager.resolve`, idempotente e cobre ontem e hoje. O assunto sai dos temas canônicos da pessoa (a Bia: relacionamentos, festas, fofocas; o Theo: faculdade, moda, crushes...).
+
+**Sem passado inventado:** `social_day_start` é gravado no primeiro startup e nada anterior é materializado. Sem isso, o bot registraria de uma vez encontros de ontem e de hoje cedo que podem contradizer o que a Marina já contou ao Patrick nesses dias.
+
+**Histórias:**
+- Em ~35% dos dias um contato traz um **gancho** (a Bia desabafou, a Helena deu retorno, a Lívia mencionou um job). Ele fornece exatamente a precondição que o StoryEngine exigia e restringe a semente àquela pessoa. O StoryEngine ainda aplica a própria cadência (60% dos dias são banais) e o orçamento. Resultado: dias banais predominam, como o roadmap 3.6.2 pede.
+- A história **nasce com a pessoa como participante**: `StoryEngine._start` ganhou `extra_participants`.
+- De 1 a 4 dias depois, um novo contato com a mesma pessoa **continua ou resolve** o assunto via `continue_thread`, que já existia e nunca era usado.
+
+**No prompt:**
+- `[SEU DIA ATÉ AGORA — aconteceu de verdade]` lista os contatos de hoje e as histórias em andamento, com a instrução de usar só quando vier ao caso, não despejar a agenda e não contradizer nem inventar outro encontro.
+- Quando o Patrick cita alguém, a linha da relação ganha "Último contato: hoje às 21:05 — Trocou mensagens com a Bia; assunto: relacionamentos." ou "Sem contato registrado recentemente."
+
+Biblioteca: Registro 086 ("falou com a Bia hoje?" sem despejar agenda).
+
+## Testes
+
+`tests/test_social_day_audit6.py`, 7 testes:
+1. Duas semanas de vida social coerente com a agenda (Bia em ≥8 dias; todo encontro na PUC cai dentro de um bloco de aula).
+2. O primeiro startup não inventa passado.
+3. A materialização é idempotente e só grava o que já passou.
+4. O encontro na academia só acontece se ela foi (Patrick conversando → não foi → sem Carol).
+5. O passeio do Milo nunca cai dentro do sono.
+6. A história nasce com a pessoa e continua dias depois.
+7. O prompt mostra o dia e o último contato de quem foi citado.
+
+## Custo e desempenho
+
+Uma resolução de estado leva ~165 ms. Na versão anterior às auditorias, medida num worktree do `HEAD`, eram **161 ms**: o acréscimo das auditorias #4–#6 é de 10–20 ms. O primeiro rascunho custava 249 ms e ganhou cache:
+- plano social por (banco, dia, histórias abertas);
+- linhas de rotina, grade e horários por instância do `RoutineEngine`;
+- uma consulta só para os contatos já processados.
+
+O custo alto real é antigo: **cada consulta abre e fecha uma conexão SQLite** (`db.get_connection`), cerca de 34 conexões por resolução. Fica registrado como candidato a auditoria de infraestrutura, junto com as migrations.
+
+`test_world_context` teve o teto de tamanho do prompt ajustado de 11k para 12k: o bloco do dia é limitado a 5 contatos + 2 histórias (~700 chars).
+
+Suíte: **545/546**. A única falha é a dívida conhecida.
+
+## Pendente, próximo passo natural
+
+- ~~Saídas presenciais com as amigas~~ → feito na parte 2.
+- **Deslocamento como estado** (achado 5.5): a volta da PUC ainda é instantânea.
+
+## Parte 2 — Fechando o mundo (pedido do Patrick: "ela tem 20 anos, garota popular, tem mais é que viver")
+
+### Achado 6.4 🔴 — A proatividade viva mandava frases prontas, e parte do que eu corrigi era código morto *(erro meu nas auditorias #4 e #5)*
+
+`autonomous_routine_v36`, o único caminho proativo em produção, escolhe um motivo via `RelationshipWorld.ranked_candidate` e manda **texto fixo**: quatro variações de "oi amor, como você tá?". O caminho que gerava a fala pelo LLM com contexto (`determine_proactive_prompt`) foi desligado na 3.7.0, e o `scripts/audit_prompt_authority.py` proíbe chamá-lo. A decisão foi correta na época, porque o mundo não tinha eventos reais e o LLM inventaria.
+
+Consequência para mim: o achado 4.5 (aviso de saída), o 4.4 e o 4.6 (contexto e instruções da mensagem espontânea) e o `_build_neutral_context` da #5 corrigiram código que **não roda**. Eu corrigi sem verificar se estava no caminho de execução. As correções continuam válidas se o caminho voltar, mas não mudaram nada em produção.
+
+**Correção:** `_proactive_text()` em `bot.py`. O motivo continua vindo do `ranked_candidate`, com as mesmas garantias de entrega. O texto passa a ser gerado pelo LLM:
+- ancorado no estado e no dia registrado, com a instrução marcada "[INICIATIVA SUA — o Patrick NÃO mandou mensagem]";
+- passando pelos mesmos guards das respostas (`_needs_retry_for_junk`, `_salvage_reply`, `_strip_assistant_politeness`);
+- com fallback para a frase pronta antiga se falhar.
+
+Há um motivo novo, `social_day_share`: um acontecimento das últimas 3h que ela ainda não contou (histórias primeiro) vira assunto. `mark_shared` impede que ela conte a mesma coisa duas vezes.
+
+### Achado 6.5 🔴 — Com o Patrick conversando, ela nunca saía
+
+O filtro de conversa ativa (Patch 013) bloqueia saídas enquanto o Patrick fala, contando com o aviso "vou levar o Milo, já volto". O aviso vivia no caminho morto. Além disso, a proatividade autônoma só dispara com o Patrick **ocioso**, então jamais poderia avisar no meio de uma conversa. Resultado: se o Patrick conversasse no horário da academia ou do passeio, ela simplesmente não ia.
+
+**Correção:** `_maybe_announce_transition()` roda no pipeline de resposta. Quando um slot da agenda começa durante a conversa, a transição é registrada e a própria resposta recebe a instrução "[AVISO DE SAÍDA — faça nesta resposta]". Uma vez só. Depois, o `announced_transition` do WorldState a coloca lá até o fim do slot.
+
+### Achado 6.6 🟡 — Privacidade: instruções em inglês e resposta pronta
+
+- `KnowledgePrivacy.prompt_constraint` ia para o prompt em inglês ("[VERIFIED KNOWLEDGE POLICY] Do not reveal..."). Traduzido.
+- `KnowledgeDialogue.prepare_replies`, quando o Patrick cita um assunto registrado, **pula o LLM** e manda frase pronta ("Sobre X: prefiro não falar sobre isso."). Esse caminho está dormente (nenhum assunto registrado) e continua assim: os segredos do dia social não registram aliases e usam o bloco do dia com a instrução "contado EM SEGREDO". **Dívida:** se um dia houver assuntos registrados, esse caminho precisa passar pelo LLM.
+
+### Mais vida (decisão do Patrick)
+
+- `STORY_EVENT_CADENCE_THRESHOLD`: 0,60 → 0,25. `HOOK_CHANCE`: 0,35 → 0,70.
+- Até **2 histórias abertas** ao mesmo tempo (antes: 1, que travava tudo), nunca 2 com a mesma pessoa. Orçamento de intensidade semanal de 2 → 3.
+- Continua valendo: no máximo 1 história nova por dia, e eventos graves bloqueados.
+- A continuação passou a contar da **última** vez que o assunto apareceu. Antes, uma continuação que não resolvia deixava a história morrer (ia para `dormant`).
+- Em duas semanas simuladas: **4–5 histórias**, todas com continuação e desfecho (antes: 1).
+
+### Saídas com as amigas
+
+Viram **compromissos confirmados** no `CalendarWorld`, criados até 6 dias antes, nunca com menos de 2h de antecedência e nunca retroativos:
+
+| Dia | Chance | Saída |
+|---|---|---|
+| Sábado | 65% | Quartinho Bar, 21:00–23:59 (a Bia; às vezes o Theo) |
+| Domingo | 40% | praia, 10:00–13:00 (a Bia ou a Carol) |
+| Sexta | 35% | Quartinho Bar, 19:30–22:30 (o Theo; às vezes a Júlia) |
+| Quarta e quinta | 25% | Starbucks da Gávea depois da aula (a Júlia/o Theo) |
+
+O que já existia reage sozinho:
+- o WorldState a coloca lá (`confirmed_commitment`);
+- a disponibilidade fica `SOCIAL`, com praia e café adicionados ao mapeamento;
+- a bateria social gasta (−0,10/h);
+- os encontros presenciais são registrados.
+
+O `CalendarWorld` recusa conflito com aula ou com outro compromisso. O prompt mostra "Plano combinado: Saindo com o Theo no Quartinho Bar (sexta, 19:30)", então ela sabe dos próprios planos. O lugar não é mais trocado por "local reservado" quando é uma saída do dia social.
+
+### Segredos e amigos entre si
+
+- **Segredos:** assuntos de relacionamento, crush, fofoca e conflito leve são contados em segredo em 35% das vezes. A proveniência vai para o `KnowledgePrivacy`: a pessoa observa → autoriza a Marina → share confirmado. A Marina fica com `CONFIDENTIAL`, e `decision(marina → patrick) = WITHHOLD`. O prompt marca "contado EM SEGREDO: você sabe, mas não conta os detalhes pro Patrick — no máximo diz que prometeu guardar". Biblioteca: Registro 087.
+- **Amigos entre si:** às vezes a conversa com um amigo gira em torno de outro ("…e falaram da Júlia"). Quando o Patrick cita alguém, a linha da relação mostra "Conhece: …".
+  - Theo ↔ Júlia: colegas de turma (sustentado pelo cânone, os dois ligados à PUC).
+  - **Bia ↔ Theo: proposta de cânone minha** ("se conheceram nas festas por causa da Marina"). **O Patrick pode vetar.**
+
+### Proteção do bootstrap
+
+A inicialização limpa (`bootstrap_v36`) resolve o estado e depois exige zero memória. Com o dia social, esse resolve criava saídas na agenda e o bootstrap falhava ("Memória antiga remanescente: eventos_pendentes"). A materialização agora só roda depois de `clean_canonical_start_done`.
+
+### Testes
+
+`tests/test_social_day_audit6.py` subiu para 15 testes. Os novos cobrem:
+- proatividade ancorada: guards, fallback e a instrução marcada como iniciativa dela;
+- a novidade é contada uma vez só;
+- o aviso de saída ao vivo;
+- saídas viram compromisso e ela está lá (`SOCIAL`);
+- saída nunca é criada em cima da hora;
+- o segredo da amiga fica com a Marina (`WITHHOLD` para o Patrick, cadeia pessoa → Marina);
+- os amigos falam uns dos outros só dentro dos vínculos declarados.
+
+Atualizados porque codificavam a decisão antiga:
+- `test_story_engine` (faixa de dias sem história: 55–75% → 15–45%);
+- `test_knowledge_privacy` (textos em pt-BR);
+- `test_relationship_world_v365` (patch de `_proactive_text`).
+
+Suíte: **553/554**. A única falha é a dívida conhecida.
+
+## Parte 3 — O círculo vivo: gente e lugares novos que podem virar cânone
+
+O Patrick lembrou que o sistema, em teoria, fazia a Marina e os NPCs canônicos conhecerem gente não canônica, e que essas pessoas (e lugares) tinham chance de entrar no cânone.
+
+### Achado 6.7 🔴 — O ciclo de descoberta e promoção existia inteiro e nunca rodava
+
+- `SocialWorld.discover_person` e `discover_place` nunca são chamados.
+- A promoção **existia**, dentro de `SocialWorld.record`: pessoa `ephemeral` → `secondary` depois de 3 dias com encontro bom → `recurring` depois de 6. Lugar `discovered` → `known` → `habitual` → `favorite`. Mas como `record` nunca era chamado, nada subia.
+- `WorldHygiene.review_promotions` marca candidatos `PROMOTABLE` para revisão manual, e não existe comando para o Patrick aprovar.
+- A passagem de `recurring` para cânone não existia.
+
+### Correção
+
+**Gente que ela pode conhecer**, onde a rotina já a leva (`NPC_POOLS` em `social_day.py`), com pesos 3/2/1 para que uma pessoa por lugar tenda a virar "a da turma":
+
+| Onde | Quem | Ligado a |
+|---|---|---|
+| PUC (35% dos dias de aula) | Rafa (colega de Projeto), Duda (fotografia), Lara (Moda) | Rafa → Theo; Duda → Júlia |
+| Bodytech (25% dos treinos) | Bruno (personal), Nanda (funcional) | Bruno → Carol |
+| Passeio (20%) | Gabi (tutora da spitz), Seu Ademir (golden) | Seu Ademir → Dona Célia |
+| Saídas (45%) | Caio (amigo da Bia), Luana (amiga do Theo) | Caio → Bia; Luana → Theo |
+
+- **Primeiro encontro:** `discover_person` cria o NPC como `ephemeral`, e o registro diz "Conheceu a Gabi, tutora da spitz que brinca com o Milo". Os encontros seguintes dizem "Encontrou".
+- **Laços com o círculo canônico:** entram em `FRIEND_TIES`, então a conversa com a Júlia pode girar em torno da Duda. O Patrick pediu o círculo "de alguma forma interligado quando fizer sentido".
+- **Promoção a cânone:** quando o NPC chega a `recurring`, `_maybe_canonize` o trava no cânone (`canon_locked=1`, com o "quem é" como tipo de relação) e registra `canonized:<chave>` em `world_bootstrap`. O caminho automático para `close_npc` continua não existindo, por decisão do código original.
+- **Lugares novos:** 30% das saídas de sexta vão para um lugar em descoberta (hamburgueria na Voluntários, barzinho no Humaitá, açaí na Praia de Botafogo). São ficção interna, sem endereço real. Cada visita alimenta a familiaridade via `SocialWorld.record`.
+- **No prompt:** quando o Patrick cita um conhecido novo, a linha de relação aparece com "(conhecido(a) recente)".
+
+### `/mundo`
+
+Um comando novo mostra o mundo dela de fora:
+- o círculo, com último contato e frequência em 30 dias;
+- os conhecidos novos e o nível de cada um;
+- os lugares em descoberta e a familiaridade;
+- as histórias rolando e os próximos planos.
+
+**Não mostra o assunto das conversas**, porque pode ser segredo de amiga.
+
+Seis semanas simuladas: a Bia com 33 contatos no mês, o Theo com 18, a Júlia com 17. **A Gabi, do passeio, entrou no cânone.** Rafa, Bruno, Luana e Seu Ademir já são conhecidos; Duda, Caio e Lara acabaram de aparecer. Um lugar novo foi descoberto.
+
+### Decisões do Patrick nesta parte
+
+- Aceitou o vínculo Bia ↔ Theo proposto na parte 2 ("o ideal é que o círculo dela seja de alguma forma interligado quando fizer sentido").
+- Os NPCs e os lugares da tabela acima são **propostas minhas de cânone suave**: só viram cânone de fato se a Marina conviver com eles.
+
+### Testes
+
+`LivingCircleTests`, com 4 testes:
+1. O primeiro encontro cria o NPC e diz "Conheceu".
+2. Seis dias de encontro fazem o NPC entrar no cânone (`secondary` no 3º dia).
+3. O `/mundo` não expõe o assunto das conversas.
+4. A saída de sexta pode descobrir um lugar novo, não canônico.
+
+Suíte depois da parte 3: **557/558**. A única falha é a dívida conhecida. O teto de tamanho do `test_world_context` mede só a estrutura fixa: o bloco do dia social, que varia com a data, é isolado no teste.
+
+---
+
+# Auditoria #7 — Infraestrutura do banco: isolamento, conexões e migrations
+
+**Por que esta:** o Patrick autorizou unificar as migrations. Na #6 medi que cada resolução de estado custava ~165 ms, quase tudo em abertura de conexão SQLite. Com o mundo vivo rodando a cada mensagem, isso pesa.
+
+## Achado 7.1 🔴 — A suíte de testes gravava no banco de produção *(eu rodei assim a sessão inteira)*
+
+`db.py` cria um `db_manager` global na importação, apontando para `marin_memory.db`. O projeto tem um runner isolado (`tests/run_isolated.py`, que aponta `MARINA_DB_PATH` para um banco descartável), mas nada impedia o caminho direto. Eu rodei todas as suítes desta sessão com `python -m unittest discover -s tests`. Os testes que usam os singletons do bot gravaram na produção.
+
+Levantamento feito antes da limpeza, com backup em `backups/pre_test_pollution_cleanup_20260921_165631.db`:
+- **Intacto:** conversas (a última é real, 13:29), memórias, schema 19, emoções exceto a bateria.
+- **Poluído pelos testes da #6:**
+  - 2 saídas agendadas (café com a Júlia, bar com a Bia);
+  - o marco `social_day_start`, gravado às 15:54, quando deveria nascer no startup do bot;
+  - a bateria social (0,90 → 0,97) e o marco de contagem dela;
+  - 55 snapshots de `world_state` da tarde, com o bot desligado.
+
+Tudo foi removido ou restaurado.
+
+A auditoria #3 já tinha achado a mesma causa para o log (achado 3.6). Aquela correção isolou só o arquivo de log.
+
+**Correção:** `db._resolve_db_file()`. Sob teste (`python -m unittest` ou pytest) e sem `MARINA_DB_PATH` explícito, o banco global é um arquivo descartável na pasta temporária. `test_suite_nunca_usa_o_banco_de_producao` trava isso. A suíte seguinte foi verificada com hash MD5 do `marin_memory.db` antes e depois.
+
+**Descoberto no caminho:** importar `db.py` roda as migrations na produção. É assim por desenho (o bot migra no startup), mas qualquer script que importa `db` sem `MARINA_DB_PATH` também migra. Aconteceu nesta auditoria: um teste manual da migration 020 importou `db` e tentou aplicá-la na produção. Falhou antes de gravar (ver 7.4), e a verificação posterior confirmou schema 19, a coluna presente e a integridade ok.
+
+## Achado 7.2 🔴 — Uma conexão nova por consulta: meio segundo por mensagem
+
+`get_connection()` abria uma conexão por consulta e fechava no fim. Medição por etapa:
+
+| Etapa | Custo |
+|---|---|
+| abrir | 0,6 ms |
+| PRAGMAs | 0,05 ms |
+| **1ª consulta** | **4–5 ms** (o SQLite relê o schema inteiro: dezenas de tabelas, índices, FTS) |
+| fechar | 1,7–2,6 ms |
+| consulta numa conexão reaproveitada | **0,04 ms** |
+
+**Correção:** `_ReusedConnection`, uma conexão por thread mantida aberta, com commit/rollback no `__exit__` (mesma semântica do `with`), sem fechar.
+- Ligada no startup do bot (`memory_manager.db.enable_connection_reuse()`) e desligada por padrão: os testes criam bancos em pastas temporárias, e conexão aberta trava arquivo no Windows.
+- `close()` fecha todas.
+- Uma conexão reaproveitada que aparecer com transação pendurada leva rollback e warning: nunca deveria acontecer, porque todo uso no código é `with`, o que foi verificado.
+
+| Medida | Antes | Depois |
+|---|---|---|
+| Resolução de estado | 173 ms | **4 ms** |
+| Montagem do prompt (banco de produção copiado) | 588 ms | **38 ms** |
+
+## Achado 7.3 🟡 — Schema fora das migrations, rodando a cada startup
+
+Três remendos em `_run_migrations`, todos com `except: pass`:
+
+| Remendo | Situação |
+|---|---|
+| `ALTER TABLE fatos_patrick ADD COLUMN last_decay_at` | redundante: já está na migration 007 |
+| `DELETE` de resumos duplicados + `CREATE UNIQUE INDEX idx_resumos_intervalo` | redundante: está na 007. O `DELETE` varria a tabela a cada startup |
+| `ALTER TABLE reminders ADD COLUMN offer_message_id` | **não estava em migration nenhuma**: a coluna existia só por causa desse remendo |
+
+**Correção:** a migration `020_reminder_offer_message.sql` cria a coluna, e os três remendos saíram. O replay de ADD COLUMN duplicada ganhou a versão 20, porque bancos antigos já têm a coluna. O schema agora tem uma fonte só (`migrations/*.sql`), travada por `test_schema_tem_uma_fonte_so`.
+
+## Achado 7.4 🟡 — O replay de migration quebrava com `;` dentro de comentário *(bug meu, do Patch 032)*
+
+O replay divide o SQL em `;` e só depois remove comentários. Um `;` no meio de uma frase de comentário partia o texto, e o resto do comentário virava "statement" (`near "o": syntax error`). Apareceu na primeira versão da 020. Correção: os comentários saem **antes** da divisão.
+
+## Pendente registrado
+
+- `eventos_pendentes` id 2, "medico", tem como descrição a própria mensagem do Patrick ("A gente é né amor ksksksk…"). É uma extração ruim do planner, de uma conversa real às 12:37. Candidato para uma auditoria do planner e dos eventos.
+
+## Testes
+
+`tests/test_infra_audit7.py`, com 8 testes:
+- a suíte não usa o banco de produção;
+- a mesma thread reaproveita a conexão e faz commit;
+- uma exceção faz rollback;
+- threads diferentes têm conexões diferentes;
+- a transação em lote continua atômica;
+- o schema tem uma fonte só;
+- um banco novo tem a coluna da 020;
+- um banco antigo com a coluna avulsa migra sem erro.
+
+Atualizados de 19 para 20: `test_bootstrap_v36`, `test_social_world`, `test_world_repository`.
+
+### Testes que só passavam por causa do banco de produção
+
+Com a suíte isolada, 3 testes de `test_prompt_language_audit2` (meus, da Auditoria #2) quebraram: eles montavam o prompt pelo `context_builder` global, ou seja, com a World Bible e o estilo aprendido do banco real. Agora montam num banco temporário com o cânone semeado. O rótulo `[COMO O PATRICK ESCREVE]` saiu da lista de obrigatórios, porque só existe com estilo aprendido. A ausência da versão em inglês continua travada.
+
+Prova de isolamento: o MD5 do `marin_memory.db` é idêntico antes e depois da suíte completa (`f6684b66…`).
+
+## Achado 7.5 🟡 — O conteúdo de `[COMO O PATRICK ESCREVE]` seguia em inglês *(resto da Auditoria #2)*
+
+Na #2 traduzi o rótulo do bloco, mas não os campos gerados por `StyleEngine.get_learned_style_summary`: "Laugh pattern:", "Frequent emojis:", "Shared slang:", "Writing rhythm:". Achei isso ao conferir, no código, o item C1 do plano de voz. Os campos foram traduzidos (risada, emojis que ele mais usa, gírias em comum, ritmo de escrita) e travados por `LearnedStyleContentLanguageTests`.
+
+O `PLANO_VOZ_MARINA_V371.md` ganhou um painel de status (seção 0): cada fase foi conferida no código, com a lista do que foi entregue fora do plano e as pendências reais.
+
+Suíte final da #7: **565/566**, com o hash do banco de produção idêntico antes e depois.
