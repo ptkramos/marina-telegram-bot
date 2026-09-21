@@ -230,27 +230,29 @@ class StyleEngine:
         if self._has_observed_data("risada"):
             valor = estilo.get("risada", {}).get("valor", "")
             if valor:
-                parts.append(f"Laugh pattern: {valor}")
+                parts.append(f"risada: {valor}")
 
         # Emojis — only if actually observed
         if self._has_observed_data("emojis_favoritos"):
             valor = estilo.get("emojis_favoritos", {}).get("valor", "")
             if valor:
-                parts.append(f"Frequent emojis: {valor}")
+                parts.append(f"emojis que ele mais usa: {valor}")
 
         # Slang — only if actually observed
         if self._has_observed_data("girias"):
             valor = estilo.get("girias", {}).get("valor", "")
             if valor:
-                parts.append(f"Shared slang: {valor}")
+                parts.append(f"gírias em comum: {valor}")
 
         # Cadence — always observational by nature
         cadencia = estilo.get("cadencia", {}).get("valor", "")
         if cadencia:
-            parts.append(f"Writing rhythm: {cadencia}")
+            parts.append(f"ritmo de escrita: {cadencia}")
 
         if not parts:
             return ""
+        # Auditoria #7: a #2 traduziu só o rótulo do bloco ([COMO O PATRICK
+        # ESCREVE]); o conteúdo dos campos seguia em inglês.
         return "; ".join(parts)
 
     def get_style_prompt_injection(self) -> str:

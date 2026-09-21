@@ -36,7 +36,7 @@ class TestLivingWorldStorage(unittest.TestCase):
             self.assertTrue(expected <= actual)
             legacy_count = conn.execute("SELECT COUNT(*) FROM perfil").fetchone()[0]
             self.assertEqual(conn.execute("PRAGMA integrity_check").fetchone()[0], "ok")
-        self.assertEqual(self.db.get_schema_version(), 19)
+        self.assertEqual(self.db.get_schema_version(), 20)
         DatabaseManager(self.db.db_path)
         with self.db.get_connection() as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM perfil").fetchone()[0], legacy_count)

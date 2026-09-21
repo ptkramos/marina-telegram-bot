@@ -2391,6 +2391,16 @@ async def worlddebug_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=20.0))
 
 
+async def mundo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/mundo — o mundo vivo da Marina: círculo, conhecidos novos, lugares,
+    histórias e planos (Auditoria #6). Não mostra conteúdo de conversa."""
+    if not is_authorized(update):
+        return
+    from social_day import SocialDay
+    text = SocialDay(memory_manager.db).world_summary(datetime.now())
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=text[:3500])
+
+
 async def memory_hygiene_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /memoryhygiene para disparar manualmente o ciclo de manutenção da memória."""
     if not is_authorized(update):
@@ -3007,6 +3017,9 @@ async def process_incoming_batch(
         availability_budget_hint=availability_budget_hint,
     )
     messages[0]['content'] = apply_policy(messages[0]['content'], response_policy)
+    transition_hint = _maybe_announce_transition()
+    if transition_hint:
+        messages.append({"role": "system", "content": transition_hint})
     if plan and plan.get("should_offer_reminder"):
         event_desc = plan.get("event_details", {}).get("description") or "compromisso"
         messages.append({
@@ -3635,6 +3648,78 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
 # --- VONTADE PRÓPRIA & INICIATIVA ÍNTIMA (DIRECIONADA APENAS AO PATRICK) ---
 
+def _maybe_announce_transition(now: Optional[datetime] = None) -> Optional[str]:
+    """Auditoria #6: o aviso "vou levar o Milo, já volto" vivia em
+    `determine_proactive_prompt`, que não roda desde a 3.7.0 — e a proatividade
+    autônoma só dispara com o Patrick ocioso, então nunca poderia avisar no meio
+    de uma conversa. Resultado: com o filtro de conversa ativa, se o Patrick
+    estivesse conversando no horário do passeio ou da academia, ela
+    simplesmente não ia. Agora o aviso sai dentro da própria resposta."""
+    try:
+        now = now or datetime.now()
+        if proactivity_service._pending_transition(now):
+            return None
+        intent = proactivity_service._detect_transition_intent(now)
+        if not intent:
+            return None
+        from world_repository import WorldStateRepository
+        current = WorldStateRepository(memory_manager.db).latest()
+        if current and (current.get("activity") or "") == intent["activity"]:
+            return None  # já está lá
+        proactivity_service._register_transition(intent, now)
+        logger.info("TRANSITION_ANNOUNCED type=%s", intent["routine_type"])
+        return ("[AVISO DE SAÍDA — faça nesta resposta] Primeiro responda ao que o Patrick "
+                "disse. Depois, na mesma resposta: " + intent["instruction_hint"])
+    except Exception:
+        logger.exception("transition.announce.error")
+        return None
+
+
+_PROACTIVE_INSTRUCTIONS = {
+    'pending_event_followup': ("Você lembrou que o Patrick tinha este compromisso: '{detail}'. "
+                               "Mande uma mensagem curta perguntando como foi, com carinho, do seu jeito."),
+    'open_loop_checkin': ("Você lembrou de algo que o Patrick comentou: '{detail}'. "
+                          "Pergunte de leve se tem novidade, sem pressão."),
+    'shared_topic_callback': ("Você ficou pensando no assunto '{detail}' que vocês já conversaram. "
+                              "Retome com naturalidade, em uma ou duas frases."),
+    'social_day_share': ("Aconteceu agora no seu dia: {detail} Mande uma mensagem espontânea pro "
+                         "Patrick puxando esse assunto, do jeito que namorada conta as coisas. "
+                         "Fique no que está no fato: não invente acontecimento grave nem exponha "
+                         "intimidade da outra pessoa."),
+    'light_affection': ("Mande uma mensagem espontânea curta pro Patrick. Use só o que está no seu "
+                        "estado atual e no seu dia — um pensamento sobre o que você está fazendo, uma "
+                        "reação ao momento ou só carinho. Não invente acontecimento novo. Varie: não "
+                        "caia no 'oi amor, como você tá?'."),
+}
+
+
+def _proactive_text(reason: str, detail, fallback: str) -> str:
+    """Auditoria #6: a proatividade viva mandava só frases prontas (4 variações
+    de "oi amor"). O caminho que usava o LLM (`determine_proactive_prompt`) foi
+    desligado na 3.7.0 para ela não inventar eventos — correto na época, porque
+    o mundo dela não tinha eventos reais. Agora tem: o texto é gerado ancorado
+    no estado e no dia registrado, passa pelos mesmos guards das respostas e,
+    se falhar, cai na frase pronta de antes."""
+    template = _PROACTIVE_INSTRUCTIONS.get(reason, _PROACTIVE_INSTRUCTIONS['light_affection'])
+    instruction = ("[INICIATIVA SUA — o Patrick NÃO mandou mensagem; é você puxando conversa] "
+                   + template.format(detail=detail or ''))
+    for _ in range(2):
+        try:
+            text = limpar_fala_marina(generate_dynamic_speech(instruction, max_tokens=120) or '')
+        except Exception:
+            logger.exception('proactive.generate.error')
+            return fallback
+        if not text.strip():
+            continue
+        junk, _why = _needs_retry_for_junk(text)
+        if junk:
+            text = _salvage_reply(text) or ''
+            if not text.strip():
+                continue
+        return _strip_assistant_politeness(text) or fallback
+    return fallback
+
+
 async def autonomous_routine(application: Application):
     """Living World proactivity (v3.7.0)."""
     await autonomous_routine_v36(application)
@@ -3670,12 +3755,21 @@ async def autonomous_routine_v36(application: Application):
                 settings.TARGET_CHAT_ID, application.bot, [reply], db=memory_manager.db)
         else:
             detail = candidate.get('detail')
+            news = None
+            if reason == 'light_affection':
+                # Auditoria #6: com o dia social registrado, "nada pra contar"
+                # deixou de ser verdade — um acontecimento recente vira assunto.
+                from social_day import SocialDay
+                news = SocialDay(memory_manager.db).fresh_news(now)
+                if news:
+                    reason = 'social_day_share'
+                    detail = news['summary']
             if reason == 'pending_event_followup':
-                text = f"Amor, lembrei do seu compromisso: {detail}. Como foi?"
+                fallback = f"Amor, lembrei do seu compromisso: {detail}. Como foi?"
             elif reason == 'open_loop_checkin':
-                text = f"Amor, como estão as coisas com {detail}?"
+                fallback = f"Amor, como estão as coisas com {detail}?"
             elif reason == 'shared_topic_callback':
-                text = f"Fiquei pensando naquilo que a gente conversou sobre {detail}. Como você está vendo isso agora?"
+                fallback = f"Fiquei pensando naquilo que a gente conversou sobre {detail}. Como você está vendo isso agora?"
             else:
                 # A thought of Patrick is not evidence of a new world event.
                 options = (
@@ -3684,8 +3778,11 @@ async def autonomous_routine_v36(application: Application):
                     "Pensei em você agora. Como tá seu dia?",
                     "Amor, queria saber como você tá hoje.",
                 )
-                text = options[(now.toordinal() + now.hour // 4
-                                + proactivity_service.get_autonomous_count_today(now)) % len(options)]
+                fallback = options[(now.toordinal() + now.hour // 4
+                                    + proactivity_service.get_autonomous_count_today(now)) % len(options)]
+            text = await asyncio.to_thread(_proactive_text, reason, detail, fallback)
+            if news:
+                SocialDay(memory_manager.db).mark_shared(news['event_key'])
             sent = await application.bot.send_message(chat_id=settings.TARGET_CHAT_ID, text=text)
             if not isinstance(getattr(sent, 'message_id', None), int) or sent.message_id <= 0:
                 raise RuntimeError('Telegram did not confirm proactive message')
@@ -4010,6 +4107,7 @@ def main():
     app.add_handler(CommandHandler("cancelar_lembrete", cancelar_lembrete_command))
     app.add_handler(CommandHandler("memoryhygiene", memory_hygiene_command))
     app.add_handler(CommandHandler("worlddebug", worlddebug_command))
+    app.add_handler(CommandHandler("mundo", mundo_command))
     app.add_handler(CommandHandler("refletir", refletir_command))
     app.add_handler(CommandHandler("jogo", jogo_command))
     app.add_handler(CommandHandler("botafogo", jogo_command))
@@ -4045,6 +4143,9 @@ if __name__ == "__main__":
     _lock_path = Path(__file__).resolve().parent / "logs" / "marina.lock"
     try:
         with single_instance(_lock_path):
+            # Auditoria #7: conexão SQLite reaproveitada por thread (a 1ª
+            # consulta de cada conexão nova custa ~5 ms relendo o schema).
+            memory_manager.db.enable_connection_reuse()
             main()
     except RuntimeError as exc:
         # Mensagem amigável em vez de traceback: quem abre o .bat duas vezes

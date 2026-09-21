@@ -373,7 +373,9 @@ class ResponseAvailabilityPolicy:
             return 'GYM'
         if any(x in act for x in ('casting', 'ensaio', 'sessão de foto')):
             return 'CASTING'
-        if any(x in act for x in ('com amig', 'bar ', 'happy hour', 'balada')):
+        if any(x in act for x in ('com amig', 'bar ', 'happy hour', 'balada',
+                                  # Auditoria #6: saídas do dia social.
+                                  'saindo com', 'praia', 'rolê', 'café com')):
             return 'SOCIAL'
         if any(x in act for x in ('intervalo', 'tomando café', 'tomando cafe')):
             return 'SOCIAL'
@@ -386,7 +388,8 @@ class ResponseAvailabilityPolicy:
             return 'CASTING'
         if place_key == 'enseada_botafogo':
             return 'PET_WALK'
-        if place_key in ('quartinho_bar',):
+        if place_key in ('quartinho_bar', 'starbucks_shopping_gavea', 'copacabana_beach',
+                         'ipanema_beach', 'leblon_beach'):
             return 'SOCIAL'
         if place_key == 'marina_apartment' or 'casa' in text or 'apartamento' in text:
             return 'HOME_RELAXING'

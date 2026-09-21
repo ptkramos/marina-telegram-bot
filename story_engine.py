@@ -177,11 +177,18 @@ class StoryEngine:
         """None represents an ordinary day; no detailed event is invented."""
         context=context or {}
         budget=self.narrative_budget(now)
-        if budget['thirty_day_major_events'] or budget['seven_day_intensity']>=2 or budget['active_social_threads']>=2:
+        if budget['thirty_day_major_events'] or budget['seven_day_intensity']>=3 or budget['active_social_threads']>=2:
             return None
+        # Auditoria #6: uma única história aberta travava a vida inteira dela
+        # até alguém "observar" a continuação — que nunca vinha. Agora até duas,
+        # e nunca duas com a mesma pessoa.
+        hint=context.get('participant_hint')
         with self.db.get_connection() as c:
-            if c.execute("SELECT 1 FROM story_threads WHERE status='open' LIMIT 1").fetchone():
-                return None  # Consequences require an observed continuation, not a lottery.
+            open_meta=[json.loads(r[0] or '{}') for r in c.execute("SELECT metadata_json FROM story_threads WHERE status='open'")]
+        if len(open_meta)>=2:
+            return None
+        if hint and any(hint in m.get('participants',[]) for m in open_meta):
+            return None
         rng=self._rng(f'{now.date().isoformat()}:story-v1')
         cadence_threshold = getattr(settings, 'STORY_EVENT_CADENCE_THRESHOLD', 0.60)
         if rng.random() < cadence_threshold:
@@ -208,13 +215,19 @@ class StoryEngine:
             seed=self.select_seed(now,context=context)
             result={'date':day,'seed_key':seed.key if seed else None,'event_key':None}
             if seed:
-                result['event_key']=self._start(seed,now)
+                # Auditoria #6: quem disparou a história (a Bia que desabafou, a
+                # Helena que deu retorno) entra como participante — antes toda
+                # thread social era "com um contato conhecido" sem nome.
+                hint=(context or {}).get('participant_hint')
+                extra=(hint,) if hint and hint not in seed.participants and self.bible.get_character(hint) else ()
+                result['event_key']=self._start(seed,now,extra_participants=extra)
             with self.db.get_connection() as c:
                 c.execute('INSERT INTO world_bootstrap VALUES (?,?,?)',(key,json.dumps(result),now.isoformat()))
             return result
 
-    def _start(self,seed,now):
+    def _start(self,seed,now,extra_participants=()):
         self.validator.validate_seed(seed)
+        participants=tuple(seed.participants)+tuple(extra_participants)
         thread_key=f'{seed.key}:{now.date().isoformat()}'
         event_key=f'{thread_key}:start'
         place=self.bible.get_place(seed.place_key) if seed.place_key else None
@@ -222,12 +235,12 @@ class StoryEngine:
             thread_id=c.execute('''INSERT INTO story_threads(thread_key,thread_type,title,summary,status,importance,
                 started_at,last_event_at,metadata_json) VALUES (?,?,?,?,?,?,?,?,?)''',
                 (thread_key,seed.thread_type,seed.title,seed.summary,'open',seed.importance,
-                 now.isoformat(),now.isoformat(),json.dumps({'seed_key':seed.key}))).lastrowid
+                 now.isoformat(),now.isoformat(),json.dumps({'seed_key':seed.key,'participants':list(participants)}))).lastrowid
             c.execute('''INSERT INTO life_events(event_key,event_at,event_type,title,summary,source_type,
                 autonomy_level,importance,location_place_id,participants_json,thread_id,share_worthy,created_at)
                 VALUES (?,?,?,?,?,'simulated',?,?,?,?,?,0,?)''',
                 (event_key,now.isoformat(),seed.key,seed.title,seed.summary,seed.autonomy_level,
-                 seed.importance,place['id'] if place else None,json.dumps(seed.participants),thread_id,now.isoformat()))
+                 seed.importance,place['id'] if place else None,json.dumps(participants),thread_id,now.isoformat()))
         return event_key
 
     def continue_thread(self, thread_key, *, evidence_key, occurred_at, summary, participants=(), resolved=False):

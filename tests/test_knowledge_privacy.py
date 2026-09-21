@@ -39,7 +39,7 @@ class TestKnowledgePrivacy(unittest.TestCase):
         self.assertEqual(decision.level, 'WITHHOLD')
         self.assertFalse(decision.recipient_already_knows)
         prompt = self.knowledge.prompt_constraint('fact', 1)
-        self.assertIn('Do not reveal, confirm, or deny', prompt)
+        self.assertIn('Não revele, não confirme e não negue', prompt)
         self.assertNotIn('bia_andrade', prompt)
         with self.assertRaises(PermissionError):
             self.knowledge.record_confirmed_share('fact', 1, 'marina', 'patrick_ramos',
@@ -66,10 +66,10 @@ class TestKnowledgePrivacy(unittest.TestCase):
         self.knowledge.grant('fact', 1, 'marina', 'patrick_ramos', authorized_by='bia_andrade')
         self.assertEqual(self.knowledge.decision('fact', 1, 'marina', 'patrick_ramos').level,
                          'DETAILS')
-        self.assertIn('has not been told', self.knowledge.prompt_constraint('fact', 1))
+        self.assertIn('ele ainda não sabe', self.knowledge.prompt_constraint('fact', 1))
         self.knowledge.record_confirmed_share('fact', 1, 'marina', 'patrick_ramos',
                                               detail_level='details', evidence_key='detail-share')
-        self.assertIn('already knows', self.knowledge.prompt_constraint('fact', 1))
+        self.assertIn('ele já sabe', self.knowledge.prompt_constraint('fact', 1))
         self.knowledge.revoke_grant('fact', 1, 'marina', 'patrick_ramos',
                                     authorized_by='bia_andrade')
         self.assertEqual(self.knowledge.decision('fact', 1, 'marina', 'patrick_ramos').level,

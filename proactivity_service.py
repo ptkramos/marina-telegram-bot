@@ -493,7 +493,8 @@ class ProactivityService:
             if affection is not None and affection >= 0.7:
                 lines.append("Seu carinho por ele está alto agora.")
             if social is not None and social < 0.4:
-                lines.append("Sua bateria social está baixa — tom pode ser mais quieto e íntimo.")
+                lines.append("Sua bateria social está baixa (cansada de gente, não dele) — "
+                             "tom mais quieto, caseiro e íntimo.")
             elif social is not None and social >= 0.7:
                 lines.append("Sua bateria social está cheia — tom mais expansivo e brincalhão cabe.")
         except Exception:
@@ -520,8 +521,8 @@ class ProactivityService:
         if topic:
             self.db.set_estado_relacional("last_autonomous_topic", topic)
 
-        # Aplica decay gradual suave nas emoções (5% em direção ao baseline)
-        self.db.aplicar_decay_emocional(taxa=0.05)
+        # Auditoria #5: o retorno ao baseline agora é pelo tempo, na leitura
+        # (db.get_estado_emocional). Não depende mais de ela mandar mensagem.
 
 
 proactivity_service = ProactivityService()

@@ -383,7 +383,8 @@ Responda ESTRITAMENTE neste formato JSON (preserve exatamente os valores de enum
     "affection": 0.0,
     "playfulness": 0.0,
     "energy": 0.0,
-    "romantic_intensity": 0.0
+    "romantic_intensity": 0.0,
+    "social_battery": 0.0
   }
 }
 
@@ -391,7 +392,7 @@ REGRAS DURAS:
 1. creates_event=true apenas para compromissos FUTUROS reais.
 2. Ofereça lembrete apenas para eventos concretos com horário definido a pelo menos 45 minutos no futuro; direct_reminder somente quando ele pedir explicitamente, sem negação.
 3. Open loops servem para assuntos inacabados que não têm alarme marcado.
-4. emotional_deltas sutis, no intervalo [-0.05, +0.05].
+4. emotional_deltas sutis, no intervalo [-0.05, +0.05]. social_battery é energia pra GENTE, não pro Patrick: conversa leve, carinhosa ou divertida com ele recarrega um pouco (+0.01 a +0.03); conversa pesada (briga, DR, cobrança, problema sério) gasta um pouco (-0.01 a -0.03). NUNCA mexa nela pelo tamanho da conversa.
 5. reaction_emoji deve ser um emoji comum do Telegram, ou null.
 6. TODOS os campos de texto (response_goal, description, content, topics, follow_up_prompt, shared_topic) precisam estar em português brasileiro natural — NUNCA em inglês.
 7. NUNCA marque should_offer_reminder=true para eventos próximos (menos de 45 minutos a partir de agora).
@@ -754,6 +755,8 @@ class InternalPlanner:
         # 5. Aplica deltas emocionais com clamp automático
         deltas = plan.get("emotional_deltas", {})
         if deltas and isinstance(deltas, dict):
+            # Auditoria #5: sem este log não havia como medir o viés dos deltas.
+            logger.info("EMOTIONAL_DELTAS %s", json.dumps(deltas, ensure_ascii=False))
             for emotion, delta in deltas.items():
                 if delta != 0.0:
                     try:

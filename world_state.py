@@ -66,9 +66,19 @@ def current_energy(db: DatabaseManager) -> float:
     então a vontade de ir à academia divergia entre prompt e disponibilidade."""
     try:
         emotional = db.get_estado_emocional()
-        return max(0.0, min(1.0, float(emotional.get("energy", {}).get("valor", 0.7))))
+        value = float(emotional.get("energy", {}).get("valor", 0.7))
     except Exception:
         return 0.7
+    # Auditoria #5: o prompt já multiplicava pela fase do ciclo ("energia:
+    # baixa" na menstrual), mas a rotina usava o valor cru — ela dizia estar
+    # sem energia e ia à academia. Mesma conta nos dois lados agora.
+    try:
+        from cycle import MenstrualCycleManager
+        multipliers = MenstrualCycleManager(db.get_data_inicio_ciclo()).get_emotional_multipliers() or {}
+        value *= float(multipliers.get("energy", 1.0))
+    except Exception:
+        pass
+    return max(0.0, min(1.0, value))
 
 @dataclass(frozen=True)
 class RoutineCandidate:
@@ -132,6 +142,11 @@ class RoutineEngine:
     def __init__(self, db: DatabaseManager, rng: Optional[random.Random] = None):
         self.db = db
         self.rng = rng or random.Random()
+        # Cache por instância (um resolve/uma consulta): a agenda consulta as
+        # mesmas linhas várias vezes e cada consulta abre uma conexão SQLite.
+        self._row_cache: dict = {}
+        self._busy_cache: dict = {}
+        self._hours_cache: dict = {}
 
     @staticmethod
     def _within_window(now: datetime, start: Optional[str], end: Optional[str]) -> bool:
@@ -158,11 +173,13 @@ class RoutineEngine:
         """Consulta `world_places.usage_rules_json['opening_hours']` do local."""
         if not place_key:
             return None
-        with self.db.get_connection() as conn:
-            row = conn.execute(
-                "SELECT usage_rules_json FROM world_places WHERE canonical_key = ?",
-                (place_key,),
-            ).fetchone()
+        if place_key not in self._hours_cache:
+            with self.db.get_connection() as conn:
+                self._hours_cache[place_key] = conn.execute(
+                    "SELECT usage_rules_json FROM world_places WHERE canonical_key = ?",
+                    (place_key,),
+                ).fetchone()
+        row = self._hours_cache[place_key]
         if not row or not row["usage_rules_json"]:
             return None
         try:
@@ -259,10 +276,12 @@ class RoutineEngine:
     # ------------------------------------------------------------------
     def _routine_row(self, source_key: str) -> Optional[Mapping]:
         key = source_key.split(":", 1)[0]
-        with self.db.get_connection() as conn:
-            return conn.execute(
-                "SELECT * FROM routine_patterns WHERE canonical_key = ?", (key,)
-            ).fetchone()
+        if key not in self._row_cache:
+            with self.db.get_connection() as conn:
+                self._row_cache[key] = conn.execute(
+                    "SELECT * FROM routine_patterns WHERE canonical_key = ?", (key,)
+                ).fetchone()
+        return self._row_cache[key]
 
     @staticmethod
     def happens_on(day, row: Mapping) -> bool:
@@ -277,14 +296,18 @@ class RoutineEngine:
 
     def _class_busy(self, day) -> Optional[tuple[datetime, datetime]]:
         """Intervalo ocupado pela faculdade, com arrumação/ida e volta pra casa."""
+        if day in self._busy_cache:
+            return self._busy_cache[day]
         from academic_life import AcademicLife
         blocks = AcademicLife(self.db).blocks_on(day)
         if not blocks:
+            self._busy_cache[day] = None
             return None
         first = min(datetime.fromisoformat(b["start_at"]) for b in blocks)
         last = max(datetime.fromisoformat(b["end_at"]) for b in blocks)
-        return (first - timedelta(minutes=CLASS_PREP_MINUTES),
-                last + timedelta(minutes=CLASS_COMMUTE_BACK_MINUTES))
+        self._busy_cache[day] = (first - timedelta(minutes=CLASS_PREP_MINUTES),
+                                 last + timedelta(minutes=CLASS_COMMUTE_BACK_MINUTES))
+        return self._busy_cache[day]
 
     def _placement(self, day, row, routine_type: str, has_class: Optional[bool]):
         """Onde o slot cai no dia (sem considerar vontade). None = não cabe."""
@@ -301,9 +324,14 @@ class RoutineEngine:
         if start_t >= end_t:
             return None  # janela cruzando a meia-noite não tem slot fixo
         free = [(datetime.combine(day, start_t), datetime.combine(day, end_t))]
-        if busy:
-            lo, hi = free[0]
-            free = [(lo, min(hi, busy[0])), (max(lo, busy[1]), hi)]
+        blocked = [busy] if busy else []
+        # Auditoria #6 (bug da #4): em dia sem aula ela dorme até 08:29 e o
+        # passeio podia cair às 07:05 — o sono vencia no pick() e o Milo não
+        # saía. O slot agora nunca invade a janela de sono do próprio dia.
+        blocked += self._sleep_windows(day, has_class if has_class is not None else busy is not None)
+        for b_start, b_end in blocked:
+            free = [piece for lo, hi in free
+                    for piece in ((lo, min(hi, b_start)), (max(lo, b_end), hi)) if piece[0] < piece[1]]
         rng = random.Random(f"marina-agenda:{day.isoformat()}:{row['canonical_key']}")
         minutes = rng.randint(*duration)
         fits = [(a, b) for a, b in free if (b - a).total_seconds() // 60 >= minutes]
@@ -316,6 +344,24 @@ class RoutineEngine:
         if routine_type == "pet_walk":
             slot = self._avoid_gym(day, slot, has_class, window_end)
         return slot
+
+    def _sleep_windows(self, day, has_class: bool) -> list[tuple[datetime, datetime]]:
+        with self.db.get_connection() as conn:
+            rows = conn.execute(
+                "SELECT window_start, window_end, day_scope FROM routine_patterns "
+                "WHERE character_key='marina' AND routine_type='sleep' AND active=1").fetchall()
+        moment = datetime.combine(day, time(12, 0))
+        result = []
+        for row in rows:
+            if not row["window_start"] or not row["window_end"]:
+                continue
+            if not self._day_applies(row["day_scope"], moment, has_class):
+                continue
+            start_t, end_t = _parse_hhmm(row["window_start"]), _parse_hhmm(row["window_end"])
+            if start_t < end_t:
+                result.append((datetime.combine(day, start_t),
+                               datetime.combine(day, end_t) + timedelta(minutes=1)))
+        return result
 
     def _avoid_gym(self, day, slot, has_class, limit):
         """Passeio e academia no mesmo dia não se sobrepõem."""
@@ -526,6 +572,16 @@ class WorldStateManager:
         calendar = CalendarWorld(self.db)
         academic = AcademicLife(self.db)
         academic.catch_up(now, auto_generate=True)
+        try:
+            from social_battery import accrue
+            accrue(self.db, now)
+        except Exception:
+            logger.exception("social_battery.accrue.error")
+        try:
+            from social_day import SocialDay
+            SocialDay(self.db).materialize(now)
+        except Exception:
+            logger.exception("social_day.materialize.error")
         if has_class is None:
             has_class = bool(academic.blocks_on(now.date()))
         if confirmed_commitment is None:

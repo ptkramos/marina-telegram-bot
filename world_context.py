@@ -77,7 +77,8 @@ class WorldContextBuilder:
         certainty = certainty_map.get(reason, "inferência de rotina (probabilística)")
         binding = reason in ("confirmed_commitment", "explicit_plan", "announced_transition")
         if (True
-                and source.get('calendar_event_id') and location != 'Apartamento da Marina'):
+                and source.get('calendar_event_id') and location != 'Apartamento da Marina'
+                and not self._is_social_outing(source.get('calendar_event_id'))):
             location = 'local reservado'
 
         control = CONTROL_EN if control_language == "en" else CONTROL_PT
@@ -199,6 +200,14 @@ class WorldContextBuilder:
         emotional = self._emotional_context()
         if emotional:
             blocks.extend(["[SEU ESTADO EMOCIONAL INTERNO ATUAL]", *emotional])
+            social = self.db.get_estado_emocional().get('social_battery', {}).get('valor')
+            if social is not None and social < 0.40:
+                # Auditoria #5: bateria baixa = cansada de GENTE, nunca do Patrick.
+                blocks.append(
+                    "Sua bateria social está baixa: o dia te cansou de gente e de agito. "
+                    "Isso NÃO é cansaço do Patrick — com ele você fica mais caseira, "
+                    "dengosa e quietinha, querendo sossego e colo; o que falta é pique "
+                    "pra sair ou encontrar outras pessoas.")
 
         active_loops = self.db.get_open_loops_ativos(
             limit=getattr(settings, 'MAX_ACTIVE_OPEN_LOOPS_CONTEXT', 2))
@@ -218,9 +227,10 @@ class WorldContextBuilder:
         preferences = self._compact_preferences()
         if preferences:
             blocks += ["[GOSTOS CANÔNICOS RELEVANTES]", ", ".join(preferences) + "."]
-        social = self._social_context(user_message)
+        social = self._social_context(user_message, now)
         if social:
             blocks += ["[RELAÇÕES CANÔNICAS RELEVANTES — não implica compartilhar intimidades]", *social]
+        blocks += self._social_day_block(now)
         if True:
             from relationship_world import RelationshipWorld
 
@@ -380,6 +390,13 @@ class WorldContextBuilder:
 
         return "\n".join(blocks)
 
+    def _is_social_outing(self, event_id) -> bool:
+        """Saída do dia social (Auditoria #6): o lugar não é privado — a
+        própria atividade já diz "no Quartinho Bar"."""
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT source_key FROM eventos_pendentes WHERE id=?", (event_id,)).fetchone()
+        return bool(row and (row["source_key"] or "").startswith("outing:"))
+
     def _energy(self) -> float:
         from world_state import current_energy
         return current_energy(self.db)
@@ -391,9 +408,10 @@ class WorldContextBuilder:
             multipliers = self.cycle_mgr.get_emotional_multipliers() or {}
         labels = {
             'affection': 'carinho e afeto',
+            'playfulness': 'vontade de brincar e provocar',
             'energy': 'energia e disposição',
             'romantic_intensity': 'paixão e intensidade romântica',
-            'social_battery': 'bateria social para conversar',
+            'social_battery': 'bateria social (pique pra gente e pra agito — não pro Patrick)',
         }
         lines = []
         for key, data in emotional.items():
@@ -413,16 +431,74 @@ class WorldContextBuilder:
             lines.append(f"- {labels.get(key, key)}: {level}")
         return lines
 
-    def _social_context(self, message: str) -> list[str]:
+    def _social_context(self, message: str, now: Optional[datetime] = None) -> list[str]:
         import re
         from social_world import SocialWorld
+        from social_day import SocialDay
         words = set(re.findall(r'\w+', message.casefold()))
         result = []
+        day = SocialDay(self.db)
         for person in SocialWorld(self.db).graph():
             aliases = set(re.findall(r'\w+', person['display_name'].casefold()))
-            if person['canon_locked'] and words & aliases:
-                result.append(f"{person['display_name']}: {person['relationship_type']}; região: {person['home_region'] or 'não definida'}.")
+            if words & aliases:
+                # Auditoria #6: conhecidos novos (não canônicos) também aparecem
+                # quando o Patrick cita o nome — com o "quem é" deles.
+                from social_day import NPC_INDEX
+                kind = (NPC_INDEX[person['character_key']][3] + ' (conhecido(a) recente)'
+                        if not person['canon_locked'] and person['character_key'] in NPC_INDEX
+                        else person['relationship_type'])
+                if not person['canon_locked'] and person['character_key'] not in NPC_INDEX:
+                    continue
+                line = f"{person['display_name']}: {kind}; região: {person['home_region'] or 'não definida'}."
+                # Auditoria #6: "falou com a Bia?" agora tem resposta registrada.
+                last = day.last_contact(person['character_key'], now or datetime.now())
+                if last:
+                    quando = datetime.fromisoformat(last['event_at'])
+                    line += f" Último contato: {self._quando(quando, now or datetime.now())} — {last['summary']}"
+                else:
+                    line += " Sem contato registrado recentemente."
+                ties = day.ties_of(person['character_key'])
+                if ties:
+                    line += " Conhece: " + "; ".join(ties) + "."
+                result.append(line)
         return result[:3]
+
+    @staticmethod
+    def _quando(moment: datetime, now: datetime) -> str:
+        dias = (now.date() - moment.date()).days
+        hora = moment.strftime('%H:%M')
+        if dias == 0:
+            return f"hoje às {hora}"
+        if dias == 1:
+            return f"ontem às {hora}"
+        return f"há {dias} dias"
+
+    def _social_day_block(self, now: datetime) -> list[str]:
+        """Auditoria #6: o que aconteceu de verdade no dia social dela."""
+        from social_day import SocialDay
+        day = SocialDay(self.db)
+        contatos = day.today_so_far(now)
+        historias = day.open_stories()
+        planos = day.upcoming_outings(now)
+        if not contatos and not historias and not planos:
+            return []
+        lines = ["[SEU DIA ATÉ AGORA — aconteceu de verdade]"]
+        lines += [f"- {datetime.fromisoformat(c['event_at']).strftime('%H:%M')} — {c['summary']}"
+                  + (" (" + SocialDay.SECRET_NOTE + ")" if c.get('secret') else '') for c in contatos]
+        for h in historias:
+            desde = self._quando(datetime.fromisoformat(h['started_at']), now)
+            lines.append(f"- Assunto em andamento (desde {desde}): {h['title']} — {h['summary']}")
+        dias = ('segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo')
+        for p in planos:
+            quando = datetime.fromisoformat(p['event_at'])
+            dia = 'hoje' if quando.date() == now.date() else (
+                'amanhã' if (quando.date() - now.date()).days == 1 else dias[quando.weekday()])
+            lines.append(f"- Plano combinado: {p['description']} ({dia}, {quando.strftime('%H:%M')})")
+        lines.append(
+            "Use isto só quando vier ao caso ou se o Patrick perguntar — não despeje a "
+            "agenda. Detalhes finos você completa com naturalidade, mas não contradiga "
+            "estes fatos nem invente outro encontro ou conversa com essas pessoas hoje.")
+        return lines
 
     def _location_name(self, place_id: Optional[int]) -> Optional[str]:
         if place_id is None:

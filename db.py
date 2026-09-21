@@ -13,8 +13,9 @@ import sqlite3
 import json
 import logging
 import os
+import sys
 from contextlib import closing, contextmanager
-from threading import local
+from threading import Lock, local
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Optional, Union
@@ -22,7 +23,31 @@ from typing import Optional, Union
 logger = logging.getLogger("MarinaDB")
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_FILE = Path(os.environ["MARINA_DB_PATH"]).expanduser().resolve() if os.environ.get("MARINA_DB_PATH") else BASE_DIR / "marin_memory.db"
+
+
+def _running_under_tests() -> bool:
+    argv0 = sys.argv[0] if sys.argv else ""
+    return "unittest" in argv0 or "pytest" in sys.modules
+
+
+def _resolve_db_file() -> Path:
+    """Auditoria #7: `python -m unittest discover` importava o `db_manager`
+    global apontando para o banco REAL — as migrations rodavam na produção e os
+    testes que usam os singletons do bot gravavam nela (saídas agendadas,
+    bateria social, snapshots de estado). O runner isolado
+    (`tests/run_isolated.py`) existia, mas nada impedia o caminho direto.
+    Agora, sob teste e sem MARINA_DB_PATH explícito, o banco é descartável."""
+    if os.environ.get("MARINA_DB_PATH"):
+        return Path(os.environ["MARINA_DB_PATH"]).expanduser().resolve()
+    if _running_under_tests():
+        import tempfile
+        path = Path(tempfile.gettempdir()) / f"marina_test_global_{os.getpid()}.db"
+        logger.warning("db.test_mode — banco global descartável em %s", path)
+        return path
+    return BASE_DIR / "marin_memory.db"
+
+
+DB_FILE = _resolve_db_file()
 MIGRATIONS_DIR = BASE_DIR / "migrations"
 
 class _ManagedConnection:
@@ -42,6 +67,27 @@ class _ManagedConnection:
                 self._conn.close()
             except Exception:
                 pass
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
+class _ReusedConnection:
+    """Conexão reaproveitada da thread: commit/rollback no __exit__, sem fechar.
+
+    Auditoria #7: a primeira consulta de cada conexão nova custa 4–5 ms porque
+    o SQLite relê o schema inteiro; numa conexão reaproveitada a mesma consulta
+    custa ~0,04 ms. Abrir uma conexão por consulta fazia o bot pagar isso
+    centenas de vezes por mensagem.
+    """
+    def __init__(self, conn: sqlite3.Connection):
+        self._conn = conn
+
+    def __enter__(self):
+        return self._conn.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self._conn.__exit__(exc_type, exc_val, exc_tb)
 
     def __getattr__(self, name):
         return getattr(self._conn, name)
@@ -74,17 +120,55 @@ class DatabaseManager:
     def __init__(self, db_path: Path = DB_FILE):
         self.db_path = db_path
         self._transaction_state = local()
+        # Auditoria #7: reaproveitamento de conexão por thread. Desligado por
+        # padrão (testes criam bancos em pastas temporárias, e conexão aberta
+        # trava o arquivo no Windows); o bot liga no startup.
+        self._reuse = False
+        self._thread_conn = local()
+        self._open_conns: list[sqlite3.Connection] = []
+        self._open_conns_lock = Lock()
         self._init_db()
+
+    def _open(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.db_path, timeout=5.0)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA busy_timeout=5000;")
+        conn.execute("PRAGMA foreign_keys=ON;")
+        return conn
+
+    def enable_connection_reuse(self) -> None:
+        """Uma conexão por thread, mantida aberta durante a vida do processo."""
+        self._reuse = True
+
+    def close(self) -> None:
+        """Fecha todas as conexões reaproveitadas (todas as threads)."""
+        with self._open_conns_lock:
+            conns, self._open_conns = self._open_conns, []
+        for conn in conns:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        self._thread_conn = local()
 
     def get_connection(self):
         active = getattr(self._transaction_state, "connection", None)
         if active is not None:
             return active
-        conn = sqlite3.connect(self.db_path, timeout=5.0)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA busy_timeout=5000;")
-        conn.execute("PRAGMA foreign_keys=ON;")
-        return _ManagedConnection(conn)
+        if not self._reuse:
+            return _ManagedConnection(self._open())
+        conn = getattr(self._thread_conn, "conn", None)
+        if conn is None:
+            conn = self._open()
+            self._thread_conn.conn = conn
+            with self._open_conns_lock:
+                self._open_conns.append(conn)
+        elif conn.in_transaction:
+            # Nunca deveria acontecer (todo uso é `with`, que faz commit), mas
+            # uma escrita esquecida aberta travaria o banco para as outras threads.
+            logger.warning("db.reused_connection.dangling_transaction — rollback")
+            conn.rollback()
+        return _ReusedConnection(conn)
 
     @contextmanager
     def transaction(self):
@@ -166,15 +250,20 @@ class DatabaseManager:
                                 'metadata_json',
                             }),
                             18: ('conversas', {'model'}),
+                            # Auditoria #7: a coluna existia só pelo ALTER avulso
+                            # do startup; bancos antigos já a têm.
+                            20: ('reminders', {'offer_message_id'}),
                         }
                         target = replayable.get(version_num)
                         if target is None or "duplicate column name" not in str(e).lower():
                             raise
                         table_name, known_columns = target
                         expected_alter = ['alter', 'table', table_name, 'add', 'column']
-                        for fragment in sql_content.split(";"):
-                            statement = '\n'.join(line for line in fragment.splitlines()
-                                                  if not line.lstrip().startswith('--')).strip()
+                        # Comentários saem ANTES de dividir em ';' — um ';' dentro
+                        # de comentário quebrava o statement (Auditoria #7).
+                        code_only = '\n'.join(line.split('--', 1)[0] for line in sql_content.splitlines())
+                        for fragment in code_only.split(";"):
+                            statement = fragment.strip()
                             if not statement:
                                 continue
                             try:
@@ -200,34 +289,11 @@ class DatabaseManager:
                     conn.commit()
                     logger.info(f"Migration {version_num} aplicada com sucesso.")
 
-            # Garante colunas de robustez mesmo se migrations já foram executadas
-            try:
-                cursor.execute("ALTER TABLE fatos_patrick ADD COLUMN last_decay_at TEXT;")
-                conn.commit()
-            except Exception:
-                pass
-            try:
-                cursor.execute("ALTER TABLE reminders ADD COLUMN offer_message_id INTEGER;")
-                conn.commit()
-            except Exception:
-                pass
-            try:
-                cursor.execute("""
-                DELETE FROM resumos_conversa
-                WHERE id NOT IN (
-                    SELECT MIN(id)
-                    FROM resumos_conversa
-                    GROUP BY start_conversation_id, end_conversation_id
-                ) AND start_conversation_id IS NOT NULL AND end_conversation_id IS NOT NULL;
-                """)
-                cursor.execute("""
-                CREATE UNIQUE INDEX IF NOT EXISTS idx_resumos_intervalo
-                ON resumos_conversa(start_conversation_id, end_conversation_id)
-                WHERE start_conversation_id IS NOT NULL AND end_conversation_id IS NOT NULL;
-                """)
-                conn.commit()
-            except Exception as e:
-                logger.warning(f"Erro ao verificar/criar idx_resumos_intervalo: {e}")
+            # Auditoria #7: aqui ficavam três remendos que rodavam a cada startup
+            # engolindo qualquer erro — `last_decay_at` e `idx_resumos_intervalo`
+            # (redundantes: já estão na migration 007, que inclusive faz a
+            # deduplicação) e `reminders.offer_message_id` (agora migration 020).
+            # O schema tem uma fonte só: migrations/*.sql.
 
     def get_schema_version(self) -> int:
         """Retorna a versão mais recente do schema aplicada no banco."""
@@ -1876,28 +1942,62 @@ class DatabaseManager:
 
     # --- MÉTODOS DE ESTADO EMOCIONAL COM CLAMP & DECAY ---
 
-    def get_estado_emocional(self) -> dict[str, dict]:
+    # Auditoria #5: a emoção só voltava ao baseline quando a Marina mandava
+    # mensagem espontânea (aplicar_decay_emocional no proactivity). Em 20–21/09
+    # ela não mandou nenhuma, e 56 turnos de deltas quase sempre positivos
+    # travaram carinho, brincadeira e intensidade em 1,0. Agora a emoção relaxa
+    # com o TEMPO (meia-vida EMOTION_HALF_LIFE_HOURS), calculado na leitura,
+    # e empurrar perto do teto/piso rende cada vez menos.
+    EMOTION_HALF_LIFE_HOURS = 6.0
+    EMOTION_SOFT_EDGE = 0.30
+    # Bateria social não relaxa pelo relógio: gasta/recarrega pela agenda
+    # (social_battery.accrue) e pelo tipo de conversa com o Patrick.
+    EMOTIONS_WITHOUT_TIME_RELAX = frozenset({"social_battery"})
+
+    @classmethod
+    def _relaxar(cls, valor: float, baseline: float, updated_at: Optional[str],
+                 now: Optional[datetime] = None, chave: Optional[str] = None) -> float:
+        if not updated_at or chave in cls.EMOTIONS_WITHOUT_TIME_RELAX:
+            return valor
+        try:
+            desde = datetime.fromisoformat(updated_at)
+        except (TypeError, ValueError):
+            return valor
+        horas = max(0.0, ((now or datetime.now()) - desde).total_seconds() / 3600.0)
+        fator = 0.5 ** (horas / cls.EMOTION_HALF_LIFE_HOURS)
+        return baseline + (valor - baseline) * fator
+
+    def get_estado_emocional(self, now: Optional[datetime] = None) -> dict[str, dict]:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT chave, valor, baseline, updated_at FROM estado_emocional")
             return {
                 r["chave"]: {
-                    "valor": float(r["valor"]),
+                    "valor": round(self._relaxar(float(r["valor"]), float(r["baseline"]),
+                                                 r["updated_at"], now, r["chave"]), 3),
                     "baseline": float(r["baseline"]),
                     "updated_at": r["updated_at"]
                 }
                 for r in cursor.fetchall()
             }
 
-    def ajustar_emocao(self, chave: str, delta: float):
-        """Ajusta uma dimensão emocional com limite rigoroso entre 0.0 e 1.0 (clamp)."""
-        now_iso = datetime.now().isoformat()
+    def ajustar_emocao(self, chave: str, delta: float, now: Optional[datetime] = None,
+                       *, soft_edges: bool = True):
+        """Ajusta uma dimensão emocional: relaxa pelo tempo, aplica o delta com
+        retorno decrescente perto das bordas e grava com clamp em [0, 1]."""
+        now = now or datetime.now()
+        now_iso = now.isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT valor, baseline FROM estado_emocional WHERE chave = ?", (chave,))
+            cursor.execute("SELECT valor, baseline, updated_at FROM estado_emocional WHERE chave = ?", (chave,))
             row = cursor.fetchone()
             if row:
-                novo_valor = max(0.0, min(1.0, float(row["valor"]) + delta))
+                atual = self._relaxar(float(row["valor"]), float(row["baseline"]),
+                                      row["updated_at"], now, chave)
+                folga = (1.0 - atual) if delta > 0 else atual
+                efetivo = (delta * min(1.0, max(0.0, folga) / self.EMOTION_SOFT_EDGE)
+                           if soft_edges else delta)
+                novo_valor = max(0.0, min(1.0, atual + efetivo))
                 cursor.execute(
                     "UPDATE estado_emocional SET valor = ?, updated_at = ? WHERE chave = ?",
                     (round(novo_valor, 3), now_iso, chave)
@@ -1915,11 +2015,15 @@ class DatabaseManager:
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT chave, valor, baseline FROM estado_emocional")
+            cursor.execute("SELECT chave, valor, baseline, updated_at FROM estado_emocional")
             rows = cursor.fetchall()
             for r in rows:
-                val = float(r["valor"])
                 base = float(r["baseline"])
+                # Parte do valor já relaxado pelo tempo; gravar o bruto com
+                # updated_at=agora desfaria o relaxamento acumulado.
+                if r["chave"] in self.EMOTIONS_WITHOUT_TIME_RELAX:
+                    continue
+                val = self._relaxar(float(r["valor"]), base, r["updated_at"], chave=r["chave"])
                 novo_val = max(0.0, min(1.0, val + (base - val) * taxa))
                 cursor.execute(
                     "UPDATE estado_emocional SET valor = ?, updated_at = ? WHERE chave = ?",

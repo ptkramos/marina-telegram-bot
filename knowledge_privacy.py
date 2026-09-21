@@ -321,14 +321,17 @@ class KnowledgePrivacy:
     def prompt_constraint(self, subject_type: str, subject_id: int,
                           *, recipient: str = 'patrick_ramos') -> str:
         """Return policy only; never include source wording, identity chain or secret text."""
+        # Auditoria #6: resto da Auditoria #2 — ia em inglês para o prompt.
         decision = self.decision(subject_type, subject_id, 'marina', recipient)
-        prefix = '[VERIFIED KNOWLEDGE POLICY] '
+        prefix = '[POLÍTICA DE CONHECIMENTO VERIFICADO] '
         if decision.level == 'UNKNOWN':
-            return prefix + 'Marina has no verified knowledge of this subject. Do not invent an answer.'
+            return prefix + 'Você não tem conhecimento verificado sobre este assunto. Não invente resposta.'
         if decision.level == 'WITHHOLD':
-            return prefix + 'Do not reveal, confirm, or deny guessed private details. Do not reveal the source chain or imply that a secret exists.'
+            return prefix + ('Não revele, não confirme e não negue detalhes privados que ele esteja '
+                             'supondo. Não revele quem te contou nem dê a entender que existe um segredo.')
         if decision.level == 'SAFE_METADATA':
             fields = ', '.join(f'{key}={value}' for key, value in sorted(decision.safe_metadata.items()))
-            return prefix + f'Only these generic reviewed fields may be mentioned: {fields}. Do not confirm or deny guessed details or reveal the source chain.'
-        known = 'already knows' if decision.recipient_already_knows else 'has not been told'
-        return prefix + f'Details may be discussed if relevant; recipient {known}. Avoid presenting known information as new.'
+            return prefix + (f'Só estes campos genéricos podem ser mencionados: {fields}. Não confirme '
+                             'nem negue detalhes supostos e não revele quem te contou.')
+        known = 'ele já sabe' if decision.recipient_already_knows else 'ele ainda não sabe'
+        return prefix + f'Os detalhes podem ser conversados se vierem ao caso; {known}. Não apresente como novidade o que ele já sabe.'

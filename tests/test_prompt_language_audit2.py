@@ -24,7 +24,6 @@ import memory_consolidator
 import planner
 import session_reflector
 import vision_service
-from context_builder import context_builder
 
 
 class ProcessingPromptsLanguageTests(unittest.TestCase):
@@ -72,7 +71,27 @@ class PromptLabelsLanguageTests(unittest.TestCase):
     """Rótulos fixos do prompt montado em produção."""
 
     def setUp(self):
-        msgs = context_builder.build(
+        # Auditoria #7: usava o context_builder global, isto é, o banco REAL da
+        # Marina. Agora monta o prompt num banco temporário com o cânone semeado.
+        import tempfile
+        from unittest.mock import MagicMock
+        from context_builder import ContextBuilder
+        from db import DatabaseManager
+        from memory import MemoryManager
+        from seed_academic_v36 import seed_academic
+        from seed_world_bible_v36 import seed_world_bible
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        db = DatabaseManager(Path(temp.name) / "labels.db")
+        seed_world_bible(db)
+        seed_academic(db)
+        with db.get_connection() as conn:
+            conn.execute("INSERT INTO world_bootstrap (key, value, updated_at) "
+                         "VALUES ('clean_canonical_start_done', '1', '2026-09-17T00:00:00')")
+        retriever = MagicMock()
+        retriever.retrieve_context.return_value = {"fatos": [], "momentos": [], "resumos": []}
+        builder = ContextBuilder(memory_mgr=MemoryManager(db=db), retriever=retriever)
+        msgs = builder.build(
             user_message="e a prova da quinta?",
             planner_tone="carinhosa",
             planner_goal="puxar detalhe concreto sobre a prova",
@@ -92,10 +111,21 @@ class PromptLabelsLanguageTests(unittest.TestCase):
         self.assertNotIn("Goal:", self.prompt)
 
     def test_com_equivalentes_em_portugues(self):
-        for rotulo in ("[COMO O PATRICK ESCREVE]", "[INTENÇÃO DESTE TURNO",
-                       "Tom:", "Objetivo:"):
+        # [COMO O PATRICK ESCREVE] só existe com estilo aprendido (banco com
+        # conversa real); a ausência do rótulo em inglês é coberta acima.
+        for rotulo in ("[INTENÇÃO DESTE TURNO", "Tom:", "Objetivo:"):
             with self.subTest(rotulo=rotulo):
                 self.assertIn(rotulo, self.prompt)
+
+
+class LearnedStyleContentLanguageTests(unittest.TestCase):
+    """Auditoria #7: o rótulo virou pt-BR na #2, mas o conteúdo não."""
+
+    def test_campos_do_estilo_aprendido_em_portugues(self):
+        src = (BASE_DIR / "style_engine.py").read_text(encoding="utf-8")
+        for campo in ("Laugh pattern:", "Frequent emojis:", "Shared slang:", "Writing rhythm:"):
+            with self.subTest(campo=campo):
+                self.assertNotIn(campo, src)
 
 
 if __name__ == "__main__":

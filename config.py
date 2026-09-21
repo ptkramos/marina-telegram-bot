@@ -175,10 +175,12 @@ class Settings:
     # v3.7.0 — CRITICAL urgency during SLEEPING requires explicit wake policy.
     # When false (default for first soak), sleep remains protected even for CRITICAL messages.
     CRITICAL_WAKE_POLICY_ENABLED: bool = os.getenv("CRITICAL_WAKE_POLICY_ENABLED", "false").lower() in ("true", "1", "yes")
-    # Living World v3.6.2: Cadência de novos Story Events calibrada para ~89% de dias banais (longo prazo).
-    # Com STORY_THREAD_DORMANT_DAYS=7 e STORY_EVENT_CADENCE_THRESHOLD=0.60, a simulação de 1.095 dias
-    # produz ~11% de novos eventos e ~89% de dias banais, preservando cooldowns e limites.
-    STORY_EVENT_CADENCE_THRESHOLD: float = float(os.getenv("STORY_EVENT_CADENCE_THRESHOLD", "0.60"))
+    # Living World v3.6.2 calibrou ~89% de dias banais. Auditoria #6 (decisão do
+    # Patrick, 21/09): "ela tem 20 anos, garota popular, tem mais é que viver" —
+    # 0,25 aqui + gancho em 70% dos dias (social_day.HOOK_CHANCE) dá história
+    # nova em cerca de metade dos dias. Limite de 1 história nova por dia e
+    # eventos graves bloqueados continuam valendo.
+    STORY_EVENT_CADENCE_THRESHOLD: float = float(os.getenv("STORY_EVENT_CADENCE_THRESHOLD", "0.25"))
     STORY_THREAD_DORMANT_DAYS: int = int(os.getenv("STORY_THREAD_DORMANT_DAYS", "7"))
     VOICE_PROSODY_ENABLED: bool = os.getenv("VOICE_PROSODY_ENABLED", "false").lower() in ("true", "1", "yes")
     VOICE_PROSODY_EMOTION_ENABLED: bool = os.getenv("VOICE_PROSODY_EMOTION_ENABLED", "false").lower() in ("true", "1", "yes")

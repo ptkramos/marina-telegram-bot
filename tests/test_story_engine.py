@@ -24,8 +24,10 @@ class TestStoryEngine(unittest.TestCase):
     def test_ordinary_days_dominate_selection_without_calendar_assumptions(self):
         dates=[datetime(2026,1,1)+timedelta(days=i) for i in range(100)]
         selections=[self.engine.select_seed(now) for now in dates]
-        self.assertGreaterEqual(sum(seed is None for seed in selections),55)
-        self.assertLessEqual(sum(seed is None for seed in selections),75)
+        # Auditoria #6 (decisão do Patrick): cadência 0,25 — ela vive mais. Ainda
+        # há dias sem história nova; o gancho do dia social limita o resto.
+        self.assertGreaterEqual(sum(seed is None for seed in selections),15)
+        self.assertLessEqual(sum(seed is None for seed in selections),45)
         self.assertFalse(any(s and s.thread_type in ('academic','professional') for s in selections))
         with self.db.get_connection() as c:
             self.assertEqual(c.execute('SELECT COUNT(*) FROM life_events').fetchone()[0],0)

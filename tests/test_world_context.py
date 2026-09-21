@@ -59,6 +59,12 @@ class TestWorldContext(unittest.TestCase):
         _patch_antibib = patch.object(voice_library, "_ANTIBIBLIOTECA_PATH", _sem_antibib)
         _patch_antibib.start()
         self.addCleanup(_patch_antibib.stop)
+        # Auditoria #6: o bloco [SEU DIA ATÉ AGORA] varia com a data (planos,
+        # contatos, histórias) — o teto aqui mede só a estrutura fixa.
+        import world_context
+        _patch_day = patch.object(world_context.WorldContextBuilder, "_social_day_block", return_value=[])
+        _patch_day.start()
+        self.addCleanup(_patch_day.stop)
         with patch.object(settings, "LIVING_WORLD_ENABLED", True), \
              patch.object(settings, "ACADEMIC_LIFE_ENABLED", False), \
              patch.object(settings, "CALENDAR_CONTINUITY_ENABLED", False), \
@@ -86,7 +92,7 @@ class TestWorldContext(unittest.TestCase):
         # translated RESPONSE RHYTHM/DATA CHANNEL/KNOWLEDGE POLICY blocks to
         # pt-BR (slightly larger) and Patch 022 added no-live-call + no-fake-
         # title rules. Ceiling raised to 11k to keep sanity check meaningful.
-        self.assertLess(len(birthday), 11000)
+        self.assertLess(len(birthday), 11500)
         # Retriever is optional for compact World Context; presence of canon is the contract.
         self.assertIn("Marina Salles", birthday)
 

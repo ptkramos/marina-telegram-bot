@@ -119,6 +119,7 @@ class LivingWorldDeliveryTests(unittest.IsolatedAsyncioTestCase):
              patch.object(settings, 'KNOWLEDGE_PRIVACY_ENABLED', True), \
              patch.object(settings, 'CALENDAR_CONTINUITY_ENABLED', False), \
              patch('bot.proactivity_service', fake_service), \
+             patch('bot._proactive_text', return_value='amor, e o projeto?'), \
              patch('bot.memory_manager.db', fake_db):
             await autonomous_routine_v36(SimpleNamespace(bot=fake_bot))
         fake_service.db.atualizar_open_loop_touch.assert_not_called()
@@ -139,6 +140,7 @@ class LivingWorldDeliveryTests(unittest.IsolatedAsyncioTestCase):
              patch.object(settings, 'KNOWLEDGE_PRIVACY_ENABLED', True), \
              patch.object(settings, 'CALENDAR_CONTINUITY_ENABLED', False), \
              patch('bot.proactivity_service', fake_service), \
+             patch('bot._proactive_text', return_value='amor, e o projeto?'), \
              patch('bot.memory_manager.db', fake_db):
             await autonomous_routine_v36(SimpleNamespace(bot=fake_bot))
         fake_service.db.atualizar_open_loop_touch.assert_called_once()
