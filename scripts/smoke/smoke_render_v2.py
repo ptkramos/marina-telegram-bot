@@ -1,5 +1,14 @@
+"""Manual render probe contra o ComfyUI. Rodar à mão; faz chamada de GPU real.
+
+Auditoria #1: movido de `test_render_v2.py` na raiz — o prefixo `test_` sugeria
+que era parte da suíte automatizada.
+"""
 import asyncio
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 from sd_client import sd_client
 
 async def test():

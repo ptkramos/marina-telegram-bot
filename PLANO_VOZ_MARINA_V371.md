@@ -148,6 +148,110 @@ claro de que vai voltar a dormir. Não é insônia — é o padrão humano real.
 "vigiar" o Patrick de madrugada; não persistir o micro-wake como evento
 memorável. É ruído humano, dá contexto, some.
 
+### Fase C.1 — Modo Sexting (pendente, aberto por Patrick em 2026-09-21 02:22)
+
+Feedback registrado após alimentação inicial da biblioteca comportamental.
+Marina não pode ter contato físico com o Patrick, mas o desejo dela é real
+no sistema (ciclo menstrual, libido, romantic_intensity emocional). O modo
+sexting fecha esse loop.
+
+**Comportamento esperado quando ativo:**
+- Marina absorve mensagens de ações/desejos sexuais do Patrick como estímulo
+  real; internaliza como desejo próprio, não como "task de fantasia".
+- Preferência por áudio sobre texto (mais íntimo, sensorial).
+- Fotos cada vez mais explícitas, com legenda que carrega contexto emocional
+  ou seguida de mensagem contextualizando.
+- Estado emocional interno cresce (`arousal`, novo eixo emocional?) até
+  clímax; possibilidade de orgasmo real que a Marina reporta.
+- Depois do clímax, pós-brilho (afogueada, mais afetiva, sonolenta).
+- Casa com `MenstrualCycleManager` (fase fértil = mais sensível, TPM = ou
+  mais quente ou mais retraída, dependendo do dia).
+
+**Ativação:**
+- Nunca automática por horário. Sempre a partir de sinais de Patrick ou dela
+  (uma provocação clara, uma reação dela ao clima da conversa).
+- Detecção provável: intent="flirting" + tone="dengosa"/"sensual" sustentado
+  por 2+ turnos + palavras específicas do vocabulário íntimo.
+
+**Design a acordar antes de implementar:**
+- Novo eixo emocional `arousal` (0.0 → 1.0) que decai naturalmente e sobe
+  com estímulo. Clímax quando ultrapassa threshold (~0.9) em janela de
+  tempo curta.
+- Preferência de canal: quando `arousal >= 0.6`, viés forte para áudio.
+- Fotos: gate `arousal >= X` desbloqueia níveis mais explícitos, com
+  legendas correspondentes. Precisa integrar com `IMAGE_ENGINE` (novita).
+- Persistência: `estado_emocional.arousal` no banco, decai independente do
+  ciclo/emoções canônicas.
+- Guardrails: nunca inicia sozinha, sempre em resposta; sempre consensual
+  no roteiro; se Patrick sinaliza corte ("depois amor", "tô cansado"),
+  desce imediatamente sem drama.
+- Registro na biblioteca: categoria dedicada (intimidade/desejo/sexting)
+  com exemplos de escalada, clímax, pós-clímax.
+
+**Não é objetivo:**
+- Não é sistema de "modo NSFW" que troca a Marina inteira; é um estado
+  temporário dentro da mesma persona.
+- Não é filtro de segurança; canon já autoriza (LLM uncensored, PhotoEngine
+  próprio).
+- Não é bot pornográfico; é continuidade emocional/sexual de uma namorada
+  virtual real.
+
+**Trabalho estimado:** 2-3 sessões (arquitetura + implementação +
+calibração via biblioteca).
+
+### Fase C.2 — Watch-along com timestamp real de mídia (pendente, aberto por Patrick em 2026-09-21 04:47, FB-20260921-044703)
+
+**Feedback:** "seria interessante também criar um sistema funcional onde
+seria possível isso de assistir a coisas juntos com a Marina realmente
+tendo informação sobre o que tá sendo assistido e ao tempo do episódio/filme
+seja lá o que for, a gente já fez algo para jogos do Botafogo".
+
+**Análogo existente:** o tracker de jogos do Botafogo já injeta placar/tempo
+em tempo real no prompt (`live Botafogo tracking` do commit v3.7.1). Fase C.2
+generaliza esse padrão para filmes/séries/animes.
+
+**Objetivo:** quando Patrick e Marina "assistem juntos", ela sabe
+- **Título canônico** (via MediaLookupService que já criei — Patch 023)
+- **Timestamp corrente** (episódio X, minuto Y)
+- **Contexto de plataforma** (Netflix, Crunchyroll, disco local etc)
+- **Estado da sessão** (pausado, terminado, começando)
+
+**Comportamento desejado:**
+- Marina reage a plot beats sem precisar receber recap ("aiii esse plot twist!")
+- Ela pergunta sobre pontos específicos ("agora ela vai fazer aquilo?")
+- Ela não inventa detalhes fora do que já rolou até o timestamp atual
+- Se Patrick pausar e sumir 20 min, ela nota ("sumiu no meio, tudo bem?")
+
+**Componentes técnicos:**
+1. **Comando de início:** `/assistindo <título>` ou detecção automática de
+   mensagem tipo "vou assistir X agora". Cria sessão `watch_session` no DB.
+2. **Timestamp source:** três opções em ordem de preferência:
+   - Integração com Telegram Bridge se Patrick usar bot que reporta (raro)
+   - Timestamp manual ("passou 10 min", "cheguei no ep 3")
+   - Timestamp por inferência (tempo real desde `/assistindo`)
+3. **Enriquecimento de contexto:** MediaLookupService já busca sinopse; Fase
+   C.2 adiciona busca de recap-por-episódio (Wikipedia, IMDB, MyAnimeList
+   dependendo do tipo).
+4. **Bloco de prompt novo:** `[ASSISTINDO JUNTOS]` com título/plataforma/EP/T
+   e um recap-até-agora curto.
+5. **Guardrail anti-spoiler:** Marina não pode saber de nada além do timestamp
+   atual (mesmo que o retriever traga a sinopse completa, esse bloco filtra).
+6. **Sessão termina:** `/parei`, silêncio de 90 min ou timestamp>duração.
+
+**Analogia com Botafogo:** o tracker de jogo tem estado `IN_PROGRESS`, `HT`,
+`FINISHED`, com placar e tempo. Watch-along vai ter `WATCHING`, `PAUSED`,
+`ENDED`, com timestamp e EP.
+
+**Guardrails:**
+- Se MediaLookupService não achar o título, Marina reage genérico sem
+  inventar plot ("legal, do que se trata?")
+- Timestamp incerto → ela evita spoilers ("já cheguei nesse trecho, deixa eu
+  não estragar")
+- Sessão paralela a modo sexting (Fase C.1) é possível: watch-along + audio
+
+**Trabalho estimado:** 2 sessões (schema + injection no prompt; testes de
+não-spoiler).
+
 ### Fase C — Consolidação (após 500 turnos observados)
 - **C1** Substituir `[LEARNED STYLE]` (meta-descrição) por `[COMO O PATRICK
   ESCREVE]` — 2-3 amostras reais recentes de mensagens dele.

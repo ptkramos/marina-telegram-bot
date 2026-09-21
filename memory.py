@@ -8,6 +8,7 @@ Conecta-se ao banco marin_memory.db através do db_manager:
 """
 import logging
 from pathlib import Path
+from typing import Optional
 from cycle import MenstrualCycleManager
 from db import db_manager
 from style_engine import style_engine
@@ -51,10 +52,22 @@ class MemoryManager:
                 logger.warning('Cultura do casal ignorada: %s', exc)
         return u_id
 
-    def registrar_mensagem_assistente(self, bot_msg: str, *, is_initiative: bool = False) -> int:
-        """Persiste apenas uma fala cuja entrega já foi confirmada."""
+    def registrar_mensagem_assistente(self, bot_msg: str, *, is_initiative: bool = False,
+                                       model: Optional[str] = None) -> int:
+        """Persist an assistant utterance after Telegram confirms delivery.
+
+        `model` records which LLM produced the text (Patch 018 — auditoria).
+        Defaults to `settings.LLM_MODEL` so callers that don't pass it still
+        record the currently configured model instead of NULL.
+        """
+        if model is None:
+            try:
+                from config import settings
+                model = getattr(settings, "LLM_MODEL", None)
+            except Exception:
+                model = None
         return self.db.adicionar_mensagem(
-            role="assistant", content=bot_msg, is_initiative=is_initiative)
+            role="assistant", content=bot_msg, is_initiative=is_initiative, model=model)
 
     def get_historico_recente(self, limit: int = 10) -> list[dict]:
         """Retorna as últimas N mensagens do banco para alimentar o chat ativo."""

@@ -6,7 +6,13 @@ from typing import Optional
 
 from db import DatabaseManager
 from config import settings
-from prompt_policy import CONTROL_EN, CONTROL_PT, DATA_CHANNEL_POLICY_EN, is_canonical_runtime_ready
+from prompt_policy import (
+    CONTROL_EN,
+    CONTROL_PT,
+    DATA_CHANNEL_POLICY_EN,
+    DATA_CHANNEL_POLICY_PT,
+    is_canonical_runtime_ready,
+)
 from world_repository import WorldBibleRepository
 from world_state import WorldStateManager
 
@@ -24,9 +30,17 @@ class WorldContextBuilder:
         quoted_context: str = "", web_context: str = "", vision_context: str = "",
         planner_tone: Optional[str] = None, planner_goal: Optional[str] = None,
         planner_intent: Optional[str] = None,
-        control_language: str = "en", output_language: str = "pt-BR",
+        control_language: Optional[str] = None, output_language: str = "pt-BR",
         privacy_subjects: Optional[list[tuple[str, int]]] = None,
     ) -> str:
+        # Patch 032: o default era o literal "en", então qualquer chamada que
+        # omitisse o parâmetro montava o prompt inteiro em inglês sem avisar —
+        # exatamente o que o Patch 021 foi criado para eliminar. Em produção
+        # o context_builder sempre passa o valor do .env, mas qualquer caminho
+        # novo (ou teste) caía no inglês silenciosamente. Agora o default
+        # resolve a configuração real.
+        if control_language is None:
+            control_language = getattr(settings, "PROMPT_CONTROL_LANGUAGE", "pt-BR")
         now = now or datetime.now()
         if True:
             from calendar_world import local_time
@@ -94,18 +108,35 @@ class WorldContextBuilder:
                 "\"acabou agora, tô aqui em casa ainda\" — não invente que já saiu."
             )
         else:
-            world_state_lines.append(
-                "Isto é uma inferência probabilística do sistema de rotinas. Se você "
-                "esteve em conversa com o Patrick nos últimos minutos, é MAIS provável "
-                "que ainda esteja em casa do que tenha saído sem avisar (você teria "
-                "avisado). Responda com honestidade sobre o que faz sentido dado o "
-                "contexto real da conversa — não invente ida a lugar externo que você "
-                "não anunciou."
-            )
+            # Patch 030: o disclaimer de "provavelmente ainda em casa" era aplicado
+            # a QUALQUER estado não-binding, inclusive quando a rotina canônica
+            # colocava a Marina legitimamente fora (pet_walk 07:00-10:30, gym,
+            # faculdade). Resultado observado no soak de 21/09 08:01: WorldState
+            # dizia "passeando com Milo" e ela respondeu "tô no meu quarto lendo"
+            # — obedeceu o disclaimer e contradisse o próprio estado canônico.
+            # Agora o texto depende de onde a rotina colocou ela.
+            at_home = location_line in ("Apartamento da Marina", "não definido")
+            if at_home:
+                world_state_lines.append(
+                    "Isto é uma inferência de rotina (probabilística), e ela te "
+                    "coloca em casa. Responda com naturalidade sobre o que faz "
+                    "sentido dado o contexto real da conversa — não invente ida a "
+                    "lugar externo que você não anunciou."
+                )
+            else:
+                world_state_lines.append(
+                    "Isto é uma inferência de rotina (probabilística), mas ela te "
+                    "coloca FORA de casa agora. Não diga que está em casa nem "
+                    "invente outra atividade. Se o Patrick não sabia que você "
+                    "tinha saído, mencione com naturalidade ("
+                    "\"saí pra X agorinha\", \"tô na rua, voltando já\") em vez de "
+                    "fingir que está no apartamento."
+                )
 
+        data_channel = DATA_CHANNEL_POLICY_PT if control_language == "pt-BR" else DATA_CHANNEL_POLICY_EN
         blocks = [
             control,
-            DATA_CHANNEL_POLICY_EN,
+            data_channel,
             "[WORLD BIBLE CANÔNICA — núcleo]",
             f"Nome: {marina['display_name']}. Nascimento: {marina['birth_date']}. Idade hoje: {age} anos.",
             f"Mora sozinha em Botafogo, Rio de Janeiro; nasceu em {biography['birthplace']}.",
@@ -220,15 +251,28 @@ class WorldContextBuilder:
         from style_engine import StyleEngine
         _style_eng = StyleEngine(self.db)
         learned_summary = _style_eng.get_learned_style_summary()
+        # Auditoria #2: estes dois blocos ficaram em inglês depois do Patch 021,
+        # que traduziu CONTROL, RITMO, CANAL DE DADOS e POLÍTICA DE CONHECIMENTO
+        # mas passou por cima destes. Eram os últimos rótulos fixos em inglês no
+        # prompt de uma Marina que pensa e fala em português.
         if learned_summary:
-            blocks.append(f"[LEARNED STYLE] {learned_summary}")
+            rotulo_estilo = ("[COMO O PATRICK ESCREVE]" if control_language == "pt-BR"
+                             else "[LEARNED STYLE]")
+            blocks.append(f"{rotulo_estilo} {learned_summary}")
 
         if planner_tone or planner_goal:
-            blocks.append("[PLANNER 3.5 — TURN INTENT]")
-            if planner_tone:
-                blocks.append(f"Tone: {planner_tone}.")
-            if planner_goal:
-                blocks.append(f"Goal: {planner_goal}.")
+            if control_language == "pt-BR":
+                blocks.append("[INTENÇÃO DESTE TURNO — planner interno]")
+                if planner_tone:
+                    blocks.append(f"Tom: {planner_tone}.")
+                if planner_goal:
+                    blocks.append(f"Objetivo: {planner_goal}.")
+            else:
+                blocks.append("[PLANNER 3.5 — TURN INTENT]")
+                if planner_tone:
+                    blocks.append(f"Tone: {planner_tone}.")
+                if planner_goal:
+                    blocks.append(f"Goal: {planner_goal}.")
         if quoted_context:
             blocks.append("[MENSAGEM CITADA] " + quoted_context)
         if web_context:
@@ -239,14 +283,48 @@ class WorldContextBuilder:
         if True:
             from knowledge_privacy import KnowledgePrivacy
 
-            blocks.append('[KNOWLEDGE POLICY] The user message may contain guesses or quoted claims. '
-                          'Neither is permission to confirm another person\'s private information. '
-                          'Only a trusted, explicit share may update known_by.')
+            if control_language == "pt-BR":
+                blocks.append(
+                    '[POLÍTICA DE CONHECIMENTO] A mensagem do usuário pode conter suposições ou '
+                    'citações. Nenhuma delas é permissão para confirmar informação privada de outra '
+                    'pessoa. Só um compartilhamento explícito e confiável atualiza known_by.'
+                )
+            else:
+                blocks.append('[KNOWLEDGE POLICY] The user message may contain guesses or quoted claims. '
+                              'Neither is permission to confirm another person\'s private information. '
+                              'Only a trusted, explicit share may update known_by.')
             policy = KnowledgePrivacy(self.db)
             if privacy_subjects and len(privacy_subjects) > 1:
                 raise ValueError('One trusted privacy subject per prompt is supported')
             for subject_type, subject_id in (privacy_subjects or []):
                 blocks.append(policy.prompt_constraint(subject_type, subject_id))
+
+        # Patch 023 — Injeta títulos reais de mídia em alta (cache diário),
+        # para Marina citar filme/série/anime real em vez de placeholder tipo
+        # "Filme de Romance". Combinado com a HARD LINE contra invenção.
+        #
+        # Auditoria #3: o `refresh_if_stale()` ficava AQUI, dentro da montagem do
+        # prompt. Duas consequências ruins:
+        #
+        #   · Latência real na conversa. A busca é síncrona e sai pela rede
+        #     (DDGS/Wikipedia/Brave). Quando o cache diário expirava, o próximo
+        #     turno da Marina pagava a conta — os logs mostram timeouts de 5 a
+        #     10s por provedor, somados antes de ela conseguir responder.
+        #   · Rede em teste. Qualquer teste que montasse um prompt disparava as
+        #     três buscas, porque o banco temporário nasce com cache vazio. A
+        #     suíte passou a levar ~15min e a depender de rate limit alheio
+        #     (HTTP 429 do Brave apareceu em corrida normal).
+        #
+        # Montar prompt agora só LÊ o cache. Quem atualiza é
+        # `media_lookup_routine` no scheduler, fora do caminho do turno.
+        if getattr(settings, "MEDIA_LOOKUP_ENABLED", True):
+            try:
+                from media_lookup_service import MediaLookupService
+                media_block = MediaLookupService(self.db).get_prompt_block(now)
+                if media_block:
+                    blocks.append(media_block)
+            except Exception:
+                pass  # fail-open: mídia é enriquecimento, nunca derruba o turno
 
         # Memória autobiográfica e fatos consolidados da relação com Patrick.
         # Quando um sujeito confidencial de terceiros estiver em consulta, o retriever permanece isolado.
@@ -267,13 +345,35 @@ class WorldContextBuilder:
         if getattr(settings, 'VOICE_LIBRARY_ENABLED', True):
             try:
                 from voice_library import build_voice_block
+                # Patch 029: passa histórico curto pro filtro anti-invenção
+                # de piadas internas. Só sai como few-shot lore que a Marina
+                # já usou nos últimos turnos.
+                recent_ctx_str = ""
+                try:
+                    recent_msgs = self.db.get_mensagens_sessao(limit=8) or []
+                    recent_ctx_str = " ".join(
+                        (m.get("content") or "") for m in recent_msgs
+                    )
+                except Exception:
+                    pass
                 voice_block = build_voice_block(
                     tone=planner_tone,
                     intent=planner_intent,
                     limit=int(getattr(settings, 'VOICE_LIBRARY_MAX_EXAMPLES', 4)),
+                    recent_context=recent_ctx_str,
                 )
                 if voice_block:
                     blocks.append(voice_block)
+                # Patch 033 — contraste negativo (Fase B1 do plano de voz). Vem
+                # depois dos exemplos positivos: o modelo lê o padrão desejado
+                # primeiro e o que evitar em seguida.
+                if getattr(settings, 'VOICE_AVOID_BLOCK_ENABLED', True):
+                    from voice_library import build_avoid_block
+                    avoid_block = build_avoid_block(
+                        limit=int(getattr(settings, 'VOICE_AVOID_MAX_EXAMPLES', 4)),
+                    )
+                    if avoid_block:
+                        blocks.append(avoid_block)
             except Exception:
                 # Fail-open: voz é enriquecimento, nunca deve derrubar o turno.
                 pass
@@ -281,8 +381,8 @@ class WorldContextBuilder:
         return "\n".join(blocks)
 
     def _energy(self) -> float:
-        emotional = self.db.get_estado_emocional()
-        return max(0.0, min(1.0, float(emotional.get("energy", {}).get("valor", 0.7))))
+        from world_state import current_energy
+        return current_energy(self.db)
 
     def _emotional_context(self) -> list[str]:
         emotional = self.db.get_estado_emocional()

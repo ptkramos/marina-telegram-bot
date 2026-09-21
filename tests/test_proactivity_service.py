@@ -107,5 +107,89 @@ class TestProactivityService(unittest.TestCase):
         self.assertEqual(reason, "autonomous_cooldown_active")
 
 
+class TestProactivityStateFactor(unittest.TestCase):
+    """Fase B.5 — Proatividade sensível ao WorldState da Marina."""
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.temp_db_path = Path(self.temp_dir.name) / "test_state_factor.db"
+        self.db = DatabaseManager(db_path=self.temp_db_path)
+        self.service = ProactivityService(db=self.db)
+        # Seed a place so location_place_id works.
+        from seed_world_bible_v36 import seed_world_bible
+        seed_world_bible(self.db)
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def _snap(self, *, activity: str, reason: str, observed: datetime):
+        from world_repository import WorldStateRepository
+        states = WorldStateRepository(self.db)
+        with self.db.get_connection() as conn:
+            place = conn.execute(
+                "SELECT id, region FROM world_places WHERE canonical_key='marina_apartment'"
+            ).fetchone()
+        states.add_snapshot({
+            "state_date": observed.date().isoformat(),
+            "observed_at": observed.isoformat(),
+            "location_place_id": place["id"] if place else None,
+            "location_region": place["region"] if place else None,
+            "activity": activity,
+            "energy_level": 0.7,
+            "source_json": {"reason": reason},
+        })
+
+    def test_free_time_boosts_probability(self):
+        now = datetime(2026, 9, 20, 14, 0)
+        self._snap(activity="tempo livre em casa", reason="free_time", observed=now)
+        factor, label = self.service._compute_state_factor(now)
+        self.assertGreater(factor, 1.0)
+        self.assertEqual(label, "free_time")
+
+    def test_busy_activity_reduces_probability(self):
+        now = datetime(2026, 9, 20, 14, 0)
+        self._snap(activity="treinando na academia", reason="gym_weekly", observed=now)
+        factor, label = self.service._compute_state_factor(now)
+        self.assertLess(factor, 1.0)
+        self.assertTrue(label.startswith("busy"))
+
+    def test_class_reduces_probability(self):
+        now = datetime(2026, 9, 20, 10, 0)
+        self._snap(activity="aula de design", reason="confirmed_commitment", observed=now)
+        factor, label = self.service._compute_state_factor(now)
+        self.assertLess(factor, 1.0)
+        self.assertTrue(label.startswith("busy"))
+
+    def test_post_event_recovery_slight_boost(self):
+        now = datetime(2026, 9, 20, 20, 30)
+        self._snap(activity="chegou em casa", reason="post_event_recovery", observed=now)
+        factor, label = self.service._compute_state_factor(now)
+        self.assertGreater(factor, 1.0)
+        self.assertLess(factor, 1.6)
+        self.assertEqual(label, "post_event")
+
+    def test_sleeping_zeros_out(self):
+        now = datetime(2026, 9, 20, 3, 15)
+        self._snap(activity="dormindo", reason="light_day_sleep", observed=now)
+        factor, label = self.service._compute_state_factor(now)
+        self.assertEqual(factor, 0.0)
+        self.assertEqual(label, "sleeping")
+
+    def test_absent_worldstate_falls_back_to_neutral(self):
+        now = datetime(2026, 9, 20, 15, 0)
+        factor, label = self.service._compute_state_factor(now)
+        self.assertEqual(factor, 1.0)
+        self.assertIn(label, ("absent", "unavailable"))
+
+    def test_stale_worldstate_falls_back_to_neutral(self):
+        now = datetime(2026, 9, 20, 15, 0)
+        # observed 2h earlier — stale by our 90 min threshold
+        self._snap(activity="tempo livre em casa", reason="free_time",
+                   observed=now - timedelta(hours=2))
+        factor, label = self.service._compute_state_factor(now)
+        self.assertEqual(factor, 1.0)
+        self.assertEqual(label, "stale")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

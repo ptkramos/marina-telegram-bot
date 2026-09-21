@@ -61,7 +61,7 @@ class ContextBuilder:
             quoted_context=quoted_context, web_context=web_context,
             vision_context=vision_context, planner_tone=planner_tone,
             planner_goal=planner_goal, planner_intent=planner_intent,
-            control_language=getattr(settings, "PROMPT_CONTROL_LANGUAGE", "en"),
+            control_language=getattr(settings, "PROMPT_CONTROL_LANGUAGE", "pt-BR"),
             output_language=getattr(settings, "MARINA_OUTPUT_LANGUAGE", "pt-BR"),
             privacy_subjects=privacy_subjects,
         )

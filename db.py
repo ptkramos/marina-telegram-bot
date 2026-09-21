@@ -150,15 +150,28 @@ class DatabaseManager:
                     try:
                         cursor.executescript(sql_content)
                     except sqlite3.OperationalError as e:
-                        # Synthetic upgrades may replay migration 012 after some
-                        # of its ALTERs already landed. Keep that recovery local
-                        # to the known calendar columns, never to all migrations.
-                        if version_num != 12 or "duplicate column name" not in str(e).lower():
-                            raise
-                        calendar_columns = {
-                            'owner_character_key', 'end_at', 'location_key', 'source_key',
-                            'story_thread_id', 'confirmed', 'metadata_json',
+                        # Synthetic upgrades may replay an ADD COLUMN migration
+                        # after its columns already landed (a downgrade that
+                        # clears schema_version without dropping the table).
+                        # The recovery stays scoped to migrations and columns
+                        # listed here — never blanket-applied — so a genuine
+                        # schema error still fails loudly.
+                        # Patch 032 added 018: the test that rolls back to
+                        # schema 8 keeps `conversas` intact, so replaying the
+                        # migration hit "duplicate column name: model".
+                        replayable = {
+                            12: ('eventos_pendentes', {
+                                'owner_character_key', 'end_at', 'location_key',
+                                'source_key', 'story_thread_id', 'confirmed',
+                                'metadata_json',
+                            }),
+                            18: ('conversas', {'model'}),
                         }
+                        target = replayable.get(version_num)
+                        if target is None or "duplicate column name" not in str(e).lower():
+                            raise
+                        table_name, known_columns = target
+                        expected_alter = ['alter', 'table', table_name, 'add', 'column']
                         for fragment in sql_content.split(";"):
                             statement = '\n'.join(line for line in fragment.splitlines()
                                                   if not line.lstrip().startswith('--')).strip()
@@ -168,15 +181,17 @@ class DatabaseManager:
                                 cursor.execute(statement)
                             except sqlite3.OperationalError as stmt_err:
                                 tokens = statement.lower().split()
-                                known_alter = (len(tokens) >= 6 and tokens[:5] ==
-                                               ['alter', 'table', 'eventos_pendentes', 'add', 'column']
-                                               and tokens[5] in calendar_columns)
+                                known_alter = (len(tokens) >= 6
+                                               and tokens[:5] == expected_alter
+                                               and tokens[5] in known_columns)
                                 if not (known_alter and "duplicate column name" in str(stmt_err).lower()):
                                     raise
                         actual_columns = {row['name'] for row in cursor.execute(
-                            'PRAGMA table_info(eventos_pendentes)').fetchall()}
-                        if not calendar_columns <= actual_columns:
-                            raise RuntimeError('Calendar migration left required columns missing')
+                            f'PRAGMA table_info({table_name})').fetchall()}
+                        if not known_columns <= actual_columns:
+                            raise RuntimeError(
+                                f'Migration {version_num} left required columns '
+                                f'missing on {table_name}')
                     now_iso = datetime.now().isoformat()
                     cursor.execute(
                         "INSERT INTO schema_version (version, name, applied_at) VALUES (?, ?, ?);",
@@ -237,24 +252,37 @@ class DatabaseManager:
                 "INSERT OR IGNORE INTO ciclo_biologico (id, data_inicio_ciclo, updated_at) VALUES (1, '2026-09-02', ?)",
                 (now_iso,),
             )
+            # Auditoria #2: o seed criava a identidade do Patrick com o tier
+            # default ('standard'). Nome próprio é o caso mais óbvio de core
+            # memory — é o fato que a Marina deve ter presente em qualquer
+            # conversa, e o retriever carrega cores independentemente de
+            # palavra-chave. Sem isso o banco nascia sem nenhuma core memory.
             cursor.execute(
-                "INSERT OR IGNORE INTO fatos_patrick (fato, created_at) VALUES (?, ?)",
-                ("Nome: Patrick Ramos", now_iso),
+                """INSERT OR IGNORE INTO fatos_patrick
+                   (fato, created_at, category, importance, confidence,
+                    memory_tier, volatility, canonical_key, last_confirmed_at)
+                   VALUES (?, ?, 'pessoal', 1.0, 1.0, 'core', 'stable',
+                           'nome_patrick', ?)""",
+                ("Nome: Patrick Ramos", now_iso, now_iso),
             )
             conn.commit()
 
     # --- MÉTODOS DE CONVERSAS & CURSOR DE CONSOLIDAÇÃO ---
 
-    def adicionar_mensagem(self, role: str, content: str, is_initiative: bool = False, media_type: str = "text", timestamp: Optional[str] = None) -> int:
+    def adicionar_mensagem(self, role: str, content: str, is_initiative: bool = False, media_type: str = "text", timestamp: Optional[str] = None, model: Optional[str] = None) -> int:
+        """Persist a chat turn. `model` is only stored for assistant turns and
+        records which LLM produced the text (Patch 018 — auditoria de modelo).
+        """
         now_iso = timestamp or datetime.now().isoformat()
+        model_value = model if role == "assistant" else None
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                INSERT INTO conversas (timestamp, role, content, is_initiative, media_type)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO conversas (timestamp, role, content, is_initiative, media_type, model)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (now_iso, role, content, 1 if is_initiative else 0, media_type)
+                (now_iso, role, content, 1 if is_initiative else 0, media_type, model_value)
             )
             conn.commit()
             return cursor.lastrowid
@@ -394,9 +422,15 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 for table in dynamic_tables:
                     counts[table] = conn.execute(f'DELETE FROM "{table}"').rowcount
+                # Auditoria #2: mesmo seed do _init_db — a identidade nasce como
+                # core memory, não 'standard'.
                 conn.execute(
-                    "INSERT INTO fatos_patrick (fato, created_at) VALUES (?, ?)",
-                    ("Nome: Patrick Ramos", now_iso),
+                    """INSERT INTO fatos_patrick
+                       (fato, created_at, category, importance, confidence,
+                        memory_tier, volatility, canonical_key, last_confirmed_at)
+                       VALUES (?, ?, 'pessoal', 1.0, 1.0, 'core', 'stable',
+                               'nome_patrick', ?)""",
+                    ("Nome: Patrick Ramos", now_iso, now_iso),
                 )
                 conn.executemany(
                     "INSERT INTO estado_relacional (chave, valor, updated_at) VALUES (?, ?, ?)",

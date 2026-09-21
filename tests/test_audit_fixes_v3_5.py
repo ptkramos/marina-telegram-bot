@@ -52,6 +52,15 @@ class TestAuditFixesV35(unittest.TestCase):
         self._random_patcher = patch.object(bot.random, "random", return_value=1.0)
         self._random_patcher.start()
         self.addCleanup(self._random_patcher.stop)
+        # Patch 026: força availability_service a "proceed" para todos os testes
+        # da classe (senão AVAILABILITY_DEFER bloqueia o fluxo quando os testes
+        # rodam durante a janela de sono da Marina — 00-08h).
+        self._availability_patcher = patch.object(
+            bot.availability_service, "evaluate_and_maybe_defer",
+            return_value=("proceed", None, None),
+        )
+        self._availability_patcher.start()
+        self.addCleanup(self._availability_patcher.stop)
 
     def tearDown(self):
         self.temp_dir.cleanup()
@@ -88,7 +97,10 @@ class TestAuditFixesV35(unittest.TestCase):
         ])
         mock_plan.apply_plan_effects.assert_not_called()
 
-    def test_reaction_is_skipped_when_chat_has_no_available_reactions(self):
+    def test_reaction_is_permissive_when_chat_returns_empty_available_reactions(self):
+        # Patch 019: available_reactions=[] pode significar "todas permitidas"
+        # em chats privados. Trata como permissivo — se Telegram rejeitar,
+        # o TTL de _invalid_reactions bloqueia dali pra frente.
         bot._reaction_capabilities.clear()
         bot._invalid_reactions.clear()
         chat = MagicMock()
@@ -96,8 +108,8 @@ class TestAuditFixesV35(unittest.TestCase):
         api = AsyncMock()
         api.get_chat.return_value = chat
         sent = asyncio.run(bot.set_safe_message_reaction(api, 12345, 77, "❤️"))
-        self.assertFalse(sent)
-        api.set_message_reaction.assert_not_called()
+        self.assertTrue(sent)
+        api.set_message_reaction.assert_called_once()
 
     def test_reaction_alias_is_used_when_chat_allows_reactions(self):
         bot._reaction_capabilities.clear()

@@ -20,6 +20,15 @@ class TestKnowledgeDialogue(unittest.TestCase):
         self.db = DatabaseManager(Path(temp.name) / 'knowledge_dialogue.db')
         seed_world_bible(self.db)
         self.dialogue = KnowledgeDialogue(self.db)
+        # Patch 026: força availability_service a "proceed" — senão
+        # AVAILABILITY_DEFER (janela de sono) bloqueia process_incoming_batch.
+        import bot as _bot
+        self._availability_patcher = patch.object(
+            _bot.availability_service, "evaluate_and_maybe_defer",
+            return_value=("proceed", None, None),
+        )
+        self._availability_patcher.start()
+        self.addCleanup(self._availability_patcher.stop)
 
     def _topics(self):
         bia = self.dialogue.register_subject(

@@ -163,13 +163,23 @@ class ProactivityService:
             if minutos_desde_auto < settings.AUTONOMOUS_COOLDOWN_MINUTES:
                 return False, "autonomous_cooldown_active"
 
+        # Fase B.5 — Marina de bobeira te procura mais; ocupada procura menos.
+        # Fator multiplicativo sobre a chance estocástica; cooldown/teto diário
+        # permanecem intactos. Ver PLANO_VOZ_MARINA_V371.md Fase B.5.
+        state_factor, state_label = self._compute_state_factor(dt)
+
         if living:
             candidate = self.determine_living_world_candidate(dt)
             if candidate['rank'] >= 70:
                 return True, candidate['reason']
             # A relationship thought need not become a message. Low-priority
             # callbacks and affection remain occasional, not clock-driven.
-            probability = settings.AUTONOMOUS_TRIGGER_CHANCE * (0.35 if candidate['rank'] >= 40 else 0.12)
+            base = settings.AUTONOMOUS_TRIGGER_CHANCE * (0.35 if candidate['rank'] >= 40 else 0.12)
+            probability = base * state_factor
+            logger.info(
+                "proactivity.state_factor state=%s factor=%.2f base=%.3f prob=%.3f route=living_world",
+                state_label, state_factor, base, probability,
+            )
             return (True, candidate['reason']) if random.random() < probability else (False, 'living_world_quiet')
 
         # 4. Verifica se há evento pendente vencido para follow-up imediato
@@ -183,11 +193,80 @@ class ProactivityService:
             if loops_prontos:
                 return True, "open_loop_ready"
 
-        # 5. Chance estatística configurada caso não haja evento específico
-        if random.random() < settings.AUTONOMOUS_TRIGGER_CHANCE:
+        # 5. Chance estatística modulada pelo estado atual da Marina
+        base = settings.AUTONOMOUS_TRIGGER_CHANCE
+        probability = base * state_factor
+        logger.info(
+            "proactivity.state_factor state=%s factor=%.2f base=%.3f prob=%.3f route=stochastic",
+            state_label, state_factor, base, probability,
+        )
+        if random.random() < probability:
             return True, "stochastic_trigger"
 
         return False, "stochastic_miss"
+
+    def _compute_state_factor(self, now: datetime) -> Tuple[float, str]:
+        """Devolve o multiplicador de proatividade baseado no WorldState atual.
+
+        Se a Marina está livre em casa, chance aumenta; se está ocupada
+        (aula/academia/trabalho/casting), chance cai; se está dormindo, vai a
+        zero (defense-in-depth, sleep_window já bloqueia antes). Quando
+        WorldState não está disponível ou stale, aplica o fator UNKNOWN
+        (default 1.0 = comportamento anterior).
+        """
+        try:
+            from world_repository import WorldStateRepository
+            snap = WorldStateRepository(self.db).latest()
+        except Exception:
+            return settings.PROACTIVITY_STATE_FACTOR_UNKNOWN, "unavailable"
+
+        if not snap:
+            return settings.PROACTIVITY_STATE_FACTOR_UNKNOWN, "absent"
+
+        try:
+            observed = datetime.fromisoformat(snap["observed_at"])
+        except (TypeError, ValueError, KeyError):
+            return settings.PROACTIVITY_STATE_FACTOR_UNKNOWN, "malformed"
+
+        age = now - observed
+        is_fresh = (observed.date() == now.date()
+                    and timedelta(0) <= age < timedelta(minutes=90))
+        if not is_fresh:
+            return settings.PROACTIVITY_STATE_FACTOR_UNKNOWN, "stale"
+
+        activity = (snap.get("activity") or "").casefold()
+        try:
+            source = json.loads(snap.get("source_json") or "{}")
+        except (TypeError, ValueError):
+            source = {}
+        reason = str(source.get("reason") or "").casefold()
+
+        if any(x in activity for x in ("dorm", "sleep", "sono")):
+            return 0.0, "sleeping"
+
+        # Busy: confirmed commitments, class, gym, work, casting.
+        busy_keywords = (
+            "aula", "class", "faculdade", "academia", "gym", "treinando",
+            "trabalh", "working", "casting", "reuniao", "reunião",
+        )
+        confirmed_busy = reason in ("confirmed_commitment", "explicit_plan",
+                                    "announced_transition")
+        if confirmed_busy and any(k in activity for k in busy_keywords):
+            return settings.PROACTIVITY_STATE_FACTOR_BUSY, f"busy:{reason}"
+        if any(k in activity for k in busy_keywords):
+            return settings.PROACTIVITY_STATE_FACTOR_BUSY, "busy:activity"
+
+        # Post-event recovery: acabou de sair de um compromisso.
+        if reason == "post_event_recovery":
+            return settings.PROACTIVITY_STATE_FACTOR_POST_EVENT, "post_event"
+
+        # Free time in her own apartment — mais provável te procurar.
+        free_keywords = ("livre", "descans", "tempo livre", "relax",
+                         "em casa", "tempo em casa", "free")
+        if reason == "free_time" or any(k in activity for k in free_keywords):
+            return settings.PROACTIVITY_STATE_FACTOR_FREE_TIME, "free_time"
+
+        return settings.PROACTIVITY_STATE_FACTOR_UNKNOWN, "other"
 
     def determine_living_world_candidate(self, now: Optional[datetime] = None) -> dict:
         from relationship_world import RelationshipWorld
@@ -214,7 +293,7 @@ class ProactivityService:
         no `RoutineEngine.candidates` SEM os filtros de conversa/cooldown
         (queremos saber a intenção 'crua' do sistema de rotinas para avisar)."""
         try:
-            from world_state import RoutineEngine, EXTERNAL_ROUTINE_TYPES
+            from world_state import RoutineEngine, EXTERNAL_ROUTINE_TYPES, current_energy
             from academic_life import AcademicLife
             from calendar_world import CalendarWorld, local_time
         except Exception:
@@ -233,22 +312,34 @@ class ProactivityService:
         # Sem os filtros de bloqueio: queremos ver se "seria" hora de sair.
         cands = engine.candidates(
             now, has_class=has_class, heavy_rain=heavy_rain,
-            energy=0.7, holiday_scope=holiday_scope,
+            energy=current_energy(self.db), holiday_scope=holiday_scope,
             conversation_active=False, post_event_cooldown=False,
         )
-        externals = [c for c in cands if c.routine_type in EXTERNAL_ROUTINE_TYPES]
+        # Auditoria #4: só anuncia saída que ESTÁ na agenda do dia. Antes pegava
+        # o externo de maior score a qualquer momento da janela — a academia era
+        # anunciada todo dia (a cota semanal nunca era aplicada) e, vencida a
+        # primeira transição, podia ser anunciada de novo na mesma tarde.
+        externals = []
+        for cand in cands:
+            if cand.routine_type not in EXTERNAL_TRANSITION_TEMPLATES:
+                continue
+            slot = engine.slot_for(now, cand, has_class=has_class)
+            if not slot:
+                continue
+            start, end = slot
+            lead = timedelta(minutes=TRANSITION_ANNOUNCE_LEAD_MINUTES)
+            if start - lead <= now and now + lead + timedelta(minutes=10) <= end:
+                externals.append((cand, end))
         if not externals:
             return None
-        # Escolhe o mais provável dentre os externos.
-        best = max(externals, key=lambda c: c.score)
-        template = EXTERNAL_TRANSITION_TEMPLATES.get(best.routine_type)
-        if not template:
-            return None
+        best, slot_end = max(externals, key=lambda pair: pair[0].score)
+        template = EXTERNAL_TRANSITION_TEMPLATES[best.routine_type]
         return {
             "routine_type": best.routine_type,
             "activity": template["activity"],
             "place_key": template["place_key"],
             "instruction_hint": template["instruction_hint"],
+            "end_at": slot_end.isoformat(),
         }
 
     def _register_transition(self, intent: Dict[str, Any], now: datetime) -> None:
@@ -256,6 +347,9 @@ class ProactivityService:
         vai efetivar como `explicit_plan` quando `transition_at` chegar."""
         transition_at = now + timedelta(minutes=TRANSITION_ANNOUNCE_LEAD_MINUTES)
         end_at = transition_at + timedelta(minutes=TRANSITION_DEFAULT_DURATION_MINUTES)
+        if intent.get("end_at"):
+            end_at = max(transition_at + timedelta(minutes=10),
+                         datetime.fromisoformat(intent["end_at"]))
         payload = {
             "routine_type": intent["routine_type"],
             "activity": intent["activity"],
@@ -322,8 +416,8 @@ class ProactivityService:
                 "reason": "pending_event_followup",
                 "event_id": ev["id"],
                 "instruction": (
-                    f"Daypart is {daypart}. You remembered Patrick had this commitment: '{desc}'. "
-                    "Ask how it went with genuine girlfriend affection. Do not invent a location."
+                    f"Período do dia: {daypart}. Você lembrou que o Patrick tinha este compromisso: '{desc}'. "
+                    "Pergunte como foi, com carinho genuíno de namorada. Não invente local."
                 )
             }
 
@@ -339,8 +433,8 @@ class ProactivityService:
                     "reason": "open_loop_checkin",
                     "loop_id": loop["id"],
                     "instruction": (
-                        f"Daypart is {daypart}. You remembered something Patrick mentioned: "
-                        f"'{loop['content']}'. Ask lightly if there is any update — no pressure, no invented scene."
+                        f"Período do dia: {daypart}. Você lembrou de algo que o Patrick comentou: "
+                        f"'{loop['content']}'. Pergunte de leve se tem novidade — sem pressão, sem inventar cena."
                     )
                 }
 
@@ -352,8 +446,8 @@ class ProactivityService:
                 "reason": "topic_followup",
                 "event_id": None,
                 "instruction": (
-                    f"Daypart is {daypart}. Continue the shared topic '{shared_topic}' with warmth. "
-                    "Do not invent a current apartment scene or fabricated daily event."
+                    f"Período do dia: {daypart}. Retome com carinho o assunto em comum '{shared_topic}'. "
+                    "Não invente cena no apartamento nem acontecimento do dia."
                 )
             }
 
@@ -366,13 +460,12 @@ class ProactivityService:
             "reason": "neutral_affection",
             "event_id": None,
             "instruction": (
-                "Send a spontaneous message to Patrick. Draw naturally on the "
-                "context below — a passing thought about what you're doing, a "
-                "reaction to the moment, a small observation, a question about "
-                "him, or plain affection. Vary the shape: don't default to "
-                "'oi amor, como você tá?'. Do not invent location, outfit, "
-                "package, or fabricated daily events beyond what the context "
-                "supplies.\n\n" + context_lines
+                "Mande uma mensagem espontânea pro Patrick. Use o contexto "
+                "abaixo com naturalidade — um pensamento sobre o que você está "
+                "fazendo, uma reação ao momento, uma observação pequena, uma "
+                "pergunta sobre ele ou só carinho. Varie o formato: não caia no "
+                "'oi amor, como você tá?'. Não invente local, roupa, encomenda "
+                "nem acontecimento além do que o contexto traz.\n\n" + context_lines
             ),
         }
 
@@ -380,10 +473,13 @@ class ProactivityService:
         """Monta um bloco de contexto rico pra a mensagem espontânea variar
         naturalmente: WorldState atual, hora, humor, tópico compartilhado
         recente, tempo desde a última troca."""
-        lines = [f"Daypart: {daypart}. Hora local: {now.strftime('%H:%M')}."]
+        lines = [f"Período do dia: {daypart}. Hora local: {now.strftime('%H:%M')}."]
         try:
-            from world_repository import WorldStateRepository
-            snap = WorldStateRepository(self.db).latest()
+            # Auditoria #4: lia `latest()` sem checar idade — às 17:30 podia
+            # puxar assunto com o estado da academia das 15h, ou "dormindo" de
+            # madrugada às 9h. Agora passa pelo resolvedor único.
+            from world_state import WorldStateManager
+            snap = WorldStateManager(self.db).resolve(now)
             if snap:
                 lines.append(
                     f"Seu estado agora: {snap.get('activity') or 'sem atividade definida'}."

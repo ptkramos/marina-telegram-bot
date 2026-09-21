@@ -106,6 +106,34 @@ class AvailabilityPolicyTests(unittest.TestCase):
         self.assertEqual(urgent.decision, 'DEFER')
         self.assertGreaterEqual(urgent.selected_target_at, expected)
 
+    def test_patch_015_stale_sleeping_snapshot_still_protects_sleep(self):
+        """Reproduce the 20/09 01:27 bug: last snapshot said 'dormindo' 78 min
+        earlier (stale > 60 min), we are still inside light_day_sleep window.
+        Before Patch 015 the fallback dropped to UNKNOWN → REPLY_NOW; now it
+        must preserve SLEEPING and DEFER until the window ends."""
+        observed = datetime(2026, 9, 20, 0, 8)
+        now = datetime(2026, 9, 20, 1, 27)  # 79 min after observed, still in sleep window
+        self._snap(activity='dormindo', reason='light_day_sleep', observed=observed)
+        with patch.multiple(settings, CALENDAR_CONTINUITY_ENABLED=False,
+                            CRITICAL_WAKE_POLICY_ENABLED=False):
+            decision = self.policy.evaluate('marinocaa tá acordada?',
+                                            now=now, telegram_message_id=101)
+        expected_end = datetime(2026, 9, 20, 8, 30)
+        self.assertEqual(decision.activity_type, 'SLEEPING')
+        self.assertEqual(decision.decision, 'DEFER')
+        self.assertGreaterEqual(decision.selected_target_at, expected_end)
+
+    def test_patch_015_stale_non_sleeping_still_falls_back_to_unknown(self):
+        """Regression guard: outside the sleep window (or non-sleeping activity),
+        stale snapshots must still fall back to UNKNOWN as before."""
+        observed = datetime(2026, 9, 19, 14, 0)
+        now = datetime(2026, 9, 19, 16, 30)  # 150 min stale, mid-afternoon
+        self._snap(activity='tempo livre em casa', reason='free_time', observed=observed)
+        with patch.multiple(settings, CALENDAR_CONTINUITY_ENABLED=False,
+                            CRITICAL_WAKE_POLICY_ENABLED=False):
+            decision = self.policy.evaluate('e aí amor?', now=now, telegram_message_id=102)
+        self.assertEqual(decision.activity_type, 'UNKNOWN')
+
 
 class PendingBatchTests(unittest.TestCase):
     def setUp(self):

@@ -1,7 +1,14 @@
 """
 Testes Automatizados para o Memory Retriever e Context Builder da Marina Salles (v3.7.0).
+
+Patch 018 — isolamento de DB: cada método que toca em memory_manager.db agora
+usa um tempfile próprio. Antes, o singleton apontava para o banco de produção;
+rodar esta suíte por engano no ambiente do soak inseria fixtures como
+'Boa noite vida' / 'Boa noite meu amor!' na conversa real do Patrick (6 pares
+detectados no soak de 19-20/09/2026).
 """
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -10,9 +17,38 @@ sys.path.insert(0, str(BASE_DIR))
 
 from memory_retriever import memory_retriever
 from context_builder import context_builder
+from db import DatabaseManager
 
 
 class TestMemoryRetrieverAndContextBuilder(unittest.TestCase):
+    def setUp(self):
+        """Aponta memory_manager.db + retriever para tempfile isolado para
+        esta suíte. Restaura tudo no tearDown para não afetar outras suítes."""
+        from memory import memory_manager
+        from memory_retriever import memory_retriever as _mr
+        from seed_world_bible_v36 import seed_world_bible
+        from seed_academic_v36 import seed_academic
+        self._temp_dir = tempfile.TemporaryDirectory()
+        self._temp_db = DatabaseManager(Path(self._temp_dir.name) / "ctx_builder_test.db")
+        self._saved_db = memory_manager.db
+        self._saved_retriever_db = _mr.db
+        memory_manager.db = self._temp_db
+        _mr.db = self._temp_db
+        seed_world_bible(self._temp_db)
+        seed_academic(self._temp_db)
+        with self._temp_db.get_connection() as conn:
+            conn.execute(
+                """INSERT OR REPLACE INTO world_bootstrap (key, value, updated_at)
+                   VALUES ('clean_canonical_start_done', '1', '2026-09-18T00:00:00')"""
+            )
+
+    def tearDown(self):
+        from memory import memory_manager
+        from memory_retriever import memory_retriever as _mr
+        memory_manager.db = self._saved_db
+        _mr.db = self._saved_retriever_db
+        self._temp_dir.cleanup()
+
     def test_keyword_extraction(self):
         """Testa se stop words são removidas e termos reais são preservados."""
         texto = "Oi amor, tudo bem? Lembra daquele videogame de RPG que eu falei ontem?"

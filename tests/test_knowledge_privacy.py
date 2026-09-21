@@ -135,8 +135,9 @@ class TestKnowledgePrivacy(unittest.TestCase):
         with patch.object(settings, 'KNOWLEDGE_PRIVACY_ENABLED', True):
             prompt = builder.build(now=datetime(2026, 9, 18, 12),
                                    user_message='E a Bia?', privacy_subjects=[('fact', 1)])
-        self.assertIn('[KNOWLEDGE POLICY]', prompt)
-        self.assertIn('Do not reveal, confirm, or deny', prompt)
+        # Patch 021: bloco traduzido para pt-BR.
+        self.assertIn('[POLÍTICA DE CONHECIMENTO]', prompt)
+        self.assertIn('Nenhuma delas é permissão para confirmar informação privada', prompt)
         self.assertNotIn('A frase privada de Bia', prompt)
         retriever.retrieve_context.assert_not_called()
         with patch.object(settings, 'KNOWLEDGE_PRIVACY_ENABLED', True):
@@ -174,7 +175,8 @@ class TestKnowledgePrivacy(unittest.TestCase):
               patch.object(bot, 'context_builder', ContextBuilder(memory_mgr=MemoryManager(db=self.db)))):
             messages = bot.build_messages_payload(user_message='Oi')
         self.assertIn('Marina Salles', messages[0]['content'])
-        self.assertIn('[KNOWLEDGE POLICY]', messages[0]['content'])
+        # Patch 021: bloco traduzido para pt-BR.
+        self.assertIn('[POLÍTICA DE CONHECIMENTO]', messages[0]['content'])
 
 
 if __name__ == '__main__':

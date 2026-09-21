@@ -16,23 +16,27 @@ from config import settings
 
 logger = logging.getLogger("VisionService")
 
-VISION_PROMPT = """You are Marina Salles' visual perception extraction component.
-Analyze the photo Patrick Ramos just sent and return STRICTLY structured JSON of concrete visible elements.
+# Auditoria #2: traduzido para pt-BR. O resultado deste prompt entra no bloco
+# [CONTEXTO VISUAL] do prompt da Marina, então descrições geradas em inglês
+# chegavam à fala dela — o mesmo vazamento do `response_goal` do planner.
+VISION_PROMPT = """Você é o componente de percepção visual da Marina Salles.
+Analise a foto que o Patrick Ramos acabou de enviar e devolva ESTRITAMENTE um JSON com os elementos concretos visíveis.
 
-REQUIRED JSON:
+JSON OBRIGATÓRIO (todos os textos em português brasileiro):
 {
-  "scene": "clear concise description of setting/situation",
-  "people": ["short descriptions or 'Patrick' if selfie"],
-  "objects": ["main visible objects"],
-  "food": ["food/drink items if any"],
-  "visible_text": ["legible text on signs/screens/shirts if any"],
-  "notable_details": ["details worth a caring remark"],
+  "scene": "descrição clara e concisa do cenário/situação",
+  "people": ["descrições curtas, ou 'Patrick' se for selfie dele"],
+  "objects": ["principais objetos visíveis"],
+  "food": ["comidas/bebidas, se houver"],
+  "visible_text": ["texto legível em placas/telas/camisetas, se houver"],
+  "notable_details": ["detalhes que merecem um comentário carinhoso"],
   "uncertain_details": []
 }
 
-RULES:
-- Be factual. Do not invent beyond the image.
-- Return ONLY valid JSON, no markdown.
+REGRAS:
+- Seja factual. Não invente nada além do que está na imagem.
+- Escreva os textos em português brasileiro.
+- Devolva APENAS JSON válido, sem markdown.
 """
 
 

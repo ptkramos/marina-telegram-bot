@@ -1,7 +1,9 @@
 """Deterministic Response Availability & Human Latency (v3.7.0).
 
 Interprets WorldState/Calendar certainty into WHEN/HOW-MUCH to reply.
-Does not invent activity, mutate WorldState, or replace Planner/Rhythm.
+Does not invent activity or replace Planner/Rhythm. When the latest snapshot
+is stale it asks WorldStateManager.resolve() — the single resolver — so this
+decision and the prompt built right after read the same state (Auditoria #4).
 """
 from __future__ import annotations
 
@@ -40,6 +42,22 @@ DEFAULT_PROFILES = {
         'phone_access': 'HIGH', 'attention': 'HIGH', 'interruptibility': 'HIGH',
         'soft_delay_min_s': 5, 'soft_delay_max_s': 120, 'guardrail_s': 600,
         'brief_likelihood': 0.25, 'prefer': 'REPLY_NOW',
+    },
+    # Patch 030: a rotina canônica pet_walk ("passeando com Milo", 07:00-10:30)
+    # não tinha profile nem mapeamento — caía em UNKNOWN e o prompt perdia o
+    # estado concreto, levando o LLM a inventar paradeiro ("tô no meu quarto").
+    'PET_WALK': {
+        'phone_access': 'HIGH', 'attention': 'MEDIUM', 'interruptibility': 'HIGH',
+        'soft_delay_min_s': 20, 'soft_delay_max_s': 240, 'guardrail_s': 900,
+        'brief_likelihood': 0.35, 'prefer': 'REPLY_NOW',
+    },
+    # Patch 030: "acordando e tomando café" (rotina wake, 07:00-08:30) batia na
+    # heurística de 'tomando café' e virava SOCIAL (bar/amigos). Recém-acordada
+    # tem atenção parcial e responde curto — daí brief_likelihood alto.
+    'WAKING': {
+        'phone_access': 'HIGH', 'attention': 'MEDIUM', 'interruptibility': 'HIGH',
+        'soft_delay_min_s': 10, 'soft_delay_max_s': 180, 'guardrail_s': 600,
+        'brief_likelihood': 0.40, 'prefer': 'REPLY_NOW',
     },
     'GYM': {
         'phone_access': 'HIGH', 'attention': 'MEDIUM', 'interruptibility': 'MEDIUM',
@@ -239,17 +257,42 @@ class ResponseAvailabilityPolicy:
             return mapped, 'CONFIRMED_COMMITMENT', None, 'fresh', True
 
         snapshot = self.states.latest()
+        if not self._fresh(snapshot, now_naive):
+            # Auditoria #4: a disponibilidade roda ANTES da montagem do prompt,
+            # que é quem resolvia o estado. Resultado: a primeira mensagem depois
+            # de um silêncio > 60 min sempre caía em UNKNOWN (ela nunca estava
+            # "ocupada passeando com o Milo" justamente no caso mais comum), e o
+            # prompt logo depois dizia outra coisa. Resolver aqui faz os dois
+            # lerem o MESMO snapshot. Falha continua fail-open.
+            try:
+                from world_state import WorldStateManager
+                snapshot = WorldStateManager(
+                    self.db, stale_minutes=self.stale_minutes).resolve(now_naive)
+            except Exception:
+                logger.warning('availability.world_state.resolve_failed', exc_info=True)
         if not snapshot:
             return 'UNKNOWN', 'UNKNOWN', None, 'absent', False
         observed = datetime.fromisoformat(snapshot['observed_at'])
         same_day = observed.date() == now_naive.date()
         age = now_naive - observed
         fresh = same_day and timedelta(0) <= age < timedelta(minutes=self.stale_minutes)
-        if not fresh:
-            return 'UNKNOWN', 'UNKNOWN', snapshot['id'], 'stale', False
-
+        slot_end = json.loads(snapshot.get('source_json') or '{}').get('slot_end')
+        if slot_end and same_day and now_naive < datetime.fromisoformat(slot_end):
+            fresh = True  # slot da agenda vale até o fim, não até os 60 min
         place_key = self._place_key(snapshot.get('location_place_id'))
         activity = snapshot.get('activity') or ''
+        if not fresh:
+            # Sleep is deterministic enough that a stale snapshot inside the
+            # known routine sleep window still means SLEEPING — falling back
+            # to UNKNOWN used to let 01:27 messages be answered during the
+            # sleep window even though the last state was 'dormindo' (Patch
+            # 015). Preserving SLEEPING here keeps sleep_protected intact.
+            if self._map_place_activity(place_key, activity) == 'SLEEPING':
+                sleep_until = self._routine_sleep_until(snapshot['id'], now_naive)
+                if sleep_until is not None and sleep_until > now_naive:
+                    return 'SLEEPING', 'ROUTINE_PROBABILITY', snapshot['id'], 'fresh', False
+            return 'UNKNOWN', 'UNKNOWN', snapshot['id'], 'stale', False
+
         source = json.loads(snapshot.get('source_json') or '{}')
         reason = source.get('reason') or ''
         mapped = self._map_place_activity(place_key, activity)
@@ -259,6 +302,16 @@ class ResponseAvailabilityPolicy:
             return mapped, 'WORLD_STATE', snapshot['id'], 'fresh', True
         # Routine / free_time: soft signal only.
         return mapped, 'ROUTINE_PROBABILITY', snapshot['id'], 'fresh', False
+
+    def _fresh(self, snapshot: Optional[dict], now_naive: datetime) -> bool:
+        if not snapshot:
+            return False
+        observed = datetime.fromisoformat(snapshot['observed_at'])
+        slot_end = json.loads(snapshot.get('source_json') or '{}').get('slot_end')
+        if slot_end and observed.date() == now_naive.date() and now_naive < datetime.fromisoformat(slot_end):
+            return True
+        return (observed.date() == now_naive.date()
+                and timedelta(0) <= now_naive - observed < timedelta(minutes=self.stale_minutes))
 
     def _routine_sleep_until(self, snapshot_id: Optional[int], now: datetime) -> Optional[datetime]:
         """Return the first minute outside the active deterministic sleep window."""
@@ -304,6 +357,14 @@ class ResponseAvailabilityPolicy:
         # Priority: explicit activity keywords override place heuristic
         if any(x in act for x in ('dorm', 'sleep', 'sono')):
             return 'SLEEPING'
+        # Patch 030: 'acordando' tem de vir ANTES da heurística de 'tomando
+        # café', senão a rotina canônica "acordando e tomando café" cai em
+        # SOCIAL (bar/amigos) durante a janela de wake das 07:00-08:30.
+        if any(x in act for x in ('acordando', 'acabou de acordar', 'levantando')):
+            return 'WAKING'
+        # Patch 030: passeio com o Milo — sem isso o estado ia pra UNKNOWN.
+        if any(x in act for x in ('passeando', 'passeio', 'caminhando')):
+            return 'PET_WALK'
         if any(x in act for x in ('trabalh', 'freela', 'codando', 'programando')):
             return 'WORK'
         if any(x in act for x in ('uber', 'metrô', 'metro', 'ônibus', 'onibus', 'desloc')):
@@ -323,6 +384,8 @@ class ResponseAvailabilityPolicy:
             return 'GYM'
         if place_key == 'boutique_agency':
             return 'CASTING'
+        if place_key == 'enseada_botafogo':
+            return 'PET_WALK'
         if place_key in ('quartinho_bar',):
             return 'SOCIAL'
         if place_key == 'marina_apartment' or 'casa' in text or 'apartamento' in text:

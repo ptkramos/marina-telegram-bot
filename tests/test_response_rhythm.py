@@ -70,9 +70,9 @@ class TestResponseRhythm(unittest.TestCase):
         self.assertIn('Identidade canônica.',result)
         self.assertIn('Risada: kkkk',result)
         self.assertNotIn('múltiplos balões',result)
-        self.assertIn('no invented dialogue',result.lower())
-        self.assertIn('usually finish without a question',result)
-        self.assertEqual(apply_policy(result,select_policy()).count('[RESPONSE RHYTHM]'),1)
+        self.assertIn('sem diálogo',result.lower())
+        self.assertIn('em geral termine sem pergunta',result)
+        self.assertEqual(apply_policy(result,select_policy()).count('[RITMO DE RESPOSTA]'),1)
 
     def test_telegram_transport_always_uses_canonical_rhythm(self):
         import bot
@@ -93,5 +93,5 @@ class TestResponseRhythm(unittest.TestCase):
         with patch.object(bot.context_builder,'build_system_prompt',return_value='[CANONICAL WORLD]'),patch.object(bot.llm_client.chat.completions,'create',return_value=response) as create:
             self.assertEqual(bot.generate_dynamic_speech('oi'),'kkkk')
         create.assert_called_once()
-        self.assertIn('[RESPONSE RHYTHM]',create.call_args.kwargs['messages'][0]['content'])
+        self.assertIn('[RITMO DE RESPOSTA]',create.call_args.kwargs['messages'][0]['content'])
         self.assertLessEqual(create.call_args.kwargs['max_tokens'], 120)

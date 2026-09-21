@@ -59,7 +59,8 @@ class TestWiringAuditoria(unittest.TestCase):
         with patch.object(settings, 'LIVING_WORLD_ENABLED', False), \
              patch.object(settings, 'RESPONSE_RHYTHM_ENABLED', False):
             prompt = cb.build_system_prompt(planner_tone="dengosa", planner_goal="Acolher com muito dengo")
-        self.assertIn("[PLANNER 3.5 — TURN INTENT]", prompt)
+        # Auditoria #2: rótulo traduzido junto com o resto do prompt em pt-BR.
+        self.assertIn("[INTENÇÃO DESTE TURNO — planner interno]", prompt)
         self.assertIn("dengosa", prompt)
         self.assertIn("Acolher com muito dengo", prompt)
 

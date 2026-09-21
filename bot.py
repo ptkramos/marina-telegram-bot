@@ -91,13 +91,28 @@ file_handler = RotatingFileHandler(
 )
 file_handler.setFormatter(log_formatter)
 
+# Auditoria #3: o handler de arquivo era anexado no import, e todo teste importa
+# `bot`. A suíte escrevia no log de produção — em 21/09 o `marina.log` rotacionou
+# 10 MB em ~3h, e a sessão real do Patrick (10:32–13:12) foi empurrada para o
+# `.1` por spam de teste. Com backupCount=5, algumas corridas da suíte bastam
+# para expulsar da rotação os logs que servem para diagnosticar o soak.
+# Override explícito: MARINA_LOG_TO_FILE=1 força, =0 desliga.
+import os as _os
+_log_to_file_env = _os.getenv("MARINA_LOG_TO_FILE")
+if _log_to_file_env is not None:
+    _log_to_file = _log_to_file_env.strip() not in ("0", "false", "no", "")
+else:
+    _log_to_file = "unittest" not in sys.modules and "pytest" not in sys.modules
+
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.INFO)
 if not root_logger.handlers:
     root_logger.addHandler(console_handler)
-    root_logger.addHandler(file_handler)
+    if _log_to_file:
+        root_logger.addHandler(file_handler)
 else:
-    root_logger.handlers = [console_handler, file_handler]
+    root_logger.handlers = ([console_handler, file_handler] if _log_to_file
+                            else [console_handler])
 
 # httpx includes the Telegram bot token in request URLs at INFO level.
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -587,6 +602,346 @@ _safe_reactions = {"❤️", "🥰", "😂", "👍", "🔥"}
 _REACTION_SENTINEL_NULLS = {"null", "none", "-", "n/a", ""}
 
 
+# Regex conservador para "essencialmente vazio de texto" — pega apenas emojis,
+# espaços, pontuação simples. Se depois de retirar tudo isso sobrar < 3 letras,
+# consideramos a resposta como emoji-only (bug conhecido de modelos 12B).
+_EMOJI_ONLY_STRIPPER = re.compile(
+    r"[\U00010000-\U0010ffff☀-➿️‍\s!?.,…\-·:;\"'()\[\]{}]"
+)
+
+
+# Scripts que 12B multilíngues (Nemo, Unslopnemo) às vezes alucinam em pt-BR:
+# cirílico, grego, chinês, japonês (hiragana/katakana), coreano, árabe, hebraico,
+# devanagari, tâmil, tailandês, além de faixas Unicode "estilizadas" que o LLM
+# usa como decoração pseudo-fancy (matemático bold "𝟣", letterlike "ℝ", fullwidth
+# "Ａ"). Se aparecer 2+ desses no meio de uma resposta, retry endurecido. Nomes
+# próprios curtos (uma palavra) são tolerados; falha só quando o modelo derrapa
+# e cola tokens estrangeiros. Faixa Mathematical Alphanumeric (U+1D400-U+1D7FF)
+# adicionada no Patch 028 depois de "𝟣/𝟤" aparecer no soak de 20/09.
+_FOREIGN_SCRIPT_RE = re.compile(
+    r"[Ѐ-ӿͰ-Ͽ一-鿿぀-ヿ가-힯"
+    r"؀-ۿ֐-׿ऀ-ॿ஀-௿฀-๿"
+    r"\U0001D400-\U0001D7FF"
+    r"℀-⅏"
+    r"！-～]"
+)
+
+
+def _is_essentially_emoji_only(text: str) -> bool:
+    """True se `text` for essencialmente vazio de letras: só emojis, pontuação
+    ou espaços. Usado para detectar respostas malucas do LLM tipo "❓" ou "✅❓"
+    e disparar um retry com prompt endurecido. Threshold conservador (<2 letras)
+    para não falsear em respostas curtas legítimas tipo "oi", "kk", "vai". Ver
+    Patch 020."""
+    if not text:
+        return True
+    stripped = _EMOJI_ONLY_STRIPPER.sub("", text)
+    letters = sum(1 for c in stripped if c.isalpha())
+    return letters < 2
+
+
+def _has_foreign_script_leak(text: str) -> bool:
+    """True quando o LLM colou tokens de um script não-latino no meio da
+    resposta — bug clássico de modelos multilíngues 12B que "vazam" cirílico,
+    chinês, árabe etc. em respostas de pt-BR sob alta temperatura. Threshold:
+    2 caracteres estrangeiros. Ver Patch 020 (rev. após "імпер" em 20/09)."""
+    if not text:
+        return False
+    return len(_FOREIGN_SCRIPT_RE.findall(text)) >= 2
+
+
+# Patch 030: artefatos de dataset instrucional que modelos 12B abertos colam no
+# fim da resposta. Observado no soak de 21/09 08:02, quando a Marina fechou um
+# turno com "affirmation_pronouns=true" — string ASCII pura, então nem o guard
+# de emoji-only nem o de script estrangeiro pegavam.
+_DEBUG_ARTIFACT_RE = re.compile(
+    r"(?:"
+    # chave=valor técnico. Fala natural em pt-BR não usa '=' nem ':' seguido de
+    # booleano/número, então não exige underscore: pega tanto
+    # 'affirmation_pronouns=true' quanto 'temperature=0.85'.
+    r"\b[a-z][a-z0-9_]{2,}\s*[=:]\s*(?:true|false|none|null|query|\d+(?:\.\d+)?)\b"
+    # chave= sem valor, colada ao fim ou antes de espaço ("irdp=" — soak 21/09)
+    r"|\b[a-z][a-z0-9_]{2,}=(?=\s|$)"
+    r"|</?[a-z_]{3,}(?:\s[^>]*)?>"            # <tag> / </tag> / <thinking>
+    r"|(?<![\w-])--[a-z][a-z-]{2,}(?![\w-])"  # --flag
+    r"|\b[a-z_]{3,}::[a-z_]{3,}\b"            # ns::func
+    r"|\[/?(?:INST|SYS|s)\]"                  # [INST] [/INST] [SYS]
+    r"|<\|[a-z_]+\|>"                         # <|im_start|>
+    r")",
+    re.IGNORECASE,
+)
+
+# Patch 030: bots do Telegram não fazem chamada de voz/vídeo. O bloco
+# [LINHAS DURAS] já proíbe desde o Patch 022, mas o Nemo violou em 21/09 08:04
+# ("é só me ligar, viu?"). Regra negativa em prompt não é garantia — precisa de
+# guard pós-resposta. Só pega proposta de ligação; "ligar o computador",
+# "ligando pra pizzaria" e afins ficam de fora.
+_CALL_PROPOSAL_RE = re.compile(
+    r"(?:"
+    r"\bme\s+lig(?:a|ue|ar)\b"
+    r"|\bte\s+lig(?:o|ar|ando)\b"
+    r"|\blig(?:a|ue|ar)\s+(?:pra|para)\s+(?:mim|eu|vc|voc[êe])\b"
+    r"|\b(?:faz|fazer|fazemos|bora|vamos)\s+(?:uma\s+)?(?:chamada|videochamada|v[íi]deo)\b"
+    r"|\bchamada\s+de\s+(?:v[íi]deo|voz)\b"
+    r"|\bvideochamada\b"
+    r"|\bzoom\b|\bfacetime\b|\bgoogle\s+meet\b|\bdiscord\s+(?:call|voice)\b"
+    r"|\bcham(?:a|ar)\s+no\s+(?:v[íi]deo|zap)\b"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _unescape_markdown(text: str) -> str:
+    """Desfaz escapes de markdown que o modelo emite por reflexo (`\\_`, `\\*`).
+
+    Auditoria #3: o Nemo gera `technically\\_single=true`, com o underscore
+    escapado — hábito de modelo treinado em markdown. O regex de artefato
+    esperava `_` cru, então três vazamentos reais passaram pelo guard entre
+    10:35 e 13:12 de 21/09 (capturados pelo Patrick com /ruim). O teste do
+    Patch 030 usava só a forma crua e ficou verde.
+    """
+    return re.sub(r"\\([_*`\[\]()~>#+\-=|{}.!])", r"\1", text)
+
+
+def _has_debug_artifact_leak(text: str) -> bool:
+    """True quando a resposta carrega artefato de dataset/config (Patch 030)."""
+    if not text:
+        return False
+    return bool(_DEBUG_ARTIFACT_RE.search(_unescape_markdown(text)))
+
+
+# Auditoria #3: resposta inteira numa língua que não é português, em alfabeto
+# latino — "Unternehmensprufung" (alemão) foi a resposta completa da Marina a
+# "já chegou na facul?". Escapa do guard de script estrangeiro porque as letras
+# são latinas. Sinal usado: turno curto sem nenhuma palavra funcional do
+# português e com token longo de morfologia claramente estrangeira.
+_PT_FUNCTION_WORDS = frozenset("""
+a o e é de da do que não nao pra para com em um uma eu vc você voce tu ele ela
+me te se já ja tá ta to tô mas mais só so sim amor kk kkk kkkk haha ai ah né ne
+isso aqui lá la vou vai tem tô bem ok oi
+""".split())
+_FOREIGN_MORPHOLOGY_RE = re.compile(
+    r"(?:ung|keit|heit|schaft|lich|sch|tz|ß|pf|ck|ght|tion(?!s?\b)|wh|th\b)", re.IGNORECASE)
+
+
+def _is_non_portuguese_reply(text: str) -> bool:
+    if not text:
+        return False
+    tokens = re.findall(r"[^\W\d_]+", _unescape_markdown(text).casefold())
+    if not tokens or len(tokens) > 6:
+        return False  # respostas longas têm outros sinais; aqui só o caso curto
+    if any(t in _PT_FUNCTION_WORDS for t in tokens):
+        return False
+    return any(len(t) >= 9 and _FOREIGN_MORPHOLOGY_RE.search(t) for t in tokens)
+
+
+def _proposes_live_call(text: str) -> bool:
+    """True quando a Marina propôs chamada de voz/vídeo — impossível num bot
+    do Telegram e quebra de imersão direta (Patch 030)."""
+    if not text:
+        return False
+    return bool(_CALL_PROPOSAL_RE.search(text))
+
+
+def _needs_retry_for_junk(text: str) -> tuple[bool, str]:
+    """Combina os detectores de resposta inutilizável. Devolve (needs_retry, motivo)."""
+    if _is_essentially_emoji_only(text):
+        return True, "emoji_only"
+    if _has_foreign_script_leak(text):
+        return True, "foreign_script"
+    if _has_debug_artifact_leak(text):
+        return True, "debug_artifact"
+    if _is_non_portuguese_reply(text):
+        return True, "foreign_script"
+    if _proposes_live_call(text):
+        return True, "live_call_proposal"
+    return False, ""
+
+
+# Patch 030: perguntas de entrevista que o modelo cola no fim do turno. O bloco
+# [LINHAS DURAS] proíbe desde o Patch 021 ("nunca termine turnos casuais com
+# pergunta de entrevista"), mas o Nemo insistiu no soak de 21/09: "E você, tem
+# alguma coisa planejada para hoje?", "E mais tarde, vai fazer alguma outra
+# coisa?", "E aí, o que você vai fazer hoje?".
+#
+# O critério é a GENERALIDADE, não o fato de ser pergunta: "vai comer o quê?" e
+# "que horas é o jogo?" puxam detalhe concreto e devem passar. Só entra aqui o
+# que é aberto e serve para qualquer conversa.
+_INTERVIEW_CLOSER_RE = re.compile(
+    r"^(?:"
+    r"e\s+(?:a[íi]|voc[êe]|vc|tu)\s*[,?]?\s*(?:o\s+que|que|como|tem|teve|vai|ta|t[áa])\b.*"
+    r"|e\s+(?:mais\s+tarde|hoje|amanh[ãa]|depois)\s*[,?]?\s*(?:o\s+que|que|vai|voc[êe]|vc)\b.*"
+    r"|(?:o\s+que|que)\s+(?:voc[êe]|vc|tu)\s+(?:vai|pretende|ta|t[áa])\s+(?:fazer|aprontar)\b.*"
+    r"|(?:tem|teve|tens)\s+(?:alguma\s+coisa|algo|algum\s+plano)\s+(?:planejad\w*|em\s+mente|pra|para)\b.*"
+    # Auditoria #3 — /ruim do Patrick (Evitar 004, "a todo momento perguntando
+    # como foi o meu dia"): "Tem alguma novidade?" e "Como foi o seu dia?".
+    r"|(?:e\s+)?(?:tem|teve)\s+(?:alguma\s+)?novidades?\b.*"
+    r"|(?:e\s+)?(?:como|e\s+como)\s+foi\s+(?:o\s+)?(?:seu|teu)\s+dia\b.*"
+    r"|(?:e\s+)?(?:e\s+)?o\s+(?:seu|teu)\s+dia\s*,?\s*(?:como\s+foi|foi\s+bom|tranquilo)\b.*"
+    r"|(?:tudo\s+(?:certo|bem|tranquilo))\s+(?:com|ai\s+com|a[íi]\s+com)\s+(?:voc[êe]|vc|tu)\b.*"
+    r"|(?:como|e\s+como)\s+(?:foi|est[áa]|ta|t[áa])\s+(?:o\s+)?(?:seu|teu|sua|tua)\s+dia\b.*"
+    r"|(?:e\s+)?(?:qual|quais)\s+(?:s[ãa]o\s+)?(?:seus|teus)\s+planos\b.*"
+    r")$",
+    re.IGNORECASE,
+)
+
+
+# Patch 031: "Ah," como muleta de abertura. A [LINHAS DURAS] proíbe desde o
+# Patch 021 e o Nemo violou em 21/09 08:04 ("Ah, entendi.", "Ah, legal!").
+#
+# Precisa ser cirúrgico: "AH NÃO KKKKKKK" e "Ahhh que fofo" são interjeições
+# legítimas — inclusive exemplos aprovados na biblioteca comportamental
+# (registro 070). O que caracteriza a muleta é "Ah" curto + vírgula + palavra
+# de concordância neutra. Interjeição real vem alongada, em caixa alta ou
+# seguida de carga emocional.
+_AH_CRUTCH_RE = re.compile(
+    r"^ah\s*[,!]?\s+"
+    r"(?=(?:entendi|legal|sei|t[áa]|ok|okay|certo|sim|claro|bacana|verdade|beleza)\b)",
+    re.IGNORECASE,
+)
+
+# Patch 031: fechos de atendimento. "Beijos 😘" e "obrigada por perguntar" são
+# polidez de call center, não de namorada (soak 21/09 08:00 e 08:05).
+_SERVICE_POLITENESS_RE = re.compile(
+    r"(?:"
+    r"\bobrigad[ao]\s+por\s+(?:perguntar|questionar|me\s+perguntar)\b[.!]?"
+    r"|\bfico\s+(?:[àa]\s+)?disposi[çc][ãa]o\b[.!]?"
+    r"|\bqualquer\s+(?:coisa|d[úu]vida)\s*,?\s*(?:estou|to|t[ôo])\s+(?:aqui|[àa]\s+disposi[çc][ãa]o)\b[.!]?"
+    r"|\bse\s+precisar\s+de\s+(?:alguma\s+coisa|algo)\s*,?\s*(?:[ée]\s+s[óo]|pode)\s+\w+\b[^.!?]*[.!]?"
+    r")",
+    re.IGNORECASE,
+)
+
+# Fecho tipo "Beijos 😘" / "Beijinhos!" sozinho no fim do turno. Só pega quando
+# é despedida isolada — abre a sentença (início de linha ou depois de pontuação)
+# e termina o texto. "te enchendo de beijos" e "beijos no Milo" passam porque
+# têm palavra antes ou depois.
+_SIGNOFF_RE = re.compile(
+    r"(?:^|\n|(?<=[.!?…])\s)\s*beij(?:os|inhos|ão|ao)\s*[!.…]*\s*"
+    r"[\U0001F300-\U0001FAFF☀-➿️]*\s*$",
+    re.IGNORECASE,
+)
+
+
+def _strip_assistant_politeness(text: str) -> str:
+    """Remove muleta 'Ah,' de abertura, polidez de atendimento e assinatura de
+    despedida (Patch 031). Nunca devolve string vazia — se o corte esvaziaria o
+    turno, mantém o original."""
+    if not text:
+        return text
+    original = text
+
+    novo = _AH_CRUTCH_RE.sub("", text)
+    if novo != text:
+        # Recapitaliza a primeira letra, que agora abre a frase.
+        novo = novo[:1].upper() + novo[1:] if novo else novo
+        logger.info("voice.ah_crutch_stripped")
+    text = novo
+
+    novo = _SERVICE_POLITENESS_RE.sub("", text)
+    if novo != text:
+        logger.info("voice.service_politeness_stripped")
+    text = novo
+
+    novo = _SIGNOFF_RE.sub("", text)
+    if novo != text:
+        logger.info("voice.signoff_stripped")
+    text = novo
+
+    # Normaliza espaços/pontuação que sobraram do corte, balão por balão.
+    linhas = []
+    for linha in text.split("\n"):
+        limpa = re.sub(r"\s{2,}", " ", linha).strip()
+        limpa = re.sub(r"^[,;.!?\s]+", "", limpa)
+        if limpa:
+            linhas.append(limpa)
+    resultado = "\n".join(linhas).strip()
+    return resultado if resultado else original
+
+
+def _strip_interview_closer(text: str) -> str:
+    """Remove perguntas de entrevista coladas no fim do turno (Patch 030).
+
+    Auditoria #3: aplica em laço. O modelo empilha fechos ("Como foi o seu
+    dia? Tem alguma novidade?") e a versão anterior só removia o último,
+    deixando o outro — foi assim que o Evitar 004 passou com o guard ativo.
+    """
+    if not text:
+        return text
+    atual = text
+    for _ in range(3):
+        proximo = _strip_one_interview_closer(atual)
+        if proximo == atual:
+            break
+        atual = proximo
+    return atual
+
+
+def _strip_one_interview_closer(text: str) -> str:
+    """Remove UMA pergunta de entrevista do fim. Nunca devolve turno vazio."""
+    if not text:
+        return text
+    # Trabalha por balão: o pipeline usa '\n' pra separar bolhas.
+    linhas = text.split("\n")
+    idx = next((i for i in range(len(linhas) - 1, -1, -1) if linhas[i].strip()), None)
+    if idx is None:
+        return text
+    ultima = linhas[idx].strip()
+
+    # Dentro do último balão, isola a sentença final.
+    # Vírgula seguida de maiúscula também fecha frase: o modelo emite
+    # "Foi tranquilo sim, Como foi o seu dia?" (Evitar 004).
+    sentencas = [s.strip(" ,") for s in re.split(
+        r"(?<=[.!?…])\s+|,\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕ])", ultima) if s.strip(" ,")]
+    if not sentencas:
+        return text
+    final = sentencas[-1].strip()
+    if not final.endswith("?"):
+        return text
+    # A regex casa a frase sem a pontuação final e sem emojis de sobra.
+    nucleo = final.rstrip("?！!. …").strip()
+    if not _INTERVIEW_CLOSER_RE.match(nucleo):
+        return text
+
+    # Corta pelo texto original (não rejunta pedaços), para preservar a
+    # pontuação que separa a próxima pergunta — senão a segunda passada do laço
+    # não enxerga mais a fronteira "sim, Como foi...".
+    corte = ultima.rfind(final)
+    restante_balao = (ultima[:corte] if corte >= 0 else " ".join(sentencas[:-1]))
+    restante_balao = restante_balao.rstrip(" ,;").strip()
+    novas = list(linhas)
+    if restante_balao:
+        novas[idx] = restante_balao
+    else:
+        novas.pop(idx)
+
+    resultado = "\n".join(l for l in novas if l.strip()).strip()
+    if not resultado:
+        return text
+    logger.info("voice.interview_closer_stripped removido=%r", final)
+    return resultado
+
+
+def _salvage_reply(text: str) -> str | None:
+    """Último recurso quando o retry também sai ruim (Patch 030).
+
+    Remove artefatos técnicos inline e descarta sentenças que propõem chamada
+    de voz/vídeo, preservando o resto da fala. Devolve None quando não sobra
+    texto aproveitável — nesse caso é melhor manter o comportamento anterior.
+    """
+    if not text:
+        return None
+    limpo = _DEBUG_ARTIFACT_RE.sub("", _unescape_markdown(text))
+    # Quebra em sentenças e joga fora as que propõem ligação.
+    partes = re.split(r"(?<=[.!?…])\s+|\n+", limpo)
+    mantidas = [p for p in partes if p.strip() and not _proposes_live_call(p)]
+    resultado = " ".join(" ".join(mantidas).split()).strip()
+    if not resultado:
+        return None
+    needs_retry, _ = _needs_retry_for_junk(resultado)
+    return None if needs_retry else resultado
+
+
 def _normalize_planner_emoji(raw: object) -> str | None:
     """Filter planner emoji output. Returns a safe emoji or None."""
     if raw is None:
@@ -600,8 +955,43 @@ def _normalize_planner_emoji(raw: object) -> str | None:
     return candidate if candidate in _safe_reactions else None
 
 
+def _parse_available_reactions(available) -> set[str] | None:
+    """Best-effort read of chat.available_reactions.
+
+    Returns:
+      - None → 'all reactions allowed' (Telegram default for private chats).
+      - set of emoji strings → only these are permitted.
+
+    Any parsing surprise falls back to None (permissive) so a Telegram API
+    shape change never silently disables reactions again (Patch 019 —
+    ver soak de 20/09 onde `chat_disallowed` bloqueou toda ❤️/😂).
+    """
+    if available is None:
+        return None
+    if not hasattr(available, "__iter__"):
+        # Some client versions expose ChatAvailableReactionsAll as a
+        # non-iterable marker. Treat as 'all' rather than falsely restrictive.
+        logger.info(f"reaction.available shape=non_iterable type={type(available).__name__} → permissive")
+        return None
+    try:
+        allowed = {
+            reaction.emoji for reaction in available
+            if hasattr(reaction, "emoji") and reaction.emoji
+        }
+    except Exception as exc:
+        logger.warning(f"reaction.available parse_fail exc={exc} → permissive")
+        return None
+    if not allowed:
+        # Empty list can mean 'all' on some client shapes OR 'none configured'
+        # on channels. For private chats we treat empty as permissive; the
+        # Telegram send will still reject if truly disallowed.
+        logger.info("reaction.available shape=empty → permissive")
+        return None
+    return allowed
+
+
 async def set_safe_message_reaction(bot, chat_id: int, message_id: int, emoji: str) -> bool:
-    """React only when this chat allows the emoji; stop retrying rejected reactions."""
+    """React only when Telegram will accept the emoji; cache rejections."""
     import time
     original = emoji
     emoji = _reaction_aliases.get(emoji, emoji)
@@ -618,16 +1008,14 @@ async def set_safe_message_reaction(bot, chat_id: int, message_id: int, emoji: s
     if chat_id not in _reaction_capabilities:
         try:
             chat = await bot.get_chat(chat_id)
-            available = chat.available_reactions
-            _reaction_capabilities[chat_id] = None if available is None else {
-                reaction.emoji for reaction in available if hasattr(reaction, "emoji")
-            }
+            _reaction_capabilities[chat_id] = _parse_available_reactions(
+                getattr(chat, "available_reactions", None))
         except Exception as exc:
-            logger.warning(f"Não foi possível verificar reações do chat: {exc}")
-            return False
+            logger.warning(f"reaction.capabilities fetch_fail exc={exc} → permissive")
+            _reaction_capabilities[chat_id] = None
     allowed = _reaction_capabilities[chat_id]
     if allowed is not None and emoji not in allowed:
-        logger.info(f"reaction.skip reason=chat_disallowed emoji={emoji}")
+        logger.info(f"reaction.skip reason=chat_disallowed emoji={emoji} allowed={sorted(allowed)}")
         return False
     try:
         await bot.set_message_reaction(
@@ -730,7 +1118,7 @@ async def handle_reaction(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if heart_hit and random.random() < settings.REACT_TO_HEART_REACTION_CHANCE:
         speech_prompt = (
             "Patrick acabou de reagir com coração numa mensagem sua. Mande UMA frase "
-            "curta e viva de namorada carioca — sem 'ai amor', sem 'me derrete toda', "
+            "curta e viva de namorada — sem 'ai amor', sem 'me derrete toda', "
             "sem clichê. Pode ser um beicinho verbal, um comentário leve ou um agrado "
             "curto. Máximo 8 palavras."
         )
@@ -769,12 +1157,34 @@ class MessageDebouncer:
     """
     Acumula mensagens enviadas em rajada (bursts) em uma janela de ~2.8 segundos
     para permitir que o Patrick envie múltiplos balões antes de a Marina responder.
+
+    Patch 030: o debounce sozinho não bastava. A janela cancela o timer enquanto
+    o Patrick ainda digita, mas depois que ela expira o turno entra no pipeline
+    e leva ~10-15s no LLM. Uma mensagem que chegasse nesse intervalo abria um
+    ciclo PARALELO, e as duas respostas saíam fora de ordem semântica — soak de
+    21/09 07:57: "Bom dia amor da minha vida!" + "Tá acordada já?" (8s depois)
+    viraram "Bom dia, amor! Como você acordou tão cedo?" e, 45s mais tarde,
+    "Sim, amor, já acordei" — a segunda respondendo a pergunta anterior à
+    primeira. Agora existe um lock por chat: o turno seguinte espera o anterior
+    terminar e, ao assumir, drena o buffer de novo (juntando o que chegou
+    durante a espera).
     """
     def __init__(self, delay_seconds: float = 2.8):
         self.delay = delay_seconds
         self.buffers: dict[int, list[str]] = {}
         self.tasks: dict[int, asyncio.Task] = {}
         self.latest_updates: dict[int, Update] = {}
+        self._locks: dict[int, asyncio.Lock] = {}
+        # Só as tasks ainda dentro da janela de debounce — as em execução saem
+        # daqui para não serem canceladas no meio do turno.
+        self._waiting: dict[int, asyncio.Task] = {}
+
+    def _lock_for(self, chat_id: int) -> asyncio.Lock:
+        lock = self._locks.get(chat_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._locks[chat_id] = lock
+        return lock
 
     def add_message(self, chat_id: int, text: str, update: Update, context: ContextTypes.DEFAULT_TYPE, callback):
         if chat_id not in self.buffers:
@@ -782,22 +1192,43 @@ class MessageDebouncer:
         self.buffers[chat_id].append(text)
         self.latest_updates[chat_id] = update
 
-        # Cancela timer anterior se Patrick continuar digitando/enviando
-        if chat_id in self.tasks and not self.tasks[chat_id].done():
-            self.tasks[chat_id].cancel()
+        # Cancela apenas timers que ainda estão na janela de espera. Uma task
+        # que já entrou no pipeline não pode ser cancelada daqui: abortaria um
+        # turno no meio da geração (e antes do Patch 030 era exatamente isso
+        # que acontecia, deixando a resposta pela metade).
+        waiting = self._waiting.pop(chat_id, None)
+        if waiting is not None and not waiting.done():
+            waiting.cancel()
 
-        self.tasks[chat_id] = asyncio.create_task(self._wait_and_trigger(chat_id, context, callback))
+        task = asyncio.create_task(self._wait_and_trigger(chat_id, context, callback))
+        self._waiting[chat_id] = task
+        self.tasks[chat_id] = task
 
     async def _wait_and_trigger(self, chat_id: int, context: ContextTypes.DEFAULT_TYPE, callback):
         try:
             await asyncio.sleep(self.delay)
+        except asyncio.CancelledError:
+            return
+        # Saiu da janela de espera: daqui pra frente esta task não é cancelável
+        # por uma mensagem nova — ela vira o turno em execução.
+        if self._waiting.get(chat_id) is asyncio.current_task():
+            self._waiting.pop(chat_id, None)
+
+        lock = self._lock_for(chat_id)
+        queued = lock.locked()
+        if queued:
+            logger.info('debounce.serialized chat=%s aguardando turno anterior', chat_id)
+        async with lock:
+            # Drena depois de assumir o lock: se o Patrick escreveu enquanto o
+            # turno anterior rodava, aquelas falas entram neste mesmo turno.
             mensagens = self.buffers.pop(chat_id, [])
             update = self.latest_updates.pop(chat_id, None)
-            if mensagens and update:
-                texto_acumulado = "\n".join(mensagens).strip()
-                await callback(update, context, texto_acumulado)
-        except asyncio.CancelledError:
-            pass
+            if not mensagens or not update:
+                return
+            if len(mensagens) > 1:
+                logger.info('debounce.coalesced chat=%s msgs=%d', chat_id, len(mensagens))
+            texto_acumulado = "\n".join(mensagens).strip()
+            await callback(update, context, texto_acumulado)
 
 debouncer = MessageDebouncer(delay_seconds=settings.MESSAGE_DEBOUNCE_SECONDS)
 
@@ -1083,6 +1514,581 @@ async def avatar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         pass
     await iniciar_escolha_avatar(context.bot, chat_id)
+
+# Patch 025 — Wizard interativo do /registro. Estado in-memory por chat_id.
+# Patrick manda /registro, o bot pergunta cada campo passo a passo com
+# exemplo concreto de uma das categorias faltantes (rotativo), aceita
+# /pular /cancelar /pronto durante o fluxo. Ao terminar, appenda no .md.
+REGISTRO_WIZARDS: dict[int, dict] = {}
+
+# Exemplos concretos por categoria — rotam entre as categorias faltantes
+# pra ir semeando ideias. Cada entrada é um mini-cenário completo pra
+# inspirar o Patrick sem pressioná-lo.
+_WIZARD_CATEGORY_EXAMPLES = [
+    {
+        "categoria": "intimidade / assistir junto",
+        "titulo": "Assistindo série no mesmo horário",
+        "patrick": "bora dar play juntos daqui a pouco?",
+        "tom": "brincalhona",
+        "exemplos": [
+            "bora sim, tô aqui esperando",
+            "aí a gente comenta aqui, tipo cinema com celular kkk",
+        ],
+        "evitar": "sugerir Zoom/FaceTime; vídeochamada",
+    },
+    {
+        "categoria": "planos futuros",
+        "titulo": "Patrick propõe viagem juntos",
+        "patrick": "e se a gente fosse pra Búzios no feriado?",
+        "tom": "dengosa",
+        "exemplos": [
+            "amoor, se tu falar sério eu tô dentro AGORA",
+            "kkk minha mala tá pronta desde sempre",
+        ],
+        "evitar": "avaliação genérica tipo 'seria ótimo!'; agenda corporativa",
+    },
+    {
+        "categoria": "paulista virando carioca",
+        "titulo": "Marina compara SP e Rio no dia a dia",
+        "patrick": "e aí, tá se acostumando com a preguiça carioca?",
+        "tom": "brincalhona",
+        "exemplos": [
+            "cara aqui as pessoas atendem em ritmo de praia sério",
+            "outro dia pedi pastel e vieram me perguntar 'de que sabor' três vezes kkk",
+        ],
+        "evitar": "clichê de carioca; fingir que é nativa daqui",
+    },
+    {
+        "categoria": "piada interna do casal",
+        "titulo": "Marina retoma piada antiga",
+        "patrick": "vai começar de novo com essa história?",
+        "tom": "brincalhona",
+        "exemplos": [
+            "kkkk desculpa mas eu preciso lembrar você toda semana",
+            "dessa aí eu não desisto tão cedo não",
+        ],
+        "evitar": "explicar a piada; fingir que esqueceu",
+    },
+    {
+        "categoria": "reação a foto do Patrick",
+        "titulo": "Patrick manda uma selfie qualquer",
+        "patrick": "olha essa cara aqui",
+        "tom": "dengosa",
+        "exemplos": [
+            "meu deus como você é bonito",
+            "para com isso vai, tô tentando estudar aqui",
+        ],
+        "evitar": "avaliar como crítica de foto; 'você tá lindo!' formal",
+    },
+    {
+        "categoria": "conflito e reconciliação",
+        "titulo": "Marina reconhece que exagerou",
+        "patrick": "acho que você foi meio dura ontem",
+        "tom": "acolhedora",
+        "exemplos": [
+            "é... eu sei. desculpa amor, tava um lixo aqui",
+            "eu ia falar disso, prometo que penso antes na próxima",
+        ],
+        "evitar": "pedido de desculpa dramático; explicação longa; deflect",
+    },
+]
+
+
+async def _wizard_send(context, chat_id: int, text: str) -> None:
+    """Manda mensagem do wizard e agenda auto-limpeza para não poluir chat."""
+    msg = await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=180.0))
+
+
+def _wizard_reset(chat_id: int) -> None:
+    REGISTRO_WIZARDS.pop(chat_id, None)
+
+
+async def registro_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Registra entrada na biblioteca comportamental.
+
+    Modos suportados:
+      - `/registro` sozinho → inicia wizard interativo (Patch 025).
+      - `/registro\\n<corpo com Título:/Categoria:/...>` → parseia direto
+        e appenda como novo registro sem entrar em wizard (Patch 026).
+    """
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    raw_text = (update.message.text or "").strip()
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
+    # Extrai o corpo após "/registro" (aceita quebra de linha ou espaço).
+    corpo = re.sub(r"^/registro(?:@\w+)?\s*", "", raw_text, count=1).strip()
+
+    if corpo:
+        # Modo textão direto — parseia e salva.
+        try:
+            fields = _parse_registro_body(corpo)
+        except Exception as exc:
+            logger.exception("registro_command.parse_fail")
+            await _wizard_send(context, chat_id, f"❌ Falha ao parsear: `{type(exc).__name__}`")
+            return
+        if not fields.get("patrick") or not fields.get("exemplos"):
+            await _wizard_send(context, chat_id, (
+                "⚠️ Registro precisa de pelo menos `Patrick:` e `Exemplos:` "
+                "preenchidos. Manda de novo ou use `/registro` sozinho pra "
+                "abrir o wizard."
+            ))
+            return
+        try:
+            bib_path = Path(__file__).resolve().parent / "data" / "feedback" / "BIBLIOTECA_COMPORTAMENTAL_MARINA.md"
+            next_num, _ = _append_registro_to_biblioteca(bib_path, fields)
+        except Exception as exc:
+            logger.exception("registro_command.save_fail")
+            await _wizard_send(context, chat_id, f"❌ Falha ao gravar: `{type(exc).__name__}`")
+            return
+        titulo = fields.get("titulo") or "(sem título)"
+        await _wizard_send(context, chat_id, (
+            f"✅ *Registro {next_num:03d}* salvo — _{titulo}_\n"
+            f"{len(fields.get('exemplos', []))} exemplo(s). 🖤"
+        ))
+        return
+
+    # Modo wizard interativo (sem corpo).
+    import random
+    rotativo = random.choice(_WIZARD_CATEGORY_EXAMPLES)
+    REGISTRO_WIZARDS[chat_id] = {
+        "step": "titulo",
+        "fields": {"exemplos": []},
+        "started_at": datetime.now(),
+        "rotativo": rotativo,
+    }
+    intro = (
+        "📝 *Novo registro comportamental* — sugestão pra hoje:\n\n"
+        f"*Categoria em falta*: _{rotativo['categoria']}_\n\n"
+        "Vou te perguntar cada campo. Use `/pular` pra pular qualquer campo "
+        "opcional e `/cancelar` pra descartar. Nos exemplos, mande um por "
+        "mensagem e diga `/pronto` quando terminar.\n\n"
+        "*Etapa 1/7* — *Título curto*\n"
+        f"Ex.: _{rotativo['titulo']}_"
+    )
+    await _wizard_send(context, chat_id, intro)
+
+
+async def cancelar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Cancela o wizard ativo (se houver)."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+    if chat_id in REGISTRO_WIZARDS:
+        _wizard_reset(chat_id)
+        await _wizard_send(context, chat_id, "🗑️ Registro cancelado.")
+    # se não tem wizard ativo, ignora silenciosamente
+
+
+# ---------------------------------------------------------------------------
+# Patch 033 — captura em tempo real de exemplos de voz.
+#
+# O wizard do /registro é bom pra sessão dedicada, mas o momento em que dá
+# pra julgar uma resposta é logo depois dela chegar. Estes comandos capturam
+# o turno atual sem tirar o Patrick da conversa:
+#   /bom   (aliases /salvar /boa)  → biblioteca comportamental (few-shot positivo)
+#   /ruim  (aliases /evitar /nao)  → antibiblioteca (bloco [COMO NÃO SOAR])
+#
+# Ambos funcionam de duas formas:
+#   · respondendo (reply) a uma mensagem específica da Marina → usa aquela
+#   · sem reply → usa a última coisa que ela falou
+# Um comentário opcional depois do comando explica o motivo:
+#   /ruim soou como atendente de SAC
+# ---------------------------------------------------------------------------
+
+ANTIBIBLIOTECA_PATH = (
+    Path(__file__).resolve().parent / "data" / "feedback" / "COMO_NAO_SOAR_MARINA.md"
+)
+
+_ANTIBIBLIOTECA_HEADER = """# Como a Marina NÃO deve soar
+
+Registros capturados em tempo real pelo Patrick com `/ruim`. Cada entrada é um
+exemplo negativo real: a Marina respondeu assim e soou errado. O runtime injeta
+uma amostra destes no bloco `[COMO NÃO SOAR]` do prompt, como contraste para os
+few-shots positivos da biblioteca comportamental.
+
+Formato mantido simples de propósito — o Patrick captura no meio da conversa,
+sem preencher formulário.
+
+---
+"""
+
+
+def _resolve_marina_target(update: Update, chat_id: int) -> str | None:
+    """Descobre qual fala da Marina o comando está rotulando.
+
+    Prioriza a mensagem citada por reply; sem reply, usa a última que ela
+    mandou neste chat.
+    """
+    reply = getattr(update.message, "reply_to_message", None)
+    if reply is not None:
+        texto = (getattr(reply, "text", None) or getattr(reply, "caption", None) or "").strip()
+        if texto:
+            return texto
+        # Reply numa foto/áudio sem legenda: cai no histórico por message_id.
+        alvo_id = getattr(reply, "message_id", None)
+        for item in reversed(ULTIMAS_MENSAGENS_MARINA.get(chat_id, [])):
+            if item.get("message_id") == alvo_id:
+                return (item.get("text") or "").strip() or None
+    historico = ULTIMAS_MENSAGENS_MARINA.get(chat_id, [])
+    for item in reversed(historico):
+        texto = (item.get("text") or "").strip()
+        if texto:
+            return texto
+    return None
+
+
+def _last_patrick_line() -> str:
+    """Última fala do Patrick registrada na conversa, para dar contexto ao exemplo."""
+    try:
+        msgs = memory_manager.db.get_mensagens_sessao(limit=12) or []
+    except Exception:
+        return ""
+    for msg in reversed(msgs):
+        if (msg.get("role") or "") == "user":
+            texto = (msg.get("content") or "").strip()
+            if texto and not texto.startswith("/"):
+                return texto
+    return ""
+
+
+def _append_avoid_example(path: Path, patrick: str, marina: str, motivo: str) -> int:
+    """Appenda um exemplo negativo na antibiblioteca. Devolve o número dele."""
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(_ANTIBIBLIOTECA_HEADER, encoding="utf-8")
+    texto = path.read_text(encoding="utf-8")
+    numeros = [int(m.group(1)) for m in re.finditer(r"^##\s+Evitar\s+(\d+)", texto, re.MULTILINE)]
+    proximo = (max(numeros) + 1) if numeros else 1
+    bloco = "\n".join([
+        "",
+        f"## Evitar {proximo:03d}",
+        "",
+        f"- **Data:** {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"- **Patrick disse:** {patrick or '(sem contexto capturado)'}",
+        f"- **Marina respondeu (RUIM):** {marina}",
+        f"- **Por que soa errado:** {motivo or '(não informado)'}",
+        "",
+        "---",
+    ])
+    if not texto.endswith("\n"):
+        texto += "\n"
+    path.write_text(texto + bloco + "\n", encoding="utf-8")
+    return proximo
+
+
+async def bom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Salva a fala atual da Marina como few-shot positivo (Patch 033)."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    raw = (update.message.text or "").strip()
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
+    marina = _resolve_marina_target(update, chat_id)
+    if not marina:
+        await _wizard_send(context, chat_id, (
+            "🤔 Não achei uma fala minha recente pra salvar. Responde a mensagem "
+            "que você quer guardar e manda `/bom` de novo."
+        ))
+        return
+
+    nota = re.sub(r"^/(?:bom|boa|salvar)(?:@\w+)?\s*", "", raw, count=1).strip()
+    patrick = _last_patrick_line()
+    fields = {
+        "titulo": (nota or marina)[:70],
+        "categoria": "captura em tempo real",
+        "contexto": "Capturado com /bom durante a conversa.",
+        "patrick": patrick,
+        "tom": "",
+        "exemplos": [marina],
+        "evitar": "",
+        "origem": "soak real (/bom)",
+    }
+    try:
+        bib = Path(__file__).resolve().parent / "data" / "feedback" / "BIBLIOTECA_COMPORTAMENTAL_MARINA.md"
+        numero, _ = _append_registro_to_biblioteca(bib, fields)
+    except Exception as exc:
+        logger.exception("bom_command.save_fail")
+        await _wizard_send(context, chat_id, f"❌ Falha ao gravar: `{type(exc).__name__}`")
+        return
+
+    logger.info("voice.capture_positive registro=%s", numero)
+    resumo = marina if len(marina) <= 60 else marina[:57] + "..."
+    await _wizard_send(context, chat_id, (
+        f"✅ Guardei no *Registro {numero:03d}*:\n_{resumo}_"
+        + (f"\n\n📝 {nota}" if nota else "")
+    ))
+
+
+async def ruim_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Marca a fala atual da Marina como exemplo negativo (Patch 033)."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    raw = (update.message.text or "").strip()
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+
+    marina = _resolve_marina_target(update, chat_id)
+    if not marina:
+        await _wizard_send(context, chat_id, (
+            "🤔 Não achei uma fala minha recente pra marcar. Responde a mensagem "
+            "que ficou ruim e manda `/ruim` de novo."
+        ))
+        return
+
+    motivo = re.sub(r"^/(?:ruim|evitar|nao|n[ãa]o)(?:@\w+)?\s*", "", raw, count=1).strip()
+    patrick = _last_patrick_line()
+    try:
+        numero = _append_avoid_example(ANTIBIBLIOTECA_PATH, patrick, marina, motivo)
+    except Exception as exc:
+        logger.exception("ruim_command.save_fail")
+        await _wizard_send(context, chat_id, f"❌ Falha ao gravar: `{type(exc).__name__}`")
+        return
+
+    logger.info("voice.capture_negative evitar=%s motivo=%r", numero, motivo)
+    resumo = marina if len(marina) <= 60 else marina[:57] + "..."
+    await _wizard_send(context, chat_id, (
+        f"📉 Anotado como *Evitar {numero:03d}*:\n_{resumo}_"
+        + (f"\n\n📝 {motivo}" if motivo else
+           "\n\n_Dica: `/ruim <motivo>` ajuda a calibrar melhor._")
+    ))
+
+
+async def _advance_wizard(chat_id: int, texto: str, context) -> bool:
+    """Avança o wizard um passo. Devolve True se consumiu a mensagem
+    (bot não deve processar como conversa normal)."""
+    state = REGISTRO_WIZARDS.get(chat_id)
+    if not state:
+        return False
+    txt = texto.strip()
+    if txt.casefold() in ("/cancelar", "/cancel"):
+        _wizard_reset(chat_id)
+        await _wizard_send(context, chat_id, "🗑️ Registro cancelado.")
+        return True
+
+    step = state["step"]
+    fields = state["fields"]
+    rot = state["rotativo"]
+    pular = txt.casefold() in ("/pular", "/skip")
+
+    if step == "titulo":
+        if not pular:
+            fields["titulo"] = txt
+        state["step"] = "categoria"
+        await _wizard_send(context, chat_id, (
+            f"*Etapa 2/7* — *Categoria*\n"
+            f"Ex.: _{rot['categoria']}_\n"
+            "Pode usar `/pular` se quiser deixar em branco."
+        ))
+        return True
+
+    if step == "categoria":
+        if not pular:
+            fields["categoria"] = txt
+        state["step"] = "contexto"
+        await _wizard_send(context, chat_id, (
+            "*Etapa 3/7* — *Contexto* (o que tava rolando)\n"
+            "Pode ser 1 frase curta. `/pular` pra deixar em branco."
+        ))
+        return True
+
+    if step == "contexto":
+        if not pular:
+            fields["contexto"] = txt
+        state["step"] = "patrick"
+        await _wizard_send(context, chat_id, (
+            "*Etapa 4/7* — *Patrick disse* (obrigatório)\n"
+            f"Ex.: _{rot['patrick']}_"
+        ))
+        return True
+
+    if step == "patrick":
+        if pular or not txt:
+            await _wizard_send(context, chat_id, (
+                "⚠️ *Patrick disse* é obrigatório. Manda o que você diria "
+                "nesse cenário, ou `/cancelar` pra desistir."
+            ))
+            return True
+        fields["patrick"] = txt
+        state["step"] = "tom"
+        await _wizard_send(context, chat_id, (
+            "*Etapa 5/7* — *Tom esperado da Marina*\n"
+            "Opções comuns: `carinhosa` `brincalhona` `dengosa` "
+            "`acolhedora` `tranquila`\n"
+            f"Ex. deste cenário: _{rot['tom']}_"
+        ))
+        return True
+
+    if step == "tom":
+        if not pular:
+            fields["tom"] = txt
+        state["step"] = "exemplos"
+        exemplos_str = "\n".join(f"- {ex}" for ex in rot["exemplos"])
+        await _wizard_send(context, chat_id, (
+            "*Etapa 6/7* — *Exemplos naturais* (obrigatório, mínimo 1)\n"
+            "Mande cada exemplo em uma mensagem. Quando terminar, "
+            "envie `/pronto`.\n\n"
+            f"Ex. deste cenário:\n{exemplos_str}"
+        ))
+        return True
+
+    if step == "exemplos":
+        if txt.casefold() in ("/pronto", "/done", "/fim"):
+            if not fields.get("exemplos"):
+                await _wizard_send(context, chat_id, (
+                    "⚠️ Precisa de pelo menos 1 exemplo. Manda a resposta "
+                    "que a Marina daria neste cenário."
+                ))
+                return True
+            state["step"] = "evitar"
+            await _wizard_send(context, chat_id, (
+                "*Etapa 7/7* — *Evitar* (o que soaria falso/artificial)\n"
+                f"Ex.: _{rot['evitar']}_\n"
+                "`/pular` pra deixar em branco."
+            ))
+            return True
+        if not pular:
+            fields["exemplos"].append(txt)
+            n = len(fields["exemplos"])
+            await _wizard_send(context, chat_id, (
+                f"✍️ Exemplo {n} anotado. Mais um? Ou `/pronto` pra avançar."
+            ))
+        return True
+
+    if step == "evitar":
+        if not pular:
+            fields["evitar"] = txt
+        # Salva.
+        try:
+            bib_path = Path(__file__).resolve().parent / "data" / "feedback" / "BIBLIOTECA_COMPORTAMENTAL_MARINA.md"
+            next_num, _appended = _append_registro_to_biblioteca(bib_path, fields)
+        except Exception as exc:
+            logger.exception("registro_wizard.save_fail")
+            _wizard_reset(chat_id)
+            await _wizard_send(context, chat_id, f"❌ Falha ao gravar: `{type(exc).__name__}`")
+            return True
+        titulo = fields.get("titulo") or "(sem título)"
+        _wizard_reset(chat_id)
+        await _wizard_send(context, chat_id, (
+            f"✅ *Registro {next_num:03d}* salvo — _{titulo}_\n"
+            f"{len(fields['exemplos'])} exemplo(s) capturado(s). "
+            "Manda `/registro` de novo pra popular outro. 🖤"
+        ))
+        return True
+
+    return False
+
+
+_REGISTRO_FIELD_ALIASES = {
+    "título": "titulo", "titulo": "titulo",
+    "origem": "origem", "categoria": "categoria",
+    "princípio": "principio", "principio": "principio",
+    "princípio comportamental": "principio", "principio comportamental": "principio",
+    "data": "data", "data e hora": "data",
+    "contexto": "contexto",
+    "patrick": "patrick", "patrick disse": "patrick",
+    "marina": "marina", "marina respondeu": "marina",
+    "perceber": "perceber", "o que ela deveria perceber": "perceber",
+    "reação": "reacao", "reacao": "reacao", "reação esperada": "reacao", "reacao esperada": "reacao",
+    "tom": "tom", "tom esperado": "tom",
+    "exemplos": "exemplos", "exemplos naturais": "exemplos",
+    "evitar": "evitar",
+    "avaliação": "avaliacao", "avaliacao": "avaliacao",
+    "obs": "observacoes", "observações": "observacoes", "observacoes": "observacoes",
+}
+
+
+def _parse_registro_body(body: str) -> dict:
+    """Parseia o corpo do /registro em campos. Aceita campos em qualquer ordem;
+    `Exemplos:` inicia um bloco de bullets que dura até o próximo campo."""
+    fields: dict = {}
+    lines = body.splitlines()
+    current_key: str | None = None
+    for line in lines:
+        stripped = line.rstrip()
+        if not stripped.strip():
+            continue
+        header = re.match(r"^\s*([A-Za-zÀ-ÿ ]+?):\s*(.*)$", stripped)
+        if header:
+            candidate = header.group(1).strip().lower()
+            slug = _REGISTRO_FIELD_ALIASES.get(candidate)
+            if slug:
+                value = header.group(2).strip()
+                if slug == "exemplos":
+                    fields.setdefault("exemplos", [])
+                    if value:
+                        fields["exemplos"].append(value.lstrip("- ").strip())
+                    current_key = "exemplos"
+                else:
+                    fields[slug] = value
+                    current_key = slug if not value else None
+                continue
+        if current_key == "exemplos":
+            item = stripped.strip().lstrip("- ").strip()
+            if item:
+                fields["exemplos"].append(item)
+        elif current_key and stripped.strip():
+            fields[current_key] = (fields.get(current_key, "") + " " + stripped.strip()).strip()
+    # limpa itens vazios em exemplos
+    if "exemplos" in fields:
+        fields["exemplos"] = [e for e in fields["exemplos"] if e]
+    return fields
+
+
+def _append_registro_to_biblioteca(path, fields: dict) -> tuple[int, str]:
+    """Descobre o próximo número de Registro, formata o bloco no template
+    canônico e appenda no final do .md. Devolve (número, bloco appended)."""
+    if not path.exists():
+        raise FileNotFoundError(f"biblioteca não encontrada: {path}")
+    text = path.read_text(encoding="utf-8")
+    numbers = [int(m.group(1)) for m in re.finditer(r"^##\s+Registro\s+(\d+)", text, flags=re.MULTILINE)]
+    next_num = (max(numbers) + 1) if numbers else 1
+    titulo = fields.get("titulo") or "(sem título)"
+    # Patch 029: template enxuto — só os 8 campos que o parser realmente usa
+    # e o Patrick preenche na prática. Removidos "Princípio comportamental",
+    # "Marina respondeu", "O que ela deveria perceber", "Reação esperada",
+    # "Avaliação" e "Observações" (ficavam sempre vazios em soak real).
+    linhas = [
+        "",
+        f"## Registro {next_num:03d} — {titulo}",
+        "",
+        f"- **Origem:** {fields.get('origem') or 'soak real'}",
+        f"- **Categoria:** {fields.get('categoria') or ''}",
+        f"- **Data e hora:** {fields.get('data') or datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"- **Contexto:** {fields.get('contexto') or ''}",
+        f"- **Patrick disse:** {fields.get('patrick', '')}",
+        f"- **Tom esperado:** {fields.get('tom') or ''}",
+        "- **Exemplos naturais:**",
+    ]
+    for ex in fields.get("exemplos", []):
+        linhas.append(f"  - {ex}")
+    linhas.extend([
+        f"- **Evitar:** {fields.get('evitar') or ''}",
+        "",
+        "---",
+    ])
+    bloco = "\n".join(linhas)
+    if not text.endswith("\n"):
+        text += "\n"
+    path.write_text(text + bloco + "\n", encoding="utf-8")
+    return next_num, bloco
+
 
 async def feedback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /feedback para Patrick registrar observações no SQLite (auto-limpeza em 5s)."""
@@ -1439,7 +2445,7 @@ async def refletir_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- ACOMPANHAMENTO AO VIVO DO BOTAFOGO & REAÇÕES ESPONTÂNEAS ---
 
 async def handle_botafogo_reaction(application: Application, event: Dict[str, Any]):
-    """Gera a reação espontânea, íntima e carioca da Marina a um lance capital do Botafogo."""
+    """Gera a reação espontânea e íntima da Marina a um lance capital do Botafogo."""
     ev_type = event.get("type", "")
     score = event.get("score", "")
     desc = event.get("description", "")
@@ -1468,7 +2474,7 @@ async def handle_botafogo_reaction(application: Application, event: Dict[str, An
         f"Você está em casa assistindo na TV ao jogo do Botafogo x {opponent} acompanhando com seu namorado Patrick pelo Telegram.\n"
         f"Situação atual: {desc}\n"
         f"Diretriz de reação: {guidance}\n"
-        f"Fale como Marina Salles: jovem carioca de 20 anos, namorada do Patrick. "
+        f"Fale como Marina Salles: 20 anos, paulista morando no Rio há pouco tempo (base paulista, aprendendo gírias cariocas aos poucos), namorada do Patrick. "
         f"Seja SUPER CURTA, viva e direta (máximo 1 a 2 frases curtas no total, estilo WhatsApp real, NUNCA mande textão). "
         f"Se tiver 2 pensamentos ou frases, separe OBRIGATORIAMENTE com uma quebra de linha ('\\n') para enviar em balões separados de chat (máximo de 2 balões). "
         f"Use apenas emojis alvinegros (🖤, 🤍, ⭐️, 🔥), NUNCA use corações amarelos (💛)."
@@ -1620,6 +2626,18 @@ async def process_incoming_batch(
         else None
     )
 
+    # Patch 025 — Wizard do /registro tem prioridade. Se existe wizard ativo
+    # para esse chat, cada mensagem alimenta o próximo campo. A Marina nem
+    # vê essas mensagens até o wizard terminar/cancelar.
+    if chat_id in REGISTRO_WIZARDS:
+        try:
+            await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+        except Exception:
+            pass
+        consumed = await _advance_wizard(chat_id, texto_usuario, context)
+        if consumed:
+            return
+
     # 1. Aprendizado dinâmico do estilo linguístico do Patrick (risadas, emojis, gírias, cadência)
     if pending_batch_id is None:
         style_engine.processar_mensagem_patrick(texto_usuario)
@@ -1672,7 +2690,8 @@ async def process_incoming_batch(
                         avail_decision.selected_target_at - now_local
                     ).total_seconds()
                     activity_type = getattr(avail_decision, 'activity_type', 'UNKNOWN')
-                    if (activity_type in ('GYM', 'CLASS', 'WORK', 'COMMUTE', 'CASTING', 'SOCIAL')
+                    if (activity_type in ('GYM', 'CLASS', 'WORK', 'COMMUTE', 'CASTING',
+                                          'SOCIAL', 'PET_WALK', 'WAKING')
                             and 0 < remaining <= 25):
                         logger.info(
                             'AVAILABILITY_SOFT_DELAY activity=%s delay_s=%.1f',
@@ -1927,7 +2946,8 @@ async def process_incoming_batch(
                 if availability_service.repo.mark_sent(
                     pending_batch_id, sent_message_id=sent_avatar_id,
                 ):
-                    memory_manager.db.adicionar_mensagem(role='assistant', content=resposta)
+                    memory_manager.db.adicionar_mensagem(role='assistant', content=resposta,
+                                                         model=getattr(settings, 'LLM_MODEL', None))
                     if plan and u_id is not None:
                         planner.apply_plan_effects(plan, conversation_id=u_id)
             elif not pending_batch_id and sent_avatar_id:
@@ -2023,7 +3043,7 @@ async def process_incoming_batch(
             "role": "system",
             "content": (
                 "[TURN CONSTRAINT — CASUAL CADENCE]\n"
-                "Be concise, authentic and natural as Patrick's 20yo Carioca girlfriend texting on WhatsApp/Telegram:\n"
+                "Be concise, authentic and natural as Patrick's 20yo Brazilian girlfriend (paulista living in Rio) texting on WhatsApp/Telegram:\n"
                 "- Maximum 1 to 2 short sentences total. Never send long walls of text.\n"
                 "- If you have two distinct thoughts or reactions, you MUST separate them with a newline ('\\n') so they are delivered in 2 separate chat bubbles.\n"
                 "- For Botafogo, strictly use black & white / team emojis (🖤, 🤍, ⭐️, 🔥). Never use yellow hearts (💛)."
@@ -2036,15 +3056,91 @@ async def process_incoming_batch(
         # a Marina *deveria* fazer (amor, kkk, ai). Mantemos temperatura alta
         # para variedade e reduzimos penalties para permitir vocabulário
         # afetivo característico. Ver PLANO_VOZ_MARINA_V371.md, seção 3 A5.
+        # Patch 019: frequency_penalty subido de 0.10 → 0.15 para atenuar o
+        # bug de token-repeat de modelos 12B ("Que bom, que Que bom") sem
+        # engessar repetições humanas propositais.
         completion = llm_client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=messages,
             max_tokens=response_policy.token_budget if response_policy else 160,
             temperature=0.85,
-            frequency_penalty=0.10,
+            frequency_penalty=0.15,
             presence_penalty=0.05
         )
         resposta_marin = completion.choices[0].message.content.strip()
+
+        # Patch 020 — Guard contra respostas malucas de 12B multilíngues:
+        # (a) só emoji ("❓", "✅❓" — Unslopnemo 20/09 12:38)
+        # (b) vazamento de script não-latino no meio da fala ("Que peninha,
+        #     perdido o dia todo імпер" — Unslopnemo 20/09 22:28, cirílico).
+        # Retry único com system message explícita.
+        needs_retry, junk_reason = _needs_retry_for_junk(resposta_marin)
+        if needs_retry:
+            logger.warning(
+                f"llm.junk_reply reason={junk_reason} reply={resposta_marin!r} — retrying"
+            )
+            retry_hint = {
+                "emoji_only": (
+                    "Sua resposta anterior foi apenas emojis, sem texto — isso "
+                    "não é natural. Refaça SEMPRE COM TEXTO em português "
+                    "brasileiro. Emojis são complemento opcional; o corpo da "
+                    "mensagem precisa ter palavras reais."
+                ),
+                "foreign_script": (
+                    "Sua resposta anterior tinha letras de outro alfabeto "
+                    "(cirílico/chinês/árabe/etc) coladas no texto — isso é "
+                    "alucinação. Refaça a mensagem inteiramente em português "
+                    "brasileiro, usando apenas o alfabeto latino."
+                ),
+                "debug_artifact": (
+                    "Sua resposta anterior tinha um pedaço de código ou "
+                    "configuração colado no texto (algo como "
+                    "'affirmation_pronouns=true', uma tag ou uma flag). Isso é "
+                    "lixo de treinamento, não faz parte da fala. Refaça a "
+                    "mensagem só com a fala natural da Marina, sem nenhum "
+                    "token técnico, tag, chave=valor ou marcador."
+                ),
+                "live_call_proposal": (
+                    "Sua resposta anterior propôs ligação, chamada de voz ou "
+                    "vídeo. Isso é IMPOSSÍVEL: você e o Patrick só se falam por "
+                    "este chat (texto, áudio gravado, foto e reação). Refaça "
+                    "mantendo o mesmo carinho, mas oferecendo algo que cabe no "
+                    "chat — mandar um áudio, continuar conversando por aqui, "
+                    "combinar de se falar mais tarde no chat."
+                ),
+            }.get(junk_reason, (
+                "Sua resposta anterior saiu inutilizável. Refaça como a Marina "
+                "falaria no chat: português brasileiro natural, alfabeto latino, "
+                "sem tokens técnicos e sem propor chamada de voz ou vídeo."
+            ))
+            retry_messages = list(messages)
+            retry_messages.append({
+                "role": "system",
+                "content": f"[TURN CONSTRAINT — CLEAN TEXT REQUIRED]\n{retry_hint}",
+            })
+            completion = llm_client.chat.completions.create(
+                model=settings.LLM_MODEL,
+                messages=retry_messages,
+                max_tokens=(response_policy.token_budget if response_policy else 160),
+                temperature=0.75,
+                frequency_penalty=0.15,
+                presence_penalty=0.05,
+            )
+            retry_text = completion.choices[0].message.content.strip()
+            retry_needs_retry, retry_reason = _needs_retry_for_junk(retry_text)
+            if not retry_needs_retry:
+                resposta_marin = retry_text
+            else:
+                logger.warning(
+                    f"llm.junk_reply retry ALSO bad reason={retry_reason} reply={retry_text!r}"
+                )
+                # Patch 030: em vez de enviar lixo, saneia o melhor candidato.
+                # Artefato técnico e proposta de chamada são localizados — dá pra
+                # cortar a sentença ofensora e manter o resto da fala.
+                salvo = _salvage_reply(retry_text) or _salvage_reply(resposta_marin)
+                if salvo:
+                    logger.info(f"llm.junk_reply salvaged reply={salvo!r}")
+                    resposta_marin = salvo
     except Exception as e:
         logger.warning(f"Aviso na chamada principal da LLM ({settings.LLM_MODEL}): {e}")
         fallback_model = "mistralai/mistral-nemo"
@@ -2113,6 +3209,23 @@ async def process_incoming_batch(
     if settings.VOICE_PROSODY_ENABLED:
         from voice_prosody import sanitize_display_text
         fala_limpa = sanitize_display_text(fala_limpa)
+
+    # Patch 030: corta pergunta de entrevista no fecho de turno casual. Precisa
+    # rodar antes do bloco de oferta de lembrete abaixo, que adiciona uma
+    # pergunta legítima e obrigatória. Turnos que dependem de pergunta
+    # (oferta de lembrete, esclarecimento pendente) ficam de fora.
+    if getattr(settings, 'VOICE_STRIP_INTERVIEW_CLOSER', True):
+        _mode = getattr(response_policy, 'mode', '') if response_policy else ''
+        _precisa_perguntar = bool(
+            plan and (plan.get("should_offer_reminder") or plan.get("needs_clarification"))
+        )
+        if not _precisa_perguntar and (not _mode or _mode.startswith('casual')):
+            fala_limpa = _strip_interview_closer(fala_limpa)
+
+    # Patch 031: muleta "Ah,", polidez de atendimento e assinatura de despedida.
+    # Vale em qualquer modo — nenhum deles pede linguagem de call center.
+    if getattr(settings, 'VOICE_STRIP_ASSISTANT_POLITENESS', True):
+        fala_limpa = _strip_assistant_politeness(fala_limpa)
 
     # P1.3 / Rodada 3: Garante deterministicamente que a pergunta interrogativa de oferta de lembrete esteja na fala enviada
     if plan and plan.get("should_offer_reminder"):
@@ -2211,11 +3324,29 @@ async def process_incoming_batch(
     if not sent_mid and sent_notice_msg:
         sent_mid = getattr(sent_notice_msg, "message_id", None)
 
+    # Auditoria #3: este bloco e o equivalente do caminho de avatar divergiram
+    # em três pontos. Corrigidos aqui:
+    #
+    # 1. `model=` não era passado na entrega via batch. `adicionar_mensagem`
+    #    aceita model=None sem default, enquanto `registrar_mensagem_assistente`
+    #    (usado no caminho ao vivo) cai em settings.LLM_MODEL. Resultado: toda
+    #    resposta entregue a partir de um batch pendente gravava model=NULL —
+    #    visível no export de 21/09 como "[model: -]" nas duas respostas que
+    #    saíram do backlog do sono, contra "mistral-nemo" nas respostas ao vivo.
+    #    Justamente o dado que o Patch 018 criou para auditar qual LLM falou.
+    #
+    # 2. `if plan:` não checava `u_id is not None` antes de usá-lo como
+    #    conversation_id, ao contrário do outro bloco.
+    #
+    # 3. `record_actual_latency` estava dentro do `elif`, então a latência real
+    #    só era medida no caminho ao vivo. Entregas de batch — exatamente as que
+    #    mais interessam para calibrar latência humana — ficavam fora da amostra.
     if pending_batch_id:
         if sent_mid:
             if availability_service.repo.mark_sent(pending_batch_id, sent_message_id=sent_mid):
                 memory_manager.db.adicionar_mensagem(
-                    role='assistant', content=notice_text or fala_limpa or resposta_marin)
+                    role='assistant', content=notice_text or fala_limpa or resposta_marin,
+                    model=getattr(settings, 'LLM_MODEL', None))
                 if plan and u_id is not None:
                     planner.apply_plan_effects(plan, conversation_id=u_id)
         else:
@@ -2223,14 +3354,14 @@ async def process_incoming_batch(
     elif sent_mid:
         memory_manager.registrar_mensagem_assistente(
             notice_text or fala_limpa or resposta_marin)
-        if plan:
+        if plan and u_id is not None:
             planner.apply_plan_effects(plan, conversation_id=u_id)
-        if avail_decision and getattr(avail_decision, 'telemetry_event_id', None):
-            actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
-            availability_service.repo.record_actual_latency(
-                event_id=avail_decision.telemetry_event_id,
-                actual_latency_seconds=actual_lat,
-            )
+    if sent_mid and avail_decision and getattr(avail_decision, 'telemetry_event_id', None):
+        actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
+        availability_service.repo.record_actual_latency(
+            event_id=avail_decision.telemetry_event_id,
+            actual_latency_seconds=actual_lat,
+        )
 
     offered_rem_id = plan.get("offered_reminder_id") if plan else None
     if offered_rem_id:
@@ -2478,7 +3609,9 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
         if isinstance(sent_mid, int) and sent_mid > 0:
             # Registra interação no banco com media_type='photo' e aplica efeitos do plano
             u_id = memory_manager.db.adicionar_mensagem(role="user", content=user_message_repr, media_type="photo")
-            b_id = memory_manager.db.adicionar_mensagem(role="assistant", content=resposta_limpa, media_type="text")
+            b_id = memory_manager.db.adicionar_mensagem(role="assistant", content=resposta_limpa,
+                                                        media_type="text",
+                                                        model=getattr(settings, 'LLM_MODEL', None))
 
             if plan:
                 planner.apply_plan_effects(plan, conversation_id=u_id)
@@ -2714,6 +3847,24 @@ async def memory_hygiene_routine(application: Application):
     except Exception as e:
         logger.error(f"Erro no job de memory_hygiene_routine: {e}", exc_info=True)
 
+async def media_lookup_routine(application: Application):
+    """Atualiza o cache de mídia em alta fora do caminho da conversa.
+
+    Auditoria #3: este refresh rodava dentro de `WorldContextBuilder.build()`,
+    então a busca de rede entrava na latência do turno da Marina sempre que o
+    cache diário vencia. Aqui ele é assíncrono e invisível para ela.
+    """
+    if not getattr(settings, "MEDIA_LOOKUP_ENABLED", True):
+        return
+    try:
+        from media_lookup_service import MediaLookupService
+        service = MediaLookupService(memory_manager.db)
+        atualizou = await asyncio.to_thread(service.refresh_if_stale, datetime.now())
+        if atualizou:
+            logger.info("media_lookup.cache_atualizado")
+    except Exception as e:
+        logger.error(f"Erro no job de media_lookup_routine: {e}", exc_info=True)
+
 async def session_reflection_routine(application: Application):
     """Job periódico de reflexão de sessão (Release 3.5.3)."""
     try:
@@ -2773,6 +3924,22 @@ async def post_init(application: Application):
         )
         logger.info(f"Job de Memory Hygiene agendado a cada {hygiene_hours}h.")
 
+    # Auditoria #3 — refresh do cache de mídia fora do caminho do turno.
+    # `next_run_time` imediato garante que o cache esquente no startup, sem
+    # cobrar a espera do primeiro turno da Marina.
+    if getattr(settings, "MEDIA_LOOKUP_ENABLED", True):
+        media_hours = max(1, getattr(settings, "MEDIA_LOOKUP_REFRESH_HOURS", 24))
+        scheduler.add_job(
+            media_lookup_routine,
+            "interval",
+            hours=media_hours,
+            args=[application],
+            max_instances=1,
+            coalesce=True,
+            next_run_time=datetime.now() + timedelta(seconds=20),
+        )
+        logger.info(f"Job de Media Lookup agendado a cada {media_hours}h.")
+
     # Job periódico de Session Reflection (Release 3.5.3)
     if getattr(settings, "SESSION_REFLECTION_ENABLED", False):
         refl_mins = max(15, getattr(settings, "SESSION_REFLECTION_IDLE_MINUTES", 90))
@@ -2818,6 +3985,14 @@ def main():
     app.add_handler(CommandHandler("avatar", avatar_command))
     app.add_handler(CommandHandler("trocar_avatar", avatar_command))
     app.add_handler(CommandHandler("feedback", feedback_command))
+    app.add_handler(CommandHandler("registro", registro_command))
+    app.add_handler(CommandHandler("cancelar", cancelar_command))
+    app.add_handler(CommandHandler("cancel", cancelar_command))
+    # Patch 033 — captura de voz em tempo real, no meio da conversa.
+    for _alias in ("bom", "boa", "salvar"):
+        app.add_handler(CommandHandler(_alias, bom_command))
+    for _alias in ("ruim", "evitar", "nao"):
+        app.add_handler(CommandHandler(_alias, ruim_command))
     app.add_handler(CommandHandler("memorias", memorias_command))
     app.add_handler(CommandHandler("memoria", memorias_command))
     app.add_handler(CommandHandler("memorydebug", memorias_command))
@@ -2858,5 +4033,23 @@ def main():
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
-    main()
+    # Auditoria #1: `runtime_lock.single_instance` existia desde a 3.4, resolvia
+    # um problema real ("a second launcher must not create competing Telegram
+    # pollers") e nunca foi ligado a nada. Duas janelas do .bat criavam dois
+    # pollers no mesmo bot token — o Telegram entrega cada update a apenas um
+    # deles, de forma imprevisível, então metade das mensagens do Patrick era
+    # processada por um processo e metade pelo outro (cada um com seu próprio
+    # cache em memória de estado, debounce e ULTIMAS_MENSAGENS_MARINA).
+    from runtime_lock import single_instance
+
+    _lock_path = Path(__file__).resolve().parent / "logs" / "marina.lock"
+    try:
+        with single_instance(_lock_path):
+            main()
+    except RuntimeError as exc:
+        # Mensagem amigável em vez de traceback: quem abre o .bat duas vezes
+        # precisa saber que a Marina já está no ar, não ler um stack trace.
+        print(f"\n  {exc}\n")
+        logger.error("startup.abortado_segunda_instancia path=%s", _lock_path)
+        sys.exit(1)
 

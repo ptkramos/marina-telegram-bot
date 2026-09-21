@@ -85,14 +85,33 @@ class DynamicAgeTests(unittest.TestCase):
 
 
 class BackendPromptLanguageTests(unittest.TestCase):
-    def test_control_prompts_english_markers(self):
-        self.assertIn('You are Marina Salles', PLANNER_SYSTEM_PROMPT)
-        self.assertIn('Extract durable facts', CONSOLIDATOR_SYSTEM_PROMPT)
-        self.assertIn('internal session reflection', SESSION_REFLECTOR_SYSTEM_PROMPT)
-        self.assertIn('visual perception extraction', VISION_PROMPT)
-        for text in (PLANNER_SYSTEM_PROMPT, CONSOLIDATOR_SYSTEM_PROMPT,
-                     SESSION_REFLECTOR_SYSTEM_PROMPT, VISION_PROMPT):
-            self.assertNotIn('Você é', text)
+    def test_processing_prompts_are_in_portuguese(self):
+        """Política invertida na Auditoria #2 — e este teste era parte do problema.
+
+        Na versão anterior, ele EXIGIA inglês nos quatro prompts de processamento
+        e proibia explicitamente 'Você é'. Quando o Patch 021 traduziu o prompt
+        de fala, quem tentasse traduzir o resto veria este teste falhar e
+        concluiria, razoavelmente, que o inglês era deliberado.
+
+        O teste institucionalizou o defeito: o planner seguiu classificando
+        mensagens em português sob instrução em inglês, e seu campo
+        `response_goal` — o único do schema sem exigência de idioma — entrava
+        cru no prompt da Marina como "Goal: <frase em inglês>" a cada turno.
+
+        A política atual está documentada no docstring de `prompt_policy`:
+        todos os prompts em pt-BR, com os blocos `*_EN` preservados apenas
+        para `PROMPT_CONTROL_LANGUAGE='en'`.
+        """
+        for nome, texto in (
+            ('planner', PLANNER_SYSTEM_PROMPT),
+            ('consolidator', CONSOLIDATOR_SYSTEM_PROMPT),
+            ('session_reflector', SESSION_REFLECTOR_SYSTEM_PROMPT),
+            ('vision', VISION_PROMPT),
+        ):
+            with self.subTest(prompt=nome):
+                self.assertRegex(texto, r'\b(Você|Responda|Analise|Extraia|Devolva|Seja)\b')
+                self.assertNotIn('You are Marina', texto)
+                self.assertNotIn('Extract durable facts', texto)
 
 
 class VisualDnaTests(unittest.TestCase):

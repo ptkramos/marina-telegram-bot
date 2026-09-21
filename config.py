@@ -41,7 +41,7 @@ class Settings:
     CALENDAR_CONTINUITY_ENABLED = True
     STYLE_ENGINE_V2_ENABLED = True
     VOICE_LIBRARY_ENABLED = True
-    VOICE_LIBRARY_MAX_EXAMPLES = int(os.getenv("VOICE_LIBRARY_MAX_EXAMPLES", "4"))
+    VOICE_LIBRARY_MAX_EXAMPLES = int(os.getenv("VOICE_LIBRARY_MAX_EXAMPLES", "6"))
 
     # v3.7.1 — Verbal replies when Patrick reacts to Marina's messages. Humans
     # usually absorb a reaction silently; keep chances low, add a cooldown so a
@@ -50,6 +50,20 @@ class Settings:
     REACT_TO_FIRE_REACTION_CHANCE: float = float(os.getenv("REACT_TO_FIRE_REACTION_CHANCE", "0.15"))
     REACT_TO_LAUGH_REACTION_CHANCE: float = float(os.getenv("REACT_TO_LAUGH_REACTION_CHANCE", "0.05"))
     REACTION_VERBAL_REPLY_COOLDOWN_MINUTES: int = int(os.getenv("REACTION_VERBAL_REPLY_COOLDOWN_MINUTES", "15"))
+
+    # v3.7.1 Fase B.5 — Proatividade sensível ao WorldState.
+    # Multiplicadores aplicados sobre AUTONOMOUS_TRIGGER_CHANCE conforme o
+    # activity atual da Marina. Redistribui as ocasiões sem aumentar volume
+    # nem tocar em cooldown/teto diário.
+    PROACTIVITY_STATE_FACTOR_FREE_TIME: float = float(os.getenv("PROACTIVITY_STATE_FACTOR_FREE_TIME", "1.6"))
+    PROACTIVITY_STATE_FACTOR_POST_EVENT: float = float(os.getenv("PROACTIVITY_STATE_FACTOR_POST_EVENT", "1.3"))
+    PROACTIVITY_STATE_FACTOR_BUSY: float = float(os.getenv("PROACTIVITY_STATE_FACTOR_BUSY", "0.4"))
+    PROACTIVITY_STATE_FACTOR_UNKNOWN: float = float(os.getenv("PROACTIVITY_STATE_FACTOR_UNKNOWN", "1.0"))
+
+    # v3.7.1 Patch 023 — Retriever antecipado de filmes/séries para Marina
+    # citar título real em vez de "Filme de Romance" placeholder. Cache diário.
+    MEDIA_LOOKUP_ENABLED: bool = os.getenv("MEDIA_LOOKUP_ENABLED", "true").lower() in ("true", "1", "yes")
+    MEDIA_LOOKUP_REFRESH_HOURS: int = int(os.getenv("MEDIA_LOOKUP_REFRESH_HOURS", "24"))
 
 
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
@@ -68,6 +82,21 @@ class Settings:
 
     # Buffer Inteligente de Digitação (Debounce)
     MESSAGE_DEBOUNCE_SECONDS: float = float(os.getenv("MESSAGE_DEBOUNCE_SECONDS", "3.8"))
+    # Patch 030 — remove pergunta de entrevista no fecho de turno casual
+    # ("E você, tem alguma coisa planejada?"). Kill switch caso o corte fique
+    # agressivo em algum modo.
+    VOICE_STRIP_INTERVIEW_CLOSER: bool = os.getenv(
+        "VOICE_STRIP_INTERVIEW_CLOSER", "true").lower() == "true"
+    # Patch 031 — remove muleta "Ah," de abertura, polidez de atendimento
+    # ("obrigada por perguntar", "se precisar é só chamar") e assinatura de
+    # despedida ("Beijos 😘").
+    VOICE_STRIP_ASSISTANT_POLITENESS: bool = os.getenv(
+        "VOICE_STRIP_ASSISTANT_POLITENESS", "true").lower() == "true"
+    # Patch 033 — bloco [COMO NÃO SOAR] com exemplos negativos capturados pelo
+    # Patrick via /ruim. Fecha a Fase B1 do PLANO_VOZ_MARINA_V371.
+    VOICE_AVOID_BLOCK_ENABLED: bool = os.getenv(
+        "VOICE_AVOID_BLOCK_ENABLED", "true").lower() == "true"
+    VOICE_AVOID_MAX_EXAMPLES: int = int(os.getenv("VOICE_AVOID_MAX_EXAMPLES", "4"))
     
     # Consolidação Periódica de Memória
     MEMORY_CONSOLIDATION_BATCH_SIZE: int = int(os.getenv("MEMORY_CONSOLIDATION_BATCH_SIZE", "8"))
@@ -170,7 +199,12 @@ class Settings:
     FERIADOS_API_KEY: str = os.getenv("FERIADOS_API_KEY", "").strip()
     REAL_WORLD_PLACE_LOOKUP_ENABLED: bool = os.getenv("REAL_WORLD_PLACE_LOOKUP_ENABLED", "false").lower() in ("true", "1", "yes")
     WORLD_STATE_DEFAULT_STALE_MINUTES: int = int(os.getenv("WORLD_STATE_DEFAULT_STALE_MINUTES", "60"))
-    PROMPT_CONTROL_LANGUAGE: str = os.getenv("PROMPT_CONTROL_LANGUAGE", "en").strip()
+    # Patch 032: default passou de "en" para "pt-BR". O Patch 021 mostrou que
+    # instrução de controle em inglês degrada a voz da Marina (modelo lê regra
+    # em EN, responde em PT e mistura os dois registros). O .env do Patrick já
+    # marcava pt-BR, mas o default em "en" era uma armadilha para qualquer
+    # ambiente sem a variável setada.
+    PROMPT_CONTROL_LANGUAGE: str = os.getenv("PROMPT_CONTROL_LANGUAGE", "pt-BR").strip()
     MARINA_OUTPUT_LANGUAGE: str = os.getenv("MARINA_OUTPUT_LANGUAGE", "pt-BR").strip()
     VISION_MODEL: str = os.getenv("VISION_MODEL", "google/gemini-2.5-flash").strip()
     VISION_ENABLED: bool = os.getenv("VISION_ENABLED", "true").lower() in ("true", "1", "yes")

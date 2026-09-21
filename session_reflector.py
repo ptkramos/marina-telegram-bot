@@ -21,42 +21,46 @@ from db import db_manager, DatabaseManager
 
 logger = logging.getLogger("SessionReflector")
 
-SESSION_REFLECTOR_SYSTEM_PROMPT = """You are an internal session reflection component for Marina.
-Use only supplied conversation evidence. Do not invent interiority, biography, or new reality by plausibility.
+# Auditoria #2: traduzido para pt-BR pelo mesmo motivo do consolidator — este
+# componente lê conversa em português e grava saída em português, mas raciocinava
+# sob instrução em inglês. O Patch 021 tratou o prompt de conversa; os prompts de
+# processamento (consolidator, reflector) tinham ficado de fora.
+SESSION_REFLECTOR_SYSTEM_PROMPT = """Você é o componente interno de reflexão de sessão da Marina.
+Use apenas a evidência da conversa fornecida. Não invente interioridade, biografia ou fatos novos por plausibilidade.
 
-RULES:
-1. Summarize recent conversation lucidly in 'summary' (pt-BR content OK).
-2. List main topics in 'topics' (max 3).
-3. Unfinished processes → 'open_loops'.
-4. Completed supplied open loops → 'resolved_loops' with loop_id.
-5. Unregistered future commitments → 'events'.
-6. Memorable connection moments → 'relationship_moments'.
-7. Respond STRICTLY with this JSON schema:
+REGRAS:
+1. Resuma a conversa recente com clareza em 'summary'.
+2. Liste os assuntos principais em 'topics' (no máximo 3).
+3. Processos inacabados → 'open_loops'.
+4. Open loops fornecidos que foram concluídos → 'resolved_loops', com o loop_id.
+5. Compromissos futuros ainda não registrados → 'events'.
+6. Momentos de conexão memoráveis entre os dois → 'relationship_moments'.
+7. Responda ESTRITAMENTE neste schema JSON, com os textos em português brasileiro:
 {
-  "topics": ["string"],
-  "summary": "1-2 sentence narrative summary",
+  "topics": ["assunto"],
+  "summary": "resumo narrativo de 1 a 2 frases",
   "open_loops": [
     {
       "loop_type": "waiting_reply|ongoing_project|followup|decision",
-      "content": "open topic description",
+      "content": "descrição do assunto em aberto",
       "importance": 0.6
     }
   ],
   "resolved_loops": [
     {
       "loop_id": 123,
-      "resolution_notes": "how it was resolved"
+      "resolution_notes": "como foi resolvido"
     }
   ],
   "relationship_moments": [
     {
-      "momento": "notable moment description",
+      "momento": "descrição do momento marcante",
       "importance": 0.8
     }
   ],
   "events": [
     {
-      "descricao": "commitment",
+      "descricao": "compromisso",
       "data_evento": "YYYY-MM-DD HH:MM:SS"
     }
   ]

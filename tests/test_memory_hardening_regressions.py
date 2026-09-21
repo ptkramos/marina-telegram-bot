@@ -154,7 +154,14 @@ class AuditRegressions(unittest.TestCase):
 
     def test_core_and_fts_return_age_and_source(self):
         fid = self.db.adicionar_fato_patrick('Chess preference', memory_tier='core', source_conversation_id=123)
-        for fact in (self.db.buscar_fatos_fts('Chess')[0], self.db.get_core_memories()[0]):
+        # Auditoria #2: o seed passou a criar a identidade do Patrick como core
+        # (antes nascia 'standard', deixando o passo de core do retriever inerte).
+        # Então get_core_memories() tem mais de um item e a ordenação é por
+        # importance — buscar pelo id evita depender de posição.
+        cores = self.db.get_core_memories()
+        core_do_teste = next((f for f in cores if f['id'] == fid), None)
+        self.assertIsNotNone(core_do_teste, f'fato core {fid} deveria estar em {cores!r}')
+        for fact in (self.db.buscar_fatos_fts('Chess')[0], core_do_teste):
             self.assertEqual(fact['id'], fid)
             self.assertIn('created_at', fact)
             self.assertIn('updated_at', fact)

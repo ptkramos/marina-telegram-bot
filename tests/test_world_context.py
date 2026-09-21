@@ -39,7 +39,8 @@ class TestWorldContext(unittest.TestCase):
 
     def test_compatibility_markers_cannot_disable_canonical_context(self):
         with patch.object(settings, "LIVING_WORLD_ENABLED", False), \
-             patch.object(settings, "KNOWLEDGE_PRIVACY_ENABLED", False):
+             patch.object(settings, "KNOWLEDGE_PRIVACY_ENABLED", False), \
+             patch.object(settings, "PROMPT_CONTROL_LANGUAGE", "en"):
             prompt = self.builder.build_system_prompt(user_message="Oi")
         self.assertNotIn("Marina Seltin", prompt)
         self.assertNotIn("SEMPRE uma mulher de 19 anos", prompt)
@@ -49,10 +50,20 @@ class TestWorldContext(unittest.TestCase):
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM world_state").fetchone()[0], 1)
 
     def test_flag_on_uses_canon_dynamic_age_and_excludes_legacy_autobiography(self):
+        # Auditoria #3: o teto de tamanho abaixo passou a falhar sozinho à medida
+        # que o Patrick usava /ruim — o bloco [COMO NÃO SOAR] lê o arquivo real
+        # de produção. Um teste de sanidade estrutural não pode depender de
+        # quanto feedback foi capturado; isola a antibiblioteca.
+        import voice_library
+        _sem_antibib = Path(self.temp.name) / "__sem_antibiblioteca__.md"
+        _patch_antibib = patch.object(voice_library, "_ANTIBIBLIOTECA_PATH", _sem_antibib)
+        _patch_antibib.start()
+        self.addCleanup(_patch_antibib.stop)
         with patch.object(settings, "LIVING_WORLD_ENABLED", True), \
              patch.object(settings, "ACADEMIC_LIFE_ENABLED", False), \
              patch.object(settings, "CALENDAR_CONTINUITY_ENABLED", False), \
-             patch.object(settings, "RESPONSE_RHYTHM_ENABLED", False):
+             patch.object(settings, "RESPONSE_RHYTHM_ENABLED", False), \
+             patch.object(settings, "PROMPT_CONTROL_LANGUAGE", "en"):
             before_birthday = self.builder.build_system_prompt(
                 user_message="Oi", now=datetime(2026, 4, 28, 16, 0),
             )
@@ -71,9 +82,11 @@ class TestWorldContext(unittest.TestCase):
         self.assertIn("Patrick perguntou da faculdade", birthday)
         self.assertIn("Tone: carinhoso", birthday)
         self.assertIn("Respond as Marina in natural Brazilian Portuguese", birthday)
-        # v3.7.1 voice library adds ≤ ~2k chars of few-shots to the end of the
-        # prompt; ceiling raised to 10k to keep sanity check meaningful.
-        self.assertLess(len(birthday), 10000)
+        # v3.7.1 voice library adds ≤ ~2k chars of few-shots + Patch 021
+        # translated RESPONSE RHYTHM/DATA CHANNEL/KNOWLEDGE POLICY blocks to
+        # pt-BR (slightly larger) and Patch 022 added no-live-call + no-fake-
+        # title rules. Ceiling raised to 11k to keep sanity check meaningful.
+        self.assertLess(len(birthday), 11000)
         # Retriever is optional for compact World Context; presence of canon is the contract.
         self.assertIn("Marina Salles", birthday)
 
@@ -126,7 +139,7 @@ class TestWorldContext(unittest.TestCase):
             spoken = bot.generate_dynamic_speech("Diz oi")
         self.assertEqual(spoken, "Oi, Patrick!")
         system.assert_called_once_with(user_message="Diz oi")
-        self.assertTrue(create.call_args.kwargs["messages"][0]["content"].startswith("WORLD\n[RESPONSE RHYTHM]"))
+        self.assertTrue(create.call_args.kwargs["messages"][0]["content"].startswith("WORLD\n[RITMO DE RESPOSTA]"))
 
     def test_canonical_proactivity_ignores_retired_relationship_marker(self):
         import bot

@@ -33,7 +33,7 @@ class RealContextCache:
     def put(self, context_key: str, kind: str, payload: Mapping, *, source_name: str,
             observed_at: datetime, expires_at: datetime) -> None:
         observed_at, expires_at = local_time(observed_at), local_time(expires_at)
-        if kind not in ('weather', 'holiday', 'holiday_year', 'place_fact', 'place_negative') or not context_key or not source_name:
+        if kind not in ('weather', 'holiday', 'holiday_year', 'place_fact', 'place_negative', 'media') or not context_key or not source_name:
             raise ValueError('Context needs a key, source and reviewed kind')
         if len(source_name) > 80 or any(ord(ch) < 32 for ch in source_name):
             raise ValueError('Invalid context source label')
@@ -76,6 +76,10 @@ class RealContextCache:
                               'confidence', 'status', 'for_date'} or not value.get('entity_key')
                     or value.get('status') not in ('CONFIRMED', 'UNKNOWN')):
                 raise ValueError('Invalid place context')
+        elif kind == 'media':
+            if (set(value) - {'titles'} or not isinstance(value.get('titles'), list)
+                    or not all(isinstance(t, str) and 1 <= len(t) <= 80 for t in value['titles'])):
+                raise ValueError('Invalid media cache payload')
         with self.db.get_connection() as conn:
             conn.execute('''INSERT INTO real_context_cache
                 (context_key,kind,payload_json,source_name,observed_at,expires_at)

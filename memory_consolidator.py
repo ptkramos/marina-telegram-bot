@@ -23,37 +23,55 @@ class MemoryConsolidationError(RuntimeError):
     pass
 
 
-CONSOLIDATOR_SYSTEM_PROMPT = """Extract durable facts about Patrick Ramos for girlfriend Marina Salles' memory from recent dialogue.
-CLASSIFICATION AND INTELLIGENCE RULES:
-1. Ignore casual chitchat (hi, lol, emojis, ok, empty compliments, greetings). Use decision='ignore' if there is no durable content.
-2. Extract only preferences, routine, future plans, projects, or relevant long-term facts.
-3. If Patrick reaffirms something that already exists in the known facts list: set decision='same', existing_fact_id=FACT_ID. DO NOT create a duplicate fact.
-4. If it contradicts or updates a known fact: set decision='update' or 'contradiction', existing_fact_id=OLD_FACT_ID, supersedes_id=OLD_FACT_ID and describe the new fact.
-5. If it is a completely new fact: set decision='new', existing_fact_id=null, supersedes_id=null.
-6. If Patrick explicitly asks to remember ("remember that...", "keep this", "don't forget"): set memory_tier='core', importance>=0.90, confidence=1.0.
-7. If Patrick explicitly revokes something ("forget this", "don't keep this anymore", "this is no longer valid"): include in 'keys_to_deactivate' or 'facts_to_deactivate'.
-8. Associate canonical_key (snake_case, e.g. current_main_game, favorite_energy_drink, training_routine) for updatable concepts.
-9. Set volatility: 'stable' (family, identity, fundamental tastes), 'medium' (current games, projects), 'volatile' (temporary routines, weekly schedules).
-10. Respond STRICTLY in JSON (write fato, momento, and topic_summary in Brazilian Portuguese):
+# Auditoria #2: prompt traduzido para pt-BR (o Patch 021 mostrou que instrução
+# em inglês sobre texto português degrada a saída) e regras de memory_tier
+# ampliadas. Antes, a única regra que produzia tier='core' era o pedido
+# explícito do Patrick ("lembra disso"), então na prática nenhum fato virava
+# core — e o passo do MemoryRetriever que carrega core memories em todo turno,
+# independente de palavra-chave, ficava inerte. O contrato da 3.5.0 define core
+# como "projeto central, fato forte do relacionamento, preferência muito
+# importante, informação explicitamente pedida para lembrar": quatro casos, dos
+# quais só o último estava implementado.
+CONSOLIDATOR_SYSTEM_PROMPT = """Extraia fatos duráveis sobre o Patrick Ramos para a memória da Marina Salles (namorada dele) a partir do diálogo recente.
+
+REGRAS DE CLASSIFICAÇÃO:
+1. Ignore conversa fiada (oi, kkk, emojis, ok, elogio vazio, cumprimento). Use decision='ignore' quando não houver conteúdo durável.
+2. Extraia apenas preferências, rotina, planos futuros, projetos ou fatos relevantes de longo prazo.
+3. Se o Patrick reafirma algo que já existe na lista de fatos conhecidos: decision='same', existing_fact_id=FACT_ID. NÃO crie fato duplicado.
+4. Se contradiz ou atualiza um fato conhecido: decision='update' ou 'contradiction', existing_fact_id=ID_ANTIGO, supersedes_id=ID_ANTIGO, e descreva o fato novo.
+5. Se é um fato completamente novo: decision='new', existing_fact_id=null, supersedes_id=null.
+6. Se o Patrick pede explicitamente para lembrar ("lembra disso", "guarda isso", "não esquece"): memory_tier='core', importance>=0.90, confidence=1.0.
+7. Se o Patrick revoga explicitamente ("esquece isso", "não guarda mais", "não vale mais"): inclua em 'keys_to_deactivate' ou 'facts_to_deactivate'.
+8. Associe canonical_key (snake_case, ex.: jogo_atual, energetico_favorito, rotina_treino) para conceitos que mudam com o tempo.
+9. Defina volatility: 'stable' (família, identidade, gostos fundamentais), 'medium' (jogos e projetos atuais), 'volatile' (rotina temporária, agenda da semana).
+
+COMO ESCOLHER memory_tier:
+- 'core' — identidade dele (nome, família, trabalho), projeto ou meta central da vida dele, fato forte do relacionamento de vocês, preferência muito importante, ou algo que ele pediu para lembrar. São os fatos que a Marina deveria ter presentes em qualquer conversa, mesmo sem ele mencionar o assunto.
+- 'standard' — preferências, rotinas, projetos e planos normais. É o padrão: use quando estiver em dúvida.
+- 'contextual' — detalhe de curto prazo que só importa nos próximos dias (compromisso pontual, tarefa da semana, algo que expira).
+
+Seja criterioso com 'core': se tudo for core, nada é. Em geral um diálogo rende zero ou um fato core.
+
+10. Responda ESTRITAMENTE em JSON, escrevendo fato, momento e topic_summary em português brasileiro:
 {
   "facts_to_create": [
     {
-      "fato": "string in 3rd person in Portuguese (pt-BR)",
+      "fato": "frase em 3a pessoa, em português",
       "category": "preferencia|rotina|trabalho|projeto|hobby|relacionamento|pessoal|saude|outro",
       "importance": 0.5,
       "confidence": 1.0,
       "memory_tier": "core|standard|contextual",
       "volatility": "stable|medium|volatile",
-      "canonical_key": "string_or_null",
+      "canonical_key": "string_ou_null",
       "decision": "new|same|update|contradiction|ignore",
       "existing_fact_id": null,
       "supersedes_id": null
     }
   ],
-  "facts_to_deactivate": [{"existing_fact_id": 1, "reason": "string"}],
-  "keys_to_deactivate": ["canonical_key_if_revoked"],
-  "important_moments": [{"momento": "string in Portuguese (pt-BR)", "importance": 0.8}],
-  "topic_summary": "short one-sentence summary in Portuguese (pt-BR) or null"
+  "facts_to_deactivate": [{"existing_fact_id": 1, "reason": "motivo"}],
+  "keys_to_deactivate": ["canonical_key_se_revogada"],
+  "important_moments": [{"momento": "frase em português", "importance": 0.8}],
+  "topic_summary": "resumo de uma frase em português ou null"
 }"""
 
 

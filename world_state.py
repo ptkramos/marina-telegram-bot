@@ -39,6 +39,36 @@ POST_EVENT_COOLDOWN_MINUTES = 20
 # bloqueadas do sorteio (Marina anuncia antes de sair — ver proactivity_service).
 CONVERSATION_ACTIVE_WINDOW_MINUTES = 15
 
+# Auditoria #4 — agenda diária determinística.
+# Antes, a rotina era uma amostra aleatória do INSTANTE, refeita a cada vez que
+# o snapshot ficava stale (60 min). Numa janela de 15:00–21:00 isso deixava a
+# Marina "treinando na academia" em quase toda amostra — cinco horas seguidas —
+# e em todo dia da semana, porque `3_to_5_days_per_week` nunca era aplicado.
+# Agora cada rotina com deslocamento ganha UM slot concreto por dia, derivado
+# só da data: o mesmo em /status, disponibilidade, prompt, câmera e anúncio de
+# saída, e o mesmo depois de um restart.
+SLOT_DURATION_MINUTES = {
+    "pet_walk": (30, 50),
+    "gym": (60, 90),
+    "gym_indoor": (60, 90),  # mesmo slot da academia de rua, só muda o lugar
+}
+WEEKLY_QUOTA = {"3_to_5_days_per_week": (3, 5)}
+# Dia de aula: o Milo passeia onde couber entre 07:00 e 19:00, fora da faculdade.
+CLASS_DAY_PET_WALK_WINDOW = ("07:00", "19:00")
+CLASS_PREP_MINUTES = 60          # arrumar + ir pra PUC
+CLASS_COMMUTE_BACK_MINUTES = 45  # voltar da Gávea pra Botafogo
+
+
+
+def current_energy(db: DatabaseManager) -> float:
+    """Energia atual da Marina (estado emocional). Fonte única para todo
+    leitor de rotina — antes só o prompt usava a real e o resto supunha 0,7,
+    então a vontade de ir à academia divergia entre prompt e disponibilidade."""
+    try:
+        emotional = db.get_estado_emocional()
+        return max(0.0, min(1.0, float(emotional.get("energy", {}).get("valor", 0.7))))
+    except Exception:
+        return 0.7
 
 @dataclass(frozen=True)
 class RoutineCandidate:
@@ -159,9 +189,12 @@ class RoutineEngine:
             routine_type = row["routine_type"]
             if not self._day_applies(row["day_scope"], now, has_class):
                 continue
-            if not self._within_window(now, row["window_start"], row["window_end"]):
-                continue
-            if routine_type == "pet_walk" and has_class and now.hour >= 9:
+            window_start, window_end = row["window_start"], row["window_end"]
+            if routine_type == "pet_walk" and has_class:
+                # Dia de aula: o passeio vai pra onde couber (manhã antes da
+                # faculdade ou tarde depois dela) — o slot decide o horário.
+                window_start, window_end = CLASS_DAY_PET_WALK_WINDOW
+            if not self._within_window(now, window_start, window_end):
                 continue
             if routine_type == "university":
                 # Academic blocks are handled by CalendarWorld, not by routine sorting.
@@ -220,6 +253,141 @@ class RoutineEngine:
                 routine_type=routine_type,
             ))
         return [candidate for candidate in result if candidate.score > 0]
+
+    # ------------------------------------------------------------------
+    # Agenda diária (Auditoria #4)
+    # ------------------------------------------------------------------
+    def _routine_row(self, source_key: str) -> Optional[Mapping]:
+        key = source_key.split(":", 1)[0]
+        with self.db.get_connection() as conn:
+            return conn.execute(
+                "SELECT * FROM routine_patterns WHERE canonical_key = ?", (key,)
+            ).fetchone()
+
+    @staticmethod
+    def happens_on(day, row: Mapping) -> bool:
+        """Rotinas com cota semanal escolhem os dias da semana ISO pela data."""
+        quota = WEEKLY_QUOTA.get(row["day_scope"])
+        if not quota:
+            return True
+        year, week, _ = day.isocalendar()
+        rng = random.Random(f"marina-agenda:{year}-W{week:02d}:{row['canonical_key']}")
+        days = rng.sample(range(7), rng.randint(*quota))
+        return day.weekday() in days
+
+    def _class_busy(self, day) -> Optional[tuple[datetime, datetime]]:
+        """Intervalo ocupado pela faculdade, com arrumação/ida e volta pra casa."""
+        from academic_life import AcademicLife
+        blocks = AcademicLife(self.db).blocks_on(day)
+        if not blocks:
+            return None
+        first = min(datetime.fromisoformat(b["start_at"]) for b in blocks)
+        last = max(datetime.fromisoformat(b["end_at"]) for b in blocks)
+        return (first - timedelta(minutes=CLASS_PREP_MINUTES),
+                last + timedelta(minutes=CLASS_COMMUTE_BACK_MINUTES))
+
+    def _placement(self, day, row, routine_type: str, has_class: Optional[bool]):
+        """Onde o slot cai no dia (sem considerar vontade). None = não cabe."""
+        duration = SLOT_DURATION_MINUTES.get(routine_type)
+        if not duration or not row["window_start"] or not row["window_end"]:
+            return None
+        if not self.happens_on(day, row):
+            return None
+        busy = self._class_busy(day) if has_class is not False else None
+        window = (row["window_start"], row["window_end"])
+        if routine_type == "pet_walk" and busy:
+            window = CLASS_DAY_PET_WALK_WINDOW
+        start_t, end_t = _parse_hhmm(window[0]), _parse_hhmm(window[1])
+        if start_t >= end_t:
+            return None  # janela cruzando a meia-noite não tem slot fixo
+        free = [(datetime.combine(day, start_t), datetime.combine(day, end_t))]
+        if busy:
+            lo, hi = free[0]
+            free = [(lo, min(hi, busy[0])), (max(lo, busy[1]), hi)]
+        rng = random.Random(f"marina-agenda:{day.isoformat()}:{row['canonical_key']}")
+        minutes = rng.randint(*duration)
+        fits = [(a, b) for a, b in free if (b - a).total_seconds() // 60 >= minutes]
+        if not fits:
+            return None
+        window_start, window_end = fits[0]  # o primeiro horário livre que cabe
+        span = int((window_end - window_start).total_seconds() // 60) - minutes
+        start = window_start + timedelta(minutes=rng.randint(0, span) // 5 * 5)
+        slot = (start, start + timedelta(minutes=minutes))
+        if routine_type == "pet_walk":
+            slot = self._avoid_gym(day, slot, has_class, window_end)
+        return slot
+
+    def _avoid_gym(self, day, slot, has_class, limit):
+        """Passeio e academia no mesmo dia não se sobrepõem."""
+        gym_row = self._routine_row("gym_weekly")
+        gym = self._placement(day, gym_row, "gym", has_class) if gym_row else None
+        if not gym or slot[1] <= gym[0] or slot[0] >= gym[1]:
+            return slot
+        length = slot[1] - slot[0]
+        gap = timedelta(minutes=15)
+        before = gym[0] - gap - length
+        if before.date() == day and before >= datetime.combine(day, time(7, 0)):
+            return before, before + length
+        after = gym[1] + gap
+        return (after, after + length) if after + length <= datetime.combine(day, time(21, 0)) else None
+
+    @staticmethod
+    def _willing(day, row, candidate: RoutineCandidate) -> bool:
+        """Vontade do dia: energia, chuva e feriado continuam decidindo se ela vai.
+
+        Rolagem fixa por dia; o score do candidato (que já embute energia,
+        chuva e feriado) vira a chance de ir. Para academia a referência é a
+        energia normal (0,7): com disposição normal ela vai nos dias da cota;
+        cansada, pode pular. Chuva forte: academia de rua quase nunca (vira a
+        do prédio), passeio com o Milo 1 em 4.
+        """
+        base = float(row["probability"] or 0) or 1.0
+        chance = candidate.score / base
+        if candidate.routine_type in ("gym", "gym_indoor"):
+            chance /= 0.7
+        roll = random.Random(f"marina-agenda:{day.isoformat()}:{row['canonical_key']}:vontade").random()
+        return roll < min(1.0, chance)
+
+    def slot_for(
+        self, now: datetime, candidate: RoutineCandidate, *, has_class: Optional[bool] = None,
+    ) -> Optional[tuple[datetime, datetime]]:
+        """Slot concreto do dia para rotinas com deslocamento; None = não vai hoje."""
+        if candidate.routine_type not in SLOT_DURATION_MINUTES:
+            return None
+        row = self._routine_row(candidate.source_key)
+        if not row:
+            return None
+        day = now.date()
+        slot = self._placement(day, row, candidate.routine_type, has_class)
+        if not slot or not self._willing(day, row, candidate):
+            return None
+        return slot
+
+    def pick(
+        self, now: datetime, candidates: list[RoutineCandidate], *,
+        has_class: Optional[bool] = None,
+    ) -> tuple[RoutineCandidate, Optional[datetime]]:
+        """Escolha determinística: sono > slot ativo > rotina de janela > tempo livre.
+
+        Retorna também o fim do slot, para o snapshot expirar exatamente nele.
+        """
+        sleeping = [item for item in candidates if item.activity == "dormindo"]
+        if sleeping:
+            return max(sleeping, key=lambda item: item.score), None
+        in_slot = []
+        for item in candidates:
+            if item.routine_type not in SLOT_DURATION_MINUTES:
+                continue
+            slot = self.slot_for(now, item, has_class=has_class)
+            if slot and slot[0] <= now < slot[1]:
+                in_slot.append((item, slot[1]))
+        if in_slot:
+            return max(in_slot, key=lambda pair: pair[0].score)
+        windowed = [item for item in candidates if item.routine_type not in SLOT_DURATION_MINUTES]
+        if windowed:
+            return max(windowed, key=lambda item: item.score), None
+        return RoutineCandidate("tempo livre em casa", "marina_apartment", 0.2, "free_time",
+                                routine_type="free_time"), None
 
     def choose(self, candidates: list[RoutineCandidate]) -> RoutineCandidate:
         # Sleep window locked: never let free-time keep Marina awake at dawn.
@@ -345,8 +513,10 @@ class WorldStateManager:
         explicit_plan: Optional[Mapping] = None,
         active_consequence: Optional[Mapping] = None,
         has_class: Optional[bool] = None, weather: Optional[Mapping] = None,
-        energy: float = 0.7, force: bool = False,
+        energy: Optional[float] = None, force: bool = False,
     ) -> dict:
+        if energy is None:
+            energy = current_energy(self.db)
         if not 0 <= energy <= 1:
             raise ValueError("energy deve estar entre 0 e 1")
         from calendar_world import CalendarWorld, local_time
@@ -419,11 +589,22 @@ class WorldStateManager:
                 token in (previous.get("activity") or "").casefold()
                 for token in ("dorm", "sleep", "sono")
             )
-            if (timedelta(0) <= age < timedelta(minutes=self.stale_minutes)
+            slot_end_raw = prior_source.get("slot_end")
+            if slot_end_raw:
+                # Auditoria #4: saiu pra um slot, fica nele até o fim — mesmo que
+                # o Patrick comece a conversar no meio. Antes, o re-sorteio com
+                # `conversation_active` a teletransportava de volta pra casa.
+                if (timedelta(0) <= age and now < datetime.fromisoformat(slot_end_raw)
+                        and not plan_expired and not (sleep_now and not previous_sleeping)):
+                    return previous
+            elif (timedelta(0) <= age < timedelta(minutes=self.stale_minutes)
                     and not weather_changed and not plan_expired
-                    and not (sleep_now and not previous_sleeping)):
+                    and not (sleep_now and not previous_sleeping)
+                    and not self._slot_began(now, has_class=has_class, weather=weather,
+                                             energy=energy, holiday_scope=holiday_scope)):
                 return previous
 
+        slot_end: Optional[datetime] = None
         if chosen is None:
             # Sinais para o RoutineEngine sobre cooldown e conversa ativa.
             recent_end = self._recent_commitment_end(now)
@@ -441,7 +622,7 @@ class WorldStateManager:
                 conversation_active=conversation_active,
                 post_event_cooldown=post_event_cooldown,
             )
-            selected = self.routine.choose(candidates)
+            selected, slot_end = self.routine.pick(now, candidates, has_class=has_class)
 
             # Se o cooldown pós-evento está ativo, marcamos explicitamente
             # para o world_context descrever o estado como "acabei de X".
@@ -473,5 +654,20 @@ class WorldStateManager:
                 "holiday_scope": holiday_scope,
                 "calendar_event_id": chosen.get("calendar_event_id"),
                 "academic_block_id": chosen.get("academic_block_id"),
+                "slot_end": slot_end.isoformat() if slot_end else None,
             },
         })
+
+    def _slot_began(self, now: datetime, *, has_class: Optional[bool], weather: Optional[Mapping],
+                    energy: float, holiday_scope: Optional[str]) -> bool:
+        """Um slot da agenda começou depois do snapshot em casa (e nada o bloqueia)?"""
+        last_conv = self._last_conversation_at()
+        candidates = self.routine.candidates(
+            now, has_class=has_class, heavy_rain=bool(weather and weather.get("heavy_rain")),
+            energy=energy, holiday_scope=holiday_scope,
+            conversation_active=bool(
+                last_conv and (now - last_conv) < timedelta(minutes=CONVERSATION_ACTIVE_WINDOW_MINUTES)
+            ),
+        )
+        _, slot_end = self.routine.pick(now, candidates, has_class=has_class)
+        return slot_end is not None

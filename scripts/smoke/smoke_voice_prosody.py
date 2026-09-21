@@ -1,10 +1,19 @@
-"""Manual short speech probe. Run explicitly; never imported by unit tests."""
+"""Manual short speech probe. Run explicitly; never imported by unit tests.
+
+Auditoria #1: movido de `voice_prosody_smoke_test.py` na raiz para cá. O nome
+antigo, com prefixo `test_`, dava a entender que fazia parte da suíte — mas
+`unittest discover -s tests` nunca o coletava, e se coletasse faria chamada de
+rede real para a Novita.
+"""
 import argparse
 import asyncio
 from datetime import datetime
 import json
 from pathlib import Path
 import subprocess
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from config import settings
 from voice_engine import VoiceEngine

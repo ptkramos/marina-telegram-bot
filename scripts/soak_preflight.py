@@ -39,8 +39,8 @@ def main():
             errors.append(f'Credencial ausente: {key}')
     if settings.NOVITA_VOICE_ID_CONVERSATIONAL == settings.NOVITA_VOICE_ID_INTIMATE:
         errors.append('Os dois perfis de voz precisam ser distintos.')
-    if settings.PROMPT_CONTROL_LANGUAGE != 'en':
-        errors.append('PROMPT_CONTROL_LANGUAGE precisa ser en; a saída para o usuário continua pt-BR.')
+    if settings.PROMPT_CONTROL_LANGUAGE not in ('en', 'pt-BR'):
+        errors.append("PROMPT_CONTROL_LANGUAGE deve ser 'en' ou 'pt-BR'; a saída para o usuário continua pt-BR.")
     if settings.MARINA_OUTPUT_LANGUAGE != 'pt-BR':
         errors.append('MARINA_OUTPUT_LANGUAGE precisa ser pt-BR para a conversa da Marina.')
     source = Path(os.environ.get('MARINA_DB_PATH') or ROOT / 'marin_memory.db').resolve()

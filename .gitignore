@@ -30,6 +30,7 @@ log.txt
 *.log
 logs/
 scratch/
+scratchpad/
 backups/
 test_ping.txt
 

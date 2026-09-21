@@ -40,6 +40,7 @@ class VoiceExample:
     intent: str = "casual_chat"
     source: str = "canonical"
     note: str = ""
+    categoria: str = ""  # Patch 029: tag literal do registro pra filtro específico
 
     def as_dict(self) -> dict:
         return {
@@ -49,6 +50,7 @@ class VoiceExample:
             "intent": self.intent,
             "source": self.source,
             "note": self.note,
+            "categoria": self.categoria,
         }
 
 
@@ -232,6 +234,79 @@ def _is_placeholder(text: str) -> bool:
     return bool(_PLACEHOLDER_PATTERNS.match(text.strip()))
 
 
+_ANTIBIBLIOTECA_PATH = (
+    Path(__file__).resolve().parent / "data" / "feedback" / "COMO_NAO_SOAR_MARINA.md"
+)
+
+
+@dataclass(frozen=True)
+class AvoidExample:
+    """Uma fala que soou errada, capturada pelo Patrick com /ruim (Patch 033)."""
+    marina: str
+    motivo: str = ""
+    patrick: str = ""
+
+
+def parse_avoid_examples(path: Optional[Path] = None) -> list[AvoidExample]:
+    """Lê a antibiblioteca (`COMO_NAO_SOAR_MARINA.md`).
+
+    Fecha o ciclo previsto na Fase B1 do PLANO_VOZ_MARINA_V371: o Patrick marca
+    uma resposta ruim com `/ruim` e ela volta ao prompt como contraste, em vez
+    de ficar só registrada. Fail-open: qualquer erro devolve lista vazia.
+    """
+    path = path or _ANTIBIBLIOTECA_PATH
+    if not path.exists():
+        return []
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        logger.warning("voice_library.antibiblioteca read_fail exc=%s", exc)
+        return []
+
+    resultados: list[AvoidExample] = []
+    blocos = re.split(r"^##\s+Evitar\s+\d+.*$", text, flags=re.MULTILINE)[1:]
+    for bloco in blocos:
+        campos = _extract_fields(bloco)
+        marina = (campos.get("marina_respondeu_ruim")
+                  or campos.get("marina_respondeu")
+                  or campos.get("marina") or "").strip()
+        if not marina or _is_placeholder(marina):
+            continue
+        resultados.append(AvoidExample(
+            marina=marina,
+            motivo=(campos.get("por_que_soa_errado") or "").strip(),
+            patrick=(campos.get("patrick_disse") or campos.get("patrick") or "").strip(),
+        ))
+    logger.info("voice_library.antibiblioteca exemplos=%d", len(resultados))
+    return resultados
+
+
+def build_avoid_block(*, limit: int = 4) -> str:
+    """Monta o bloco `[COMO NÃO SOAR]` com os exemplos negativos mais recentes.
+
+    Os mais recentes vêm primeiro porque refletem o que o Patrick está
+    corrigindo agora. String vazia quando não há nada capturado — o bloco não
+    aparece no prompt até existir material real.
+    """
+    exemplos = parse_avoid_examples()
+    if not exemplos:
+        return ""
+    escolhidos = exemplos[-max(1, int(limit)):]
+    linhas = [
+        "[COMO NÃO SOAR — falas suas que o Patrick marcou como erradas]",
+        "Estes são turnos REAIS seus que soaram mal. Não repita a forma deles.",
+    ]
+    for ex in escolhidos:
+        linhas.append("---")
+        if ex.patrick:
+            linhas.append(f"Patrick: {ex.patrick}")
+        linhas.append(f"Marina (RUIM): {ex.marina}")
+        if ex.motivo:
+            linhas.append(f"Problema: {ex.motivo}")
+    linhas.append("---")
+    return "\n".join(linhas)
+
+
 def parse_biblioteca_comportamental(path: Optional[Path] = None) -> list[VoiceExample]:
     """Lê a biblioteca comportamental e devolve exemplos escritos pelo Patrick
     como padrão desejado.
@@ -283,6 +358,7 @@ def parse_biblioteca_comportamental(path: Optional[Path] = None) -> list[VoiceEx
         note = (fields.get("observacoes")
                 or fields.get("principio_comportamental")
                 or "")[:160]
+        categoria_raw = (fields.get("categoria") or "").lower()
         for ex in exemplos:
             results.append(VoiceExample(
                 patrick=patrick,
@@ -291,6 +367,7 @@ def parse_biblioteca_comportamental(path: Optional[Path] = None) -> list[VoiceEx
                 intent=_infer_intent(fields),
                 source="biblioteca_comportamental",
                 note=note,
+                categoria=categoria_raw,
             ))
             stats["extraidos"] += 1
 
@@ -377,9 +454,43 @@ def _infer_intent(fields: dict) -> str:
     return "casual_chat"
 
 
+# Patch 029: categorias cujos exemplos referenciam contexto compartilhado real
+# (piadas internas, apelidos, códigos do casal). Se um exemplo dessa categoria
+# usa uma expressão que NÃO aparece no histórico recente, o LLM pode inventar
+# lore novo achando que é padrão — Marina começa a falar de "zika reversa" sem
+# nunca ter combinado com o Patrick. O filtro só deixa passar quando pelo menos
+# uma palavra distintiva do exemplo aparece no recent_context.
+_SHARED_LORE_CATEGORIES = (
+    "piada interna", "piadas internas",
+    "codigo interno", "código interno",
+    "apelido",
+    "linguagem do casal", "lore",
+)
+
+
+def _exemplo_amarrado_ao_contexto(ex: VoiceExample, recent_context: str) -> bool:
+    """Confere se o exemplo compartilha alguma palavra distintiva com o
+    contexto recente. Palavras < 4 letras e stopwords não contam."""
+    if not recent_context:
+        return False
+    ctx = recent_context.casefold()
+    stop = {"amor", "meu", "bem", "kkkk", "kkkkk", "kkkkkk", "isso", "para",
+            "pra", "que", "com", "sim", "nao", "não", "vou", "vai", "tem",
+            "tô", "to", "eu", "ele", "ela", "gente", "hoje", "muito", "aqui",
+            "então", "entao", "aí", "ai", "então", "vezes", "coisa", "certeza"}
+    for token in re.findall(r"[a-záàâãéêíîóôõúûç]{4,}", ex.marina.casefold()):
+        if token in stop:
+            continue
+        if token in ctx:
+            return True
+    return False
+
+
 def select_examples(
     *, tone: Optional[str] = None, intent: Optional[str] = None,
-    limit: int = 4, include_biblioteca: bool = True,
+    limit: int = 6, include_biblioteca: bool = True,
+    max_per_patrick: int = 2,
+    recent_context: str = "",
 ) -> list[VoiceExample]:
     """Devolve até `limit` exemplos, ranqueados por afinidade com tone/intent.
 
@@ -390,6 +501,18 @@ def select_examples(
         4. nenhum bate (fallback amostral)
     Dentro de cada bucket, exemplos da biblioteca comportamental vêm antes dos
     canônicos (evidência real do Patrick > exemplo escrito à mão).
+
+    Patch 024: `limit` subiu de 4 → 6 (papers de in-context sugerem 6-10 pra
+    transferência de estilo). `max_per_patrick=2` força diversidade: no
+    máximo 2 exemplos com a mesma fala do Patrick, para evitar 4 "boa noite"
+    sequenciais.
+
+    Patch 029: `recent_context` opcional — se passado, filtra exemplos de
+    "piada interna / apelido / código interno" que não têm nenhuma palavra
+    distintiva presente no contexto. Sem isso o LLM inventa lore ("zika
+    reversa" saindo do nada). Se `recent_context` estiver vazio, esses
+    exemplos ainda são filtrados (segurança padrão) — o registro só entra
+    quando você já reusou a expressão em turnos anteriores.
     """
     tone_n = _normalize_tone(tone)
     intent_n = (intent or "").strip().lower()
@@ -397,6 +520,16 @@ def select_examples(
     pool: list[VoiceExample] = list(_CANONICAL_EXAMPLES)
     if include_biblioteca:
         pool = parse_biblioteca_comportamental() + pool
+
+    # Filtro anti-invenção de lore (Patch 029).
+    def is_shared_lore(ex: VoiceExample) -> bool:
+        cat = (ex.categoria or "").lower()
+        return any(kw in cat for kw in _SHARED_LORE_CATEGORIES)
+
+    pool = [
+        ex for ex in pool
+        if not is_shared_lore(ex) or _exemplo_amarrado_ao_contexto(ex, recent_context)
+    ]
 
     def rank(ex: VoiceExample) -> tuple[int, int]:
         tone_match = tone_n and _normalize_tone(ex.tone) == tone_n
@@ -413,7 +546,21 @@ def select_examples(
         return (bucket, biblioteca_first)
 
     ranked = sorted(pool, key=rank)
-    return ranked[: max(0, int(limit))]
+
+    # Diversidade: no máximo `max_per_patrick` exemplos com a mesma fala do
+    # Patrick, pra não repetir cenário (ex.: 4 "boa noite" seguidos).
+    limit_i = max(0, int(limit))
+    picked: list[VoiceExample] = []
+    seen_counts: dict[str, int] = {}
+    for ex in ranked:
+        if len(picked) >= limit_i:
+            break
+        key = ex.patrick.strip().casefold()[:100]
+        if seen_counts.get(key, 0) >= max_per_patrick:
+            continue
+        picked.append(ex)
+        seen_counts[key] = seen_counts.get(key, 0) + 1
+    return picked
 
 
 def format_examples_block(
@@ -438,15 +585,22 @@ def format_examples_block(
 
 def build_voice_block(
     *, tone: Optional[str] = None, intent: Optional[str] = None,
-    limit: int = 4, include_biblioteca: bool = True,
+    limit: int = 6, include_biblioteca: bool = True,
+    recent_context: str = "",
 ) -> str:
     """Atalho: select_examples + format_examples_block em uma chamada.
 
     Devolve string vazia quando o catálogo está vazio (nunca acontece em prática
-    porque _CANONICAL_EXAMPLES é fixo, mas mantém o contrato honesto)."""
+    porque _CANONICAL_EXAMPLES é fixo, mas mantém o contrato honesto).
+
+    Patch 029: `recent_context` (histórico recente da conversa) chega até
+    `select_examples` para filtrar few-shots de piada interna que ainda não
+    foram usados na sessão real. Passar vazio bloqueia esses registros por
+    padrão — comportamento mais seguro."""
     picks = select_examples(
         tone=tone, intent=intent, limit=limit,
         include_biblioteca=include_biblioteca,
+        recent_context=recent_context,
     )
     logger.info(
         "voice_library.injected examples=%d tone=%s intent=%s sources=%s",
