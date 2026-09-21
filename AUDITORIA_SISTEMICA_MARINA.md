@@ -40,6 +40,7 @@ Critérios herdados do `ROADMAP_FUNCIONAL_MARINA_COMPLETO_3_0_A_3_7_V3_CANONICAL
 | 5 | Estado emocional (inclui bateria social) | 1 🔴 · 3 🟡 · 1 ⚪ | ✅ concluída |
 | 6 | Mundo social — a vida dela acontece | 6 🔴 · 1 🟡 | ✅ concluída |
 | 7 | Infraestrutura do banco (isolamento, conexões, migrations) | 2 🔴 · 3 🟡 | ✅ concluída |
+| 8 | Planner, eventos e lembretes (+ reset do soak) | 2 🔴 · 1 🟡 | ✅ concluída |
 
 **Ação aberta que depende do Patrick:** versionar o roadmap funcional (achado 1.2).
 
@@ -1094,3 +1095,78 @@ Na #2 traduzi o rótulo do bloco, mas não os campos gerados por `StyleEngine.ge
 O `PLANO_VOZ_MARINA_V371.md` ganhou um painel de status (seção 0): cada fase foi conferida no código, com a lista do que foi entregue fora do plano e as pendências reais.
 
 Suíte final da #7: **565/566**, com o hash do banco de produção idêntico antes e depois.
+
+---
+
+# Auditoria #8 — Planner, eventos e lembretes
+
+**Por que esta:** era a pendência mais concreta do painel. Havia um evento "médico" com o texto cru da mensagem do Patrick como descrição. Lembrete é confiabilidade pura: uma namorada que lembra da coisa errada quebra a ilusão rápido.
+
+## Preparação — o reset do soak não conhecia o mundo vivo
+
+O `reset_soak_learning` foi escrito antes da #6. Ele apagava as tabelas de vida, mas preservava (corretamente, porque ali mora o cânone) as tabelas onde o mundo vivo também grava. Depois de um soak, o reset deixaria:
+- a Gabi canonizada **sem nenhuma lembrança de como a Marina a conheceu**;
+- os lugares de ficção descobertos;
+- as marcas do dia social;
+- a convivência da Bia com 33 contatos que nunca aconteceram.
+
+**Correção:**
+- O reset remove NPCs (`npc_*`) e as relações deles, lugares de ficção interna, marcas em `world_bootstrap` (`social_day_start`, `skip:`, `story_day:`, `canonized:`) e preferências aprendidas (`canon_locked=0`).
+- A convivência com o círculo canônico volta ao ponto de partida (0,75).
+- O modo de teste do `reset_soak.py` passou a mostrar essas linhas.
+- A lista de "preservados" mostrava `calendar_events` e `avatar_atual` como "(ausente)", tabelas que não existem neste schema, o que sugeria perda de dados. Foi corrigida: o avatar e o DNA visual moram no código (`visual_profile.py`).
+
+Teste: `SoakResetTests` (2 semanas de mundo vivo com NPC canonizado → reset → cânone intacto, resto zerado).
+
+## Achado 8.1 🔴 — O dentista do Patrick virou compromisso da Marina
+
+O caso real, de 21/09 às 12:34: o debouncer juntou duas mensagens num lote só.
+
+> A gente é né amor ksksksk tô falando exatamente isso, que qualquer coisa você me lembra
+> Em falar em me lembrar, quarta-feira eu tenho dentista, 10h
+
+`detect_explicit_scheduled_event` foi escrito para uma frase por vez:
+- O corte "até a palavra *tenho*" usava `^.*?` sem DOTALL, e o `tenho` estava na 2ª linha. **Nada foi cortado.**
+- A remoção do horário exigia "às 10h", e o "10h" solto ficou.
+- A descrição virou o **lote inteiro**.
+- A regra de "compromisso do casal" procura "a gente" na descrição, e o lote começava com "A gente é…". O evento ficou com **dono Marina, confirmado, no apartamento dela**.
+
+Consequências se o bot estivesse ligado:
+- Na quarta, das 10h às 12h, o `CalendarWorld` colocaria a Marina "em um compromisso" em casa (o dentista **dele**). A disponibilidade a deixaria ocupada.
+- O lembrete das 9h mandaria o texto cru ("amor, passando pra te lembrar: A gente é né amor ksksksk…").
+
+**Correção:**
+- O detector olha **só o trecho do lote** que tem o gatilho e o tipo de evento (a negação também é avaliada no trecho).
+- A descrição sai limpa, sem dia e sem hora: "dentista", "prova", "consulta no cardiologista".
+- O resultado leva `owner: patrick_ramos` explícito ("eu tenho" é dele).
+- Em `apply_plan_effects`, o dono explícito vence a heurística de palavras.
+- Programa do casal ("assistir ao filme juntos") continua sendo do casal.
+
+O registro ruim da produção (evento id 2 e o lembrete dele) sai com o reset do soak.
+
+## Achado 8.2 🔴 — Resposta-lixo sem salvamento era enviada assim mesmo
+
+Depois de uma resposta ruim (artefato de debug, proposta de ligação, outra língua), o pipeline tenta de novo. Se a segunda tentativa também é ruim, tenta salvar cortando a frase problemática. Se **nada** sobra (a resposta inteira era "Posso te ligar na hora?"), o código seguia com a resposta ruim e **enviava**.
+
+**Correção:** `_safe_fallback_reply()`. Se o turno era de confirmar lembrete, a fala segura é a própria confirmação ("Combinado, amor! Te mando mensagem aqui no Telegram às 09:30 💕"). Senão, "Amor, deu uma bugadinha aqui kkk me manda de novo?".
+
+## Achado 8.3 🟡 — Confirmação de lembrete sem garantia do horário
+
+Quando o Patrick aceita um lembrete oferecido ("pode me lembrar uma hora antes"), o lembrete era registrado certo no banco (09:30), mas a confirmação ficava inteira com o LLM, sem garantia de citar o horário nem o canal.
+
+**Correção:** a fala continua sendo do LLM, e se ela não citar o horário (`_mentions_clock` aceita 09:30, 9:30, 9h30 e, na hora cheia, 9h), é acrescentado "Te mando mensagem aqui no Telegram às HH:MM 💕". É o mesmo padrão que já garantia a pergunta de oferta e a de esclarecimento.
+
+**Dívida quitada:** `test_offer_acceptance_does_not_leave_second_direct_reminder_pending`, que falhava desde **antes** das auditorias, passa. Ele exigia exatamente isso: "09:30", "mensagem aqui no Telegram" e nada de "ligar".
+
+## Testes
+
+`tests/test_planner_events_audit8.py`, com 7 testes:
+- o lote real vira "dentista" do Patrick;
+- a descrição sai sem dia nem hora;
+- a negação só vale no trecho do compromisso;
+- o compromisso do Patrick não ocupa a Marina (`CalendarWorld.current` = None na quarta às 10:30);
+- o programa do casal continua sendo do casal;
+- o fallback seguro nunca propõe ligação;
+- o horário é reconhecido em vários formatos.
+
+Suíte: **575/575**, a primeira totalmente verde desde o início das auditorias. O hash do banco de produção ficou idêntico antes e depois da rodada.

@@ -161,36 +161,54 @@ def parse_direct_reminder_datetime(raw_val: Any, reference_dt: Optional[datetime
     return parse_iso_or_relative_datetime(raw_val, reference_dt=reference_dt, default_offset_hours=None)
 
 
+_EVENT_TRIGGER = re.compile(r"\b(?:tenho|vou ter|marquei|agendei)\b", re.IGNORECASE)
+_EVENT_TYPES = {
+    "reunião": "trabalho", "reuniao": "trabalho", "consulta": "medico",
+    "dentista": "medico", "médico": "medico", "medico": "medico",
+    "prova": "estudo", "exame": "estudo", "entrevista": "trabalho",
+    "voo": "viagem", "audiência": "compromisso", "audiencia": "compromisso",
+}
+_WHEN_WORDS = re.compile(
+    r",?\s*\b(?:hoje|amanh[aã]|depois de amanh[aã]|(?:n[ao]\s+)?(?:segunda|ter[çc]a|quarta|quinta|sexta)"
+    r"(?:-feira)?|(?:n[ao]\s+)?(?:s[áa]bado|domingo)|de manh[ãa]|[àa] tarde|[àa] noite)\b",
+    re.IGNORECASE)
+_CLOCK = re.compile(r",?\s*(?:[aà]s\s*)?\b\d{1,2}(?:[:h]\d{0,2})?\s*(?:h(?:oras?|rs?)?)?\b", re.IGNORECASE)
+
+
 def detect_explicit_scheduled_event(text: str, reference_dt: Optional[datetime] = None) -> Optional[dict]:
-    """Recognize an affirmative, concrete future appointment with an explicit clock time."""
+    """Recognize an affirmative, concrete future appointment with an explicit clock time.
+
+    Auditoria #8: o debouncer junta mensagens em lote ("A gente é né amor… /
+    quarta-feira eu tenho dentista, 10h"). O detector olhava o lote inteiro: a
+    descrição virava o texto cru e o "a gente" da 1ª mensagem transformava o
+    dentista do Patrick em compromisso do casal (dono: Marina, no apartamento
+    dela). Agora só o trecho que fala do compromisso conta, a descrição é limpa
+    e o dono é explícito: "eu tenho" é do Patrick.
+    """
     if not text:
         return None
-    normalized = text.strip().lower()
-    if re.search(r"\b(?:n[aã]o|nem|nunca|cancelei|cancelado|era|tinha|talvez|se)\b", normalized):
+    segments = [seg.strip() for seg in re.split(r"[\n.!?;]+", text) if seg.strip()]
+    segment = next((seg for seg in segments
+                    if _EVENT_TRIGGER.search(seg)
+                    and any(re.search(rf"\b{word}\b", seg.lower()) for word in _EVENT_TYPES)), None)
+    if not segment:
         return None
-    if not re.search(r"\b(?:tenho|vou ter|marquei|agendei)\b", normalized):
+    normalized = segment.lower()
+    if re.search(r"\b(?:n[aã]o|nem|nunca|cancelei|cancelado|era|tinha|talvez|se)\b", normalized):
         return None
     if re.search(r"\bdia\s+\d{1,2}\b|\b\d{1,2}/\d{1,2}\b", normalized):
         return None  # This parser does not resolve calendar dates written by number.
-    event_types = {
-        "reunião": "trabalho", "reuniao": "trabalho", "consulta": "medico",
-        "dentista": "medico", "médico": "medico", "medico": "medico",
-        "prova": "estudo", "exame": "estudo", "entrevista": "trabalho",
-        "voo": "viagem", "audiência": "compromisso", "audiencia": "compromisso",
-    }
-    event_type = next((kind for word, kind in event_types.items() if re.search(rf"\b{word}\b", normalized)), None)
-    if not event_type:
-        return None
+    word, event_type = next((w, kind) for w, kind in _EVENT_TYPES.items()
+                            if re.search(rf"\b{w}\b", normalized))
     now = reference_dt or datetime.now()
-    event_at = parse_direct_reminder_datetime(text, reference_dt=now)
+    event_at = parse_direct_reminder_datetime(segment, reference_dt=now)
     if not event_at or datetime.fromisoformat(event_at) <= now:
         return None
-    description = re.sub(r"^.*?\b(?:tenho|vou ter|marquei|agendei)\b\s*", "", text.strip(), flags=re.IGNORECASE)
-    description = re.sub(
-        r"\s*\b(?:hoje|amanh[aã]|depois de amanh[aã])?\s*(?:[aà]s)\s*\d{1,2}(?:[:h]\d{1,2})?\b.*$",
-        "", description, flags=re.IGNORECASE,
-    ).strip(" .!?,")
-    return {"event_type": event_type, "description": description or text.strip(), "event_at": event_at}
+    description = _EVENT_TRIGGER.split(segment, maxsplit=1)[-1]
+    description = _CLOCK.sub("", _WHEN_WORDS.sub("", description)).strip(" .!?,-")
+    return {"event_type": event_type, "description": description or word,
+            "event_at": event_at, "owner": "patrick_ramos"}
+
 
 def detect_direct_reminder_intent(text: str) -> tuple[bool, Optional[str]]:
     """
@@ -588,10 +606,14 @@ class InternalPlanner:
                 if follow_prompt and follow_prompt not in desc:
                     desc = f"{desc} | Follow-up: {follow_prompt}"
 
-                # Atribuição de compromisso compartilhado vs pessoal do Patrick
-                is_shared = ed.get("event_type") in ("encontro", "social") or any(
-                    w in desc.lower() for w in ("juntos", "a gente", "nós", "bora", "comigo", "ver o jogo", "assistir")
-                )
+                # Atribuição de compromisso compartilhado vs pessoal do Patrick.
+                # Auditoria #8: dono explícito vence a heurística de palavras.
+                if ed.get("owner") == "patrick_ramos":
+                    is_shared = False
+                else:
+                    is_shared = ed.get("event_type") in ("encontro", "social") or any(
+                        w in desc.lower() for w in ("juntos", "a gente", "nós", "bora", "comigo", "ver o jogo", "assistir")
+                    )
                 owner_key = "marina" if is_shared else "patrick_ramos"
                 is_confirmed = 1 if is_shared else 0
                 expected_end_iso = (datetime.fromisoformat(event_at_iso) + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%S") if event_at_iso else None

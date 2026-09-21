@@ -361,5 +361,57 @@ class LivingCircleTests(unittest.TestCase):
         self.assertTrue(all(r["canon_locked"] == 0 for r in novos))
 
 
+class SoakResetTests(unittest.TestCase):
+    """Auditoria #8: o reset do soak precisa desfazer o mundo vivo, não o cânone."""
+
+    def test_reset_remove_o_que_nasceu_no_soak_e_preserva_o_canone(self):
+        from social_world import seed_social
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        db = DatabaseManager(Path(temp.name) / "reset.db")
+        seed_world_bible(db)
+        seed_academic(db)
+        seed_social(db)
+        with db.get_connection() as conn:
+            conn.execute("INSERT INTO world_bootstrap (key,value,updated_at) "
+                         "VALUES ('clean_canonical_start_done','1','2026-09-01')")
+            canon_antes = conn.execute("SELECT COUNT(*) FROM world_characters").fetchone()[0]
+        day = SocialDay(db)
+        day.materialize(datetime(2026, 9, 21, 7, 0))
+        for offset in range(6):  # NPC recorrente → canonizado
+            day._record(Contact(key=f"teste:{offset}:gabi", character_key="npc_gabi_freitas",
+                                at=datetime(2026, 9, 21 + offset, 9, 30), channel="presencial",
+                                place_key="enseada_botafogo", topic="cachorros"))
+        for offset in range(14):
+            day.materialize(datetime.combine(date(2026, 9, 21) + timedelta(days=offset), time(23, 59)))
+        from world_repository import WorldBibleRepository
+        self.assertEqual(WorldBibleRepository(db).get_character("npc_gabi_freitas")["canon_locked"], 1)
+
+        with db.get_connection() as conn:
+            conn.execute("INSERT INTO character_preferences (character_key, category, value, preference_type, "
+                         "strength, confidence, canon_locked, active, first_seen_at, last_seen_at) "
+                         "VALUES ('marina','place','quartinho_bar','current_interest',0.7,0.7,0,1,"
+                         "'2026-09-21','2026-09-21')")
+        db.reset_soak_learning()
+        with db.get_connection() as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM character_preferences WHERE canon_locked=0").fetchone()[0], 0)
+            self.assertGreater(conn.execute("SELECT COUNT(*) FROM character_preferences WHERE canon_locked=1").fetchone()[0], 0)
+
+        with db.get_connection() as conn:
+            npcs = conn.execute("SELECT COUNT(*) FROM world_characters WHERE canonical_key LIKE 'npc!_%' ESCAPE '!'").fetchone()[0]
+            marcas = conn.execute("SELECT COUNT(*) FROM world_bootstrap WHERE key='social_day_start' "
+                                  "OR key LIKE 'skip:%' OR key LIKE 'story_day:%' OR key LIKE 'canonized:%'").fetchone()[0]
+            ficcao = conn.execute("SELECT COUNT(*) FROM world_places WHERE canon_locked=0 "
+                                  "AND json_extract(usage_rules_json,'$.internal_fiction')=1").fetchone()[0]
+            bia = conn.execute("SELECT contact_frequency, last_interaction_at, closeness FROM social_relationships "
+                               "WHERE character_key='bia_andrade'").fetchone()
+            canon_depois = conn.execute("SELECT COUNT(*) FROM world_characters").fetchone()[0]
+            limpo = conn.execute("SELECT 1 FROM world_bootstrap WHERE key='clean_canonical_start_done'").fetchone()
+        self.assertEqual((npcs, marcas, ficcao), (0, 0, 0))
+        self.assertEqual((bia["contact_frequency"], bia["last_interaction_at"], bia["closeness"]), (0, None, 0.75))
+        self.assertEqual(canon_depois, canon_antes)
+        self.assertIsNotNone(limpo)
+
+
 if __name__ == "__main__":
     unittest.main()

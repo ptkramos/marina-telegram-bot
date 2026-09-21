@@ -8,11 +8,14 @@ Chama `DatabaseManager.reset_soak_learning()`, que deleta em transação única:
     - preference_evidence, social_evidence/place_state
     - life_events(_archive), story_threads, world_state, world_hygiene_log
     - world_decisions, real_context_cache, estado_relacional
+    - mundo vivo (Auditoria #8): NPCs e lugares de ficção descobertos,
+      marcas do dia social em world_bootstrap, convivência com o círculo
+      canônico volta ao ponto de partida
 
 E preserva (deixados intactos):
     - Persona canônica (world_characters, world_places, world_bootstrap)
-    - Calendário fixo (calendar_events, academic_profile)
-    - Perfil da Marina (perfil, avatar_atual, ciclo)
+    - Grade da PUC (academic_profile, academic_courses, academic_schedule_blocks)
+    - Perfil da Marina (perfil, ciclo_biologico); avatar e DNA visual ficam no código
     - Rotinas (routine_patterns), schema_version, migrations aplicadas
 
 Ao final:
@@ -57,6 +60,18 @@ def _snapshot_counts() -> dict[str, int]:
                 counts[t] = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0]
             except Exception:
                 counts[t] = -1
+        # Auditoria #8: o mundo vivo (#6) mora em tabelas que também guardam
+        # o cânone; o reset remove só a parte que nasceu no soak.
+        extras = {
+            "mundo vivo: NPCs descobertos": "SELECT COUNT(*) FROM world_characters WHERE canonical_key LIKE 'npc!_%' ESCAPE '!'",
+            "mundo vivo: lugares de ficção descobertos": "SELECT COUNT(*) FROM world_places WHERE canon_locked=0 AND json_extract(usage_rules_json,'$.internal_fiction')=1",
+            "mundo vivo: marcas (início, histórias, pulos)": "SELECT COUNT(*) FROM world_bootstrap WHERE key='social_day_start' OR key LIKE 'skip:%' OR key LIKE 'story_day:%' OR key LIKE 'canonized:%'",
+        }
+        for label, sql in extras.items():
+            try:
+                counts[label] = conn.execute(sql).fetchone()[0]
+            except Exception:
+                counts[label] = -1
     return counts
 
 
@@ -69,9 +84,13 @@ def _print_counts(counts: dict[str, int], header: str) -> None:
 
 
 def _preserved_summary() -> dict[str, int]:
+    # Auditoria #8: "calendar_events" e "avatar_atual" não existem neste
+    # schema e apareciam como "(ausente)", sugerindo perda de dados. O avatar e
+    # o DNA visual moram no código (visual_profile.py); a grade, nas academic_*.
     tables = ("world_characters", "world_places", "world_bootstrap",
-              "calendar_events", "academic_profile", "routine_patterns",
-              "perfil", "avatar_atual")
+              "academic_profile", "academic_courses", "academic_schedule_blocks",
+              "routine_patterns", "perfil", "ciclo_biologico",
+              "social_relationships", "character_preferences")
     counts: dict[str, int] = {}
     with db_manager.get_connection() as conn:
         for t in tables:

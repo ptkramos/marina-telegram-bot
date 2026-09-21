@@ -823,6 +823,22 @@ _SIGNOFF_RE = re.compile(
 )
 
 
+def _safe_fallback_reply(reminder_at: Optional[datetime] = None) -> str:
+    """Fala segura quando a resposta do LLM é lixo e não dá para salvar."""
+    if reminder_at:
+        return f"Combinado, amor! Te mando mensagem aqui no Telegram às {reminder_at:%H:%M} 💕"
+    return "Amor, deu uma bugadinha aqui kkk me manda de novo?"
+
+
+def _mentions_clock(text: str, moment: datetime) -> bool:
+    """A fala cita o horário? Aceita 09:30, 9:30, 9h30 e, na hora cheia, 9h."""
+    t = (text or "").casefold()
+    forms = {f"{moment:%H:%M}", f"{moment.hour}:{moment.minute:02d}", f"{moment.hour}h{moment.minute:02d}"}
+    if moment.minute == 0:
+        forms |= {f"{moment.hour}h", f"{moment.hour} h", f"{moment.hour} horas"}
+    return any(re.search(rf"(?<!\d){re.escape(form)}(?!\d)", t) for form in forms)
+
+
 def _strip_assistant_politeness(text: str) -> str:
     """Remove muleta 'Ah,' de abertura, polidez de atendimento e assinatura de
     despedida (Patch 031). Nunca devolve string vazia — se o corte esvaziaria o
@@ -2850,6 +2866,7 @@ async def process_incoming_batch(
 
     # 2.1 Verificação de consentimento para oferta recente de lembrete com atribuição estrita (Release 3.5.1 / P0/P1.3)
     reminder_decision_instruction = None
+    reminder_confirmed_at = None
     if True:
         last_offered = reminder_service.get_last_offered_reminder(max_age_minutes=60)
         if last_offered:
@@ -2874,7 +2891,8 @@ async def process_incoming_batch(
                     plan = suppress_direct_reminder_after_offer_decision(plan)
                     confirmed = reminder_service.db.get_reminder(last_offered["id"])
                     if confirmed:
-                        when = datetime.fromisoformat(confirmed["remind_at"]).strftime("%d/%m às %H:%M")
+                        reminder_confirmed_at = datetime.fromisoformat(confirmed["remind_at"])
+                        when = reminder_confirmed_at.strftime("%d/%m às %H:%M")
                         reminder_decision_instruction = (
                             f"[INSTRUÇÃO DESTE TURNO]: O Patrick confirmou o lembrete para '{confirmed['description']}' ({when}). "
                             "Confirme com carinho e com suas próprias palavras de namorada que vai avisá-lo, atendendo com afeto e naturalidade ao que ele falou nesta mensagem."
@@ -3154,6 +3172,11 @@ async def process_incoming_batch(
                 if salvo:
                     logger.info(f"llm.junk_reply salvaged reply={salvo!r}")
                     resposta_marin = salvo
+                else:
+                    # Auditoria #8: sem salvamento possível, o lixo era enviado
+                    # assim mesmo ("Posso te ligar na hora?" saía para o Patrick).
+                    resposta_marin = _safe_fallback_reply(reminder_confirmed_at)
+                    logger.warning(f"llm.junk_reply unsalvageable — fallback={resposta_marin!r}")
     except Exception as e:
         logger.warning(f"Aviso na chamada principal da LLM ({settings.LLM_MODEL}): {e}")
         fallback_model = "mistralai/mistral-nemo"
@@ -3246,6 +3269,12 @@ async def process_incoming_batch(
             event_desc = plan.get("event_details", {}).get("description") or "compromisso"
             pergunta_lembrete = f"\nQuer que eu te lembre do {event_desc} antes, amor? 💕"
             fala_limpa = f"{fala_limpa.strip()}{pergunta_lembrete}"
+
+    # Auditoria #8: lembrete confirmado neste turno — a fala é do LLM, mas o
+    # horário e o canal (mensagem aqui, nunca ligação) são garantidos.
+    if reminder_confirmed_at and not _mentions_clock(fala_limpa, reminder_confirmed_at):
+        fala_limpa = (f"{fala_limpa.strip()}\nTe mando mensagem aqui no Telegram às "
+                      f"{reminder_confirmed_at:%H:%M} 💕")
 
     # P1 / P2 / Rodada 3: Garante pergunta de esclarecimento caso o Patrick tenha pedido lembrete sem horário
     if plan and plan.get("needs_clarification") == "direct_reminder_time":

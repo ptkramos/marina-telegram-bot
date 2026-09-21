@@ -69,17 +69,17 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
 | # | Pendência | Origem |
 |---|---|---|
-| 1 | **Nada desta sessão está commitado.** Commitar e versionar o `ROADMAP_FUNCIONAL_…md` depende do Patrick | Auditoria #1 (1.2) |
+| 1 | ~~Nada commitado~~ → auditorias #1–#7 na `main` (commits `f551235`, `8293062`, `7456d0f`); o roadmap já estava versionado | ✅ resolvido |
 | 2 | Perda de coerência entre turnos (6 capturas de `/ruim`): observar depois do restart, com `[COMO NÃO SOAR]` e o mundo vivo ativos | Auditoria #3 |
 | 3 | Qualidade das mensagens espontâneas geradas pelo modelo: só dá pra medir em conversa real (usar `/bom` e `/ruim` nelas) | Auditoria #6 |
-| 4 | Planner extraiu evento "médico" com o texto da mensagem do Patrick como descrição (`eventos_pendentes` id 2) | Auditoria #7 |
+| 4 | ~~Evento "médico" com o texto cru~~ → corrigido na causa (Auditoria #8). O registro ruim sai com o reset do soak | ✅ resolvido |
 | 5 | Deslocamento como estado: a volta da PUC ainda é instantânea | Auditorias #5 e #6 |
 | 6 | `KnowledgeDialogue` responde com frase pronta (sem modelo) quando há assunto registrado. Hoje está dormente | Auditoria #6 |
 | 7 | Câmera e fator proativo leem o estado com regra própria de 60 min (os slots vão até 90) | Auditoria #4 |
 | 8 | Código morto da proatividade antiga (`determine_proactive_prompt`, anúncio, contexto neutro): apagar ou reaproveitar | Auditoria #6 |
 | 9 | `build_safe_core_prompt`, fallback legado ainda vivo | Auditoria #2 (2.3) |
 | 10 | Blocos de finalização duplicados no pipeline (sob teste, falta extrair o helper) | Auditoria #3 (3.2) |
-| 11 | Teste `test_offer_acceptance` falhando (LLM mockado com texto fixo) | anterior às auditorias |
+| 11 | ~~Teste `test_offer_acceptance` falhando~~ → passa. Era um bug real: resposta-lixo sem salvamento era enviada (Auditoria #8) | ✅ resolvido |
 | 12 | Erros de concordância nas falas | soak |
 
 ---

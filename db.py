@@ -509,6 +509,34 @@ class DatabaseManager:
                 conn.execute(
                     "UPDATE estado_emocional SET valor=baseline, updated_at=?", (now_iso,)
                 )
+                # Auditoria #8: o mundo vivo (#6) grava em tabelas que o reset
+                # preserva por conterem o cânone. Separa o que nasceu no soak.
+                counts["world_bootstrap:mundo_vivo"] = conn.execute(
+                    """DELETE FROM world_bootstrap WHERE key='social_day_start'
+                       OR key LIKE 'skip:%' OR key LIKE 'story_day:%' OR key LIKE 'canonized:%'"""
+                ).rowcount
+                counts["social_relationships:npc"] = conn.execute(
+                    "DELETE FROM social_relationships WHERE character_key LIKE 'npc!_%' ESCAPE '!'"
+                ).rowcount
+                counts["world_characters:npc"] = conn.execute(
+                    "DELETE FROM world_characters WHERE canonical_key LIKE 'npc!_%' ESCAPE '!'"
+                ).rowcount
+                counts["world_places:ficcao_descoberta"] = conn.execute(
+                    """DELETE FROM world_places WHERE canon_locked=0
+                       AND json_extract(usage_rules_json, '$.internal_fiction') = 1"""
+                ).rowcount
+                # Preferências aprendidas no soak (as evidências já foram apagadas).
+                counts["character_preferences:aprendidas"] = conn.execute(
+                    "DELETE FROM character_preferences WHERE canon_locked=0"
+                ).rowcount
+                # Convivência com o círculo canônico volta ao ponto de partida.
+                conn.execute(
+                    """UPDATE social_relationships SET contact_frequency=0,
+                       recent_positive_interactions=0, recent_tension=0,
+                       last_interaction_at=NULL,
+                       closeness=CASE WHEN canon_locked=1 THEN 0.75 ELSE 0 END,
+                       trust=CASE WHEN canon_locked=1 THEN 0.75 ELSE 0 END"""
+                )
                 placeholders = ",".join("?" for _ in dynamic_tables)
                 conn.execute(
                     f"DELETE FROM sqlite_sequence WHERE name IN ({placeholders})",
