@@ -49,12 +49,17 @@ RUSH = ((time(7, 0), time(9, 30)), (time(17, 0), time(19, 30)))
 RUSH_FACTOR = {"onibus": 1.35, "uber": 1.35, "metro_onibus": 1.25, "metro": 1.1, "a_pe": 1.0}
 LABEL = {"a_pe": "a pé", "metro": "de metrô", "onibus": "de ônibus",
          "metro_onibus": "de metrô e ônibus", "uber": "de uber"}
+# Carona (cânone do Patrick, 22/09: o Theo tem carro). Peso na ida/volta da PUC
+# (ele é da mesma faculdade e passa por Botafogo vindo da Glória) e nas saídas
+# em que ele está junto.
+CARONA_WEIGHT_PUC = 0.25
+CARONA_WEIGHT_OUTING = 0.9
 # Margens que a agenda já reserva em volta da aula (world_state).
 CLASS_GO_MAX_MIN = 50
 CLASS_BACK_MAX_MIN = 45
 API_URL = "https://api.distancematrix.ai/maps/api/distancematrix/json"
 API_TIMEOUT_S = 4
-API_MODE = {"uber": "driving", "onibus": "transit", "metro": "transit", "metro_onibus": "transit",
+API_MODE = {"uber": "driving", "carona": "driving", "onibus": "transit", "metro": "transit", "metro_onibus": "transit",
             "a_pe": "walking"}
 API_TRANSIT = {"onibus": "bus", "metro": "subway", "metro_onibus": "bus|subway"}
 API_CLAMP = (0.6, 2.5)      # em relação à tabela: fora disso é endereço mal geocodificado
@@ -68,6 +73,7 @@ INCIDENTS = {
     "uber": ["o motorista do uber errou o caminho", "o uber cancelou e ela teve que chamar outro"],
     "a_pe": ["começou a garoar no caminho"],
     "uber_dividido": ["o motorista do uber errou o caminho"],
+    "carona": ["pegaram um trânsito chato no caminho", "pararam pra comprar um açaí no caminho"],
 }
 
 
@@ -84,8 +90,16 @@ class Leg:
     incident: str = ""
     incident_at: Optional[datetime] = None
 
+    @property
+    def how(self) -> str:
+        if self.mode == "uber_dividido":
+            return f"dividindo um uber com {self.companion}"
+        if self.mode == "carona":
+            return f"de carona com {self.companion}"
+        return LABEL[self.mode]
+
     def activity(self, now: datetime) -> str:
-        how = f"dividindo um uber com {self.companion}" if self.mode == "uber_dividido" else LABEL[self.mode]
+        how = self.how
         where = (f"indo {self.destination}" if self.direction == "ida"
                  else f"voltando {self.destination} pra casa")
         text = f"{where} {how}"
@@ -141,9 +155,23 @@ class Commute:
         except Exception:
             return 0.7
 
+    def _driver(self, among: Optional[list] = None) -> tuple[str, str]:
+        """(chave, nome curto) de quem do círculo tem carro — cânone em
+        world_characters.initial_state_json.has_car."""
+        with self.db.get_connection() as conn:
+            rows = conn.execute("SELECT canonical_key FROM world_characters WHERE active=1 AND "
+                                "json_extract(initial_state_json, '$.has_car') = 1").fetchall()
+        keys = [r["canonical_key"] for r in rows if among is None or r["canonical_key"] in among]
+        if not keys:
+            return "", ""
+        from social_day import short_name
+        key = sorted(keys)[0]
+        return key, short_name(key)  # já vem com artigo ("o Theo")
+
     # ------------------------------------------------------------ escolha --
     def _choose(self, day: date, name: str, region: str, moment: datetime, companion: str = "",
-                place: Optional[dict] = None, outbound: bool = True) -> tuple[str, int]:
+                place: Optional[dict] = None, outbound: bool = True,
+                carona_weight: float = 0.0) -> tuple[str, int]:
         """Modo e minutos do trecho. Decidido uma vez e gravado: a energia e a
         chuva mudam ao longo do dia, e o ônibus não pode virar uber no meio."""
         key = f"commute:{day.isoformat()}:{name}"
@@ -152,7 +180,7 @@ class Commute:
         if row:
             mode, minutes = row["value"].split("|")
             return mode, int(minutes)
-        mode, minutes = self._decide(day, name, region, moment, companion, place, outbound)
+        mode, minutes = self._decide(day, name, region, moment, companion, place, outbound, carona_weight)
         with self.db.get_connection() as conn:
             conn.execute("INSERT OR IGNORE INTO world_bootstrap (key, value, updated_at) VALUES (?, ?, ?)",
                          (key, f"{mode}|{minutes}", datetime.now().isoformat()))
@@ -160,8 +188,11 @@ class Commute:
         return mode, minutes
 
     def _decide(self, day: date, name: str, region: str, moment: datetime, companion: str = "",
-                place: Optional[dict] = None, outbound: bool = True) -> tuple[str, int]:
+                place: Optional[dict] = None, outbound: bool = True,
+                carona_weight: float = 0.0) -> tuple[str, int]:
         options = dict(ROUTES.get(region) or ROUTES["Copacabana"])
+        if carona_weight > 0:
+            options["carona"] = options.get("uber") or 10
         rain = self._heavy_rain(moment)
         night = moment.time() >= time(22, 0) or moment.time() < time(6, 0)
         if rain or night:
@@ -174,6 +205,8 @@ class Commute:
             if mode == "uber":
                 w *= (2.5 if night else 1.0) * (2.0 if rain else 1.0) * (1.5 if self._energy() < 0.4 else 1.0)
                 w *= 0.6 if day.day >= 24 else 1.0
+            elif mode == "carona":
+                w = carona_weight * (2.0 if rain else 1.0) * (1.5 if night else 1.0)
             elif night and mode in ("onibus", "metro_onibus"):
                 w *= 0.2
             weights[mode] = w
@@ -245,14 +278,20 @@ class Commute:
             first = min(datetime.fromisoformat(b["start_at"]) for b in blocks)
             last = max(datetime.fromisoformat(b["end_at"]) for b in blocks)
             puc = self._place("puc_rio") or {"name": "PUC-Rio", "region": "Gávea"}
-            mode, mins = self._choose(day, "puc:ida", "Gávea", first - timedelta(minutes=40), place=puc)
+            _key, driver = self._driver()
+            w = CARONA_WEIGHT_PUC if driver else 0.0
+            mode, mins = self._choose(day, "puc:ida", "Gávea", first - timedelta(minutes=40), place=puc,
+                                      carona_weight=w)
             mins = min(mins, CLASS_GO_MAX_MIN)
             legs.append(self._incident(Leg(f"commute:{day.isoformat()}:puc:ida", first - timedelta(minutes=mins),
-                                           first, mode, "ida", _pra("PUC"), "Gávea")))
-            mode, mins = self._choose(day, "puc:volta", "Gávea", last, place=puc, outbound=False)
+                                           first, mode, "ida", _pra("PUC"), "Gávea",
+                                           driver if mode == "carona" else "")))
+            mode, mins = self._choose(day, "puc:volta", "Gávea", last, place=puc, outbound=False,
+                                      carona_weight=w)
             mins = min(mins, CLASS_BACK_MAX_MIN)
             legs.append(self._incident(Leg(f"commute:{day.isoformat()}:puc:volta", last,
-                                           last + timedelta(minutes=mins), mode, "volta", _de("PUC"), "Gávea")))
+                                           last + timedelta(minutes=mins), mode, "volta", _de("PUC"), "Gávea",
+                                           driver if mode == "carona" else "")))
         with self.db.get_connection() as conn:
             outings = [dict(r) for r in conn.execute(
                 """SELECT source_key, event_at, end_at, location_key, metadata_json FROM eventos_pendentes
@@ -271,12 +310,17 @@ class Commute:
                 companion = ""
             region = place["region"] or "Copacabana"
             tag = o["source_key"].split(":", 1)[1]
-            mode, mins = self._choose(day, f"{tag}:ida", region, start, place=place)
+            _key, driver = self._driver(among=friends)
+            w = CARONA_WEIGHT_OUTING if driver else 0.0
+            mode, mins = self._choose(day, f"{tag}:ida", region, start, place=place, carona_weight=w)
             legs.append(self._incident(Leg(f"commute:outing:{tag}:ida", start - timedelta(minutes=mins), start,
-                                           mode, "ida", _pra(place["name"]), region)))
-            mode, mins = self._choose(day, f"{tag}:volta", region, end, companion, place=place, outbound=False)
+                                           mode, "ida", _pra(place["name"]), region,
+                                           driver if mode == "carona" else "")))
+            mode, mins = self._choose(day, f"{tag}:volta", region, end, companion, place=place, outbound=False,
+                                      carona_weight=w)
             legs.append(self._incident(Leg(f"commute:outing:{tag}:volta", end, end + timedelta(minutes=mins),
-                                           mode, "volta", _de(place["name"]), region, companion)))
+                                           mode, "volta", _de(place["name"]), region,
+                                           driver if mode == "carona" else companion)))
         return legs
 
     def leg_at(self, now: datetime) -> Optional[Leg]:
@@ -304,7 +348,7 @@ class Commute:
             for leg in self.legs_on(day):
                 if not leg.incident or not leg.incident_at or not (floor <= leg.incident_at <= now):
                     continue
-                how = "dividindo um uber" if leg.mode == "uber_dividido" else LABEL[leg.mode]
+                how = leg.how
                 trecho = f"indo {leg.destination}" if leg.direction == "ida" else f"voltando {leg.destination}"
                 summary = f"No caminho ({trecho}, {how}): {leg.incident}."
                 with self.db.get_connection() as conn:

@@ -28,7 +28,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **C.1** Modo sexting | ✅ conversa · ⬜ fotos | `intimacy.py` + migration 021: excitação em minutos, degraus da biblioteca, troca para `LLM_INTIMATE_MODEL`, clímax, pós-clímax, corte e despedida; ciclo pesa na libido. **C.1b** (fotos explícitas escalonadas pelo nível de excitação) pendente |
 | **C.2** Assistir junto (watch-along) | ⬜ | nada implementado |
 | **C.3** Rituais de namorada (bom dia, boa noite, cotidiano) | ✅ | `rituals.py` + job de 5 min: bom dia ao acordar, boa noite antes de deitar, momentos do cotidiano (saiu da aula, Milo, academia, banho) com teto de 2/dia; o banho vira estado `SHOWER` e ela some de verdade. Foto do banho espera o motor de imagem (C.1b) |
-| **C.4** Locomoção viva (uber, a pé, ônibus/metrô, carona) | ✅ tabela + API · ⬜ carona | `commute.py`: ida e volta da PUC e das saídas viram estado ("voltando da PUC pra casa de ônibus"), modo sorteado por dia (pico, noite, chuva, fim de mês, cansaço, uber dividido com a amiga), imprevistos viram acontecimento do dia. Minutos pela Distance Matrix API quando há `DISTANCE_MATRIX_KEY` (1 consulta por trecho), tabela como reserva. Carona espera cânone de quem tem carro |
+| **C.4** Locomoção viva (uber, a pé, ônibus/metrô, carona) | ✅ tabela + API + carona | `commute.py`: ida e volta da PUC e das saídas viram estado ("voltando da PUC pra casa de ônibus"), modo sorteado por dia (pico, noite, chuva, fim de mês, cansaço, uber dividido com a amiga), imprevistos viram acontecimento do dia. Minutos pela Distance Matrix API quando há `DISTANCE_MATRIX_KEY` (1 consulta por trecho), tabela como reserva. Carona com o Theo (cânone: ele tem carro) |
 | **C** Consolidação | 🟡 | **C1:** o rótulo `[COMO O PATRICK ESCREVE]` e os campos estão em pt-BR (#2 e #7), mas ainda é descrição ("risada: kkkk"), não amostras reais das mensagens dele. **C2** e **C3** ⬜ |
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
@@ -391,14 +391,15 @@ travadas em 1,0.
 **Trabalho estimado:** 1 sessão para bom dia / boa noite; 1 para a foto
 (critério de humor + pipeline visual + testes de frequência).
 
-### Fase C.4 — Locomoção viva ✅ tabela + API (2026-09-22) · carona ⬜
+### Fase C.4 — Locomoção viva ✅ (2026-09-22)
 
 **Como ficou:** `commute.py`, chamado pelo resolvedor do mundo (prioridade: compromisso confirmado > trajeto > transição anunciada > rotina).
 - **Trechos:** ida e volta da PUC (a ida termina na primeira aula, a volta começa na última, dentro das margens que a agenda já reservava) e das saídas com as amigas. Ela fica "a caminho" até o trecho acabar; a disponibilidade trata como `COMMUTE` (celular na mão, responde rápido).
 - **Modo:** sorteado por trecho e gravado (não muda no meio do caminho): noite puxa uber, chuva tira o "a pé", fim de mês reduz uber, cansaço aumenta; na volta de uma saída ela pode dividir o uber com a amiga.
 - **Tempo:** Distance Matrix API com `DISTANCE_MATRIX_KEY` (trânsito previsto para uber, horários para ônibus/metrô, caminhada), uma consulta por trecho, limitada a 0,6–2,5× a tabela; sem chave ou com falha, a tabela por região com fator de pico. A casa dela vai como "Botafogo" (sem inventar rua); lugares fictícios vão pela região. A suíte de testes nunca chama a API real.
 - **Histórias:** 12% dos trechos têm um imprevisto (ônibus lotado, uber errou o caminho…) que vira acontecimento do dia e aparece no [SEU DIA ATÉ AGORA]. O ritual "saí da aula" (C.3) agora pega ela no caminho de volta.
-- **Pendente:** carona (precisa do cânone de quem do círculo tem carro — decisão do Patrick); trajetos até a academia e o passeio do Milo continuam dentro do próprio slot (são no bairro).
+- **Carona:** cânone decidido pelo Patrick — o Theo tem carro (seed + migration 022). Ele vira opção na ida/volta da PUC (mora na Glória e passa por Botafogo; mais provável com chuva ou à noite) e é a opção mais provável nas saídas em que está junto. Qualquer personagem com `has_car` entra no mesmo esquema.
+- **Fora do escopo:** trajetos até a academia e o passeio do Milo continuam dentro do próprio slot (são no bairro).
 
 **Desenho original:**
 

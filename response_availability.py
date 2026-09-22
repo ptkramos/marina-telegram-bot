@@ -387,7 +387,7 @@ class ResponseAvailabilityPolicy:
             return 'WORK'
         if any(x in act for x in ('uber', 'metrô', 'metro', 'ônibus', 'onibus', 'desloc',
                                   # Fase C.4: trechos a pé e "voltando … pra casa".
-                                  ' a pé', 'a caminho', 'pra casa')):
+                                  ' a pé', 'a caminho', 'pra casa', 'carona')):
             return 'COMMUTE'
         if any(x in act for x in ('treinando', 'academia', 'musculação')):
             return 'GYM'

@@ -37,7 +37,7 @@ class CommuteTests(unittest.TestCase):
         self.assertEqual(volta.start, self.last)
         self.assertLessEqual((ida.end - ida.start).total_seconds() / 60, commute.CLASS_GO_MAX_MIN)
         self.assertLessEqual((volta.end - volta.start).total_seconds() / 60, commute.CLASS_BACK_MAX_MIN)
-        self.assertIn(ida.mode, ("onibus", "metro_onibus", "uber"))
+        self.assertIn(ida.mode, ("onibus", "metro_onibus", "uber", "carona"))
         self.assertTrue(volta.activity(volta.start).startswith("voltando da PUC pra casa"))
 
     def test_escolha_gravada_nao_muda_no_meio_do_caminho(self):
@@ -113,6 +113,56 @@ class CommuteTests(unittest.TestCase):
         self.assertEqual(n0, 0)
         self.assertEqual(len([r for r in rows if leg.incident in r["summary"]]), 1)
         self.assertIn(leg.incident, leg.activity(leg.incident_at))
+
+
+class CaronaTests(unittest.TestCase):
+    """Cânone do Patrick (22/09): o Theo tem carro."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = DatabaseManager(Path(self.temp.name) / "carona.db")
+        seed_world_bible(self.db)
+        seed_academic(self.db)
+        self.c = Commute(self.db)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_theo_tem_carro_no_canone(self):
+        self.assertEqual(self.c._driver(), ("theo_martins", "o Theo"))
+        self.assertEqual(self.c._driver(among=["bia_andrade"]), ("", ""))
+
+    def test_migration_022_da_carro_ao_theo_em_banco_antigo(self):
+        import sqlite3
+        path = Path(self.temp.name) / "antigo.db"
+        DatabaseManager(path)
+        seed_world_bible(DatabaseManager(path))
+        with sqlite3.connect(path) as conn:
+            conn.execute("UPDATE world_characters SET initial_state_json='{\"gay\": true, \"single\": true}' "
+                         "WHERE canonical_key='theo_martins'")
+            conn.execute("DELETE FROM schema_version WHERE version=22")
+        Commute(DatabaseManager(path))
+        self.assertEqual(Commute(DatabaseManager(path))._driver()[0], "theo_martins")
+
+    def test_saida_com_o_theo_costuma_ser_de_carona(self):
+        from calendar_world import CalendarWorld
+        modes = []
+        for i, day in enumerate(date(2026, 10, 3) + timedelta(days=7 * k) for k in range(8)):
+            CalendarWorld(self.db).create_commitment(
+                source_key=f"outing:{day.isoformat()}:9", event_type="social",
+                description="Saindo com o Theo", start_at=datetime.combine(day, datetime.min.time()).replace(hour=20),
+                end_at=datetime.combine(day, datetime.min.time()).replace(hour=23), location_key="ipanema_beach",
+                metadata={"friends": ["theo_martins"], "origin": "social_day"})
+            modes += [l.mode for l in self.c.legs_on(day) if "outing" in l.key]
+        self.assertGreater(modes.count("carona"), len(modes) // 3)
+        leg = next(l for d in (date(2026, 10, 3) + timedelta(days=7 * k) for k in range(8))
+                   for l in self.c.legs_on(d) if l.mode == "carona")
+        self.assertIn("de carona com o Theo", leg.activity(leg.start))
+
+    def test_carona_e_trajeto_pra_disponibilidade(self):
+        from response_availability import ResponseAvailabilityPolicy
+        kind = ResponseAvailabilityPolicy(self.db)._map_place_activity(None, "indo pra PUC de carona com o Theo")
+        self.assertEqual(kind, "COMMUTE")
 
 
 class LiveTimesTests(unittest.TestCase):

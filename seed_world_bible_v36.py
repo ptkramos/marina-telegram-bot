@@ -111,7 +111,7 @@ CHARACTERS = {
         "relationship_to_marina": "amigo próximo da faculdade",
         "personality_json": {"social": True, "sarcastic": True, "observant": True, "loyal": True,
                              "humor_not_stereotype": True},
-        "initial_state_json": {"gay": True, "single": True},
+        "initial_state_json": {"gay": True, "single": True, "has_car": True},  # carro: decisão do Patrick (22/09, Fase C.4)
         "story_tendencies_json": ["faculdade", "moda", "festas", "crushes", "humor"],
     },
     "julia_azevedo": {
