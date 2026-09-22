@@ -109,6 +109,10 @@ class Settings:
     # Patrick via /ruim. Fecha a Fase B1 do PLANO_VOZ_MARINA_V371.
     VOICE_AVOID_BLOCK_ENABLED: bool = os.getenv(
         "VOICE_AVOID_BLOCK_ENABLED", "true").lower() == "true"
+    # Teto de emoji por fala (feedback do Patrick, 22/09: nem toda mensagem
+    # precisa terminar com emoji). Kill switch se a poda ficar seca demais.
+    VOICE_EMOJI_BUDGET: bool = os.getenv(
+        "VOICE_EMOJI_BUDGET", "true").lower() == "true"
     VOICE_AVOID_MAX_EXAMPLES: int = int(os.getenv("VOICE_AVOID_MAX_EXAMPLES", "4"))
     
     # Consolidação Periódica de Memória

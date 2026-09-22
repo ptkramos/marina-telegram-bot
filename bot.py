@@ -488,7 +488,8 @@ def limpar_fala_marina(texto: str) -> str:
     # Alguns modelos devolvem "\n" literal
     if "\\n" in t and "\n" not in t:
         t = t.replace("\\n", "\n")
-    return _strip_trailing_gibberish(t.strip())
+    from response_rhythm import thin_emojis
+    return thin_emojis(_strip_trailing_gibberish(t.strip()))
 
 def is_avatar_request(texto: str) -> bool:
     """Detecta pedido de trocar foto de perfil / avatar (antes de foto de chat)."""

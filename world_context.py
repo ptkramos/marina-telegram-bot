@@ -388,6 +388,29 @@ class WorldContextBuilder:
                 # Fail-open: voz é enriquecimento, nunca deve derrubar o turno.
                 pass
 
+        # /feedback do Patrick. Até 22/09 o comando gravava no banco e ninguém
+        # lia: o único injetor era memory.get_contexto_emocional, num bloco
+        # marcado como legacy e sem chamador no runtime canônico. Posição final
+        # porque é ordem direta dele, não enriquecimento.
+        try:
+            vistos, pedidos = set(), []
+            for status in ("pendente", "em_andamento"):
+                for fb in self.db.listar_feedbacks(status=status) or []:
+                    if fb["id"] in vistos:
+                        continue
+                    vistos.add(fb["id"])
+                    pedidos.append(fb["feedback"])
+            pedidos = pedidos[:int(getattr(settings, 'PATRICK_FEEDBACK_MAX', 8))]
+            if pedidos:
+                blocks.append("[PEDIDOS DO PATRICK — OBRIGATÓRIO SEGUIR]")
+                blocks.append(
+                    "Ele pediu isto sobre o jeito que você fala. Incorpore de forma "
+                    "natural, sem citar que foi pedido e sem dizer que anotou:"
+                )
+                blocks.extend(f"- {p}" for p in pedidos)
+        except Exception:
+            pass
+
         return "\n".join(blocks)
 
     def _is_social_outing(self, event_id) -> bool:

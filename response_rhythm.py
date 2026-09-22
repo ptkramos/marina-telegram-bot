@@ -272,6 +272,49 @@ _EMOJI_BOUNDARY_RE = re.compile(
 )
 
 
+# Feedback do Patrick (/feedback, 22/09): "Não é necessário que toda mensagem
+# termine com emojis". Medido no soak do Luna: 15 de 15 falas do dia levavam
+# emoji (média 1,2 por fala) e o 😘 respondia por 9 dos 21 — virou tique de
+# fecho. O prompt já pedia moderação, mas modelo nenhum conta emoji; a conta é
+# feita aqui. O emoji preservado é o PRIMEIRO, porque é ele que marca o pivô da
+# batida em _split_sentences.
+_EMOJI_CLUSTER_RE = re.compile(rf"(?:{_EMOJI})(?:‍(?:{_EMOJI}))*")
+_EMOJI_TAIL_KEEP = 40  # % das falas que mantêm o emoji do fecho
+
+
+def thin_emojis(text, *, tail_keep=_EMOJI_TAIL_KEEP):
+    """No máximo um emoji por fala, e o fecho seco na maioria delas.
+
+    A decisão é determinística por fala (mesmo sorteio do ritmo de balões): a
+    mesma frase sempre sai igual, sem sorteio novo a cada tentativa.
+    """
+    if not text or not getattr(settings, 'VOICE_EMOJI_BUDGET', True):
+        return text
+    matches = list(_EMOJI_CLUSTER_RE.finditer(text))
+    if not matches:
+        return text
+
+    out = text
+    # 1) Teto de um por fala: os extras saem de trás pra frente, pra não
+    #    invalidar os spans dos anteriores.
+    for match in reversed(matches[1:]):
+        out = out[:match.start()] + out[match.end():]
+
+    # 2) Fecho: emoji no fim da fala sobrevive só numa parte dos turnos.
+    kept = _EMOJI_CLUSTER_RE.search(out)
+    if kept and not re.sub(r"[\s\W]+", "", out[kept.end():]):
+        roll = int(hashlib.sha256(text.encode('utf-8')).hexdigest()[:8], 16) % 100
+        if roll >= tail_keep:
+            out = out[:kept.start()] + out[kept.end():]
+
+    out = re.sub(r"[ \t]{2,}", " ", out)
+    out = re.sub(r" +([,.!?…])", r"\1", out)
+    out = re.sub(r"[ \t]+(\n|$)", r"\1", out)
+    out = out.strip()
+    # Nunca deixar a fala sem texto de verdade por causa da poda.
+    return out if re.search(r"[A-Za-zÀ-ÿ]", out) else text
+
+
 def _split_sentences(text):
     """Sentence tokens keeping terminators. Good enough for chat PT-BR.
 
