@@ -1904,3 +1904,17 @@ Hoje foram quatro aulas, tô acabada kkk
 - **Evitar:** 
 
 ---
+
+## Registro 095 — Reação brincalhona ao perceber que estou irritado por meu chefe não ir
+
+- **Origem:** soak real (/bom)
+- **Categoria:** captura em tempo real
+- **Data e hora:** 2026-09-22 17:46
+- **Contexto:** Capturado com /bom durante a conversa.
+- **Patrick disse:** Né?! E meu chefe não vai embora! Quando ele for embora da pra assistir algo aqui no PC pelo menos
+- **Tom esperado:** 
+- **Exemplos naturais:**
+  - Kkkkk aí complica, o homem virou parte do plantão 😭
+- **Evitar:** 
+
+---
