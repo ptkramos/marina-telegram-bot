@@ -2797,7 +2797,7 @@ async def process_incoming_batch(
                     ).total_seconds()
                     activity_type = getattr(avail_decision, 'activity_type', 'UNKNOWN')
                     if (activity_type in ('GYM', 'CLASS', 'WORK', 'COMMUTE', 'CASTING',
-                                          'SOCIAL', 'PET_WALK', 'WAKING')
+                                          'SOCIAL', 'PET_WALK', 'WAKING', 'SHOWER')
                             and 0 < remaining <= 25):
                         logger.info(
                             'AVAILABILITY_SOFT_DELAY activity=%s delay_s=%.1f',
@@ -3865,6 +3865,16 @@ _PROACTIVE_INSTRUCTIONS = {
                          "Patrick puxando esse assunto, do jeito que namorada conta as coisas. "
                          "Fique no que está no fato: não invente acontecimento grave nem exponha "
                          "intimidade da outra pessoa."),
+    # Fase C.3 — rituais de namorada (rituals.py). Gatilhos da agenda dela.
+    'ritual_bom_dia': ("{detail} Mande o bom dia pro Patrick do seu jeito: curto, com o humor de quem "
+                       "acabou de acordar, e se fizer sentido o que te espera hoje. Varie — nem sempre "
+                       "'dormiu bem?'."),
+    'ritual_boa_noite': ("{detail} Mande boa noite pro Patrick com carinho de namorada, curto. Nada de "
+                         "despedida formal nem lista de desejos. Varie: não caia sempre em 'dorme bem e "
+                         "sonha comigo' — pode ser um detalhe do seu dia, um dengo, uma brincadeira."),
+    'ritual_cotidiano': ("Momento do seu dia agora: {detail} Mande uma mensagem espontânea curta sobre isso, "
+                         "do jeito que namorada avisa ou comenta pra chamar atenção e puxar conversa. Fique "
+                         "no que está acontecendo: não invente fato novo."),
     'light_affection': ("Mande uma mensagem espontânea curta pro Patrick. Use só o que está no seu "
                         "estado atual e no seu dia — um pensamento sobre o que você está fazendo, uma "
                         "reação ao momento ou só carinho. Não invente acontecimento novo. Varie: não "
@@ -3976,6 +3986,30 @@ async def autonomous_routine_v36(application: Application):
             topic=str(candidate['subject_id']) if reason == 'shared_topic_callback' else None)
     except Exception as exc:
         logger.error('Erro na proatividade Living World: %s', exc, exc_info=True)
+
+async def ritual_routine(application: Application):
+    """Fase C.3 — bom dia, boa noite e momentos do cotidiano, pela agenda dela.
+
+    Não passa pelo sorteio da proatividade e não gasta a cota dela; o texto sai
+    pela mesma voz (_proactive_text: prompt, biblioteca e guards)."""
+    if not settings.TARGET_CHAT_ID or not getattr(settings, 'RITUALS_ENABLED', True):
+        return
+    try:
+        from rituals import Rituals
+        now = datetime.now()
+        engine = Rituals(memory_manager.db, getattr(memory_manager, 'cycle_mgr', None))
+        ritual = await asyncio.to_thread(engine.tick, now)
+        if not ritual:
+            return
+        text = await asyncio.to_thread(_proactive_text, ritual.reason, ritual.detail, ritual.fallback)
+        sent = await application.bot.send_message(chat_id=settings.TARGET_CHAT_ID, text=text)
+        if not isinstance(getattr(sent, 'message_id', None), int) or sent.message_id <= 0:
+            raise RuntimeError('Telegram did not confirm ritual message')
+        memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
+        engine.mark(ritual, now, 'sent')
+    except Exception as exc:
+        logger.error('Erro nos rituais (C.3): %s', exc, exc_info=True)
+
 
 class _PendingDeliveryBot:
     """Track Telegram send attempts so ambiguous delivery is never retried blindly."""
@@ -4177,6 +4211,11 @@ async def post_init(application: Application):
             coalesce=True
         )
         logger.info(f"Job de Smart Reminders agendado a cada {rem_interval}s.")
+
+    if getattr(settings, 'RITUALS_ENABLED', True):
+        scheduler.add_job(ritual_routine, 'interval', minutes=5, args=[application],
+                          max_instances=1, coalesce=True)
+        logger.info('Job de Rituais (C.3) agendado a cada 5 min.')
 
     avail_interval = max(5, getattr(settings, 'RESPONSE_AVAILABILITY_CHECK_SECONDS', 15))
     scheduler.add_job(

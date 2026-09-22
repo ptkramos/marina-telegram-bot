@@ -582,6 +582,11 @@ class WorldStateManager:
             SocialDay(self.db).materialize(now)
         except Exception:
             logger.exception("social_day.materialize.error")
+        try:
+            from commute import Commute
+            Commute(self.db).materialize(now)
+        except Exception:
+            logger.exception("commute.materialize.error")
         if has_class is None:
             has_class = bool(academic.blocks_on(now.date()))
         if confirmed_commitment is None:
@@ -596,6 +601,12 @@ class WorldStateManager:
         reason = None
         chosen: Optional[Mapping] = None
         pending_transition = self._pending_transition(now)
+        commute_leg = None
+        try:
+            from commute import Commute
+            commute_leg = Commute(self.db).leg_at(now)
+        except Exception:
+            logger.exception("commute.leg_at.error")
 
         if confirmed_commitment and confirmed_commitment.get("start_at") and self._active_plan(confirmed_commitment, now):
             chosen = confirmed_commitment
@@ -603,6 +614,16 @@ class WorldStateManager:
         elif self._active_plan(explicit_plan, now):
             chosen = explicit_plan
             reason = "explicit_plan"
+        elif commute_leg is not None:
+            # Fase C.4: entre compromissos ela está a caminho, não teleporta.
+            chosen = {
+                "activity": commute_leg.activity(now),
+                "place_key": None,
+                "location_region": f"a caminho ({commute_leg.region})",
+                "start_at": commute_leg.start.isoformat(),
+                "end_at": commute_leg.end.isoformat(),
+            }
+            reason = "commute"
         elif pending_transition and pending_transition["phase"] == "active":
             # Transição anunciada e horário atingido: Marina agora ESTÁ na atividade
             # anunciada. Vira `explicit_plan` de fato.
@@ -660,7 +681,7 @@ class WorldStateManager:
                                              energy=energy, holiday_scope=holiday_scope)):
                 return previous
 
-        slot_end: Optional[datetime] = None
+        slot_end: Optional[datetime] = commute_leg.end if reason == "commute" else None
         if chosen is None:
             # Sinais para o RoutineEngine sobre cooldown e conversa ativa.
             recent_end = self._recent_commitment_end(now)

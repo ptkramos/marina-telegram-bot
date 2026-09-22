@@ -27,8 +27,8 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **B.6** Micro-despertares no sono | ⬜ | nada implementado |
 | **C.1** Modo sexting | ✅ conversa · ⬜ fotos | `intimacy.py` + migration 021: excitação em minutos, degraus da biblioteca, troca para `LLM_INTIMATE_MODEL`, clímax, pós-clímax, corte e despedida; ciclo pesa na libido. **C.1b** (fotos explícitas escalonadas pelo nível de excitação) pendente |
 | **C.2** Assistir junto (watch-along) | ⬜ | nada implementado |
-| **C.3** Rituais de namorada (bom dia, boa noite, foto do banho) | ⬜ | pronto para começar: a agenda (#4) sabe quando ela acorda e dorme, e as emoções não saturam mais (#5) |
-| **C.4** Locomoção viva (uber, a pé, ônibus/metrô, carona) | ⬜ | registrado em 22/09; tabela de trajetos primeiro, Distance Matrix API depois (resolve a pendência 5) |
+| **C.3** Rituais de namorada (bom dia, boa noite, cotidiano) | ✅ | `rituals.py` + job de 5 min: bom dia ao acordar, boa noite antes de deitar, momentos do cotidiano (saiu da aula, Milo, academia, banho) com teto de 2/dia; o banho vira estado `SHOWER` e ela some de verdade. Foto do banho espera o motor de imagem (C.1b) |
+| **C.4** Locomoção viva (uber, a pé, ônibus/metrô, carona) | ✅ tabela + API · ⬜ carona | `commute.py`: ida e volta da PUC e das saídas viram estado ("voltando da PUC pra casa de ônibus"), modo sorteado por dia (pico, noite, chuva, fim de mês, cansaço, uber dividido com a amiga), imprevistos viram acontecimento do dia. Minutos pela Distance Matrix API quando há `DISTANCE_MATRIX_KEY` (1 consulta por trecho), tabela como reserva. Carona espera cânone de quem tem carro |
 | **C** Consolidação | 🟡 | **C1:** o rótulo `[COMO O PATRICK ESCREVE]` e os campos estão em pt-BR (#2 e #7), mas ainda é descrição ("risada: kkkk"), não amostras reais das mensagens dele. **C2** e **C3** ⬜ |
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
@@ -74,7 +74,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | 2 | Perda de coerência entre turnos (6 capturas de `/ruim`): observar depois do restart, com `[COMO NÃO SOAR]` e o mundo vivo ativos | Auditoria #3 |
 | 3 | Qualidade das mensagens espontâneas geradas pelo modelo: só dá pra medir em conversa real (usar `/bom` e `/ruim` nelas) | Auditoria #6 |
 | 4 | ~~Evento "médico" com o texto cru~~ → corrigido na causa (Auditoria #8). O registro ruim sai com o reset do soak | ✅ resolvido |
-| 5 | Deslocamento como estado: a volta da PUC ainda é instantânea. **Ampliado pelo Patrick (22/09):** a locomoção vira vida — uber, a pé, transporte público, carona. Deslocamento cria janelas pra conversar (ônibus, uber) e ganchos de história (carona com a Bia, metrô lotado, uber que errou o caminho). Primeiro com tabela de trajetos + pico; depois tempo real pela Distance Matrix API (distancematrix.ai, chave no `.env`, cache por trajeto). Ver Fase C.4 | Auditorias #5 e #6 + Patrick |
+| 5 | ~~Deslocamento como estado~~ → resolvido pela Fase C.4 (22/09). Registro original: a volta da PUC ainda é instantânea. **Ampliado pelo Patrick (22/09):** a locomoção vira vida — uber, a pé, transporte público, carona. Deslocamento cria janelas pra conversar (ônibus, uber) e ganchos de história (carona com a Bia, metrô lotado, uber que errou o caminho). Primeiro com tabela de trajetos + pico; depois tempo real pela Distance Matrix API (distancematrix.ai, chave no `.env`, cache por trajeto). Ver Fase C.4 | Auditorias #5 e #6 + Patrick |
 | 6 | `KnowledgeDialogue` responde com frase pronta (sem modelo) quando há assunto registrado. Hoje está dormente | Auditoria #6 |
 | 7 | Câmera e fator proativo leem o estado com regra própria de 60 min (os slots vão até 90) | Auditoria #4 |
 | 8 | Código morto da proatividade antiga (`determine_proactive_prompt`, anúncio, contexto neutro): apagar ou reaproveitar | Auditoria #6 |
@@ -340,7 +340,16 @@ generaliza esse padrão para filmes/séries/animes.
 **Trabalho estimado:** 2 sessões (schema + injection no prompt; testes de
 não-spoiler).
 
-### Fase C.3 — Rituais de namorada na rotina ⬜ (pendente, aberto por Patrick em 2026-09-21 21:30; depois das auditorias)
+### Fase C.3 — Rituais de namorada na rotina ✅ (2026-09-22)
+
+**Como ficou:** `rituals.py`, chamado a cada 5 min (`ritual_routine`), fora do sorteio e da cota da proatividade. O texto sai pela voz normal (`_proactive_text`).
+- **Bom dia:** 5–40 min depois de acordar (7h em dia de aula, 8h30 em dia livre), em 85% dos dias, só se o Patrick não escreveu desde que ela deitou. Se ele escreveu de madrugada, ela responde a mensagem dele ao acordar (correção da disponibilidade do mesmo dia).
+- **Boa noite:** 5–30 min antes de deitar, em 85% dos dias; não sai se ele já deu boa noite desde as 20h ou se ela está na rua; com conversa em andamento vira "vou deitar".
+- **Cotidiano (ampliado pelo Patrick: "coisas do cotidiano que namorados usam para chamar atenção ou puxar conversa, pode deixar livre"):** mudanças reais de estado viram assunto: saiu da aula, saindo com o Milo, saiu da academia, vai tomar banho (depois do treino ou à noite). 45% de chance por momento, no máximo 2 por dia, 45 min de intervalo de qualquer outra iniciativa, nunca devendo resposta. Com humor provocador (excitação, ciclo, carinho e brincadeira altos), malícia leve.
+- **Banho de verdade:** o ritual registra uma transição "tomando banho" (15–30 min); a disponibilidade ganhou o tipo `SHOWER` e transição anunciada passou a contar como plano dela, não palpite de rotina.
+- **Pendente:** a foto do banho (motor de imagem em manutenção; entra com o C.1b).
+
+**Desenho original (referência):**
 
 **Ideia do Patrick:** "incluir coisas de namorada na rotina dela, como dar bom
 dia ao acordar caso acorde primeiro, boa noite antes de ir realmente dormir se
@@ -382,7 +391,16 @@ travadas em 1,0.
 **Trabalho estimado:** 1 sessão para bom dia / boa noite; 1 para a foto
 (critério de humor + pipeline visual + testes de frequência).
 
-### Fase C.4 — Locomoção viva ⬜ (aberto por Patrick em 2026-09-22 12:20)
+### Fase C.4 — Locomoção viva ✅ tabela + API (2026-09-22) · carona ⬜
+
+**Como ficou:** `commute.py`, chamado pelo resolvedor do mundo (prioridade: compromisso confirmado > trajeto > transição anunciada > rotina).
+- **Trechos:** ida e volta da PUC (a ida termina na primeira aula, a volta começa na última, dentro das margens que a agenda já reservava) e das saídas com as amigas. Ela fica "a caminho" até o trecho acabar; a disponibilidade trata como `COMMUTE` (celular na mão, responde rápido).
+- **Modo:** sorteado por trecho e gravado (não muda no meio do caminho): noite puxa uber, chuva tira o "a pé", fim de mês reduz uber, cansaço aumenta; na volta de uma saída ela pode dividir o uber com a amiga.
+- **Tempo:** Distance Matrix API com `DISTANCE_MATRIX_KEY` (trânsito previsto para uber, horários para ônibus/metrô, caminhada), uma consulta por trecho, limitada a 0,6–2,5× a tabela; sem chave ou com falha, a tabela por região com fator de pico. A casa dela vai como "Botafogo" (sem inventar rua); lugares fictícios vão pela região. A suíte de testes nunca chama a API real.
+- **Histórias:** 12% dos trechos têm um imprevisto (ônibus lotado, uber errou o caminho…) que vira acontecimento do dia e aparece no [SEU DIA ATÉ AGORA]. O ritual "saí da aula" (C.3) agora pega ela no caminho de volta.
+- **Pendente:** carona (precisa do cânone de quem do círculo tem carro — decisão do Patrick); trajetos até a academia e o passeio do Milo continuam dentro do próprio slot (são no bairro).
+
+**Desenho original:**
 
 **Pedido:** "a gente aproveita as locomoções dela, de uber, a pé, transporte público, carona, isso tudo cria margem pra ela ter tempo entre os compromissos pra conversar e pra criar histórias."
 

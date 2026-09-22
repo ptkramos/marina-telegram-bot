@@ -514,7 +514,8 @@ class DatabaseManager:
                 # preserva por conterem o cânone. Separa o que nasceu no soak.
                 counts["world_bootstrap:mundo_vivo"] = conn.execute(
                     """DELETE FROM world_bootstrap WHERE key='social_day_start'
-                       OR key LIKE 'skip:%' OR key LIKE 'story_day:%' OR key LIKE 'canonized:%'"""
+                       OR key LIKE 'skip:%' OR key LIKE 'story_day:%' OR key LIKE 'canonized:%'
+                       OR key LIKE 'ritual%' OR key LIKE 'commute:%'"""
                 ).rowcount
                 counts["social_relationships:npc"] = conn.execute(
                     "DELETE FROM social_relationships WHERE character_key LIKE 'npc!_%' ESCAPE '!'"

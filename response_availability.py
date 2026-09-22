@@ -59,6 +59,12 @@ DEFAULT_PROFILES = {
         'soft_delay_min_s': 10, 'soft_delay_max_s': 180, 'guardrail_s': 600,
         'brief_likelihood': 0.40, 'prefer': 'REPLY_NOW',
     },
+    # Fase C.3: "vou tomar banho, já volto" — ela some de verdade uns minutos.
+    'SHOWER': {
+        'phone_access': 'LOW', 'attention': 'LOW', 'interruptibility': 'LOW',
+        'soft_delay_min_s': 300, 'soft_delay_max_s': 1200, 'guardrail_s': 1800,
+        'brief_likelihood': 0.2, 'prefer': 'DEFER',
+    },
     'GYM': {
         'phone_access': 'HIGH', 'attention': 'MEDIUM', 'interruptibility': 'MEDIUM',
         'soft_delay_min_s': 60, 'soft_delay_max_s': 900, 'guardrail_s': 1500,
@@ -305,7 +311,10 @@ class ResponseAvailabilityPolicy:
         mapped = self._map_place_activity(place_key, activity)
         if reason == 'confirmed_commitment':
             return mapped, 'CONFIRMED_COMMITMENT', snapshot['id'], 'fresh', True
-        if reason == 'explicit_plan':
+        # Fase C.3: transição que ela mesma anunciou ("vou tomar banho, já
+        # volto") é plano dela, não palpite da rotina — sem isso o atraso ficava
+        # limitado a 3 min e ela "saía do banho" pra responder na hora.
+        if reason in ('explicit_plan', 'announced_transition'):
             return mapped, 'WORLD_STATE', snapshot['id'], 'fresh', True
         # Routine / free_time: soft signal only.
         return mapped, 'ROUTINE_PROBABILITY', snapshot['id'], 'fresh', False
@@ -369,12 +378,16 @@ class ResponseAvailabilityPolicy:
         # SOCIAL (bar/amigos) durante a janela de wake das 07:00-08:30.
         if any(x in act for x in ('acordando', 'acabou de acordar', 'levantando')):
             return 'WAKING'
+        if any(x in act for x in ('tomando banho', 'no banho', 'banho')):
+            return 'SHOWER'
         # Patch 030: passeio com o Milo — sem isso o estado ia pra UNKNOWN.
         if any(x in act for x in ('passeando', 'passeio', 'caminhando')):
             return 'PET_WALK'
         if any(x in act for x in ('trabalh', 'freela', 'codando', 'programando')):
             return 'WORK'
-        if any(x in act for x in ('uber', 'metrô', 'metro', 'ônibus', 'onibus', 'desloc')):
+        if any(x in act for x in ('uber', 'metrô', 'metro', 'ônibus', 'onibus', 'desloc',
+                                  # Fase C.4: trechos a pé e "voltando … pra casa".
+                                  ' a pé', 'a caminho', 'pra casa')):
             return 'COMMUTE'
         if any(x in act for x in ('treinando', 'academia', 'musculação')):
             return 'GYM'

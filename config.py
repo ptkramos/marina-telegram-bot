@@ -80,6 +80,11 @@ class Settings:
     LLM_INTIMATE_MODEL: str = os.getenv("LLM_INTIMATE_MODEL", "").strip()
     LLM_INTIMATE_REASONING: str = os.getenv("LLM_INTIMATE_REASONING", "off").strip().lower()
     INTIMACY_ENABLED: bool = os.getenv("INTIMACY_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
+    # Fase C.3 — rituais (bom dia, boa noite, cotidiano). Ver rituals.py.
+    RITUALS_ENABLED: bool = os.getenv("RITUALS_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
+    # Fase C.4 — tempo real dos trajetos (distancematrix.ai). Sem chave, vale a tabela do commute.py.
+    DISTANCE_MATRIX_KEY: str = os.getenv("DISTANCE_MATRIX_KEY", "").strip()
+    COMMUTE_LIVE_TIMES: bool = os.getenv("COMMUTE_LIVE_TIMES", "true").strip().lower() in ("1", "true", "yes", "on")
 
     # URL da API do Stable Diffusion na RX 570 (legado/local)
     _raw_sd_url = os.getenv("SD_API_URL", "http://127.0.0.1:7860/").strip()
