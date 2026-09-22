@@ -1290,3 +1290,21 @@ O turno mede de 7 a 18 s do início ao fim, contra 1,4 a 3 s da chamada da fala.
 - o relógio congelado vale para imports feitos depois.
 
 Suíte completa: **584/584**. A arena só lê a produção (backup read-only); todos os testes rodam em banco descartável.
+
+## Achado 9.9 🔴 — `/feedback` gravava no banco e ninguém lia
+
+O comando existe desde as primeiras versões: grava a observação do Patrick em `feedbacks` com status `pendente` e responde "Anotado com muito carinho". O único trecho que levava esses pedidos ao prompt era `memory.get_contexto_emocional()`, marcado como *legacy* no próprio corpo e **sem nenhum chamador em produção** desde a migração para o Living World — sobrou apenas numa fixture de teste. Todo `/feedback` do soak virou registro morto, inclusive o de 22/09 ("Não é necessário que toda mensagem termine com emojis"), que ficou dois dias no banco sem efeito.
+
+**Correção:** os pedidos pendentes entram em `WorldContextBuilder.build()` como último bloco antes do histórico — posição de ordem direta, não de enriquecimento — e saem quando o status deixa de ser `pendente`/`em_andamento`. Limite em `PATRICK_FEEDBACK_MAX` (8).
+
+## Achado 9.10 🟡 — Emoji em toda fala, sempre no fecho
+
+Medido nas 15 falas do dia: **15 de 15** levavam emoji, média 1,2 por fala, 40% fechando com emoji e 😘 respondendo por 9 dos 21. A regra do prompt ("emojis com moderação, nunca um por frase") era respeitada ao pé da letra por um modelo que escreve tudo corrido: uma mensagem, um emoji, sempre.
+
+**Correção em dois lados**, como nas bolhas:
+- **prompt:** regra contável — no máximo um por turno, maioria dos turnos sem nenhum, nunca fechar todo turno com emoji, nunca repetir o mesmo emoji dois turnos seguidos;
+- **entrega:** `thin_emojis()` poda o excedente e deixa o fecho seco na maioria dos turnos, com o mesmo sorteio determinístico do ritmo de balões. O emoji preservado é o **primeiro**: é ele que marca o pivô da batida em `_split_sentences`, e podar pelo começo desmancharia o segundo balão. Kill switch em `VOICE_EMOJI_BUDGET`.
+
+Nas falas reais do dia: com emoji **100% → 73%**, média **1,2 → 0,8**.
+
+`tests/test_emoji_budget.py`, 14 testes (teto por fala, emoji composto com ZWJ intacto, pivô ainda virando dois balões, fecho estável por fala, kill switch, feedback pendente no prompt, feedback resolvido fora dele). Suíte completa: **657/657**.
