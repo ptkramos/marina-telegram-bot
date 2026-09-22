@@ -486,6 +486,14 @@ def _exemplo_amarrado_ao_contexto(ex: VoiceExample, recent_context: str) -> bool
     return False
 
 
+_INTIMACY_OWNED = ("sexting", "clímax", "climax", "corte")
+
+
+def _is_intimacy_owned(ex: VoiceExample) -> bool:
+    cat = (ex.categoria or "").lower()
+    return any(kw in cat for kw in _INTIMACY_OWNED)
+
+
 def select_examples(
     *, tone: Optional[str] = None, intent: Optional[str] = None,
     limit: int = 6, include_biblioteca: bool = True,
@@ -530,6 +538,10 @@ def select_examples(
         ex for ex in pool
         if not is_shared_lore(ex) or _exemplo_amarrado_ao_contexto(ex, recent_context)
     ]
+    # Fase C.1: exemplos de sexting/clímax/corte são do modo íntimo, que escolhe
+    # o degrau pela excitação dela. Pelo tom do planner, um flerte leve com tom
+    # "sensual" puxaria fala explícita fora de hora.
+    pool = [ex for ex in pool if not _is_intimacy_owned(ex)]
 
     def rank(ex: VoiceExample) -> tuple[int, int]:
         tone_match = tone_n and _normalize_tone(ex.tone) == tone_n

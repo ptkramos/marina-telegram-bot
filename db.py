@@ -451,6 +451,7 @@ class DatabaseManager:
     def reset_soak_learning(self) -> dict:
         """Zera aprendizado e estado narrativo, preservando persona e mundo canônicos."""
         dynamic_tables = (
+            "intimacy_state",
             "response_pending_batch_items",
             "response_pending_batches",
             "response_availability_events",

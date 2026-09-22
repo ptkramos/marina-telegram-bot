@@ -41,6 +41,7 @@ Critérios herdados do `ROADMAP_FUNCIONAL_MARINA_COMPLETO_3_0_A_3_7_V3_CANONICAL
 | 6 | Mundo social — a vida dela acontece | 6 🔴 · 1 🟡 | ✅ concluída |
 | 7 | Infraestrutura do banco (isolamento, conexões, migrations) | 2 🔴 · 3 🟡 | ✅ concluída |
 | 8 | Planner, eventos e lembretes (+ reset do soak) | 2 🔴 · 1 🟡 | ✅ concluída |
+| 9 | Arena de modelos no OpenRouter (+ bugs que ela revelou) | 3 🔴 · 3 🟡 · 1 🔵 · 1 ⚪ | ⏳ aguardando escolha do modelo |
 
 **Ação aberta que depende do Patrick:** versionar o roadmap funcional (achado 1.2).
 
@@ -1170,3 +1171,122 @@ Quando o Patrick aceita um lembrete oferecido ("pode me lembrar uma hora antes")
 - o horário é reconhecido em vários formatos.
 
 Suíte: **575/575**, a primeira totalmente verde desde o início das auditorias. O hash do banco de produção ficou idêntico antes e depois da rodada.
+
+---
+
+# Auditoria #9 — Arena de modelos no OpenRouter
+
+**Por que esta (pedido do Patrick):** depois das auditorias #1–#8, o mundo, o prompt e o pipeline estão certos, mas a Marina seguia conversando mal. A sessão de 21/09 (mistral-nemo) inventou "cara de mistério", perguntou "como vai passar a tarde" às 18h51, perguntou do chefe no dia de folga, respondeu a foto como se fosse o Patrick e disse "desculpa não ter contado… acabei de terminar agora" estando na academia. Faltava escolher o modelo com teste real, não com achismo.
+
+## A arena
+
+`scripts/model_arena.py` roda a Marina **de verdade**: `process_incoming_batch` / `handle_photo_message`, planner, guards, segmentação em balões. A conversa segue um roteiro fixo, e só o modelo muda.
+- **Cópia do banco:** cada corrida é um subprocesso com a sua própria cópia (backup SQLite read-only da produção). A conversa e o estado transitório são zerados, e o mundo, o cânone e as memórias ficam intactos.
+- **Relógio congelado:** `scripts/scripts_clock.py` troca `datetime` antes dos imports do bot. Todo módulo vê o horário do cenário.
+- **Nada sai do simulador:** nada vai para o Telegram nem para o `marina.log`. Visão, foto e voz são stubs; a voz entra como "[áudio] fala" na transcrição.
+- **Registro por chamada:** cada chamada ao LLM registra quem chamou, a latência, os tokens, o custo em US$ e o provedor.
+- **Relatório:** `scripts/model_arena_report.py <run> --transcripts` mostra as transcrições lado a lado e as métricas.
+
+Cenários (`scripts/model_arena_scenarios.py`):
+
+| Cenário | O que mede |
+|---|---|
+| `noite_domingo` | replay fiel da sessão real de 21/09 |
+| `dia_dela` | uso do mundo vivo (dia, Bia, Theo, saudade) |
+| `desabafo` | empatia sem virar terapeuta |
+| `memoria_curta` | lembrar chefe, promoção, coordenador e sexta 30 min depois |
+| `lembrete` | oferta, confirmação às 9h e pergunta depois |
+| `brincadeira` | ciúme do Theo, Botafogo, filme favorito, Paris |
+| `manha_de_aula` | coerência com a agenda (matéria, local) |
+
+**Rodada 1 (triagem):** 18 modelos × 3 cenários. **Rodada 2 (final):** 9 modelos × 7 cenários × 2 repetições = 126 corridas. As duas somaram menos de US$ 5.
+
+## Achado 9.1 🔴 — Foto: a Marina respondia a si mesma
+
+O payload da foto não tinha o turno do Patrick. A foto só existia no system prompt, e a última mensagem era a pergunta da própria Marina ("E o que seu chefe disse…?"). O modelo continuava o texto como se fosse o Patrick: "Não contei, ele não sabe, eu só trabalho meio período mesmo" (21/09 19:02).
+
+**Correção:** a foto entra como mensagem `user` no fim do payload. Na arena, com o próprio Nemo, a resposta passou a comentar Harry Potter.
+
+## Achado 9.2 🔴 — Plano malformado derrubava o turno inteiro
+
+O Gemma 4 devolveu `{"intent": -1, "event_details": -1, …}`. `event_details.get` explodiu e o Patrick ficou **sem resposta**.
+
+**Correção:** `planner._sanitize_plan`. Tipo errado vira o padrão (texto → None, flag → False, objeto → None, deltas não numéricos descartados). Plano é conselho, não pode matar a conversa.
+
+## Achado 9.3 🔴 — Áudio espontâneo como primeira fala depois do boot: KeyError
+
+Há 6% de chance de a resposta sair em áudio. `ULTIMAS_MENSAGENS_MARINA[chat_id]` só era criado por `send_human_messages`. Se a primeira fala depois de ligar o bot fosse áudio, dava KeyError **depois** do envio, e o turno não era gravado (o GPT-5.6 Luna caiu nesse caso na arena).
+
+**Correção:** `setdefault`.
+
+## Achado 9.4 🟡 — Filtro de alfabeto estrangeiro só conhecia algumas faixas
+
+"Como foi a conversa com ele? ್ದೇಶ" (canarês, Luna) passou.
+
+**Correção:** qualquer letra fora do latino conta (emoji não é letra).
+
+## Achado 9.5 🟡 — Garantia de horário redundante
+
+"às 09h", "às 9" e "9 da manhã" não eram reconhecidos. A confirmação ganhava um "Te mando mensagem aqui no Telegram às 09:00 💕" repetido.
+
+**Correção:** `_mentions_clock` aceita essas formas.
+
+## Achado 9.6 🟡 — Nenhum controle de raciocínio; modelo reserva fixo no código
+
+- Modelos como Gemini 3.x Flash **recusam** `reasoning.enabled=false` (HTTP 400). Todas as chamadas falhavam e a Marina só dizia "deu uma osciladinha no sinal".
+- Modelos híbridos podem raciocinar por padrão, gastando latência e o orçamento de 160 tokens da fala.
+- O reserva era `"mistralai/mistral-nemo"` escrito em dois lugares do bot.
+
+**Correção:** `llm_options.llm_kwargs()` em todas as 12 chamadas de LLM (bot, planner, consolidador, reflexão), mais `LLM_REASONING` (off | minimal | low | medium) e `LLM_FALLBACK_MODEL` no `.env`. O que a arena testou é exatamente o que a produção manda.
+
+## Achado 9.7 🔵 — O cânone não tem gostos da Marina
+
+`gostos_marina` está vazio. Perguntados sobre o filme favorito, os modelos responderam Harry Potter, Amélie Poulain, Questão de Tempo, Clube da Luta, Orgulho e Preconceito, Como Se Fosse a Primeira Vez e O Diabo Veste Prada. Nenhum errou: não existe resposta. Mas cada conversa inventa um gosto novo, e com o tempo isso vira contradição. **Decisão do Patrick:** definir os gostos-base dela (filme, série, música, comida…).
+
+## Achado 9.8 ⚪ — O planner roda antes da resposta e soma latência
+
+O turno mede de 7 a 18 s do início ao fim, contra 1,4 a 3 s da chamada da fala. Boa parte vem do planner, que é sequencial. Fica registrado para uma auditoria de latência.
+
+## Resultado
+
+### Eliminados na triagem (com o que se viu)
+
+- **mistral-nemo:** tokens estrangeiros ("álního", "knives", "RT"), "você deve estar bem **cansada**" para o Patrick, "quer que eu vá com você para a empresa?".
+- **unslopnemo-12b:** inventou "acabei de sair do cinema com a Ju", caracteres de controle, "town".
+- **cydonia-24b:** "amiingh", "Tens", "o melhor fornecedor de melhora do Rio".
+- **llama-4-maverick:** "kkkk calma, amor" para briga com a mãe; alucinou estar vendo Harry Potter junto.
+- **deepseek-v3.2:** "esses dias de TPM com ela".
+- **qwen3-235b:** repetiu a mensagem do Patrick como se fosse dela.
+- **minimax-m2-her:** "(Fotos enviada por Marina)", "vc ficou chateada?", palavrão gratuito.
+- **gemma-4-31b:** quebrou o planner (9.2); "Quem? Que doideira é essa" num desabafo.
+- **claude-haiku-4.5:** "kkk por quê?" para "tô meio pra baixo"; 20× o custo do DeepSeek.
+- **grok-4.3:** seco e caro.
+
+### Final (7 cenários × 2 repetições)
+
+| Modelo | Fala (s) | Turno (s) | US$/turno | ~US$/mês* | Pontos fortes | Pontos fracos |
+|---|---|---|---|---|---|---|
+| **openai/gpt-5.6-luna** | 1,4 | 9,0 | 0,0015 | ~7 | **o mais fiel**: lembrou promoção/coordenador/sexta nas 2 repetições, agenda exata, honesto quando não sabe ("a gente nunca definiu meu favorito"), provedor único | um pouco "certinho"; 1 vazamento de canarês (agora filtrado); a OpenAI pode recusar conteúdo íntimo explícito |
+| google/gemini-3.8-flash | 2,4 | 10,8 | 0,0054 | ~24 | **mais personalidade e emoção** ("Para com isso, Patrick. Se não puder desabafar comigo vai desabafar com quem?"), flerte natural | raciocínio obrigatório; 3,5× o custo do Luna; às vezes sai do mundo (pilotis em horário de aula) |
+| moonshotai/kimi-k2.5 | 3,1 | 17,6 | 0,0035 | ~16 | usa muito bem o mundo (Quartinho, Nilton Santos, Milo) | concordância ("quer que eu te mando"), lento, 5 provedores |
+| deepseek/deepseek-v4-flash | 3,2 | 17,9 | 0,00036 | ~2 | a gíria mais natural, a mais barata | **inventa memórias** nas 2 repetições ("o cara que te chamou de 'jovem' no primeiro dia"); 14 provedores diferentes; lento |
+| z-ai/glm-4.7 | 4,2 | 20,0 | 0,0025 | ~11 | ok | inventa ("ele é meio tenso"), o mais lento, "then" |
+| google/gemini-3.1-flash-lite | 1,7 | 7,8 | 0,0019 | ~8 | o mais rápido | genérico/atendente, fugiu da pergunta de memória |
+| mistralai/mistral-medium-3.1 | 1,6 | 7,2 | 0,0019 | ~9 | conciso | 4 vazamentos ("treating", "'auteur", "organized") |
+| mistralai/mistral-small-2603 | — | — | — | — | — | limitado pelo provedor (429) nas duas rodadas |
+
+\* estimativa com 150 turnos/dia; inclui planner, consolidação e reflexão.
+
+## Testes
+
+`tests/test_model_arena_audit9.py`, 11 testes:
+- a foto é o último turno do Patrick;
+- plano com tipos errados vira o padrão;
+- plano bom passa intacto;
+- JSON-lixo no planner não derruba;
+- `llm_kwargs` com raciocínio off e obrigatório;
+- canarês dispara retry;
+- horário já citado não ganha frase repetida;
+- o relógio congelado vale para imports feitos depois.
+
+Suíte completa: **584/584**. A arena só lê a produção (backup read-only); todos os testes rodam em banco descartável.

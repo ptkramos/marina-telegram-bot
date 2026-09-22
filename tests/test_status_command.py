@@ -77,7 +77,7 @@ class TestStatusCommand(unittest.IsolatedAsyncioTestCase):
 
         await status_callback_handler(update, context)
 
-        query.answer.assert_awaited_once_with("Status fechado! 🧹")
+        query.answer.assert_awaited_once_with("Fechado! 🧹")
         query.message.delete.assert_awaited_once()
 
     async def test_status_callback_handler_unauthorized(self):

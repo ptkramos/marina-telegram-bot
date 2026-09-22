@@ -13,6 +13,7 @@ from typing import Optional
 from openai import OpenAI
 
 from config import settings
+from llm_options import llm_kwargs
 from db import db_manager, DatabaseManager
 
 logger = logging.getLogger("MemoryConsolidator")
@@ -159,7 +160,7 @@ class MemoryConsolidator:
                         {"role": "user", "content": user_content}
                     ],
                     temperature=0.2,
-                    max_tokens=650,
+                    **llm_kwargs(650),
                     response_format={"type": "json_object"}
                 )
                 raw_text = response.choices[0].message.content.strip()

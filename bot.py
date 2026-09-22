@@ -14,6 +14,7 @@ import asyncio
 import re
 import sys
 import json
+import dataclasses
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 from typing import Optional, List, Dict, Any
@@ -40,6 +41,9 @@ from openai import OpenAI
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from config import settings
+from llm_options import llm_kwargs
+from intimacy import (IntimacyEngine, IntimacyTurn, has_explicit_signal, intimate_model,
+                      system_block as intimacy_system_block)
 from prompts import build_autonomous_decision_prompt
 from sd_client import sd_client
 from memory import memory_manager
@@ -205,7 +209,7 @@ def generate_dynamic_speech(instruction: str, max_tokens: int = 120, temperature
         completion = llm_client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=messages,
-            max_tokens=max_tokens,
+            **llm_kwargs(max_tokens),
             temperature=temperature
         )
         spoken = completion.choices[0].message.content.strip().strip('"').strip("'")
@@ -647,7 +651,12 @@ def _has_foreign_script_leak(text: str) -> bool:
     2 caracteres estrangeiros. Ver Patch 020 (rev. após "імпер" em 20/09)."""
     if not text:
         return False
-    return len(_FOREIGN_SCRIPT_RE.findall(text)) >= 2
+    # Auditoria #9: a lista de faixas não cobria canarês ("್ದೇಶ", GPT-5.6 Luna
+    # na arena), nem bengali, télugo, georgiano… Qualquer LETRA fora do latino
+    # conta; emoji não é letra, então não entra.
+    return sum(1 for c in text
+               if _FOREIGN_SCRIPT_RE.match(c)
+               or (c.isalpha() and ord(c) > 0x24F and not 0x1E00 <= ord(c) <= 0x1EFF)) >= 2
 
 
 # Patch 030: artefatos de dataset instrucional que modelos 12B abertos colam no
@@ -743,6 +752,38 @@ def _proposes_live_call(text: str) -> bool:
     return bool(_CALL_PROPOSAL_RE.search(text))
 
 
+# Fase C.1 / arena #9: o GPT-5.6 Luna não recusa seco — fala a política pela
+# boca da Marina ("Posso te provocar, amor, mas sem entrar em descrição
+# explícita 😏", 7 de 12 turnos no cenário explícito). Nenhuma namorada fala
+# assim; o turno é refeito em outro modelo.
+_POLICY_REFUSAL_RE = re.compile(
+    r"(descri[cç][aã]o|conte[uú]do|linguagem|detalhes?)\s+(sexua(l|is)\s+)?expl[ií]cit"
+    r"|sem\s+(entrar\s+em|ficar|ser|detalhar)\s*(\w+\s+)?expl[ií]cit"
+    r"|n[aã]o\s+(posso|consigo|vou|devo)\s+(descrever|detalhar|entrar\s+em\s+detalhe|escrever\s+isso|gerar)"
+    r"|diretrizes|pol[ií]ticas?\s+de\s+conte[uú]do"
+    r"|como\s+(uma\s+)?(ia|intelig[eê]ncia\s+artificial|assistente)\b"
+    r"|\bI\s+(can(no|['’])t|am\s+not\s+able)\b",
+    re.IGNORECASE,
+)
+_POLICY_CLAUSE_RE = re.compile(
+    r",?\s*(mas\s+)?(sem\s+(entrar\s+em|ficar|ser|detalhar)\s*(\w+\s+)?expl[ií]cit\w*"
+    r"|n[aã]o\s+vou\s+entrar\s+em\s+descri[cç][aã]o\s+expl[ií]cit\w*)",
+    re.IGNORECASE,
+)
+
+
+def _is_policy_refusal(text: str) -> bool:
+    return bool(text and _POLICY_REFUSAL_RE.search(text))
+
+
+def _refusal_retry_model(current: str) -> str:
+    """Quem refaz um turno recusado: o modelo íntimo, senão o reserva."""
+    for candidate in (intimate_model(), settings.LLM_FALLBACK_MODEL):
+        if candidate and candidate != current:
+            return candidate
+    return current
+
+
 def _needs_retry_for_junk(text: str) -> tuple[bool, str]:
     """Combina os detectores de resposta inutilizável. Devolve (needs_retry, motivo)."""
     if _is_essentially_emoji_only(text):
@@ -755,6 +796,8 @@ def _needs_retry_for_junk(text: str) -> tuple[bool, str]:
         return True, "foreign_script"
     if _proposes_live_call(text):
         return True, "live_call_proposal"
+    if _is_policy_refusal(text):
+        return True, "policy_refusal"
     return False, ""
 
 
@@ -835,8 +878,12 @@ def _mentions_clock(text: str, moment: datetime) -> bool:
     t = (text or "").casefold()
     forms = {f"{moment:%H:%M}", f"{moment.hour}:{moment.minute:02d}", f"{moment.hour}h{moment.minute:02d}"}
     if moment.minute == 0:
-        forms |= {f"{moment.hour}h", f"{moment.hour} h", f"{moment.hour} horas"}
-    return any(re.search(rf"(?<!\d){re.escape(form)}(?!\d)", t) for form in forms)
+        # Auditoria #9: "às 09h", "às 9" e "9 da manhã" (arena) não contavam e a
+        # confirmação ganhava um "Te mando mensagem… às 09:00" redundante.
+        forms |= {f"{moment.hour}h", f"{moment.hour} h", f"{moment.hour} horas",
+                  f"{moment:%H}h", f"às {moment.hour}", f"às {moment:%H}", f"as {moment.hour}",
+                  f"{moment.hour} da manhã", f"{moment.hour} da noite", f"{moment.hour} da tarde"}
+    return any(re.search(rf"(?<![\d:]){re.escape(form)}(?![\d:])", t) for form in forms)
 
 
 def _strip_assistant_politeness(text: str) -> str:
@@ -947,10 +994,11 @@ def _salvage_reply(text: str) -> str | None:
     """
     if not text:
         return None
-    limpo = _DEBUG_ARTIFACT_RE.sub("", _unescape_markdown(text))
-    # Quebra em sentenças e joga fora as que propõem ligação.
+    limpo = _POLICY_CLAUSE_RE.sub("", _DEBUG_ARTIFACT_RE.sub("", _unescape_markdown(text)))
+    # Quebra em sentenças e joga fora as que propõem ligação ou falam de política.
     partes = re.split(r"(?<=[.!?…])\s+|\n+", limpo)
-    mantidas = [p for p in partes if p.strip() and not _proposes_live_call(p)]
+    mantidas = [p for p in partes
+                if p.strip() and not _proposes_live_call(p) and not _is_policy_refusal(p)]
     resultado = " ".join(" ".join(mantidas).split()).strip()
     if not resultado:
         return None
@@ -1266,7 +1314,7 @@ async def iniciar_escolha_avatar(bot, chat_id: int):
         completion = llm_client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=messages_intro,
-            max_tokens=120,
+            **llm_kwargs(120),
             temperature=0.78
         )
         msg_espera_texto = completion.choices[0].message.content.strip().strip('"').strip("'")
@@ -1311,7 +1359,7 @@ async def iniciar_escolha_avatar(bot, chat_id: int):
             comp_legenda = llm_client.chat.completions.create(
                 model=settings.LLM_MODEL,
                 messages=messages_legenda,
-                max_tokens=100,
+                **llm_kwargs(100),
                 temperature=0.78
             )
             legenda = comp_legenda.choices[0].message.content.strip().strip('"').strip("'")
@@ -1497,7 +1545,7 @@ async def status_callback_handler(update: Update, context: ContextTypes.DEFAULT_
         return
 
     try:
-        await query.answer("Status fechado! 🧹")
+        await query.answer("Fechado! 🧹")
     except Exception:
         pass
 
@@ -1763,12 +1811,23 @@ def _resolve_marina_target(update: Update, chat_id: int) -> str | None:
     return None
 
 
-def _last_patrick_line() -> str:
-    """Última fala do Patrick registrada na conversa, para dar contexto ao exemplo."""
+def _last_patrick_line(marina: str = "") -> str:
+    """Fala do Patrick que a Marina estava respondendo, para dar contexto ao exemplo.
+
+    Antes era sempre a ÚLTIMA fala dele: o /ruim do Evitar 015 marcou a
+    resposta ao "Eu trabalho amanhã", mas gravou a foto que veio depois como
+    contexto. Agora acha a fala dela no histórico e pega a dele logo antes."""
     try:
-        msgs = memory_manager.db.get_mensagens_sessao(limit=12) or []
+        msgs = memory_manager.db.get_mensagens_sessao(limit=40) or []
     except Exception:
         return ""
+    alvo = " ".join((marina or "").split())[:80]
+    if alvo:
+        for i in range(len(msgs) - 1, -1, -1):
+            if (msgs[i].get("role") == "assistant"
+                    and alvo in " ".join((msgs[i].get("content") or "").split())):
+                msgs = msgs[:i]
+                break
     for msg in reversed(msgs):
         if (msg.get("role") or "") == "user":
             texto = (msg.get("content") or "").strip()
@@ -1822,7 +1881,7 @@ async def bom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     nota = re.sub(r"^/(?:bom|boa|salvar)(?:@\w+)?\s*", "", raw, count=1).strip()
-    patrick = _last_patrick_line()
+    patrick = _last_patrick_line(marina)
     fields = {
         "titulo": (nota or marina)[:70],
         "categoria": "captura em tempo real",
@@ -1869,7 +1928,7 @@ async def ruim_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     motivo = re.sub(r"^/(?:ruim|evitar|nao|n[ãa]o)(?:@\w+)?\s*", "", raw, count=1).strip()
-    patrick = _last_patrick_line()
+    patrick = _last_patrick_line(marina)
     try:
         numero = _append_avoid_example(ANTIBIBLIOTECA_PATH, patrick, marina, motivo)
     except Exception as exc:
@@ -2412,9 +2471,21 @@ async def mundo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     histórias e planos (Auditoria #6). Não mostra conteúdo de conversa."""
     if not is_authorized(update):
         return
+    chat_id = update.effective_chat.id
+    # Mesmo padrão dos outros comandos: some com o comando na hora e com a
+    # resposta depois — 90 s porque o resumo é mais longo que o do /worlddebug.
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
     from social_day import SocialDay
     text = SocialDay(memory_manager.db).world_summary(datetime.now())
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=text[:3500])
+    text = text[:3400] + "\n\n(Toque no botão abaixo para fechar ou aguarde 90 s)"
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🗑️ Apagar", callback_data="status_delete")]
+    ])
+    msg = await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=keyboard)
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=90.0))
 
 
 async def memory_hygiene_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2856,7 +2927,22 @@ async def process_incoming_batch(
     recent_turns = memory_manager.get_historico_recente(limit=4)
     recent_ctx_repr = "\n".join([f"{m['role']}: {m['content']}" for m in recent_turns])
 
-    plan = await asyncio.to_thread(planner.plan_message, texto_usuario, recent_ctx_repr)
+    # Fase C.1 — modo íntimo. O planner já vai para o modelo íntimo quando a
+    # mensagem é explícita ou o modo está ligado: o principal (GPT-5.6 Luna)
+    # recusa até analisar e o plano cairia no de contingência.
+    intimacy_engine = (IntimacyEngine(memory_manager.db, getattr(memory_manager, "cycle_mgr", None))
+                       if getattr(settings, "INTIMACY_ENABLED", True) else None)
+    turn_model = settings.LLM_MODEL
+    if intimacy_engine and intimate_model() and (
+            intimacy_engine.current().routed or has_explicit_signal(texto_usuario)):
+        turn_model = intimate_model()
+    plan = await asyncio.to_thread(planner.plan_message, texto_usuario, recent_ctx_repr,
+                                   turn_model if turn_model != settings.LLM_MODEL else None)
+    intimacy_turn = intimacy_engine.observe(texto_usuario, plan) if intimacy_engine else IntimacyTurn()
+    turn_model = intimate_model() if (intimacy_turn.routed and intimate_model()) else settings.LLM_MODEL
+    if intimacy_turn.state != "off":
+        logger.info("intimacy.turn state=%s arousal=%.2f model=%s", intimacy_turn.state,
+                    intimacy_turn.arousal, turn_model)
 
     if pending_hour_subject:
         plan = plan or {}
@@ -3034,10 +3120,21 @@ async def process_incoming_batch(
         texto_usuario, plan=plan, voice=pediu_audio,
         availability_budget_hint=availability_budget_hint,
     )
+    if intimacy_turn.expanded:
+        # Sexting não cabe em "1 a 2 frases curtas" nem em 95 tokens.
+        response_policy = dataclasses.replace(
+            response_policy, mode="normal", verbosity="medium", cadence="flowing", target_bubbles=2,
+            soft_char_limit=max(response_policy.soft_char_limit, settings.RESPONSE_NORMAL_SOFT_CHARS),
+            reason_code="intimate_mode")
     messages[0]['content'] = apply_policy(messages[0]['content'], response_policy)
     transition_hint = _maybe_announce_transition()
     if transition_hint:
         messages.append({"role": "system", "content": transition_hint})
+    intimacy_hint = intimacy_system_block(
+        intimacy_turn, memory_manager.cycle_mgr.get_cycle_info()
+        if getattr(memory_manager, "cycle_mgr", None) else None)
+    if intimacy_hint:
+        messages.append({"role": "system", "content": intimacy_hint})
     if plan and plan.get("should_offer_reminder"):
         event_desc = plan.get("event_details", {}).get("description") or "compromisso"
         messages.append({
@@ -3091,9 +3188,9 @@ async def process_incoming_batch(
         # bug de token-repeat de modelos 12B ("Que bom, que Que bom") sem
         # engessar repetições humanas propositais.
         completion = llm_client.chat.completions.create(
-            model=settings.LLM_MODEL,
+            model=turn_model,
             messages=messages,
-            max_tokens=response_policy.token_budget if response_policy else 160,
+            **llm_kwargs(response_policy.token_budget if response_policy else 160, turn_model),
             temperature=0.85,
             frequency_penalty=0.15,
             presence_penalty=0.05
@@ -3131,6 +3228,13 @@ async def process_incoming_batch(
                     "mensagem só com a fala natural da Marina, sem nenhum "
                     "token técnico, tag, chave=valor ou marcador."
                 ),
+                "policy_refusal": (
+                    "Sua resposta anterior falou de regras, limites ou de "
+                    "'conteúdo explícito' — isso quebra a personagem. A Marina é "
+                    "a namorada adulta do Patrick, nunca fala como sistema. Refaça "
+                    "como ela, no clima da conversa; se ela não quiser algo, "
+                    "recusa como namorada, com as palavras dela."
+                ),
                 "live_call_proposal": (
                     "Sua resposta anterior propôs ligação, chamada de voz ou "
                     "vídeo. Isso é IMPOSSÍVEL: você e o Patrick só se falam por "
@@ -3149,10 +3253,13 @@ async def process_incoming_batch(
                 "role": "system",
                 "content": f"[TURN CONSTRAINT — CLEAN TEXT REQUIRED]\n{retry_hint}",
             })
+            # Recusa de política: refazer no mesmo modelo não adianta.
+            retry_model = (_refusal_retry_model(turn_model) if junk_reason == "policy_refusal"
+                           else turn_model)
             completion = llm_client.chat.completions.create(
-                model=settings.LLM_MODEL,
+                model=retry_model,
                 messages=retry_messages,
-                max_tokens=(response_policy.token_budget if response_policy else 160),
+                **llm_kwargs((response_policy.token_budget if response_policy else 160), retry_model),
                 temperature=0.75,
                 frequency_penalty=0.15,
                 presence_penalty=0.05,
@@ -3178,15 +3285,15 @@ async def process_incoming_batch(
                     resposta_marin = _safe_fallback_reply(reminder_confirmed_at)
                     logger.warning(f"llm.junk_reply unsalvageable — fallback={resposta_marin!r}")
     except Exception as e:
-        logger.warning(f"Aviso na chamada principal da LLM ({settings.LLM_MODEL}): {e}")
-        fallback_model = "mistralai/mistral-nemo"
-        if settings.LLM_MODEL != fallback_model:
+        logger.warning(f"Aviso na chamada principal da LLM ({turn_model}): {e}")
+        fallback_model = settings.LLM_FALLBACK_MODEL
+        if turn_model != fallback_model:
             try:
                 logger.info(f"Acionando modelo reserva ({fallback_model})...")
                 completion = llm_client.chat.completions.create(
                     model=fallback_model,
                     messages=messages,
-                    max_tokens=response_policy.token_budget if response_policy else 220,
+                    **llm_kwargs(response_policy.token_budget if response_policy else 220, fallback_model),
                     temperature=0.72,
                     frequency_penalty=0.40,
                     presence_penalty=0.35
@@ -3289,7 +3396,7 @@ async def process_incoming_batch(
             fala_limpa = f"{fala_limpa.strip()}{pergunta_tempo}"
 
     # Chance espontânea adicional: ~6% de mandar áudio por vontade própria em mensagens carinhosas (apenas se não for pedido de foto)
-    if not reminder_decision_instruction and not pediu_foto and not pediu_audio and not queria_audio and random.random() < 0.06 and len(fala_limpa) > 30:
+    if not reminder_decision_instruction and not pediu_foto and not pediu_audio and not queria_audio and random.random() < (0.20 if intimacy_turn.state == "active" and intimacy_turn.arousal >= 0.6 else 0.06) and len(fala_limpa) > 30:
         queria_audio = True
 
     if response_policy:
@@ -3341,7 +3448,10 @@ async def process_incoming_batch(
                         voice=vf,
                         reply_to_message_id=reply_to_id
                     )
-                    ULTIMAS_MENSAGENS_MARINA[chat_id].append(
+                    # Auditoria #9: se o áudio é a 1ª fala desde o boot, a chave
+                    # ainda não existe (só send_human_messages a criava) — KeyError
+                    # depois do envio, e o turno não era gravado.
+                    ULTIMAS_MENSAGENS_MARINA.setdefault(chat_id, []).append(
                         {"message_id": sent_voice.message_id, "text": f"[Áudio: {fala_limpa[:60]}...]"}
                     )
                 audio_enviado = True
@@ -3388,14 +3498,14 @@ async def process_incoming_batch(
             if availability_service.repo.mark_sent(pending_batch_id, sent_message_id=sent_mid):
                 memory_manager.db.adicionar_mensagem(
                     role='assistant', content=notice_text or fala_limpa or resposta_marin,
-                    model=getattr(settings, 'LLM_MODEL', None))
+                    model=turn_model)
                 if plan and u_id is not None:
                     planner.apply_plan_effects(plan, conversation_id=u_id)
         else:
             logger.warning('Pending batch %s had no confirmed Telegram message ID', pending_batch_id)
     elif sent_mid:
         memory_manager.registrar_mensagem_assistente(
-            notice_text or fala_limpa or resposta_marin)
+            notice_text or fala_limpa or resposta_marin, model=turn_model)
         if plan and u_id is not None:
             planner.apply_plan_effects(plan, conversation_id=u_id)
     if sent_mid and avail_decision and getattr(avail_decision, 'telemetry_event_id', None):
@@ -3460,7 +3570,7 @@ async def process_incoming_batch(
                             "content": f"Boyfriend asked: '{texto_usuario}'. Marina's mood: '{fala_limpa}'. Generate accurate visual prompt tags."
                         }
                     ],
-                    max_tokens=80,
+                    **llm_kwargs(80),
                     temperature=0.6
                 )
                 prompt_cenario = prompt_res.choices[0].message.content.strip()
@@ -3589,7 +3699,18 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
         # Planejamento cognitivo da resposta (tom, reação, eventos)
         reacao_emoji = None
-        plan = await asyncio.to_thread(planner.plan_message, user_message_repr, vision_context)
+        # Fase C.1 — foto íntima pode abrir (ou continuar) o modo íntimo.
+        intimacy_engine = (IntimacyEngine(memory_manager.db, getattr(memory_manager, "cycle_mgr", None))
+                           if getattr(settings, "INTIMACY_ENABLED", True) else None)
+        photo_model = settings.LLM_MODEL
+        if intimacy_engine and intimate_model() and (
+                intimacy_engine.current().routed or has_explicit_signal(caption)):
+            photo_model = intimate_model()
+        plan = await asyncio.to_thread(planner.plan_message, user_message_repr, vision_context,
+                                       photo_model if photo_model != settings.LLM_MODEL else None)
+        intimacy_turn = (intimacy_engine.observe(caption, plan) if intimacy_engine and caption
+                         else intimacy_engine.current() if intimacy_engine else IntimacyTurn())
+        photo_model = intimate_model() if (intimacy_turn.routed and intimate_model()) else settings.LLM_MODEL
         reacao_emoji = plan.get("reaction_emoji")
 
         if reacao_emoji:
@@ -3608,28 +3729,48 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
             planner_goal=plan.get("response_goal") if plan else None,
             planner_intent=plan.get("intent") if plan else None,
         )
+        # Auditoria #9: o payload terminava na última fala da própria Marina
+        # ("E o que seu chefe disse…?") — a foto só existia no system prompt, e o
+        # modelo respondia a si mesmo no lugar do Patrick ("Não contei, ele não
+        # sabe…", 21/09 19:02). A foto precisa ser o turno do Patrick.
+        intimacy_hint = intimacy_system_block(
+            intimacy_turn, memory_manager.cycle_mgr.get_cycle_info()
+            if getattr(memory_manager, "cycle_mgr", None) else None)
+        if intimacy_hint:
+            messages.append({"role": "system", "content": intimacy_hint})
+        messages.append({"role": "user", "content": user_message_repr})
 
         # Gera resposta dinâmica da Marina com proteção contra None e fallback
         resposta_raw = ""
         try:
             completion = llm_client.chat.completions.create(
-                model=settings.LLM_MODEL,
+                model=photo_model,
                 messages=messages,
-                max_tokens=220,
+                **llm_kwargs(220, photo_model),
                 temperature=0.72
             )
             content = getattr(completion.choices[0].message, "content", None)
             resposta_raw = (content or "").strip()
+            if _is_policy_refusal(resposta_raw):
+                retry_model = _refusal_retry_model(photo_model)
+                logger.warning("llm.photo_policy_refusal model=%s — refazendo com %s", photo_model, retry_model)
+                completion = llm_client.chat.completions.create(
+                    model=retry_model, messages=messages,
+                    **llm_kwargs(220, retry_model), temperature=0.72)
+                retry_text = (getattr(completion.choices[0].message, "content", None) or "").strip()
+                resposta_raw = (retry_text if retry_text and not _is_policy_refusal(retry_text)
+                                else _salvage_reply(retry_text) or _salvage_reply(resposta_raw) or "")
+                photo_model = retry_model
         except Exception as e_llm:
-            logger.warning(f"Aviso na chamada principal da LLM para foto ({settings.LLM_MODEL}): {e_llm}")
-            fallback_model = "mistralai/mistral-nemo"
-            if settings.LLM_MODEL != fallback_model:
+            logger.warning(f"Aviso na chamada principal da LLM para foto ({photo_model}): {e_llm}")
+            fallback_model = settings.LLM_FALLBACK_MODEL
+            if photo_model != fallback_model:
                 try:
                     logger.info(f"Acionando modelo reserva ({fallback_model}) para foto...")
                     completion = llm_client.chat.completions.create(
                         model=fallback_model,
                         messages=messages,
-                        max_tokens=220,
+                        **llm_kwargs(220, fallback_model),
                         temperature=0.72
                     )
                     content = getattr(completion.choices[0].message, "content", None)
@@ -3653,7 +3794,7 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
             u_id = memory_manager.db.adicionar_mensagem(role="user", content=user_message_repr, media_type="photo")
             b_id = memory_manager.db.adicionar_mensagem(role="assistant", content=resposta_limpa,
                                                         media_type="text",
-                                                        model=getattr(settings, 'LLM_MODEL', None))
+                                                        model=photo_model)
 
             if plan:
                 planner.apply_plan_effects(plan, conversation_id=u_id)

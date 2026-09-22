@@ -90,7 +90,7 @@ class MigrationUnificationTests(unittest.TestCase):
 
     def test_banco_novo_tem_coluna_da_020(self):
         db = DatabaseManager(Path(self.temp.name) / "novo.db")
-        self.assertEqual(db.get_schema_version(), 20)
+        self.assertEqual(db.get_schema_version(), 21)
         with db.get_connection() as conn:
             cols = {r["name"] for r in conn.execute("PRAGMA table_info(reminders)")}
         self.assertIn("offer_message_id", cols)
@@ -99,9 +99,13 @@ class MigrationUnificationTests(unittest.TestCase):
         path = Path(self.temp.name) / "antigo.db"
         DatabaseManager(path)
         with sqlite3.connect(path) as conn:  # como a produção: coluna existe, versão 20 não
-            conn.execute("DELETE FROM schema_version WHERE version=20")
+            conn.execute("DELETE FROM schema_version WHERE version>=20")
+            conn.execute("DROP TABLE intimacy_state")  # 021 (Fase C.1) ainda não existia
         db = DatabaseManager(path)
-        self.assertEqual(db.get_schema_version(), 20)
+        self.assertEqual(db.get_schema_version(), 21)
+        with db.get_connection() as conn:
+            self.assertIsNotNone(conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE name='intimacy_state'").fetchone())
 
 
 if __name__ == "__main__":

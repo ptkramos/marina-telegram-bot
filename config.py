@@ -72,7 +72,15 @@ class Settings:
     LLM_API_KEY: str = os.getenv("LLM_API_KEY", os.getenv("OPENAI_API_KEY", "")).strip()
     LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "https://openrouter.ai/api/v1").strip()
     LLM_MODEL: str = os.getenv("LLM_MODEL", "mistralai/mistral-nemo").strip()
-    
+    # Auditoria #9 — ver llm_options.py. off | minimal | low | medium
+    LLM_REASONING: str = os.getenv("LLM_REASONING", "off").strip().lower()
+    # Reserva quando o modelo principal falha (antes fixo no código como mistral-nemo).
+    LLM_FALLBACK_MODEL: str = os.getenv("LLM_FALLBACK_MODEL", "mistralai/mistral-nemo").strip()
+    # Fase C.1 — modelo do modo íntimo (vazio = sem troca). Ver intimacy.py.
+    LLM_INTIMATE_MODEL: str = os.getenv("LLM_INTIMATE_MODEL", "").strip()
+    LLM_INTIMATE_REASONING: str = os.getenv("LLM_INTIMATE_REASONING", "off").strip().lower()
+    INTIMACY_ENABLED: bool = os.getenv("INTIMACY_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
+
     # URL da API do Stable Diffusion na RX 570 (legado/local)
     _raw_sd_url = os.getenv("SD_API_URL", "http://127.0.0.1:7860/").strip()
     SD_API_URL: str = _raw_sd_url if _raw_sd_url.endswith("/") else f"{_raw_sd_url}/"

@@ -16,6 +16,7 @@ from typing import Optional, Dict, Any
 from openai import OpenAI
 
 from config import settings
+from llm_options import llm_kwargs
 from db import db_manager, DatabaseManager
 
 logger = logging.getLogger("InternalPlanner")
@@ -416,6 +417,42 @@ REGRAS DURAS:
 7. NUNCA marque should_offer_reminder=true para eventos próximos (menos de 45 minutos a partir de agora).
 """
 
+_PLAN_TEXT = ("intent", "tone", "response_goal", "shared_topic", "resolved_loop_hint")
+_PLAN_FLAGS = ("creates_event", "reminder_candidate", "should_offer_reminder",
+               "creates_open_loop", "resolves_open_loop")
+_PLAN_OBJECTS = ("event_details", "direct_reminder", "open_loop_details")
+
+
+def _sanitize_plan(data: Any) -> Dict[str, Any]:
+    """Auditoria #9: um modelo devolveu {"intent": -1, "event_details": -1, ...} e
+    `event_details.get` derrubou o turno inteiro — o Patrick ficava sem resposta.
+    O plano é conselho, não pode matar a conversa: tipo errado vira o padrão."""
+    if not isinstance(data, dict):
+        raise ValueError(f"plano não é objeto: {type(data).__name__}")
+    for key in _PLAN_TEXT:
+        if key in data and not (data[key] is None or isinstance(data[key], str)):
+            data[key] = None
+    for key in _PLAN_FLAGS:
+        if key in data and not isinstance(data[key], bool):
+            data[key] = False
+    for key in _PLAN_OBJECTS:
+        if key in data and not (data[key] is None or isinstance(data[key], dict)):
+            data[key] = None
+    emoji = data.get("reaction_emoji")
+    if emoji is not None and not (isinstance(emoji, str) and 0 < len(emoji) <= 8):
+        data["reaction_emoji"] = None
+    offset = data.get("recommended_reminder_offset_minutes")
+    if offset is not None and (isinstance(offset, bool) or not isinstance(offset, (int, float)) or offset <= 0):
+        data["recommended_reminder_offset_minutes"] = None
+    deltas = data.get("emotional_deltas")
+    data["emotional_deltas"] = ({k: float(v) for k, v in deltas.items()
+                                 if isinstance(k, str) and isinstance(v, (int, float))
+                                 and not isinstance(v, bool)}
+                                if isinstance(deltas, dict) else {})
+    data["intent"] = data.get("intent") or "casual_chat"
+    data["tone"] = data.get("tone") or "carinhosa"
+    return data
+
 
 class InternalPlanner:
     def __init__(self, db: Optional[DatabaseManager] = None, llm_client: Optional[OpenAI] = None):
@@ -500,7 +537,8 @@ class InternalPlanner:
 
         return None
 
-    def plan_message(self, user_message: str, recent_context: str = "") -> Dict[str, Any]:
+    def plan_message(self, user_message: str, recent_context: str = "",
+                     model: Optional[str] = None) -> Dict[str, Any]:
         """Gera o plano cognitivo da mensagem usando o modelo LLM com fallback para heurística."""
         # 1. Tenta heurística imediata primeiro
         heuristic_plan = self.plan_heuristics(user_message)
@@ -512,18 +550,20 @@ class InternalPlanner:
 
         for attempt in range(2):
             try:
+                # Fase C.1: no modo íntimo o planner também vai para o modelo
+                # íntimo — o principal pode recusar analisar a mensagem.
                 response = self.llm.chat.completions.create(
-                    model=settings.LLM_MODEL,
+                    model=model or settings.LLM_MODEL,
                     messages=[
                         {"role": "system", "content": PLANNER_SYSTEM_PROMPT},
                         {"role": "user", "content": user_content}
                     ],
                     temperature=0.2,
-                    max_tokens=350,
+                    **llm_kwargs(350, model or settings.LLM_MODEL),
                     response_format={"type": "json_object"}
                 )
                 raw_text = response.choices[0].message.content.strip()
-                data = json.loads(raw_text)
+                data = _sanitize_plan(json.loads(raw_text))
 
                 # Validação antecipada de lembrete direto no plano (P1 - Rodada 3 / P0 - Rodada 4)
                 dir_rem = data.get("direct_reminder")

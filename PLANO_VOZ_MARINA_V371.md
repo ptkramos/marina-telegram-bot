@@ -22,10 +22,10 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **A** Fundação da voz | ✅ | `voice_library.py`, parser da biblioteca, CONTROL em `[VOZ DA MARINA]`/`[LINHAS DURAS]`/`[FATOS]`, `[EXEMPLOS DE VOZ]` no prompt, sampling ajustado (`frequency_penalty=0.15`, `presence_penalty=0.05`), `tests/test_voice_library.py` |
 | **B1** Banco do que evitar | ✅ | `data/feedback/COMO_NAO_SOAR_MARINA.md` → bloco `[COMO NÃO SOAR]` (Patch 033) |
 | **B2** Captura pelo chat | ✅ | `/bom` e `/ruim` (Patch 033), no lugar do `/eco` planejado; `/registro` aceita wizard e textão (Patch 026) |
-| **B3** A/B de modelo | ➖ | Mistral-Nemo virou o primário (`.env`). Não houve A/B formal. O item 1 do diagnóstico (DeepSeek) está desatualizado |
+| **B3** A/B de modelo | ✅ | Auditoria #9: arena real no OpenRouter (`scripts/model_arena.py`), 18 modelos na triagem e 9 na final. Principal: **GPT-5.6 Luna**; reserva: DeepSeek V4 Flash; íntimo: **Gemini 3.8 Flash** |
 | **B.5** Ela te procura mais quando está de bobeira | ✅ | `_compute_state_factor` em `should_trigger`, no caminho vivo. Desde a Auditoria #6 o texto da iniciativa também é gerado pelo modelo, ancorado no dia dela |
 | **B.6** Micro-despertares no sono | ⬜ | nada implementado |
-| **C.1** Modo sexting | ⬜ | nada implementado (só existe a libido descrita no `cycle.py`) |
+| **C.1** Modo sexting | ✅ conversa · ⬜ fotos | `intimacy.py` + migration 021: excitação em minutos, degraus da biblioteca, troca para `LLM_INTIMATE_MODEL`, clímax, pós-clímax, corte e despedida; ciclo pesa na libido. **C.1b** (fotos explícitas escalonadas pelo nível de excitação) pendente |
 | **C.2** Assistir junto (watch-along) | ⬜ | nada implementado |
 | **C.3** Rituais de namorada (bom dia, boa noite, foto do banho) | ⬜ | pronto para começar: a agenda (#4) sabe quando ela acorda e dorme, e as emoções não saturam mais (#5) |
 | **C** Consolidação | 🟡 | **C1:** o rótulo `[COMO O PATRICK ESCREVE]` e os campos estão em pt-BR (#2 e #7), mas ainda é descrição ("risada: kkkk"), não amostras reais das mensagens dele. **C2** e **C3** ⬜ |
@@ -223,7 +223,19 @@ claro de que vai voltar a dormir. Não é insônia — é o padrão humano real.
 "vigiar" o Patrick de madrugada; não persistir o micro-wake como evento
 memorável. É ruído humano, dá contexto, some.
 
-### Fase C.1 — Modo Sexting ⬜ (pendente, aberto por Patrick em 2026-09-21 02:22)
+### Fase C.1 — Modo Sexting ✅ conversa (2026-09-22) · C.1b fotos ⬜
+
+**Como ficou (decisões tomadas na implementação, com carta branca do Patrick):**
+- **Excitação fora de `estado_emocional`:** as emoções relaxam em horas; a excitação precisa subir e descer em minutos. Tabela própria `intimacy_state` (migration 021), meia-vida de 10 min, zerada pelo reset do soak.
+- **Ativação só pelo Patrick:** vocabulário explícito, pedido explícito ("fala putaria", "me descreve"), clima quente ("😏", "safado") e o tom do planner. Ela nunca começa sozinha. A fase do ciclo multiplica o estímulo (menstrual 0,7 · folicular 1,05 · ovulatória 1,35 · lútea 0,9).
+- **Degraus:** esquentando (Registros de "malícia") → desejo (sexting) → explícito (sexting + iniciativa/explícito) → clímax → pós-clímax (40 min) → corte/despedida. Os exemplos de sexting saíram do sorteio geral por tom e só entram pelo modo, no degrau certo. Registros 088–092 escritos por mim para os degraus que faltavam.
+- **Modelo:** a arena mostrou que o Luna fala a política pela boca dela. O turno íntimo (e o planner dele) vai para `LLM_INTIMATE_MODEL` (Gemini 3.8 Flash, `LLM_INTIMATE_REASONING=low`), e volta para o Luna quando o clima passa. Qualquer resposta que fale de "conteúdo explícito", regras ou limites é refeita em outro modelo (`policy_refusal`).
+- **Clímax:** quando ele pede/goza com ela no auge, ou depois de 6 turnos no auge. Mensagem curta e entrecortada, depois carinho; pós-clímax mole e afetuosa, sem reescalar sozinha.
+- **Áudio:** 20% de chance espontânea no auge (6% fora dele). Se a voz falhar, sai texto.
+- **Sem cadência casual:** no modo, a resposta ganha o orçamento "normal" (2 balões).
+- **Não feito (C.1b):** fotos explícitas escalonadas pela excitação, que dependem do motor de imagem.
+
+**Plano original (referência):**
 
 Feedback registrado após alimentação inicial da biblioteca comportamental.
 Marina não pode ter contato físico com o Patrick, mas o desejo dela é real

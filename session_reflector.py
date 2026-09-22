@@ -17,6 +17,7 @@ from typing import Optional, List, Dict, Iterable, Set
 from openai import OpenAI
 
 from config import settings
+from llm_options import llm_kwargs
 from db import db_manager, DatabaseManager
 
 logger = logging.getLogger("SessionReflector")
@@ -114,7 +115,7 @@ class SessionReflector:
                     {"role": "user", "content": user_content}
                 ],
                 temperature=0.3,
-                max_tokens=600,
+                **llm_kwargs(600),
                 response_format={"type": "json_object"}
             )
             raw_content = response.choices[0].message.content.strip()
