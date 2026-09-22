@@ -1882,9 +1882,18 @@ async def bom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     nota = re.sub(r"^/(?:bom|boa|salvar)(?:@\w+)?\s*", "", raw, count=1).strip()
     patrick = _last_patrick_line(marina)
+    # Fase C.1: /bom numa fala do sexting não pode virar exemplo de conversa
+    # comum — marcada como sexting, ela só volta pelo modo íntimo.
+    intimo = has_explicit_signal(marina)
+    if not intimo and getattr(settings, "INTIMACY_ENABLED", True):
+        try:
+            intimo = IntimacyEngine(memory_manager.db).current().state in ("active", "climax", "afterglow")
+        except Exception:
+            intimo = False
     fields = {
         "titulo": (nota or marina)[:70],
-        "categoria": "captura em tempo real",
+        "categoria": ("intimidade / sexting / captura em tempo real" if intimo
+                      else "captura em tempo real"),
         "contexto": "Capturado com /bom durante a conversa.",
         "patrick": patrick,
         "tom": "",

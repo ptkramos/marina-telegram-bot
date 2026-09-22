@@ -129,7 +129,36 @@ class IntimacyPromptTests(unittest.TestCase):
         from voice_library import select_examples
         picks = select_examples(tone="sensual", intent="flirting", limit=20)
         self.assertFalse(any("sexting" in ex.categoria or "clímax" in ex.categoria for ex in picks))
-        self.assertIn("sentar em vc", system_block(IntimacyTurn("active", 0.9)))
+        from intimacy import _examples_for
+        from voice_library import parse_biblioteca_comportamental
+        explicitas = {ex.marina for ex in parse_biblioteca_comportamental()
+                      if "sexting" in ex.categoria and ("iniciativa" in ex.categoria or "explícit" in ex.categoria)}
+        for _ in range(10):  # exemplos são sorteados: todos precisam ser do degrau explícito
+            bloco = _examples_for("explicito")
+            falas = [l[len("Marina: "):] for l in bloco.splitlines() if l.startswith("Marina: ")]
+            self.assertTrue(falas and set(falas) <= explicitas)
+            self.assertIn("NUNCA repita frases destes exemplos", bloco)
+
+
+class CaptureTests(unittest.TestCase):
+    def test_bom_numa_fala_de_sexting_fica_so_no_modo(self):
+        import asyncio
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+        import bot
+        from config import settings
+        captured = {}
+        chat = SimpleNamespace(id=settings.TARGET_CHAT_ID)
+        fala = "tô molhadinha só de ler vc, amor"
+        update = SimpleNamespace(effective_chat=chat, effective_user=chat, message=SimpleNamespace(
+            message_id=1, text="/bom", reply_to_message=SimpleNamespace(text=fala, message_id=2)))
+        context = SimpleNamespace(bot=SimpleNamespace(delete_message=AsyncMock()))
+        with patch.object(bot, "_append_registro_to_biblioteca",
+                          side_effect=lambda _p, f: captured.update(f) or (999, None)), \
+             patch.object(bot, "_last_patrick_line", return_value="fala putaria"), \
+             patch.object(bot, "_wizard_send", AsyncMock()):
+            asyncio.run(bot.bom_command(update, context))
+        self.assertIn("sexting", captured["categoria"])
 
 
 class RoutingTests(unittest.TestCase):
