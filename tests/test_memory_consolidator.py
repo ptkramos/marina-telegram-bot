@@ -4,6 +4,7 @@ Testa lógica de banco de dados isolada (sem afetar dados de produção)
 e testes de inteligência de extração/filtragem com LLM real.
 """
 import sys
+import os
 import unittest
 import tempfile
 from pathlib import Path
@@ -153,8 +154,14 @@ class TestMemoryConsolidatorDatabase(unittest.TestCase):
         self.assertTrue(any("café expresso forte" in f for f in fatos_todos))
 
 
+@unittest.skipUnless(os.getenv("MARINA_LIVE_TESTS") == "1",
+                     "chama o modelo de verdade (custa e oscila): rode com MARINA_LIVE_TESTS=1")
 class TestMemoryConsolidatorLLM(unittest.TestCase):
-    """Testa a inteligência de extração e descarte com chamadas reais ao modelo LLM configurado."""
+    """Extração e descarte com chamadas REAIS ao modelo configurado.
+
+    Fora da suíte por padrão: com temperatura > 0 o mesmo diálogo banal às vezes
+    gera fato e às vezes não (falhou na troca para o GPT-5.6 Luna e passou na
+    rodada seguinte), e cada execução gasta credencial paga."""
 
     @classmethod
     def setUpClass(cls):

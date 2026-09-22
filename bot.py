@@ -442,6 +442,36 @@ def split_into_human_bubbles(text: str) -> list[str]:
 
 ULTIMAS_MENSAGENS_MARINA: dict[int, list[dict]] = {}
 
+# Soak 22/09 (GPT-5.6 Luna): ele às vezes cola uma palavra solta sem sentido no
+# fim da fala já terminada — "tenta descansar um pouco, tá? extrair?" e "Como vai
+# ser o turno? Baebele" (2 em 48 turnos, finish_reason=stop, não é truncamento).
+# Nenhum guard pegava: não é alfabeto estrangeiro nem token técnico. Palavras
+# soltas legítimas de fim de turno ficam na lista de exceções.
+_TRAILING_OK = {
+    "né", "ne", "sério", "serio", "jura", "quando", "onde", "quem", "como", "por quê", "porque",
+    "amor", "vida", "gatinho", "gato", "bobo", "safado", "lindo", "obrigada", "obrigado", "prometo",
+    "juro", "sempre", "nunca", "hoje", "amanhã", "agora", "kkkk", "kkk", "kk", "hahaha", "hehe",
+    "tá", "ta", "ok", "beleza", "combinado", "vem", "volta", "some", "para", "pronto", "vai",
+}
+_TRAILING_FRAGMENT_RE = re.compile(r"(?<=[.!?…])\s+([^\s.!?…]{2,14})[.!?…]*\s*$")
+
+
+def _strip_trailing_gibberish(text: str) -> str:
+    """Corta uma palavra solta pendurada depois de uma frase já terminada."""
+    if not text:
+        return text
+    match = _TRAILING_FRAGMENT_RE.search(text)
+    if not match:
+        return text
+    word = match.group(1)
+    limpo = re.sub(r"[^\wÀ-ÿ]", "", word).casefold()
+    if not limpo or limpo in _TRAILING_OK or limpo.startswith(("k", "h")):
+        return text
+    cortado = text[: match.start()].rstrip()
+    logger.info("voice.trailing_gibberish removido=%r", word)
+    return cortado or text
+
+
 def limpar_fala_marina(texto: str) -> str:
     """Remove tags de sistema, rubricas e meta-fala antes de enviar texto/áudio."""
     t = texto or ""
@@ -458,7 +488,7 @@ def limpar_fala_marina(texto: str) -> str:
     # Alguns modelos devolvem "\n" literal
     if "\\n" in t and "\n" not in t:
         t = t.replace("\\n", "\n")
-    return t.strip()
+    return _strip_trailing_gibberish(t.strip())
 
 def is_avatar_request(texto: str) -> bool:
     """Detecta pedido de trocar foto de perfil / avatar (antes de foto de chat)."""

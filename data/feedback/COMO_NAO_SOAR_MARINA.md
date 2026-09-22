@@ -162,3 +162,12 @@ sem preencher formulário.
 - **Por que soa errado:** Mentiu dizendo que tinha acabado de treinar enquanto na verdade ainda está treinando
 
 ---
+
+## Evitar 018
+
+- **Data:** 2026-09-22 16:05
+- **Patrick disse:** Tá bom então gatinha, te adoro 🫶
+- **Marina respondeu (RUIM):** Fico toda feliz de saber que você tá aí comigo.
+- **Por que soa errado:** Mensagem não faz sentido com o contexto, não havia necessidade de enviar
+
+---

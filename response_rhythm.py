@@ -9,6 +9,7 @@ bubbles to use — whatever she genuinely wanted, we deliver, up to a runtime
 sanity ceiling (anti-runaway) and Telegram's 4096-code-unit transport limit.
 """
 from dataclasses import dataclass, asdict
+import hashlib
 import logging
 import re
 import unicodedata
@@ -148,13 +149,14 @@ def select_policy(message='', *, plan=None, voice=False, storytelling=False,
 
 _MODE_RULE = {
     'casual_short':
-        'Ritmo casual de WhatsApp: no total, uma a três frases curtas de chat; '
-        'em geral um balão só, quebra com uma linha nova só quando há um pivô '
-        'real (reação e depois pergunta, riso e depois substância, um '
-        'pensamento e depois outro claramente diferente).',
+        'Ritmo casual de WhatsApp: no total, uma a três frases curtas de chat. '
+        'Quando o turno tem duas batidas — reação e depois pergunta, riso e '
+        'depois substância, informação e depois comentário —, mande em dois '
+        'balões, quebrando com uma linha nova. Uma batida só continua num '
+        'balão só.',
     'normal':
-        'Ritmo de chat: duas a quatro frases. Quebre balões em pivôs de '
-        'assunto reais; caso contrário, fique em um balão só.',
+        'Ritmo de chat: duas a quatro frases, quebrando com linha nova entre '
+        'as batidas (em geral dois balões, três quando há três assuntos).',
     'supportive':
         'Reaja como a namorada dele em uma frase quente — sem script de '
         'cuidadora, sem promessa genérica de estar disponível. No máximo uma '
@@ -192,13 +194,14 @@ def apply_policy(prompt, policy):
     mode_rule = _MODE_RULE.get(policy.mode, '')
     guidance = [
         '[RITMO DE RESPOSTA]',
-        "Responda como Marina. Só quebre em balões separados com quebra de "
-        "linha ('\\n') onde a batida realmente muda: interjeição curta antes "
-        "da substância (\"kkkk\" e depois a resposta), reação antes de uma "
-        "pergunta de acompanhamento, um pensamento antes de outro claramente "
-        "diferente. Fora disso, fique em um balão só. Não existe contagem "
-        "fixa de balões — mande quantos ou quão poucos o momento realmente "
-        "pedir.",
+        "Responda como Marina. Quebre em balões separados com quebra de linha "
+        "('\\n') onde a batida muda: interjeição curta antes da substância "
+        "(\"kkkk\" e depois a resposta), reação antes de uma pergunta de "
+        "acompanhamento, um pensamento antes de outro. No chat, você quase "
+        "sempre escreve assim, em mensagens curtas seguidas, e não num "
+        "parágrafo único. Emoji não substitui a quebra de linha: se a ideia "
+        "mudou depois do emoji, quebre a linha. Não existe contagem fixa — "
+        "mande quantos o momento pedir, sem picar um pensamento no meio.",
         'Não simule ritmo de digitação picando um pensamento no meio, e não '
         'force um balão só pra parecer humana. Um único riso ou interjeição '
         'pode ser um turno completo sozinho.',
@@ -231,6 +234,9 @@ def apply_policy(prompt, policy):
 # Segmentation
 # ---------------------------------------------------------------------------
 
+_EMOJI_RUN_RE = "[\U0001F300-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF\U0001F900-\U0001F9FF\u2122\u2139\uFE0F\u200d\s]+"
+
+
 def _coalesce_paragraphs(paragraphs):
     """Merge stray single-word fragments into their neighbor so no bubble is
     confetti. An intentional opening interjection is preserved as its own
@@ -245,17 +251,45 @@ def _coalesce_paragraphs(paragraphs):
         # Keep the first bubble standalone if it's an interjection lead — do
         # not merge substance INTO an opening laugh/exclamation.
         opening_interjection = (len(result) == 1 and _is_interjection(prev))
-        if not opening_interjection and (p_words == 1 or prev_words == 1):
+        # Balão só com emoji ("🖤" sozinho no fim) é confete: junta no anterior.
+        emoji_only = not re.sub(_EMOJI_RUN_RE, "", p).strip()
+        if not opening_interjection and (p_words == 1 or prev_words == 1 or emoji_only):
             result[-1] = f'{prev} {p}'
         else:
             result.append(p)
     return result
 
 
+# Soak 22/09 (GPT-5.6 Luna): ele separa batidas com EMOJI, não com ponto —
+# "Bom dia, amor 😘 Bom trabalho pra você" e "…teste de resistência 😭 Mas tô
+# sobrevivendo" chegavam como UMA frase, nenhuma regra de pivô pegava e tudo
+# virava um balão só. Em 101 respostas dele, 89 vinham sem quebra de linha e 24
+# usavam emoji como divisor.
+_EMOJI = "[\U0001F300-\U0001FAFF☀-➿⬀-⯿\U0001F900-\U0001F9FF™ℹ]️?"
+_EMOJI_BOUNDARY_RE = re.compile(
+    rf"((?:{_EMOJI}\s*)+)\s+(?=[A-ZÀ-Ý]|(?:mas|a[íi]|e vo?c[eê]|só que|agora|aliás|falando nisso)\b)",
+    re.IGNORECASE,
+)
+
+
 def _split_sentences(text):
-    """Sentence tokens keeping terminators. Good enough for chat PT-BR."""
+    """Sentence tokens keeping terminators. Good enough for chat PT-BR.
+
+    Emoji seguido de nova oração também fecha a batida (_EMOJI_BOUNDARY_RE)."""
     sentences = re.findall(r'[^.!?…]+[.!?…]+|[^.!?…]+$', text)
-    return [s.strip() for s in sentences if s.strip()]
+    out = []
+    for sentence in sentences:
+        for part in _EMOJI_BOUNDARY_RE.sub(r"\1\n", sentence).split("\n"):
+            part = part.strip()
+            if not part:
+                continue
+            # Emoji sozinho pertence à batida anterior ("…agora? 🤨"), senão a
+            # regra de pergunta cortava e o 🤨 virava um balão só de emoji.
+            if out and not re.sub(_EMOJI_RUN_RE, "", part).strip():
+                out[-1] = f"{out[-1]} {part}"
+            else:
+                out.append(part)
+    return out
 
 
 def _balanced_split_index(sentences):
@@ -291,6 +325,16 @@ def _semantic_split(text, policy):
                 'interjection_then_question',
             )
         return [sentences[0], ' '.join(rest).strip()], 'interjection_lead'
+
+    # 1.5) Emoji fechando uma batida: foi o próprio modelo marcando o pivô
+    #      ("Bom dia, amor 😘" + "Bom trabalho pra você"). Vale em qualquer
+    #      tamanho — é intenção dele, não regra nossa de comprimento.
+    for i, sentence in enumerate(sentences[:-1]):
+        if re.search(rf"(?:{_EMOJI})\s*$", sentence):
+            first = ' '.join(sentences[:i + 1]).strip()
+            rest = ' '.join(sentences[i + 1:]).strip()
+            if len(first) >= 12 and len(rest) >= 12:
+                return [first, rest], 'emoji_pivot'
 
     # 2) Statement(s) -> closing question: "Que legal amor. Como foi?" -> two.
     if sentences[-1].rstrip().endswith('?') and not sentences[0].rstrip().endswith('?'):
@@ -332,7 +376,28 @@ def _semantic_split(text, policy):
             if len(first) >= 12 and len(rest) >= 8:
                 return [first, rest], 'conjunctive_pivot'
 
-    # 6) Length overflow. A very long turn (>2x soft) with enough sentences
+    # 6) Duas batidas claras num turno casual: informação e comentário, saudação
+    #    e desejo, fato e reação. O Luna escreve corrido; humano manda em dois.
+    #    Curto demais continua num balão só.
+    if policy.mode in ('casual_short', 'normal') and len(sentences) >= 2 and len(text) >= 70:
+        # Variação determinística (mesma fala → mesma decisão): gente não quebra
+        # sempre. ~3 de 4 vão em dois balões; nas falas longas, às vezes três.
+        roll = int(hashlib.sha256(text.encode('utf-8')).hexdigest()[:8], 16) % 100
+        if len(sentences) >= 3 and len(text) >= 150 and roll < 35:
+            third = max(1, len(sentences) // 3)
+            trio = [' '.join(sentences[:third]).strip(),
+                    ' '.join(sentences[third:2 * third]).strip(),
+                    ' '.join(sentences[2 * third:]).strip()]
+            if all(len(part) >= 15 for part in trio):
+                return trio, 'casual_three_beats'
+        if roll < 78:
+            idx = _balanced_split_index(sentences)
+            first = ' '.join(sentences[:idx]).strip()
+            rest = ' '.join(sentences[idx:]).strip()
+            if len(first) >= 20 and len(rest) >= 20:
+                return [first, rest], 'casual_two_beats'
+
+    # 7) Length overflow. A very long turn (>2x soft) with enough sentences
     # gets 3 bubbles; a moderately long one gets 2.
     if len(text) > policy.soft_char_limit:
         if len(text) > policy.soft_char_limit * 2 and len(sentences) >= 4:
