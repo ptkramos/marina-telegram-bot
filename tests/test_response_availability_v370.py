@@ -106,6 +106,20 @@ class AvailabilityPolicyTests(unittest.TestCase):
         self.assertEqual(urgent.decision, 'DEFER')
         self.assertGreaterEqual(urgent.selected_target_at, expected)
 
+    def test_bom_dia_de_madrugada_e_respondido_quando_ela_acorda(self):
+        """Soak 22/09: 'bom dia' às 05:37 (dia de aula, acorda às 07:00) foi
+        agendado para 12:40 — o atraso era sorteado até 8 h depois da mensagem."""
+        now = datetime(2026, 9, 22, 5, 37)
+        self._snap(activity='dormindo', reason='class_day_sleep', observed=now)
+        with patch.multiple(settings, CALENDAR_CONTINUITY_ENABLED=False,
+                            CRITICAL_WAKE_POLICY_ENABLED=False):
+            targets = [self.policy.evaluate('bom dia amor', now=now, telegram_message_id=900 + i)
+                       .selected_target_at for i in range(20)]
+        for target in targets:
+            self.assertGreaterEqual(target, datetime(2026, 9, 22, 7, 5))
+            self.assertLessEqual(target, datetime(2026, 9, 22, 7, 36))
+        self.assertGreater(len(set(targets)), 1, "o tempo de pegar o celular varia por mensagem")
+
     def test_patch_015_stale_sleeping_snapshot_still_protects_sleep(self):
         """Reproduce the 20/09 01:27 bug: last snapshot said 'dormindo' 78 min
         earlier (stale > 60 min), we are still inside light_day_sleep window.

@@ -28,6 +28,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **C.1** Modo sexting | ✅ conversa · ⬜ fotos | `intimacy.py` + migration 021: excitação em minutos, degraus da biblioteca, troca para `LLM_INTIMATE_MODEL`, clímax, pós-clímax, corte e despedida; ciclo pesa na libido. **C.1b** (fotos explícitas escalonadas pelo nível de excitação) pendente |
 | **C.2** Assistir junto (watch-along) | ⬜ | nada implementado |
 | **C.3** Rituais de namorada (bom dia, boa noite, foto do banho) | ⬜ | pronto para começar: a agenda (#4) sabe quando ela acorda e dorme, e as emoções não saturam mais (#5) |
+| **C.4** Locomoção viva (uber, a pé, ônibus/metrô, carona) | ⬜ | registrado em 22/09; tabela de trajetos primeiro, Distance Matrix API depois (resolve a pendência 5) |
 | **C** Consolidação | 🟡 | **C1:** o rótulo `[COMO O PATRICK ESCREVE]` e os campos estão em pt-BR (#2 e #7), mas ainda é descrição ("risada: kkkk"), não amostras reais das mensagens dele. **C2** e **C3** ⬜ |
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
@@ -73,7 +74,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | 2 | Perda de coerência entre turnos (6 capturas de `/ruim`): observar depois do restart, com `[COMO NÃO SOAR]` e o mundo vivo ativos | Auditoria #3 |
 | 3 | Qualidade das mensagens espontâneas geradas pelo modelo: só dá pra medir em conversa real (usar `/bom` e `/ruim` nelas) | Auditoria #6 |
 | 4 | ~~Evento "médico" com o texto cru~~ → corrigido na causa (Auditoria #8). O registro ruim sai com o reset do soak | ✅ resolvido |
-| 5 | Deslocamento como estado: a volta da PUC ainda é instantânea | Auditorias #5 e #6 |
+| 5 | Deslocamento como estado: a volta da PUC ainda é instantânea. **Ampliado pelo Patrick (22/09):** a locomoção vira vida — uber, a pé, transporte público, carona. Deslocamento cria janelas pra conversar (ônibus, uber) e ganchos de história (carona com a Bia, metrô lotado, uber que errou o caminho). Primeiro com tabela de trajetos + pico; depois tempo real pela Distance Matrix API (distancematrix.ai, chave no `.env`, cache por trajeto). Ver Fase C.4 | Auditorias #5 e #6 + Patrick |
 | 6 | `KnowledgeDialogue` responde com frase pronta (sem modelo) quando há assunto registrado. Hoje está dormente | Auditoria #6 |
 | 7 | Câmera e fator proativo leem o estado com regra própria de 60 min (os slots vão até 90) | Auditoria #4 |
 | 8 | Código morto da proatividade antiga (`determine_proactive_prompt`, anúncio, contexto neutro): apagar ou reaproveitar | Auditoria #6 |
@@ -380,6 +381,19 @@ travadas em 1,0.
 
 **Trabalho estimado:** 1 sessão para bom dia / boa noite; 1 para a foto
 (critério de humor + pipeline visual + testes de frequência).
+
+### Fase C.4 — Locomoção viva ⬜ (aberto por Patrick em 2026-09-22 12:20)
+
+**Pedido:** "a gente aproveita as locomoções dela, de uber, a pé, transporte público, carona, isso tudo cria margem pra ela ter tempo entre os compromissos pra conversar e pra criar histórias."
+
+**Ideia:**
+- **Deslocamento como slot da agenda** (hoje ela "teleporta" entre casa, PUC, academia e bares). Cada trajeto tem modo, duração e disponibilidade próprios: no ônibus/metrô/uber ela conversa (celular na mão, respostas curtas ou médias); a pé, menos; dirigindo nunca (ela não dirige, a não ser que o cânone diga o contrário).
+- **Escolha do modo:** sorteio determinístico por dia, pesado por hora, clima (já existe), dinheiro do mês, cansaço e companhia (carona com Bia/Theo quando vão ao mesmo lugar, ligando com o `social_day`).
+- **Ganchos de história:** metrô lotado, uber que errou o caminho, encontrar alguém no caminho, chuva sem guarda-chuva. Entram como `life_events` pequenos, que ela pode contar.
+- **Tempo:** primeiro uma tabela local de trajetos com fator de pico; depois, opcional, a **Distance Matrix API** (distancematrix.ai) para tempo real com trânsito. Consulta por trajeto com cache, nunca por mensagem; se a API falhar, cai na tabela.
+- **Disponibilidade:** novo tipo `COMMUTE` no `response_availability`, com perfil próprio (resposta média, atraso curto).
+
+**Dependências:** agenda (#4) ✅, dia social (#6) ✅. Resolve a pendência 5.
 
 ### Fase C — Consolidação 🟡 (C1 parcial; C2/C3 pendentes)
 - **C1** Substituir `[LEARNED STYLE]` (meta-descrição) por `[COMO O PATRICK

@@ -202,7 +202,14 @@ class ResponseAvailabilityPolicy:
                     delay_s = 0 if decision == 'REPLY_NOW' else min(delay_s, 60)
 
         if sleep_protected and sleep_until is not None:
-            delay_s = max(delay_s, math.ceil((sleep_until - local_naive(now)).total_seconds()))
+            # Soak 22/09: "bom dia" às 05:37 foi agendado para 12:40. O atraso de
+            # sono era sorteado entre 30 min e 8 h a partir da MENSAGEM, e o
+            # despertar só servia de piso — ela acordou às 07:00 e respondeu ao
+            # meio-dia. Quem escreve enquanto ela dorme é respondido quando ela
+            # pega o celular ao acordar (5–35 min depois do despertar).
+            digest = hashlib.sha256(f"wake:{seed_value}".encode()).digest()
+            wake_lag_s = 300 + int(1800 * int.from_bytes(digest[:8], 'big') / 2**64)
+            delay_s = math.ceil((sleep_until - local_naive(now)).total_seconds()) + wake_lag_s
 
         target = local_naive(now) + timedelta(seconds=delay_s)
         window_start = local_naive(now) + timedelta(seconds=max(0, int(profile['soft_delay_min_s'])))
