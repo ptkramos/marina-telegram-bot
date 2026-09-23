@@ -789,6 +789,16 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - **dentro do banho ela não pega o celular**: a availability adia a resposta até ela **sair do banho e se vestir** (fim do banho + 2–8 min);
   - o estado atual não diz mais "você AVISOU o Patrick" quando ela não avisou.
 
+### "Ela tá mais confusa que o normal" (23/09, 18h30) ✅ — sem reset de soak
+
+| Achado nos logs | Efeito | Correção |
+|---|---|---|
+| **Planner cortado**: `max_tokens=350` e o JSON do plano com ~1.200 caracteres. O schema cresceu hoje (`patrick_event`, `resposta`). A partir das 18:10, **13 de 14 turnos** caíram no "plano de contingência" | Sem intenção, tom, evento, loop, emoção, reação, "só reagir"… ela respondia no escuro | `PLANNER_MAX_TOKENS = 900` (6ec73ce) |
+| **Busca web quebrada desde a 3.7.0**: `format_web_evidence` nunca foi importado em `bot.py` → `NameError` em toda busca | Pergunta de fato atual ficava sem evidência | Import adicionado |
+| "Ainda não (papei)" às 14:52, com almoço registrado às 13:16 | Deslize do modelo: o bloco de comida no prompt estava certo (conferido no banco) | — |
+
+Não precisa reset do soak: o banco está coerente. Era o planner.
+
 ### Reações e "só uma reação basta" (23/09, fim de tarde) ✅ — caderno de feedback do Patrick
 
 | Feedback (caderno) | Causa | O que foi feito |
