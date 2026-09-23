@@ -29,6 +29,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **C.2** Assistir junto (watch-along) | ⬜ | nada implementado |
 | **C.3** Rituais de namorada (bom dia, boa noite, cotidiano) | ✅ | `rituals.py` + job de 5 min: bom dia ao acordar, boa noite antes de deitar, momentos do cotidiano (saiu da aula, Milo, academia, banho) com teto de 2/dia; o banho vira estado `SHOWER` e ela some de verdade. Foto do banho espera o motor de imagem (C.1b) |
 | **C.4** Locomoção viva (uber, a pé, ônibus/metrô, carona) | ✅ tabela + API + carona | `commute.py`: ida e volta da PUC e das saídas viram estado ("voltando da PUC pra casa de ônibus"), modo sorteado por dia (pico, noite, chuva, fim de mês, cansaço, uber dividido com a amiga), imprevistos viram acontecimento do dia. Minutos pela Distance Matrix API quando há `DISTANCE_MATRIX_KEY` (1 consulta por trecho), tabela como reserva. Carona com o Theo (cânone: ele tem carro) |
+| **D** Rotina viva (refeições, sono, Milo, noite, faculdade, fim de semana, casa, freela) | 🟡 | Tabela desenhada com o Patrick em 22/09 (seção Fase D). Feito: banho como rotina (D4) e refeição prometida vira estado (parte de D1) |
 | **C** Consolidação | 🟡 | **C1:** o rótulo `[COMO O PATRICK ESCREVE]` e os campos estão em pt-BR (#2 e #7), mas ainda é descrição ("risada: kkkk"), não amostras reais das mensagens dele. **C2** e **C3** ⬜ |
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
@@ -413,6 +414,73 @@ travadas em 1,0.
 - **Disponibilidade:** novo tipo `COMMUTE` no `response_availability`, com perfil próprio (resposta média, atraso curto).
 
 **Dependências:** agenda (#4) ✅, dia social (#6) ✅. Resolve a pendência 5.
+
+### Fase D — Rotina viva 🟡 (aberta por Patrick em 2026-09-22, desenhada junto)
+
+**Pedido:** "de tudo isso que você sugeriu a gente monta uma tabela certinha JUNTOS, e depois vai implementando na ordem que você julgar melhor. Vamos dar vida dinâmica e realmente vivida pra nossa Marininha."
+
+**Por quê:** no soak de 22/09 ela não tinha o que contar numa viagem de 2 h ao lado dele, e na arena de iniciativa (`companhia_caminho`) **inventou um jantar** ("arroz, feijão e franguinho") que não existia no mundo. Mundo pobre → conversa em eco e invenção. Cada item abaixo vira estado + disponibilidade + acontecimento do dia que ela pode contar.
+
+**Regra comum:** tudo determinístico por dia (mesma data, mesma agenda), com variação real entre dias; nada inventado pelo modelo — o modelo só conta o que o mundo registrou.
+
+| # | Sistema | Hoje | Proposta | O que ela ganha pra contar | Status / decisão do Patrick |
+|---|---|---|---|---|---|
+| D1 | **Refeições** | Só existem se ela promete ("vou jantar agora", `meals.py`) | Café, almoço e jantar como rotina do dia, com horário que varia; em dia de aula o almoço é na PUC; às vezes pula o café, às vezes pede iFood; promessa continua funcionando | "almocei no bandejão com a Bia", "pedi um poke" | 🟡 promessa feita (22/09); rotina ⬜ |
+| D2 | **Sono variável** | Deita **meia-noite em ponto**, acorda 07:00 ou 08:30 fixos | Hora de deitar varia (série, trabalho, rolê, ansiedade); com compromisso cedo ela **tenta** dormir 8 h e quase sempre dorme menos; sexta/sábado estica; déficit de sono vira energia baixa e cochilo no dia seguinte; às vezes demora a pegar no sono | "dormi 5h, tô um zumbi", "capotei no sofá à tarde" | ⬜ Patrick: "o sono dela é variado… com compromisso tento dormir 8 h, geralmente durmo menos" |
+| D3 | **Micro-despertares** | Sono binário (= Fase B.6) | Desenho da B.6: banheiro, sede, sonho ruim, celular por reflexo; 0–2 por noite; resposta curtinha e volta a dormir | "acordei pra beber água e vi tua mensagem" | ⬜ desenho aprovado em 20/09 |
+| D4 | **Banho** | Só existia se a mensagem saísse → 0 banhos em 22/09 | Rotina do mundo: todo dia à noite + depois da academia (≥ 3 h entre banhos); aviso opcional, sempre com conversa rolando; "vou tomar banho" dito na conversa vira banho | "tava no banho" | ✅ 22/09 |
+| D5 | **Milo** | 1 passeio por dia | 2–3 saídas: manhã, fim de tarde e xixi rápido antes de dormir; às vezes ele apronta (comeu algo, latiu pro vizinho) | "o Milo roubou minha meia" | ⬜ |
+| D6 | **Noite em casa** | Bloco vazio de 5 h: "curtindo a noite em casa" | Fatiar em atividades: trabalho da faculdade, série/filme, skincare, rolar o celular, ligação com a família, arrumar o quarto | "tô vendo [série]", "fazendo o trabalho de Tipografia" | ⬜ |
+| D7 | **Faculdade além da aula** | Só a grade | Trabalhos e entregas com prazo, provas, grupo de trabalho com colegas; véspera de entrega muda o sono e a noite | "entrego sexta e não comecei" | ⬜ |
+| D8 | **Fim de semana** | Quase igual a dia útil | Acorda tarde, brunch, praia, rolê sábado à noite, domingo preguiçoso, família | "ressaca de domingo" | ⬜ |
+| D9 | **Casa e vida adulta** | Não existe | Mercado, lavar roupa, arrumar, conta de luz, iFood no fim do mês apertado | "fui no mercado e esqueci o que fui comprar" | ⬜ |
+| D12 | **Laços** (pai, Bia, Patrick) | Pai 30% por dia útil, Bia 80% de **uma** mensagem, proatividade com o Patrick por roleta (20%/20 min, teto 4, 2 h de intervalo) → em 22/09: 0 contato com pai e Bia, 0 iniciativa espontânea | Pai **todo dia** (mensagem de manhã, ligação algumas noites; pergunta se comeu, se chegou, se o dinheiro dá); Bia **várias trocas ao longo do dia**; Patrick: saudade como necessidade — se ele some e ela está livre, ela procura, cada vez mais; com ele ocupado, respeita | "meu pai me ligou perguntando se eu tô comendo", "a Bia me mandou um áudio de 5 min", "sumiu hein" | ⬜ pedido do Patrick em 23/09; vai junto com D1 na frente. **Decidido:** o pai liga quando está livre e manda mensagem quando está ocupado; checa a Marina pelo menos 1×/dia; banca mercado e comida sem ela pedir. Patrick: **sem teto de procura** — é o emocional que decide; de bobeira e sozinha, ele é a primeira pessoa que ela procura |
+| D10 | **Freela de modelo** | Agência da Lívia existe, quase não aparece | Casting/ensaio esporádico, prova de roupa, cachê no fim do mês | "fiz um casting pra marca de biquíni" | ⬜ |
+
+#### D1 detalhado — Fome viva (desenhado com o Patrick, 22–23/09)
+
+| # | Peça | Como funciona |
+|---|---|---|
+| 1 | Apetite (emoção nova) | Sobe com o tempo desde a última refeição; base "glutoninha fofa". Academia, aula puxada e calor aceleram; ansiedade/tristeza fazem beliscar ou perder a fome; rolê e felicidade fazem comer mais; TPM puxa doce |
+| 2 | Refeições | Café, almoço e jantar sem horário fixo: janela plausível, e o momento sai da fome + o que a agenda deixa. Ela se vira pra encaixar |
+| 3 | Lanchinhos | Por fome ou vontade; mais nas saídas; série à noite, TPM |
+| 4 | Peso dinâmico | 1,68 m (cânone), base **54 kg**; muda devagar pelo saldo da semana (comida × treino). Ela só sabe quando se pesa |
+| 5 | Bronca da agência | A Lívia cobra se o peso sai da faixa antes de casting/ensaio |
+| 6 | Dieta curta | Dias de dieta depois da bronca: mais fome, mau humor, mais academia |
+| 7 | Esquecer de comer e cobrança | Ela esquece em dia corrido; o Patrick cobra e ela cobra ele. A cobrança é registrada no mundo |
+| 8 | Mentirinha e drama | Conforme o humor, com fome ela diz "já beliscei" ou "tô sem fome". O mundo sabe a verdade; o modelo recebe "você está com fome, mas hoje está no modo de disfarçar" |
+| 9 | Cozinhar e aprender | Cozinha o básico; às vezes busca uma receita e aprende (vira habilidade); manda foto quando acha que ficou bonito (depende do motor de imagem, C.1b) |
+| 10 | Onde come | **Time iFood** (o pai banca a comida, então o fim do mês não corta); cozinha em casa; na PUC, restaurante do campus ou Shopping da Gávea (rápido quando o tempo está curto, com calma quando está de boa, sozinha ou com amigas) |
+| 11 | Job perdido pelo peso | Fora da faixa, perde o ensaio que queria (o mundo já permite ela querer ou não um job) → frustração no emocional |
+
+**Cânone de comida:** ama japonesa, massas, pizza, hambúrguer, brunch, doces e **açaí**; odeia muita pimenta, jiló e "comida estranha"; novos amores surgem pela convivência (`preference_evidence` já existe).
+
+**Decisões do Patrick (23/09):**
+- Faixa de peso aprovada (abaixo).
+- Entram: fome mexe no humor ("desculpa, eu tava com fome kkk") e comer "junto" à distância como ritual de casal.
+- **Café da manhã** (a refeição) existe sempre, com horário e tamanho variando; o **café** (a bebida) é paixão dela e à parte: sem café de manhã, sono e pouca paciência.
+- **O pai banca mercado e comida** sem ela pedir: o fim do mês **não** aperta a comida (o iFood não diminui). O aperto do fim do mês continua valendo só pro resto (uber do C.4, compras).
+
+**Faixa de peso:** a agência reclama acima de **56 kg**. Abaixo de **52 kg** quem se preocupa é a saúde dela, não a agência: cansaço, tontura na academia, amigas e o Patrick percebendo. Nenhum lado recompensa emagrecer.
+
+**Estacionado para outras fases** (ideias do Patrick que não são D1):
+- Faltar aula por conta própria (preguiça, cansaço, cólica forte), com o Patrick perguntando por quê → D7.
+- Perder ou se atrasar para aula e compromisso por trânsito e imprevisto → C.4 + D7.
+- Cólica insuportável → fica em casa, liga com o ciclo → D11 (saúde e ciclo) a desenhar.
+
+**Ordem de implementação (decisão minha, como combinado):**
+1. **D1 refeições + D12 laços** — a arena provou que sem refeição ela inventa; sem pai, Bia e saudade ela não tem o que contar nem por que procurar o Patrick. D12 é recalibração de motores que já existem.
+2. **D2 + D3 sono** — mesma engrenagem (janela de sono); o déficit de sono alimenta energia e humor de tudo o resto.
+3. **D5 Milo** — pequeno, e dá assunto todo dia.
+4. **D6 + D7 noite e faculdade** — o maior ganho de conversa: a noite é quando ele fala com ela.
+5. **D8 fim de semana**, **D9 casa**, **D10 freela**.
+
+**Perguntas em aberto para o Patrick** (ele responde solto, eu transformo em regra):
+- D1: ela cozinha ou é mais de iFood/bandejão? Tem comida que ela odeia?
+- D2: ela também tem dificuldade de dormir às vezes, ou é de capotar? Ela cochila à tarde?
+- D5: o Milo é de que porte/raça? Ela paga passeador em dia puxado?
+- D6: que séries/filmes ela vê (títulos reais)? Ela liga pra quem da família, e com que frequência?
+- D8: como é um sábado e um domingo dela?
 
 ### Fase C — Consolidação 🟡 (C1 parcial; C2/C3 pendentes)
 - **C1** Substituir `[LEARNED STYLE]` (meta-descrição) por `[COMO O PATRICK
