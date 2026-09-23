@@ -59,6 +59,57 @@ def _resolve_db_file() -> Path:
 
 
 DB_FILE = _resolve_db_file()
+
+
+# 23/09 — suíte 50 min → rápida. Cada acesso ao banco abria e fechava uma
+# conexão; num Windows isso custa ~1 ms por abertura, e simular um dia de rotina
+# abre milhares (8,1 s por dia simulado; com reaproveitamento, 0,1 s). Em
+# produção o bot já reaproveita. Nos testes estava desligado porque conexão
+# aberta impede apagar a pasta temporária no Windows — então, sob teste, as
+# conexões de bancos dentro de uma pasta são fechadas logo antes de ela ser
+# apagada (TemporaryDirectory e shutil.rmtree).
+_TEST_MANAGERS: "weakref.WeakSet[DatabaseManager]"
+
+
+def close_connections_under(path) -> None:
+    """Fecha as conexões reaproveitadas de bancos dentro de `path` (só testes)."""
+    try:
+        root = Path(path).resolve()
+    except (OSError, TypeError, ValueError):
+        return
+    for manager in list(_TEST_MANAGERS):
+        try:
+            if root == manager.db_path.resolve() or root in manager.db_path.resolve().parents:
+                manager.close()
+        except Exception:
+            pass
+
+
+def _install_test_cleanup_hooks() -> None:
+    import shutil
+    import tempfile
+    import weakref
+    global _TEST_MANAGERS
+    _TEST_MANAGERS = weakref.WeakSet()
+    original_rmtree = tempfile.TemporaryDirectory._rmtree
+
+    def _rmtree(cls, name, *args, **kwargs):
+        close_connections_under(name)
+        return original_rmtree.__func__(cls, name, *args, **kwargs)
+
+    tempfile.TemporaryDirectory._rmtree = classmethod(_rmtree)
+    original_shutil_rmtree = shutil.rmtree
+
+    def _shutil_rmtree(path, *args, **kwargs):
+        close_connections_under(path)
+        return original_shutil_rmtree(path, *args, **kwargs)
+
+    shutil.rmtree = _shutil_rmtree
+
+
+_REUSE_IN_TESTS = _running_under_tests()
+if _REUSE_IN_TESTS:
+    _install_test_cleanup_hooks()
 MIGRATIONS_DIR = BASE_DIR / "migrations"
 
 class _ManagedConnection:
@@ -138,6 +189,9 @@ class DatabaseManager:
         self._thread_conn = local()
         self._open_conns: list[sqlite3.Connection] = []
         self._open_conns_lock = Lock()
+        if _REUSE_IN_TESTS:
+            self._reuse = True
+            _TEST_MANAGERS.add(self)
         self._init_db()
 
     def _open(self) -> sqlite3.Connection:
