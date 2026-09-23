@@ -63,6 +63,6 @@ class TestBootstrap(unittest.TestCase):
             c.execute('DELETE FROM schema_version WHERE version>=9')
         result = bootstrap(self.path, **self.kw)
         self.assertEqual(result['source_schema'], 8)
-        self.assertEqual(self.db.get_schema_version(), 23)
+        self.assertEqual(self.db.get_schema_version(), 24)
         with sqlite3.connect(result['backup']) as c:
             self.assertEqual(c.execute('SELECT MAX(version) FROM schema_version').fetchone()[0], 8)

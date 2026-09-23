@@ -111,3 +111,9 @@ Módulos testados:
 ## 📄 Licença & Privacidade
 
 Projeto privado e de uso pessoal desenvolvido exclusivamente para o casal Patrick Ramos & Marina Salles. Todos os dados de conversas, memórias e credenciais permanecem protegidos localmente em SQLite e variáveis de ambiente isoladas.
+
+## 🎬 Créditos
+
+Os dados de filmes, séries, animes e doramas (títulos, episódios, recomendações e onde assistir no Brasil) vêm do [TMDB](https://www.themoviedb.org/) (logo e regras de atribuição: https://www.themoviedb.org/about/logos-attribution).
+
+*This product uses the TMDB API but is not endorsed or certified by TMDB.*

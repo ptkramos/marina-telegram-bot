@@ -43,6 +43,9 @@ DISCOVERY_POOL = (
 # Obra citada pelo Patrick (episódios, minutos) — sem catálogo, um tamanho típico.
 MENTION_DEFAULTS = {"anime": (12, 24), "série": (8, 45), "dorama": (16, 65), "filme": (1, 110)}
 MENTION_PRIORITY = 0.65          # na próxima escolha, o que ele falou costuma ganhar
+TMDB_DISCOVERY_SHARE = 0.65      # com TMDB: 65% das descobertas vêm dele, o resto da lista fixa
+MAX_EPISODES = 60                # obra enorme não vira "o que ela está vendo"
+FOLLOWED_ONGOING = ("One Piece", "Dandadan")   # ela acompanha: episódio novo vira notícia
 ONE_PIECE = ("One Piece", "anime", 1100, 24)
 ONE_PIECE_START_EP = 95          # começou por causa do Patrick; está no começo de Alabasta
 ONE_PIECE_NIGHT_CHANCE = 0.3
@@ -92,9 +95,22 @@ class Watching:
                 "SELECT value FROM character_preferences WHERE character_key='marina' AND category LIKE 'watched_%'")}
         if title.casefold() in known:
             return False
-        data.setdefault("patrick_mentions", []).append(
-            {"title": title, "kind": kind if kind in MENTION_DEFAULTS else "série",
-             "at": (now or datetime.now()).isoformat()})
+        entry = {"title": title, "kind": kind if kind in MENTION_DEFAULTS else "série",
+                 "at": (now or datetime.now()).isoformat()}
+        # D6 parte 2: com o TMDB, a obra vira dado real (título oficial, episódios,
+        # duração) — e o que não existe não entra.
+        from tmdb import TMDB, UNAVAILABLE
+        tmdb = TMDB(self.db)
+        if tmdb.available():
+            info = tmdb.find(title, entry["kind"])
+            if info is None:
+                return False
+            if info is not UNAVAILABLE:
+                if info["title"].casefold() in known:
+                    return False
+                entry.update(title=info["title"], kind=info["kind"], episodes=info["episodes"],
+                             minutes=info["minutes"], tmdb=[info["media"], info["id"]])
+        data.setdefault("patrick_mentions", []).append(entry)
         data["patrick_mentions"] = data["patrick_mentions"][-10:]
         self._save(data)
         return True
@@ -104,10 +120,15 @@ class Watching:
         rng = _rng(day, f"descoberta:{len(finished)}")
         if mentions and rng.random() < MENTION_PRIORITY:
             m = mentions[0]
-            eps, minutes = MENTION_DEFAULTS[m["kind"]]
-            return {"title": m["title"], "kind": m["kind"], "episodes": eps, "minutes": minutes, "ep": 0,
-                    "why": "o Patrick falou dele e ela ficou curiosa", "started": day.isoformat(),
-                    "from_patrick": True}
+            eps, minutes = m.get("episodes"), m.get("minutes")
+            if not eps:
+                eps, minutes = MENTION_DEFAULTS[m["kind"]]
+            return self._with_where({"title": m["title"], "kind": m["kind"], "episodes": min(eps, MAX_EPISODES),
+                                     "minutes": minutes, "ep": 0, "why": "o Patrick falou dele e ela ficou curiosa",
+                                     "started": day.isoformat(), "from_patrick": True, "tmdb": m.get("tmdb")})
+        live = self._pick_from_tmdb(finished, day, rng)
+        if live:
+            return live
         options = [t for t in DISCOVERY_POOL if t[0] not in finished]
         if not options:
             options = list(DISCOVERY_POOL)
@@ -116,6 +137,58 @@ class Watching:
         title, kind, eps, minutes, why = rng.choices(options, weights=weights, k=1)[0]
         return {"title": title, "kind": kind, "episodes": eps, "minutes": minutes, "ep": 0,
                 "why": why, "started": day.isoformat()}
+
+    # --------------------------------------------------------------- TMDB --
+    def _seen_titles(self, finished: list) -> set:
+        with self.db.get_connection() as conn:
+            canon = {r[0].split(" (")[0].casefold() for r in conn.execute(
+                "SELECT value FROM character_preferences WHERE character_key='marina' AND category LIKE 'watched_%'")}
+        return canon | {t.casefold() for t in finished}
+
+    def _pick_from_tmdb(self, finished: list, day: date, rng: random.Random) -> Optional[dict]:
+        """Descoberta viva: parecido com o que ela amou, ou em alta no streaming do Brasil."""
+        from tmdb import TMDB, UNAVAILABLE
+        tmdb = TMDB(self.db)
+        if not tmdb.available() or rng.random() >= TMDB_DISCOVERY_SHARE:
+            return None
+        seen = self._seen_titles(finished)
+        with self.db.get_connection() as conn:
+            loved = [(r[0].split(" (")[0], r[1]) for r in conn.execute(
+                """SELECT value, category FROM character_preferences WHERE character_key='marina' AND active=1
+                   AND category IN ('watched_anime','watched_series','watched_dorama') AND strength >= 0.8""")]
+        candidates = []
+        if loved and rng.random() < 0.65:
+            seed, category = rng.choice(loved)
+            hint = {"watched_anime": "anime", "watched_dorama": "dorama"}.get(category, "série")
+            info = tmdb.find(seed, hint)
+            if info and info is not UNAVAILABLE:
+                candidates = [(c, f"parecido com {seed}, que ela amou") for c in
+                              tmdb.recommendations(info["media"], info["id"])]
+        if not candidates:
+            kind = rng.choices(("anime", "série", "dorama"), weights=(3, 2, 1.5), k=1)[0]
+            candidates = [(c, "tá em alta no streaming aqui") for c in tmdb.popular_in_brazil(kind)]
+        candidates = [(c, why) for c, why in candidates if c["title"] and c["title"].casefold() not in seen]
+        rng.shuffle(candidates)
+        for cand, why in candidates[:5]:
+            info = tmdb.details(cand["media"], cand["id"])
+            if info is UNAVAILABLE or info["episodes"] > MAX_EPISODES:
+                continue          # 300 episódios de Bleach não viram "o que ela está vendo"
+            return self._with_where({"title": info["title"], "kind": info["kind"], "episodes": info["episodes"],
+                                     "minutes": info["minutes"], "ep": 0, "why": why, "started": day.isoformat(),
+                                     "tmdb": [info["media"], info["id"]]})
+        return None
+
+    def _with_where(self, item: dict) -> dict:
+        """Onde está passando no Brasil (TMDB), pra ela falar "tô vendo na Netflix"."""
+        if item.get("tmdb"):
+            from tmdb import TMDB
+            try:
+                where = TMDB(self.db).where_to_watch(*item["tmdb"])
+            except Exception:
+                where = []
+            if where:
+                item["where"] = where[0]
+        return item
 
     # ------------------------------------------------------------ noites --
     def night_plan(self, day: date) -> Optional[dict]:
@@ -148,12 +221,43 @@ class Watching:
         one_piece = rng.random() < ONE_PIECE_NIGHT_CHANCE
         return {"start": start, "bed": bed, "episodes": rng.choice((1, 2, 2, 3)), "one_piece": one_piece}
 
+    def new_episodes(self, now: datetime) -> int:
+        """Episódio novo de quem ela acompanha saiu hoje (TMDB) → acontecimento do dia."""
+        from tmdb import TMDB, UNAVAILABLE
+        tmdb = TMDB(self.db)
+        if not tmdb.available() or now.hour < 9:
+            return 0
+        followed = [(t, "anime") for t in FOLLOWED_ONGOING]
+        cur = self.state()["current"]
+        if cur.get("tmdb"):
+            followed.append((cur["title"], cur["kind"]))
+        created = 0
+        for title, hint in followed:
+            info = tmdb.find(title, hint)
+            if not info or info is UNAVAILABLE or info.get("next_air_date") != now.date().isoformat():
+                continue
+            ep = f" (temporada {info['next_season']}, ep. {info['next_episode']})" if info.get("next_episode") else ""
+            with self.db.get_connection() as conn:
+                cur_ins = conn.execute(
+                    """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,
+                       source_type,autonomy_level,importance,participants_json,share_worthy,created_at)
+                       VALUES (?,?,?,?,?,'simulated',1,0.1,?,0.4,?)""",
+                    (f"tv:novo:{info['id']}:{now.date().isoformat()}", now.isoformat(), "routine", "tv",
+                     f"Saiu episódio novo de {info['title']} hoje{ep}.", json.dumps(["marina"]), now.isoformat()))
+                conn.commit()
+                created += cur_ins.rowcount or 0
+        return created
+
     def materialize(self, now: datetime) -> int:
         from meals import Meals
         meals = Meals(self.db)
         floor = meals._floor(now)
         if floor is None:
             return 0
+        try:
+            self.new_episodes(now)
+        except Exception:
+            pass
         day = now.date()
         data = self.state()
         if day.isoformat() in data.get("done_days", []):
@@ -235,11 +339,12 @@ class Watching:
                 """SELECT value FROM character_preferences WHERE character_key='marina' AND active=1
                    AND category IN ('watched_series','watched_dorama','watched_anime') ORDER BY strength DESC""")]
         lines = ["[O QUE VOCÊ ASSISTE — real; não cite título fora desta lista]"]
+        onde = f", na {cur['where']}" if cur.get("where") else ""
         if cur["ep"]:
-            lines.append(f"- Vendo agora: {cur['title']} ({cur['kind']}), parou no episódio {cur['ep']} de "
+            lines.append(f"- Vendo agora: {cur['title']} ({cur['kind']}{onde}), parou no episódio {cur['ep']} de "
                          f"{cur['episodes']}. Começou porque: {cur['why']}.")
         else:
-            lines.append(f"- Quer começar: {cur['title']} ({cur['kind']}) — {cur['why']}.")
+            lines.append(f"- Quer começar: {cur['title']} ({cur['kind']}{onde}) — {cur['why']}.")
         lines.append(f"- One Piece: está no episódio {data.get('one_piece_ep', ONE_PIECE_START_EP)} "
                      "(começou por causa do Patrick; ele manja muito mais).")
         mentions = [m["title"] for m in data.get("patrick_mentions", [])]

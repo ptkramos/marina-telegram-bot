@@ -85,6 +85,11 @@ class Settings:
     # Fases D2/D3/D13 — sono variável, micro-despertares e manhã de trás pra frente (sleep_plan.py).
     # false = volta às janelas fixas do cânone (00:00–06:59 / 00:00–08:29).
     SLEEP_PLAN_ENABLED: bool = os.getenv("SLEEP_PLAN_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
+    # Fase D6 parte 2 — TMDB (títulos reais, episódios, recomendações, onde assistir no Brasil).
+    # Uso não comercial com crédito ao TMDB. Sem chave, vale a lista fixa do watch.py.
+    TMDB_API_KEY: str = os.getenv("TMDB_API_KEY", "").strip()
+    TMDB_API_TOKEN: str = os.getenv("TMDB_API_TOKEN", "").strip()
+    TMDB_ENABLED: bool = os.getenv("TMDB_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
     # Fase C.4 — tempo real dos trajetos (distancematrix.ai). Sem chave, vale a tabela do commute.py.
     DISTANCE_MATRIX_KEY: str = os.getenv("DISTANCE_MATRIX_KEY", "").strip()
     COMMUTE_LIVE_TIMES: bool = os.getenv("COMMUTE_LIVE_TIMES", "true").strip().lower() in ("1", "true", "yes", "on")
