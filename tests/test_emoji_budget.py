@@ -125,8 +125,8 @@ class FeedbackNoPromptTests(unittest.TestCase):
         self.db.salvar_feedback("fb-emoji", "Não é necessário que toda mensagem termine com emojis")
         self.assertNotIn("[PEDIDOS DO PATRICK", self._prompt(), "23/09: /feedback é caderno, não ordem")
         from unittest.mock import patch
-        from config import settings
-        with patch.object(settings, "PATRICK_FEEDBACK_IN_PROMPT", True, create=True):
+        import world_context   # o settings que o world_context enxerga (a suíte recarrega config)
+        with patch.object(world_context.settings, "PATRICK_FEEDBACK_IN_PROMPT", True, create=True):
             prompt = self._prompt()
         self.assertIn("[PEDIDOS DO PATRICK", prompt)
         self.assertIn("toda mensagem termine com emojis", prompt)

@@ -243,7 +243,8 @@ class PendingCancellationTests(unittest.IsolatedAsyncioTestCase):
             llm.assert_called_once()
             self.assertTrue(any(m['content'] == bot.PHOTO_UNAVAILABLE_INSTRUCTION
                                 for m in llm.call_args.kwargs['messages']))
-            self.assertEqual(send.call_args.args[2], reply)
+            # sem o ponto que fecha o balão (chat_naturalness, 23/09)
+            self.assertEqual(send.call_args.args[2], reply.rstrip('.'))
             photo.assert_not_called()
 
     async def test_photo_and_avatar_maintenance_never_start_gpu(self):
