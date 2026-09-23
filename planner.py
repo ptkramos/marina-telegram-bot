@@ -398,6 +398,7 @@ Responda ESTRITAMENTE neste formato JSON (preserve exatamente os valores de enum
   "resolves_open_loop": false,
   "resolved_loop_hint": null,
   "shared_topic": "Assunto compartilhado ou null",
+  "media_mentioned": {"title": null, "kind": "anime|série|filme|dorama|jogo"},
   "emotional_deltas": {
     "affection": 0.0,
     "playfulness": 0.0,
@@ -415,12 +416,13 @@ REGRAS DURAS:
 5. reaction_emoji deve ser um emoji comum do Telegram, ou null.
 6. TODOS os campos de texto (response_goal, description, content, topics, follow_up_prompt, shared_topic) precisam estar em português brasileiro natural — NUNCA em inglês.
 7. NUNCA marque should_offer_reminder=true para eventos próximos (menos de 45 minutos a partir de agora).
+8. media_mentioned: só quando o Patrick CITA pelo nome um anime, série, filme, dorama ou jogo — copie o título exatamente como ele escreveu. Se ele não citou nenhum título, title=null. Nunca complete, traduza nem adivinhe título.
 """
 
 _PLAN_TEXT = ("intent", "tone", "response_goal", "shared_topic", "resolved_loop_hint")
 _PLAN_FLAGS = ("creates_event", "reminder_candidate", "should_offer_reminder",
                "creates_open_loop", "resolves_open_loop")
-_PLAN_OBJECTS = ("event_details", "direct_reminder", "open_loop_details")
+_PLAN_OBJECTS = ("event_details", "direct_reminder", "open_loop_details", "media_mentioned")
 
 
 def _sanitize_plan(data: Any) -> Dict[str, Any]:
@@ -564,6 +566,14 @@ class InternalPlanner:
                 )
                 raw_text = response.choices[0].message.content.strip()
                 data = _sanitize_plan(json.loads(raw_text))
+
+                # Fase D6: obra citada pelo Patrick só vale se o título está mesmo na
+                # mensagem dele — o planner não pode inventar nem completar título.
+                media = data.get("media_mentioned")
+                title = (media or {}).get("title") if isinstance(media, dict) else None
+                if not (isinstance(title, str) and len(title.strip()) >= 3
+                        and title.strip().casefold() in (user_message or "").casefold()):
+                    data["media_mentioned"] = None
 
                 # Validação antecipada de lembrete direto no plano (P1 - Rodada 3 / P0 - Rodada 4)
                 dir_rem = data.get("direct_reminder")
@@ -817,6 +827,15 @@ class InternalPlanner:
                 logger.info(f"Tópico compartilhado atualizado pelo Planner: {shared_topic.strip()}")
             except Exception as e:
                 logger.warning(f"Erro ao atualizar current_shared_topic: {e}")
+
+        # 4.1 Fase D6: anime/série/filme que o Patrick citou vira curiosidade dela.
+        media = plan.get("media_mentioned")
+        if isinstance(media, dict) and media.get("title"):
+            try:
+                from watch import Watching
+                Watching(self.db).add_patrick_mention(media["title"], media.get("kind"))
+            except Exception as e:
+                logger.warning(f"Erro ao registrar obra citada pelo Patrick: {e}")
 
         # 5. Aplica deltas emocionais com clamp automático
         deltas = plan.get("emotional_deltas", {})

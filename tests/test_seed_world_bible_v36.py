@@ -33,7 +33,12 @@ class TestWorldBibleSeed(unittest.TestCase):
         self.assertEqual(counts["world_characters"], expected["characters"])
         self.assertEqual(counts["world_places"], expected["places"])
         self.assertEqual(counts["routine_patterns"], expected["routines"])
-        self.assertEqual(counts["character_preferences"], expected["preferences"])
+        # Fase D6: a migration 023 grava o cânone de gostos (títulos) antes do seed.
+        with self.db.get_connection() as conn:
+            taste_canon = conn.execute("SELECT COUNT(*) FROM character_preferences "
+                                       "WHERE category LIKE 'watched_%' OR category='games'").fetchone()[0]
+        self.assertEqual(taste_canon, 20)
+        self.assertEqual(counts["character_preferences"], expected["preferences"] + taste_canon)
         self.assertEqual(counts["world_bootstrap"], 2)
         self.assertEqual(counts["story_threads"], 0)
         self.assertEqual(counts["knowledge_items"], 0)

@@ -85,6 +85,53 @@ class VariableSleepTest(_Base):
                                           self.plan.bed(day - timedelta(days=1))), self.plan.wake(day)))
 
 
+class FallingAsleepTest(_Base):
+    """Decisão do Patrick (23/09): pegar no sono depende do emocional, da saúde e do mundo."""
+
+    def _free_night(self):
+        return next(d for d in self.free_days if not self.plan._frozen(d)
+                    and self.plan.target_wake(d + timedelta(days=1)) is None)
+
+    def test_tired_body_sleeps_earlier(self):
+        day = self._free_night()
+        with patch.object(SleepPlan, "_approx_hours_slept", return_value=8.0), \
+             patch.object(SleepPlan, "_gym_on", return_value=False), \
+             patch.object(SleepPlan, "_phase_on", return_value="folicular"), \
+             patch("sleep_plan.ONSET_TROUBLE_CHANCE", 0.0):
+            rested, _ = SleepPlan(self.db)._onset(day, live=False)
+        with patch.object(SleepPlan, "_approx_hours_slept", return_value=5.0), \
+             patch.object(SleepPlan, "_gym_on", return_value=True), \
+             patch.object(SleepPlan, "_phase_on", return_value="menstrual"), \
+             patch("sleep_plan.ONSET_TROUBLE_CHANCE", 0.0):
+            tired, why = SleepPlan(self.db)._onset(day, live=False)
+        self.assertLess(tired, rested - 60)
+        self.assertTrue(any("capotou" in w for w in why))
+
+    def test_sometimes_she_takes_long_to_fall_asleep(self):
+        day = self._free_night()
+        with patch("sleep_plan.ONSET_TROUBLE_CHANCE", 1.0), \
+             patch.object(SleepPlan, "_approx_hours_slept", return_value=8.0):
+            delta, why = SleepPlan(self.db)._onset(day, live=False)
+        self.assertGreater(delta, 0)
+        self.assertTrue(any("demorou pra pegar no sono" in w for w in why))
+
+    def test_tonight_is_frozen_after_8pm(self):
+        """Uma emoção que muda de madrugada não pode mudar a noite que já começou."""
+        day = self._free_night()
+        at_night = datetime.combine(day, time(21, 0))
+        with patch("sleep_plan.datetime") as fake:
+            fake.now.return_value = at_night
+            fake.combine, fake.fromisoformat = datetime.combine, datetime.fromisoformat
+            first = SleepPlan(self.db).bed(day)
+        self.assertIsNotNone(self.plan._frozen(day))
+        with patch.object(self.db, "get_estado_emocional", return_value={"energy": {"valor": 0.05}}):
+            self.assertEqual(SleepPlan(self.db).bed(day), first)
+
+    def test_no_endless_chain_through_a_long_vacation(self):
+        with patch.object(SleepPlan, "target_wake", return_value=None):
+            SleepPlan(self.db).wake(date(2026, 12, 30))   # termina sem recursão infinita
+
+
 class MicroWakeTest(_Base):
     def test_zero_to_two_per_night_never_in_deep_sleep(self):
         counts = []

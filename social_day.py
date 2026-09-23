@@ -158,10 +158,6 @@ SECRET_CATEGORY = {"relacionamentos": "relationship", "crushes": "relationship",
 # disponibilidade fica SOCIAL e a bateria social gasta. (dia_da_semana, chance,
 # início, fim, lugar, amigos possíveis, texto)
 OUTINGS = (
-    (5, 0.65, time(21, 0), time(23, 59), "quartinho_bar", ("bia_andrade",), ("theo_martins",),
-     "Saindo com {quem} no Quartinho Bar"),
-    (6, 0.40, time(10, 0), time(13, 0), None, ("bia_andrade", "carol_menezes"), (),
-     "Praia com {quem}"),
     (4, 0.35, time(19, 30), time(22, 30), "quartinho_bar", ("theo_martins",), ("julia_azevedo",),
      "Saindo com {quem} no Quartinho Bar"),
     (2, 0.25, time(15, 30), time(16, 45), "starbucks_shopping_gavea", ("julia_azevedo",), (),
@@ -171,6 +167,21 @@ OUTINGS = (
 )
 BEACHES = ("copacabana_beach", "ipanema_beach", "leblon_beach")
 OUTING_HORIZON_DAYS = 6
+
+# Fase D8 — fim de semana (Patrick, 23/09): "ela é jovem, de uma bolha social com
+# boa condição; é normal receber convites dos amigos, mais ativos no fim de
+# semana — mas a decisão é dela, e o emocional é o que conta". Fim de semana
+# vira CONVITE: chega antes, e ela decide no dia pelo estado de agora.
+WEEKEND_INVITES = (
+    (5, 0.55, time(10, 0), time(13, 0), None, ("bia_andrade", "carol_menezes"), (), "Praia com {quem}"),
+    (5, 0.75, time(21, 0), time(23, 59), "quartinho_bar", ("bia_andrade",), ("theo_martins",),
+     "Saindo com {quem} no Quartinho Bar"),
+    (6, 0.45, time(10, 0), time(13, 0), None, ("bia_andrade", "carol_menezes"), (), "Praia com {quem}"),
+    (6, 0.40, time(15, 0), time(19, 0), "shopping_gavea", ("bia_andrade", "julia_azevedo"), (),
+     "Cinema e shopping com {quem} no Shopping da Gávea"),
+)
+INVITES_KEY = "convites_json"
+INVITE_BASE_YES = 0.65
 
 HOOK_CHANCE = 0.70  # dia com gancho; o StoryEngine ainda aplica cadência e orçamento
 CONTINUE_AFTER_DAYS = (1, 4)
@@ -443,6 +454,141 @@ class SocialDay:
                     continue  # aula, outro compromisso ou replay idêntico
         return created
 
+    # ------------------------------------------------------------- convites (D8)
+    def _invites(self) -> dict:
+        raw = self.db.get_estado_relacional().get(INVITES_KEY)
+        try:
+            return json.loads(raw) if raw else {}
+        except (TypeError, ValueError):
+            return {}
+
+    def _save_invites(self, data: dict, now: datetime) -> None:
+        cutoff = (now - timedelta(days=10)).isoformat()
+        data = {k: v for k, v in data.items() if v["start"] >= cutoff}
+        self.db.set_estado_relacional(INVITES_KEY, json.dumps(data, ensure_ascii=False))
+
+    def _invite_plan(self, day: date) -> list[dict]:
+        out = []
+        for index, (weekday, chance, start_t, end_t, place, core, extra, text) in enumerate(WEEKEND_INVITES):
+            if day.weekday() != weekday:
+                continue
+            rng = _rng(day, f"convite:{index}")
+            if rng.random() >= chance:
+                continue
+            start = datetime.combine(day, start_t)
+            friends = [rng.choice(core)] + [f for f in extra if rng.random() < 0.4]
+            quem = " e ".join(short_name(f) for f in friends)
+            if rng.random() < 0.3:      # convite do próprio dia, de manhã
+                invite_at = datetime.combine(day, time(8, 30)) + timedelta(minutes=rng.randint(0, 120))
+            else:
+                invite_at = (datetime.combine(day - timedelta(days=rng.randint(1, 3)), time(12, 0))
+                             + timedelta(minutes=rng.randint(0, 9 * 60)))
+            invite_at = min(invite_at, start - timedelta(hours=1))
+            decide_at = max(invite_at, start - timedelta(hours=rng.randint(2, 5)))
+            out.append({"key": f"outing:{day.isoformat()}:c{index}", "friends": friends, "who": quem,
+                        "text": text.format(quem=quem), "place": place or rng.choice(BEACHES),
+                        "start": start.isoformat(), "end": datetime.combine(day, end_t).isoformat(),
+                        "invite_at": invite_at.isoformat(), "decide_at": decide_at.isoformat(),
+                        "status": "pending"})
+        return out
+
+    def _willing(self, invite: dict, now: datetime) -> tuple[bool, str]:
+        """Ela vai? Decidido na hora pelo estado dela (determinístico por convite)."""
+        p, reasons = INVITE_BASE_YES, []
+        try:
+            emo = {k: v["valor"] for k, v in self.db.get_estado_emocional(now).items()}
+        except Exception:
+            emo = {}
+        battery = float(emo.get("social_battery", 0.7))
+        p += 0.3 * (battery - 0.5)
+        if battery < 0.35:
+            reasons.append("tava sem bateria social")
+        if float(emo.get("energy", 0.7)) < 0.35:
+            p -= 0.3
+            reasons.append("tava sem energia")
+        try:
+            from sleep_plan import SleepPlan, enabled
+            start = datetime.fromisoformat(invite["start"])
+            if enabled() and SleepPlan(self.db).hours_slept(start.date()) < 6.0:
+                p -= 0.2
+                reasons.append("dormiu mal")
+        except Exception:
+            pass
+        if "bia_andrade" in invite["friends"]:
+            p += 0.1                     # é a melhor amiga
+        same_day = [i for i in self._invites().values()
+                    if i["start"][:10] == invite["start"][:10] and i["status"] == "accepted"]
+        if same_day:
+            p -= 0.2
+            reasons.append("já tinha outro rolê no dia")
+        roll = random.Random(f"marina-social:{invite['key']}:decide").random()
+        return roll < max(0.05, min(0.95, p)), (reasons[0] if reasons else "quis ficar de boa em casa")
+
+    def process_invites(self, now: datetime) -> int:
+        """Convites chegam (acontecimento) e, na hora, ela decide ir ou não."""
+        floor = self._floor(now)
+        data = self._invites()
+        changed = 0
+        for offset in range(-1, OUTING_HORIZON_DAYS + 1):
+            for inv in self._invite_plan(now.date() + timedelta(days=offset)):
+                if inv["key"] in data or datetime.fromisoformat(inv["invite_at"]) > now:
+                    continue
+                if datetime.fromisoformat(inv["invite_at"]) < floor:
+                    continue
+                data[inv["key"]] = inv
+                who = inv["friends"][0]
+                nome = short_name(who)
+                self._log(f"{inv['key']}:convite", datetime.fromisoformat(inv["invite_at"]), who,
+                          f"{nome[:1].upper() + nome[1:]} te chamou: {inv['text']} "
+                          f"({self._dia(datetime.fromisoformat(inv['start']), now)}).")
+                changed += 1
+        from calendar_world import CalendarWorld
+        for key, inv in data.items():
+            if inv["status"] != "pending" or now < datetime.fromisoformat(inv["decide_at"]):
+                continue
+            start = datetime.fromisoformat(inv["start"])
+            yes, reason = self._willing(inv, now)
+            if yes and start > now + timedelta(minutes=30):
+                try:
+                    CalendarWorld(self.db).create_commitment(
+                        source_key=key, event_type="social", description=inv["text"], start_at=start,
+                        end_at=datetime.fromisoformat(inv["end"]), location_key=inv["place"],
+                        metadata={"friends": inv["friends"], "origin": "convite"})
+                    inv["status"] = "accepted"
+                    self._log(f"{key}:resposta", now, inv["friends"][0],
+                              f"Topou o convite: {inv['text']}.")
+                except ValueError:
+                    inv["status"], inv["reason"] = "declined", "já tinha compromisso"
+            else:
+                inv["status"], inv["reason"] = "declined", reason
+            if inv["status"] == "declined":
+                self._log(f"{key}:resposta", now, inv["friends"][0],
+                          f"Recusou o convite ({inv['text']}): {inv['reason']}.")
+            changed += 1
+        if changed:
+            self._save_invites(data, now)
+        return changed
+
+    def pending_invites(self, now: datetime) -> list[dict]:
+        return [i for i in self._invites().values()
+                if i["status"] == "pending" and datetime.fromisoformat(i["start"]) > now]
+
+    @staticmethod
+    def _dia(moment: datetime, now: datetime) -> str:
+        dias = ('segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo')
+        delta = (moment.date() - now.date()).days
+        quando = "hoje" if delta == 0 else "amanhã" if delta == 1 else dias[moment.weekday()]
+        return f"{quando} às {moment:%H:%M}"
+
+    def _log(self, key: str, at: datetime, who: str, summary: str) -> None:
+        with self.db.get_connection() as conn:
+            conn.execute(
+                """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
+                   autonomy_level,importance,participants_json,share_worthy,created_at)
+                   VALUES (?,?,'social_invite','convite',?,'simulated',1,0.2,?,0.5,?)""",
+                (key, at.isoformat(), summary, json.dumps(["marina", who]), datetime.now().isoformat()))
+            conn.commit()
+
     # ----------------------------------------------------------- presença real
     def _was_doing(self, at: datetime, routine_type: str) -> bool:
         """Ela estava mesmo nessa rotina às `at`? Mesma regra do resolvedor.
@@ -489,6 +635,10 @@ class SocialDay:
             self.schedule_outings(now)
         except Exception:
             logger.exception("social_day.outings.error")
+        try:
+            self.process_invites(now)
+        except Exception:
+            logger.exception("social_day.invites.error")
         for day in (now.date() - timedelta(days=1), now.date()):
             if day < floor.date():
                 continue
@@ -685,7 +835,7 @@ class SocialDay:
                           EXISTS (SELECT 1 FROM knowledge_items k WHERE k.subject_type='event'
                                   AND k.subject_id=e.id AND k.holder_character_key='marina'
                                   AND k.privacy_level='CONFIDENTIAL' AND k.revoked_at IS NULL) AS secret
-                   FROM life_events e WHERE e.event_type IN ('social_contact', 'commute', 'routine')
+                   FROM life_events e WHERE e.event_type IN ('social_contact', 'social_invite', 'commute', 'routine')
                    AND e.event_at>=? AND e.event_at<=? ORDER BY e.event_at DESC LIMIT ?""",
                 (start, now.isoformat(), limit)).fetchall()
         return [dict(r) for r in reversed(rows)]

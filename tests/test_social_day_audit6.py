@@ -246,7 +246,9 @@ class WorldClosureTests(unittest.TestCase):
         for week in range(4):
             self.day.schedule_outings(datetime(2026, 9, 21, 8, 0) + timedelta(days=7 * week))
         saidas = self._saidas()
-        self.assertGreaterEqual(len(saidas), 4)
+        # Fase D8: sábado e domingo viraram convite + decisão dela no dia
+        # (tests/test_weekend_d8.py); aqui ficam as saídas de dia útil.
+        self.assertGreaterEqual(len(saidas), 2)
         for s in saidas:
             start = datetime.fromisoformat(s["event_at"])
             self.assertFalse(AcademicLife(self.db).conflicting_blocks(start, datetime.fromisoformat(s["end_at"])))

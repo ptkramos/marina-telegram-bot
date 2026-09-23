@@ -345,6 +345,10 @@ class RoutineEngine:
             return None
         if not self.happens_on(day, row):
             return None
+        if routine_type == "pet_walk":
+            from milo import Milo
+            if Milo(self.db).walker_today(day):
+                return None       # Fase D5: dia puxado, o passeador levou o Milo
         busy = self._class_busy(day) if has_class is not False else None
         window = (row["window_start"], row["window_end"])
         if routine_type == "pet_walk" and busy:
@@ -358,6 +362,10 @@ class RoutineEngine:
         # passeio podia cair às 07:05 — o sono vencia no pick() e o Milo não
         # saía. O slot agora nunca invade a janela de sono do próprio dia.
         blocked += self._sleep_windows(day, has_class if has_class is not None else busy is not None)
+        if routine_type == "pet_walk":
+            # Fase D5: Shih Tzu tem focinho curto — nada de passeio no sol do meio-dia.
+            from milo import HEAT_BLOCK
+            blocked.append((datetime.combine(day, HEAT_BLOCK[0]), datetime.combine(day, HEAT_BLOCK[1])))
         for b_start, b_end in blocked:
             free = [piece for lo, hi in free
                     for piece in ((lo, min(hi, b_start)), (max(lo, b_end), hi)) if piece[0] < piece[1]]
@@ -372,7 +380,23 @@ class RoutineEngine:
         slot = (start, start + timedelta(minutes=minutes))
         if routine_type == "pet_walk":
             slot = self._avoid_gym(day, slot, has_class, window_end)
+            slot = self._avoid_heat(day, slot)
         return slot
+
+    @staticmethod
+    def _avoid_heat(day, slot):
+        """Fase D5: o remanejamento pela academia também não pode cair no sol do meio-dia."""
+        if not slot:
+            return slot
+        from milo import HEAT_BLOCK
+        lo, hi = datetime.combine(day, HEAT_BLOCK[0]), datetime.combine(day, HEAT_BLOCK[1])
+        if slot[1] <= lo or slot[0] >= hi:
+            return slot
+        length = slot[1] - slot[0]
+        after = hi + timedelta(minutes=15)
+        if after + length <= datetime.combine(day, time(21, 0)):
+            return after, after + length
+        return None
 
     def _sleep_windows(self, day, has_class: bool) -> list[tuple[datetime, datetime]]:
         from sleep_plan import SleepPlan, enabled as sleep_plan_enabled
@@ -616,6 +640,12 @@ class WorldStateManager:
         except Exception:
             logger.exception("social_day.materialize.error")
         try:
+            # Fase D7: antes do trajeto — faltar a aula cancela a ida pra PUC.
+            from college import College
+            College(self.db).materialize(now)
+        except Exception:
+            logger.exception("college.materialize.error")
+        try:
             from commute import Commute
             Commute(self.db).materialize(now)
         except Exception:
@@ -626,6 +656,18 @@ class WorldStateManager:
             Meals(self.db).materialize(now)
         except Exception:
             logger.exception("meals.materialize.error")
+        try:
+            # Fase D5: xixi da manhã e da noite, passeador, Milo aprontando.
+            from milo import Milo
+            Milo(self.db).materialize(now)
+        except Exception:
+            logger.exception("milo.materialize.error")
+        try:
+            # Fase D6: a sessão de série/anime da noite (e o que ela descobre sozinha).
+            from watch import Watching
+            Watching(self.db).materialize(now)
+        except Exception:
+            logger.exception("watch.materialize.error")
         if has_class is None:
             has_class = bool(academic.blocks_on(now.date()))
         if confirmed_commitment is None:

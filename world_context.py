@@ -514,6 +514,10 @@ class WorldContextBuilder:
                     comida += ["[SEU SONO — aconteceu de verdade]", *sono]
             from meals import Meals
             comida += Meals(self.db).prompt_lines(now)
+            from watch import Watching
+            comida += Watching(self.db).prompt_lines()
+            from college import College
+            comida += College(self.db).prompt_lines(now)
         except Exception:
             import logging
             logging.getLogger(__name__).exception("meals.prompt_lines.error")
@@ -531,6 +535,10 @@ class WorldContextBuilder:
             dia = 'hoje' if quando.date() == now.date() else (
                 'amanhã' if (quando.date() - now.date()).days == 1 else dias[quando.weekday()])
             lines.append(f"- Plano combinado: {p['description']} ({dia}, {quando.strftime('%H:%M')})")
+        # Fase D8: convite de fim de semana ainda sem resposta — ela decide no dia.
+        for inv in day.pending_invites(now):
+            lines.append(f"- Convite em aberto: {inv['text']} ({day._dia(datetime.fromisoformat(inv['start']), now)}) "
+                         "— você ainda não decidiu se vai; depende de como estiver no dia.")
         lines.append(
             "Use isto só quando vier ao caso ou se o Patrick perguntar — não despeje a "
             "agenda. Detalhes finos você completa com naturalidade, mas não contradiga "
