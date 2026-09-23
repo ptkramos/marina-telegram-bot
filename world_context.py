@@ -395,7 +395,12 @@ class WorldContextBuilder:
         # lia: o único injetor era memory.get_contexto_emocional, num bloco
         # marcado como legacy e sem chamador no runtime canônico. Posição final
         # porque é ordem direta dele, não enriquecimento.
+        # 23/09 (Patrick): /feedback era pra ele anotar correção pra gente
+        # implementar, não pra dar ordem pra ela — o bloco "OBRIGATÓRIO
+        # SEGUIR" virava regra solta no prompt. Desligado por padrão.
         try:
+            if not getattr(settings, 'PATRICK_FEEDBACK_IN_PROMPT', False):
+                raise LookupError('feedback fora do prompt')
             vistos, pedidos = set(), []
             for status in ("pendente", "em_andamento"):
                 for fb in self.db.listar_feedbacks(status=status) or []:

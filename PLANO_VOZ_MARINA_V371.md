@@ -667,6 +667,39 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
 
 **Já corrigido antes (madrugada de 23/09):** "a função de foto tá em manutenção" (o "ver você feliz" disparava o pedido de foto) e "vou jantar agora" 4× sem jantar (a comida dela não existia no mundo; hoje existe, D1).
 
+**Depois do restart (23/09, ~14h)**, o Patrick apontou mais dois problemas. Ambos corrigidos:
+- **Ponto final ainda aparecia.** "…depois da facul. O Milo tá aqui…" foi partido em dois balões bem no ponto, e o ponto do meio virou o fim do 1º balão. Agora o ponto sai **por balão, no envio**.
+- **"Tô em casa descansando" e o `/status` dizendo banho.** Às 13:57 o mundo decidiu um banho **quieto** (ele estava 40 min sem escrever), marcado para 13:59. Ele escreveu às 13:59:04 e a resposta não sabia do banho. O que mudou:
+  - se ele escreve **antes** de ela entrar no banho, a resposta avisa ("vou tomar banho, já volto"), uma vez só;
+  - **dentro do banho ela não pega o celular**: a availability adia a resposta até ela **sair do banho e se vestir** (fim do banho + 2–8 min);
+  - o estado atual não diz mais "você AVISOU o Patrick" quando ela não avisou.
+
+### Limpeza de prompt (23/09, tarde) ✅
+
+O Patrick deu carta branca ("o ideal é a Marina que a gente planeja; vamos testar muito até chegar lá"). Medido no prompt real (`context_builder.build`), com a mensagem "tá por onde minha princesa?":
+
+| | Antes | Depois |
+|---|---|---|
+| Regras + mundo (system) | 16,5 mil chars | 14,7 mil |
+| Histórico da conversa | até 24 mil chars (~186 falas) | **12 mil** (~150 falas curtas, horas de conversa) |
+| **Total por resposta** | **~40 mil chars (~11 mil tokens)** | **~26,7 mil (−33%)** |
+
+**O que saiu e por quê:**
+- **Histórico 24k → 12k** (aceito pelo Patrick). Custava caro, e o modelo copiava os próprios tiques de 90 turnos atrás ("Kkkkk…amor", ponto final). O que é mais antigo continua chegando pela memória consolidada e pelos resumos; a memória em si não muda.
+- **`/feedback` virou caderno de correções.** A intenção do Patrick era anotar correções para a gente implementar, não dar ordens a ela. O bloco `[PEDIDOS DO PATRICK — OBRIGATÓRIO SEGUIR]` saiu do prompt (flag `PATRICK_FEEDBACK_IN_PROMPT`, desligada). A confirmação no Telegram agora diz "anotado no caderno de correções". Os pedidos pendentes (ponto final, repetição, emoji no fim) já viraram código em `chat_naturalness`.
+- **`[TURN CONSTRAINT — CASUAL CADENCE]`**: era a 3ª cópia, em inglês, de "frases curtas / quebre em balões / Botafogo preto e branco", e ainda dizia "1 a 2 frases" enquanto o ritmo diz "1 a 3".
+- **Linhas duras**: "turnos casuais: 1 a 2 frases" saiu (brigava com o ritmo). Fica só "nunca envie textão".
+- **Ritmo de resposta**: saíram as regras repetidas das linhas duras (asterisco, rubrica, markdown), o "não pique o pensamento" duplicado, o "mantenha o português natural" (a voz já cobre) e a linha de telemetria crua `mode=casual_short verbosity=low …`.
+- **Voz**: saiu "duas frases curtas / quebre com \n", que já está no ritmo.
+- **Exemplos de voz**: 1 exemplo por fala do Patrick, em vez de 2. Os pares "oii amor" ×2 e "CARALHO AMOR" ×2 gastavam metade dos exemplos repetindo o mesmo cenário.
+- **`[MÍDIA REAL EM ALTA]`**: sai quando a lista real dela (`[O QUE VOCÊ ASSISTE]`) existe. Trazia "O que está em alta" como título, talk show e "O Mentalista".
+- **Assuntos em aberto podres** (DB de produção, abandonados à mão):
+  - #12 "contar o que comeu no jantar" (de 22/09);
+  - #14 "a manutenção da função de fotos ainda não foi resolvida": o bug virou assunto dela!
+  - O reflector de sessão agora sabe que promessa miúda do momento é `promise` (vence sozinha em 12 h) e que falha técnica do app nunca é assunto em aberto.
+
+**Próximas rodadas** (testando com o Patrick): ver se o share nudge soa natural, se a espera do debounce está boa e se o "amor" ficou na dose certa.
+
 **Limite conhecido:** se o Patrick manda mais uma bolha **depois** que ela já começou a gerar (5–10 s de LLM), essa bolha vira o turno seguinte. Juntar isso no turno em andamento exigiria abortar o turno no meio (planner, emoção e memória já rodaram). Fica pra depois, se ainda incomodar com a espera nova.
 
 ### Fase C — Consolidação 🟡 (C1 parcial; C2/C3 pendentes)

@@ -129,6 +129,8 @@ class Settings:
     # Motor de Geração de Imagem (novita ou local)
     IMAGE_ENGINE: str = os.getenv("IMAGE_ENGINE", "novita").strip().lower()
     # Temporary provider outage accepted for the 3.7.0 soak; not a feature rollback.
+    # 23/09: /feedback é caderno de correções, não vai pro prompt (ver world_context).
+    PATRICK_FEEDBACK_IN_PROMPT: bool = os.getenv("PATRICK_FEEDBACK_IN_PROMPT", "false").lower() in ("true", "1", "yes")
     PHOTO_PROVIDER_MAINTENANCE: bool = os.getenv("PHOTO_PROVIDER_MAINTENANCE", "false").lower() in ("true", "1", "yes")
     NOVITA_API_KEY: str = os.getenv("NOVITA_API_KEY", "").strip()
 

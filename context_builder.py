@@ -19,7 +19,11 @@ from prompt_policy import is_canonical_runtime_ready
 logger = logging.getLogger("ContextBuilder")
 
 
-MAX_HISTORY_CHARS = 24000
+# 23/09: 24k → 12k. Com 24k cada resposta relia ~186 falas (~90 trocas): caro,
+# e o modelo copiava os próprios tiques de 90 turnos atrás ("Kkkkk… amor",
+# ponto final). 12k ainda cobre ~90 falas (horas de conversa); o que é mais
+# antigo chega pela memória consolidada e pelos resumos.
+MAX_HISTORY_CHARS = 12000
 MAX_TOTAL_CONTEXT_CHARS = 64000
 
 

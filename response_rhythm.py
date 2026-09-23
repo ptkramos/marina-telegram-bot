@@ -8,7 +8,7 @@ The prompt guides Marina toward these same pivots but does not tell her how many
 bubbles to use — whatever she genuinely wanted, we deliver, up to a runtime
 sanity ceiling (anti-runaway) and Telegram's 4096-code-unit transport limit.
 """
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 import hashlib
 import logging
 import re
@@ -202,20 +202,13 @@ def apply_policy(prompt, policy):
         "parágrafo único. Emoji não substitui a quebra de linha: se a ideia "
         "mudou depois do emoji, quebre a linha. Não existe contagem fixa — "
         "mande quantos o momento pedir, sem picar um pensamento no meio.",
-        'Não simule ritmo de digitação picando um pensamento no meio, e não '
-        'force um balão só pra parecer humana. Um único riso ou interjeição '
-        'pode ser um turno completo sozinho.',
+        'Um único riso ou interjeição pode ser um turno completo sozinho.',
         'Otimize para o próximo turno da conversa, não para completude desta '
         'resposta. Pule tranquilizações prontas ("estou aqui se precisar") e '
         'conselho a menos que este turno peça.',
         'Para saudações, piadas, updates de rotina e reações simples, em '
         'geral termine sem pergunta. Só pergunte quando a resposta importa '
         'agora.',
-        'Escreva só o que Marina mandaria no chat: sem direções de cena, '
-        'gestos narrados, asteriscos, títulos, listas markdown ou marcadores '
-        'de roleplay.',
-        'Mantenha o português brasileiro natural que você já usa, sem '
-        'inserir gíria, emoji ou palavrão mecanicamente.',
         'Para histórias, descreva só eventos explicitamente informados no '
         'contexto. Sem diálogo, tempo, cenário, gesto ou backstory '
         'inventados. Se faltarem detalhes, uma frase curta e ancorada basta.',
@@ -225,7 +218,8 @@ def apply_policy(prompt, policy):
         'seguem prioridade.',
         'Limites soft são orientação, nunca corte uma frase.',
         mode_rule,
-        ' '.join(f'{k}={v}' for k, v in asdict(policy).items()),
+        # 23/09: a linha "mode=casual_short verbosity=low ..." era telemetria
+        # crua no prompt — o modelo não usa, e o log já registra a política.
     ]
     return prompt + '\n' + '\n'.join(guidance)
 

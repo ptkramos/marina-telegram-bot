@@ -143,8 +143,27 @@ class TodayAfterRestartTest(unittest.TestCase):
                 self.assertTrue(told["told_patrick"])
                 self.assertIsNone(bot._quiet_transition_hint(told, now), "avisa uma vez só")
                 inside = bot._quiet_transition_hint(dict(pending), now.replace(minute=5, hour=14))
-                self.assertIn("no banho agora", inside)
+                self.assertIsNone(inside, "no banho ela não pega o celular")
                 self.assertIsNone(bot._quiet_transition_hint({**pending, "told_patrick": True}, now))
+
+
+    def test_message_during_shower_is_answered_after_she_gets_dressed(self):
+        import json
+        from response_availability import ResponseAvailabilityPolicy
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            db = DatabaseManager(Path(tmp) / "a.db")
+            db.set_estado_relacional("pending_transition_json", json.dumps(
+                {"routine_type": "shower", "activity": "tomando banho", "transition_at": "2026-09-23T13:59:00",
+                 "end_at": "2026-09-23T14:14:00", "told_patrick": False}))
+            pol = ResponseAvailabilityPolicy(db)
+            now = datetime(2026, 9, 23, 14, 2)
+            with patch.object(pol, "_resolve_activity", return_value=("SHOWER", "ANNOUNCED", 1, "fresh", True)):
+                d = pol.evaluate("tá por onde?", now=now)
+            self.assertEqual(d.decision, "DEFER")
+            target = d.selected_target_at.replace(tzinfo=None)
+            self.assertGreaterEqual(target, datetime(2026, 9, 23, 14, 16))
+            self.assertLessEqual(target, datetime(2026, 9, 23, 14, 22))
 
 
 if __name__ == "__main__":

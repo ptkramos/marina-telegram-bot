@@ -497,7 +497,7 @@ def _is_intimacy_owned(ex: VoiceExample) -> bool:
 def select_examples(
     *, tone: Optional[str] = None, intent: Optional[str] = None,
     limit: int = 6, include_biblioteca: bool = True,
-    max_per_patrick: int = 2,
+    max_per_patrick: int = 1,
     recent_context: str = "",
 ) -> list[VoiceExample]:
     """Devolve até `limit` exemplos, ranqueados por afinidade com tone/intent.
@@ -514,6 +514,10 @@ def select_examples(
     transferência de estilo). `max_per_patrick=2` força diversidade: no
     máximo 2 exemplos com a mesma fala do Patrick, para evitar 4 "boa noite"
     sequenciais.
+
+    23/09: `max_per_patrick` 2 → 1. Os pares com a mesma fala do Patrick
+    ("oii amor" duas vezes, "CARALHO AMOR" duas vezes) gastavam metade dos
+    exemplos repetindo cenário — 6 situações diferentes ensinam mais.
 
     Patch 029: `recent_context` opcional — se passado, filtra exemplos de
     "piada interna / apelido / código interno" que não têm nenhuma palavra

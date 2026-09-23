@@ -231,11 +231,25 @@ class ResponseAvailabilityPolicy:
             wake_lag_s = 300 + int(1800 * int.from_bytes(digest[:8], 'big') / 2**64)
             delay_s = math.ceil((sleep_until - local_naive(now)).total_seconds()) + wake_lag_s
 
+        # 23/09: no banho não tem celular. Quem escreve durante o banho é
+        # respondido quando ela sai e se veste (2–8 min depois de sair), não
+        # num atraso sorteado que podia cair no meio do banho.
+        shower_until = (self._shower_until(local_naive(now))
+                        if activity_type == 'SHOWER' and urgency != 'CRITICAL' else None)
+        if shower_until is not None:
+            digest = hashlib.sha256(f"dress:{seed_value}".encode()).digest()
+            dress_s = 120 + int(360 * int.from_bytes(digest[:8], 'big') / 2**64)
+            decision, reason = 'DEFER', 'in_shower_until_dressed'
+            delay_s = math.ceil((shower_until - local_naive(now)).total_seconds()) + dress_s
+
         target = local_naive(now) + timedelta(seconds=delay_s)
         window_start = local_naive(now) + timedelta(seconds=max(0, int(profile['soft_delay_min_s'])))
         if sleep_until is not None and window_start < sleep_until:
             window_start = sleep_until
         window_end = local_naive(now) + timedelta(seconds=int(profile['guardrail_s']))
+        if shower_until is not None:
+            window_start = shower_until
+            window_end = max(window_end, target)
         if target > window_end:
             target = window_end
         if target < window_start and decision == 'DEFER':
@@ -342,6 +356,22 @@ class ResponseAvailabilityPolicy:
             return True
         return (observed.date() == now_naive.date()
                 and timedelta(0) <= now_naive - observed < timedelta(minutes=self.stale_minutes))
+
+    def _shower_until(self, now: datetime) -> Optional[datetime]:
+        """Fim do banho em andamento (pending_transition_json), se houver."""
+        try:
+            raw = self.db.get_estado_relacional("pending_transition_json")
+            data = json.loads(raw) if raw else None
+            if not isinstance(data, dict) or data.get("routine_type") != "shower":
+                return None
+            start = datetime.fromisoformat(data["transition_at"])
+            end = datetime.fromisoformat(data["end_at"])
+        except (KeyError, TypeError, ValueError):
+            return None
+        naive = now.replace(tzinfo=None) if now.tzinfo else now
+        if not (start <= naive < end):
+            return None
+        return end.replace(tzinfo=now.tzinfo) if now.tzinfo else end
 
     def _routine_sleep_until(self, snapshot_id: Optional[int], now: datetime) -> Optional[datetime]:
         """Return the first minute outside the active deterministic sleep window."""

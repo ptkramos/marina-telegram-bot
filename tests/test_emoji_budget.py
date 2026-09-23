@@ -121,9 +121,13 @@ class FeedbackNoPromptTests(unittest.TestCase):
             now=datetime(2026, 9, 22, 16, 0), user_message="oi amor"
         )
 
-    def test_feedback_pendente_entra_no_prompt(self):
+    def test_feedback_pendente_entra_no_prompt_so_se_ligado(self):
         self.db.salvar_feedback("fb-emoji", "Não é necessário que toda mensagem termine com emojis")
-        prompt = self._prompt()
+        self.assertNotIn("[PEDIDOS DO PATRICK", self._prompt(), "23/09: /feedback é caderno, não ordem")
+        from unittest.mock import patch
+        from config import settings
+        with patch.object(settings, "PATRICK_FEEDBACK_IN_PROMPT", True, create=True):
+            prompt = self._prompt()
         self.assertIn("[PEDIDOS DO PATRICK", prompt)
         self.assertIn("toda mensagem termine com emojis", prompt)
 

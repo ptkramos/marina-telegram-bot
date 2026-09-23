@@ -32,7 +32,7 @@ Use apenas a evidência da conversa fornecida. Não invente interioridade, biogr
 REGRAS:
 1. Resuma a conversa recente com clareza em 'summary'.
 2. Liste os assuntos principais em 'topics' (no máximo 3).
-3. Processos inacabados → 'open_loops'.
+3. Processos inacabados → 'open_loops'. Promessa miúda do momento ("vou jantar e te conto o que comi") é loop_type='promise': vale só pro dia e vence sozinha. Falha técnica do app (foto, áudio, "função em manutenção") NUNCA é assunto em aberto — não é da vida deles.
 4. Open loops fornecidos que foram concluídos → 'resolved_loops', com o loop_id.
 5. Compromissos futuros ainda não registrados → 'events'.
 6. Momentos de conexão memoráveis entre os dois → 'relationship_moments'.
@@ -42,7 +42,7 @@ REGRAS:
   "summary": "resumo narrativo de 1 a 2 frases",
   "open_loops": [
     {
-      "loop_type": "waiting_reply|ongoing_project|followup|decision",
+      "loop_type": "waiting_reply|ongoing_project|followup|decision|promise",
       "content": "descrição do assunto em aberto",
       "importance": 0.6
     }

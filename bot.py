@@ -2254,7 +2254,9 @@ async def feedback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     confirmacao = await context.bot.send_message(
         chat_id=chat_id,
-        text=f"✨ **Anotado com muito carinho, amor!**\nSua observação foi guardada no banco de dados para eu sempre melhorar por você! 💕",
+        # 23/09: /feedback é caderno de correções pro Patrick e o Claude, não
+        # ordem pra Marina — não entra mais no prompt dela.
+        text="📝 **Anotado no caderno de correções.** Fica pra próxima rodada de ajustes (não vai pro prompt dela).",
         parse_mode="Markdown"
     )
     asyncio.create_task(delete_after_delay(context.bot, chat_id, confirmacao.message_id, delay=5.0))
@@ -3236,17 +3238,9 @@ async def process_incoming_batch(
                 logger.info("chat.share_nudge event=%s", news["event_key"])
         except Exception as exc:
             logger.warning("chat.share_nudge_error: %s", exc)
-    if response_policy and response_policy.mode == "casual_short" and not pediu_foto and not pediu_audio:
-        messages.append({
-            "role": "system",
-            "content": (
-                "[TURN CONSTRAINT — CASUAL CADENCE]\n"
-                "Be concise, authentic and natural as Patrick's 20yo Brazilian girlfriend (paulista living in Rio) texting on WhatsApp/Telegram:\n"
-                "- Maximum 1 to 2 short sentences total. Never send long walls of text.\n"
-                "- If you have two distinct thoughts or reactions, you MUST separate them with a newline ('\\n') so they are delivered in 2 separate chat bubbles.\n"
-                "- For Botafogo, strictly use black & white / team emojis (🖤, 🤍, ⭐️, 🔥). Never use yellow hearts (💛)."
-            )
-        })
+    # 23/09: o antigo [TURN CONSTRAINT — CASUAL CADENCE] saiu — era a 3ª cópia
+    # (em inglês) de "frases curtas / quebre em balões / Botafogo preto e branco",
+    # e dizia "1 a 2 frases" enquanto o [RITMO DE RESPOSTA] diz "uma a três".
     messages.append({"role": "user", "content": texto_usuario})
     
     try:
@@ -3929,7 +3923,8 @@ def _quiet_transition_hint(pending: dict, now: datetime) -> Optional[str]:
     """Banho quieto (23/09 13:59): o mundo pôs ela no banho sem avisar porque o
     Patrick não estava conversando; ele escreveu 1 min antes e ela respondeu
     "tô em casa descansando" — e sumiu no banho. Se ele aparece antes de ela
-    sair, a resposta conta onde ela está indo/está."""
+    entrar, a resposta avisa. Já dentro do banho ela não responde: a
+    availability adia até ela sair e se vestir."""
     if pending.get("told_patrick", True) or pending.get("routine_type") != "shower":
         return None
     try:
@@ -3937,16 +3932,13 @@ def _quiet_transition_hint(pending: dict, now: datetime) -> Optional[str]:
         end = datetime.fromisoformat(pending["end_at"])
     except (KeyError, TypeError, ValueError):
         return None
-    if now >= end:
-        return None
+    if now >= start:
+        return None   # já no banho: sem celular; a availability responde depois que ela se vestir
     pending["told_patrick"] = True
     memory_manager.db.set_estado_relacional("pending_transition_json", json.dumps(pending))
-    logger.info("TRANSITION_TOLD type=shower started=%s", now >= start)
-    if now < start:
-        return ("[AVISO — faça nesta resposta] Você ia entrar no banho agora mesmo. Responda ao "
-                "Patrick e avise, do seu jeito, que vai tomar banho e já volta.")
-    return ("[ONDE VOCÊ ESTÁ] Você está no banho agora (pegou o celular rapidinho). Responda "
-            "curto e diga que tá no banho, que já já volta pra conversar.")
+    logger.info("TRANSITION_TOLD type=shower")
+    return ("[AVISO — faça nesta resposta] Você ia entrar no banho agora mesmo. Responda ao "
+            "Patrick e avise, do seu jeito, que vai tomar banho e já volta.")
 
 
 def _maybe_announce_transition(now: Optional[datetime] = None) -> Optional[str]:
