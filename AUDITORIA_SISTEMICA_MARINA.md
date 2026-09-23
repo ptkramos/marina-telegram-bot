@@ -41,7 +41,9 @@ Critérios herdados do `ROADMAP_FUNCIONAL_MARINA_COMPLETO_3_0_A_3_7_V3_CANONICAL
 | 6 | Mundo social — a vida dela acontece | 6 🔴 · 1 🟡 | ✅ concluída |
 | 7 | Infraestrutura do banco (isolamento, conexões, migrations) | 2 🔴 · 3 🟡 | ✅ concluída |
 | 8 | Planner, eventos e lembretes (+ reset do soak) | 2 🔴 · 1 🟡 | ✅ concluída |
-| 9 | Arena de modelos no OpenRouter (+ bugs que ela revelou) | 3 🔴 · 3 🟡 · 1 🔵 · 1 ⚪ | ⏳ aguardando escolha do modelo |
+| 9 | Arena de modelos no OpenRouter (+ bugs que ela revelou) | 3 🔴 · 3 🟡 · 1 🔵 · 1 ⚪ | ✅ concluída (Luna escolhido em 22/09) |
+| 10 | Revisão do soak de 22/09 (volta do plantão) | 3 🔴 · 1 🟡 · 1 🔵 | ✅ concluída |
+| 2b | Memória revisitada antes da rotina viva | 2 🔴 · 2 🟡 · 1 ⚪ | ✅ concluída |
 
 **Ação aberta que depende do Patrick:** versionar o roadmap funcional (achado 1.2).
 
@@ -1308,3 +1310,98 @@ Medido nas 15 falas do dia: **15 de 15** levavam emoji, média 1,2 por fala, 40%
 Nas falas reais do dia: com emoji **100% → 73%**, média **1,2 → 0,8**.
 
 `tests/test_emoji_budget.py`, 14 testes (teto por fala, emoji composto com ZWJ intacto, pivô ainda virando dois balões, fecho estável por fala, kill switch, feedback pendente no prompt, feedback resolvido fora dele). Suíte completa: **657/657**.
+
+
+---
+
+# Auditoria #10 — Revisão do soak de 22/09 (volta do plantão)
+
+**Data:** 2026-09-23
+**Pergunta:** o que a conversa real de 22/09 (139 mensagens, 17h–22h31, Luna) mostra de errado?
+**Fonte:** `scratchpad/conversation_export_20260922_230601.txt` + banco de produção.
+
+## Achado 10.1 🔴 — "A função tá em manutenção" apareceu sem pedido de foto
+
+Patrick escreveu "o importante vai ser **ver você** feliz se divertindo na sua sexta". `is_photo_request` casava "ver você" solto, e a instrução de foto indisponível falava em "manutenção" — ela repetiu a palavra, falando como sistema. O áudio tinha o mesmo defeito ("adoro sua voz", "te mandei um áudio" pediam mensagem de voz).
+
+**Correção:** pedido de mídia exige verbo de pedido perto do objeto (`_FOTO_PEDIDO_RE`/`_AUDIO_PEDIDO_RE` em `bot.py`), com intervalo que não aceita "te/eu/mandar/mostrar" (o Patrick oferecendo mídia dele não conta). A instrução de indisponibilidade pede desculpa de gente e proíbe falar em manutenção, sistema, app ou função. `tests/test_media_request_detectors.py`.
+
+## Achado 10.2 🔴 — O jantar prometido seis vezes que nunca aconteceu
+
+"Vou comer agora" às 21h14, 21h15, 21h18, 22h13, 22h26 e 22h31, respondendo em 6 s entre uma promessa e outra. O mundo ficou em "curtindo a noite em casa": não havia refeição na rotina, e o que ela dizia que ia fazer não mudava o estado.
+
+**Correção:** `meals.py` — fala dela com anúncio imediato de refeição abre `pending_transition_json` ("jantando em casa", 20–35 min), a disponibilidade ganha o perfil `MEAL` (45 s–8 min) e o prato vira `life_event` do tipo `meal` no [SEU DIA ATÉ AGORA]. **Limite conhecido:** na arena (`companhia_caminho`) o Luna ainda **inventou** um jantar quando nenhum existia → a refeição precisa ser rotina, não só promessa (Fase D1).
+
+## Achado 10.3 🔴 — Zero banhos no dia
+
+O banho só existia se a mensagem de ritual saísse, e ela disputava o teto de 2 cotidianos (aula e Milo já tinham gastado), tinha 45% de chance e era proibida com conversa rolando — justo a janela do banho.
+
+**Correção (v1):** banho é rotina do mundo em `rituals.py` (noite + pós-treino, ≥ 3 h entre banhos); o aviso é opcional, sai do teto e sempre acontece com conversa rolando; "vou tomar banho, já volto" dito na conversa vira banho. A v2 (sem teto, por necessidade e emoção) está na Fase D4.
+
+## Achado 10.4 🟡 — Eco em vez de companhia
+
+Numa viagem de 2 h ela devolveu o que ele dizia ("saga" ~10×, "me avisa quando chegar" ~8×) e, ao "diz aí", perguntou "o que você quer saber?". O prompt de voz era 100% reativo.
+
+**Correção:** duas regras em `[VOZ DA MARINA]` (vida própria quando ele só faz companhia; cuidado pedido uma vez, sem bordão). Arena `companhia_caminho` (2 corridas, Luna): "saga" e "me avisa" sumiram, a chuva foi respondida; ainda troca o bordão ("expedição") e fecha quase tudo com pergunta. A causa de fundo é mundo pobre → Fase D (rotina viva) e D12 (laços).
+
+## Achado 10.5 🔵 — "o que eu papou", misreading de "aí não tá chovendo?"
+
+Deslizes do modelo; sem correção de código. Registrados para a próxima arena.
+
+Suíte: **676/676** após o ajuste de tamanho do prompt.
+
+---
+
+# Auditoria #2b — Memória revisitada antes da rotina viva
+
+**Data:** 2026-09-23
+**Pedido do Patrick:** garantir que a memória não tem bug e não vai atrapalhar a Fase D.
+**Por que de novo:** desde a #2 o modelo virou o Luna, o `/feedback` foi achado morto (9.9) e a rotina viva vai multiplicar os acontecimentos do dia.
+
+## O retrato de uma noite
+
+Em 22/09 (uma noite de conversa) a memória gravou **24 fatos, 20 "momentos marcantes", 18 resumos e 11 pendências**. O prompt só usa 3 fatos, 2 momentos e 1 resumo por turno — o volume não incha o prompt, mas **dilui**: as vagas vão para ruído.
+
+## Achado 2b.1 🔴 — Pendências de conversa viravam check-in proativo dias depois
+
+"Me avisa quando chegar" virava `open_loop` com check-in em **+48 h** (o planner usa 48 h quando a dica é descritiva) ou **+24 h** (o banco completa quando vem vazio). Pendência aberta nunca vencia — só as resolvidas eram arquivadas. Resultado: 9 pendências de 22/09 abertas, com check-in marcado para 24/09 19h39, e o `proactivity_service` dispara mensagem espontânea em `open_loop_ready`: ela perguntaria "chegou em casa?" dois dias depois. E o planner reabria a mesma pendência a cada turno ("Patrick avisar quando chegar em casa" ×4).
+
+**Correção:**
+- `waiting`/`promise` sem data explícita são **pendências curtas**: sem check-in, somem do prompt em 12 h e a higiene as abandona (`SHORT_LIVED_LOOP_TYPES`, `vencer_open_loops_curtos`). Projetos mantêm o contrato P2.1 (+24 h).
+- Pendência aberta parecida (mesmo tipo, Jaccard ≥ 0,5) é **tocada, não duplicada**.
+- `abandonar_open_loop` grava `resolved_at` — antes os abandonados nunca eram arquivados.
+
+## Achado 2b.2 🔴 — Fatos tirados da boca da Marina, e fatos sobre ela
+
+- "Patrick **costuma** comer macarrão com frango" e "tem teclado RGB e gosta de atmosfera gamer" saíram da **fala dela** sobre uma foto dele — uma observação, interpretada por ela, virou hábito dele.
+- "Marina pretende passar a tarde em casa" foi gravado em `fatos_patrick`: a vida dela vazando na memória dele — exatamente o risco da Fase D.
+- Uma noite virou "costuma avisar Marina durante o trajeto" (×2).
+
+**Correção no prompt do consolidador (DE ONDE VEM A EVIDÊNCIA):** só o que o Patrick diz é evidência; fala da Marina é contexto; nunca fato sobre a Marina; uma ocorrência não é hábito ("costuma" só se ele disser que é recorrente); narração do momento é `ignore`; padrão de relacionamento já conhecido é `same`.
+
+**Validação real (Luna, cópia do banco sem os fatos ruins, lotes de 22/09):** foto do jantar → **nenhum** fato; viagem → **nenhum**; escala 12x60 → guardada (com os próximos plantões calculados); aparelho → manutenção como contextual + ansiedade como fato; dentista → data absoluta correta. Detalhe revelado no teste: com os fatos ruins ainda ativos, o Luna os **reconfirmava** ("same") — por isso a limpeza do banco é parte da correção.
+
+## Achado 2b.3 🟡 — Data relativa congelada e fato contextual eterno
+
+"Consulta com o dentista **amanhã** às 10h30" continuaria ativo — e errado — para sempre: nada expirava `contextual`, e o texto guardava "amanhã". Além disso, a data de referência era a da consolidação, não a da conversa (um lote atrasado converteria "amanhã" para o dia errado — reproduzido no replay: virou 24/09).
+
+**Correção:** o consolidador recebe `HOJE:` com a hora da **última mensagem do lote** (o lote de `bot.py` passou a levar `timestamp`) e deve escrever data absoluta; a higiene desativa `contextual` com mais de 3 dias (`expirar_fatos_contextuais`).
+
+## Achado 2b.4 🟡 — Momentos marcantes do dia a dia
+
+20 "momentos marcantes" numa noite ("Patrick saiu do trabalho e avisou que estava indo para casa"). O prompt não definia o que é marcante. **Correção:** só o que o casal lembraria daqui a meses; em geral zero por diálogo.
+
+## Achado 2b.5 ⚪ — Resumos por lote de 8 mensagens
+
+18 resumos na noite, `topic` = `summary`. Por design do consolidador (um resumo por lote); o prompt usa só o mais recente. Registrado, sem mudança.
+
+## Limpeza do banco de produção
+
+Backup: `backups/pre_audit2b_memory_20260923_012559.db`.
+- **8 fatos desativados:** 17 (sobre a Marina), 37 e 38 (interpretação dela sobre a foto), 30 e 34 (uma noite virou "costuma"; duplicavam o 35), 20, 22 e 32 (narração do momento).
+- **Fato 27:** "amanhã" → "23/09/2026 às 10h30".
+- **8 momentos desativados** (narração da viagem: 3, 4, 5, 8, 12, 13, 14, 17).
+- **9 pendências abertas abandonadas** (todas de 22/09).
+- Ficaram 15 fatos, 12 momentos e 0 pendências abertas.
+
+`tests/test_memory_audit2b.py`, 10 testes (pendência curta sem check-in, deduplicação, vencimento em 12 h, projeto mantém 24 h, abandonado arquivável, dica descritiva sem data, contextual expira em 3 dias, higiene roda as expirações, regras no prompt, `HOJE` com a data da conversa).

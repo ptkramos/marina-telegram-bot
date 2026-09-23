@@ -24,12 +24,12 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **B2** Captura pelo chat | ✅ | `/bom` e `/ruim` (Patch 033), no lugar do `/eco` planejado; `/registro` aceita wizard e textão (Patch 026) |
 | **B3** A/B de modelo | ✅ | Auditoria #9: arena real no OpenRouter (`scripts/model_arena.py`), 18 modelos na triagem e 9 na final. Principal: **GPT-5.6 Luna**; reserva: DeepSeek V4 Flash; íntimo: **Gemini 3.8 Flash** |
 | **B.5** Ela te procura mais quando está de bobeira | ✅ | `_compute_state_factor` em `should_trigger`, no caminho vivo. Desde a Auditoria #6 o texto da iniciativa também é gerado pelo modelo, ancorado no dia dela |
-| **B.6** Micro-despertares no sono | ⬜ | nada implementado |
+| **B.6** Micro-despertares no sono | ✅ | Implementado como D3 em 23/09 (`sleep_plan.py`) |
 | **C.1** Modo sexting | ✅ conversa · ⬜ fotos | `intimacy.py` + migration 021: excitação em minutos, degraus da biblioteca, troca para `LLM_INTIMATE_MODEL`, clímax, pós-clímax, corte e despedida; ciclo pesa na libido. **C.1b** (fotos explícitas escalonadas pelo nível de excitação) pendente |
 | **C.2** Assistir junto (watch-along) | ⬜ | nada implementado |
 | **C.3** Rituais de namorada (bom dia, boa noite, cotidiano) | ✅ | `rituals.py` + job de 5 min: bom dia ao acordar, boa noite antes de deitar, momentos do cotidiano (saiu da aula, Milo, academia, banho) com teto de 2/dia; o banho vira estado `SHOWER` e ela some de verdade. Foto do banho espera o motor de imagem (C.1b) |
 | **C.4** Locomoção viva (uber, a pé, ônibus/metrô, carona) | ✅ tabela + API + carona | `commute.py`: ida e volta da PUC e das saídas viram estado ("voltando da PUC pra casa de ônibus"), modo sorteado por dia (pico, noite, chuva, fim de mês, cansaço, uber dividido com a amiga), imprevistos viram acontecimento do dia. Minutos pela Distance Matrix API quando há `DISTANCE_MATRIX_KEY` (1 consulta por trecho), tabela como reserva. Carona com o Theo (cânone: ele tem carro) |
-| **D** Rotina viva (refeições, sono, Milo, noite, faculdade, fim de semana, casa, freela) | 🟡 | Tabela desenhada com o Patrick em 22/09 (seção Fase D). Feito: banho como rotina (D4) e refeição prometida vira estado (parte de D1) |
+| **D** Rotina viva (refeições, sono, Milo, noite, faculdade, fim de semana, casa, freela) | 🟡 | Tabela desenhada com o Patrick em 22–23/09 (seção Fase D). **Feito:** D1 fome viva (refeições, lanches, apetite, disfarce, peso, agência), D12 laços (pai diário, Bia várias vezes, saudade do Patrick sem teto), D2+D3+D13 sono (variável, micro-despertares, manhã de trás pra frente), D4 banho v2 (por necessidade e emoção). **Próximos:** D5 Milo, D6+D7 noite e faculdade (todos com perguntas abertas para o Patrick) |
 | **C** Consolidação | 🟡 | **C1:** o rótulo `[COMO O PATRICK ESCREVE]` e os campos estão em pt-BR (#2 e #7), mas ainda é descrição ("risada: kkkk"), não amostras reais das mensagens dele. **C2** e **C3** ⬜ |
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
@@ -425,16 +425,19 @@ travadas em 1,0.
 
 | # | Sistema | Hoje | Proposta | O que ela ganha pra contar | Status / decisão do Patrick |
 |---|---|---|---|---|---|
-| D1 | **Refeições** | Só existem se ela promete ("vou jantar agora", `meals.py`) | Café, almoço e jantar como rotina do dia, com horário que varia; em dia de aula o almoço é na PUC; às vezes pula o café, às vezes pede iFood; promessa continua funcionando | "almocei no bandejão com a Bia", "pedi um poke" | 🟡 promessa feita (22/09); rotina ⬜ |
-| D2 | **Sono variável** | Deita **meia-noite em ponto**, acorda 07:00 ou 08:30 fixos | Hora de deitar varia (série, trabalho, rolê, ansiedade); com compromisso cedo ela **tenta** dormir 8 h e quase sempre dorme menos; sexta/sábado estica; déficit de sono vira energia baixa e cochilo no dia seguinte; às vezes demora a pegar no sono | "dormi 5h, tô um zumbi", "capotei no sofá à tarde" | ⬜ Patrick: "o sono dela é variado… com compromisso tento dormir 8 h, geralmente durmo menos" |
-| D3 | **Micro-despertares** | Sono binário (= Fase B.6) | Desenho da B.6: banheiro, sede, sonho ruim, celular por reflexo; 0–2 por noite; resposta curtinha e volta a dormir | "acordei pra beber água e vi tua mensagem" | ⬜ desenho aprovado em 20/09 |
-| D4 | **Banho** | Só existia se a mensagem saísse → 0 banhos em 22/09 | Rotina do mundo: todo dia à noite + depois da academia (≥ 3 h entre banhos); aviso opcional, sempre com conversa rolando; "vou tomar banho" dito na conversa vira banho | "tava no banho" | ✅ 22/09 |
+| D1 | **Refeições** | Só existem se ela promete ("vou jantar agora", `meals.py`) | Café, almoço e jantar como rotina do dia, com horário que varia; em dia de aula o almoço é na PUC; às vezes pula o café, às vezes pede iFood; promessa continua funcionando | "almocei no bandejão com a Bia", "pedi um poke" | ✅ 23/09 (ver "D1 — como ficou") |
+| D2 | **Sono variável** | Deita **meia-noite em ponto**, acorda 07:00 ou 08:30 fixos | Hora de deitar varia (série, trabalho, rolê, ansiedade); com compromisso cedo ela **tenta** dormir 8 h e quase sempre dorme menos; sexta/sábado estica; déficit de sono vira energia baixa e cochilo no dia seguinte; às vezes demora a pegar no sono | "dormi 5h, tô um zumbi", "capotei no sofá à tarde" | ✅ 23/09 (ver "D2 + D3 + D13 — como ficou"). Patrick: "o sono dela é variado… com compromisso tento dormir 8 h, geralmente durmo menos" |
+| D3 | **Micro-despertares** | Sono binário (= Fase B.6) | Desenho da B.6: banheiro, sede, sonho ruim, celular por reflexo; 0–2 por noite; resposta curtinha e volta a dormir | "acordei pra beber água e vi tua mensagem" | ✅ 23/09 (desenho da B.6, aprovado em 20/09) |
+| D4 | **Banho** | Só existia se a mensagem saísse → 0 banhos em 22/09 | Rotina do mundo: todo dia à noite + depois da academia (≥ 3 h entre banhos); aviso opcional, sempre com conversa rolando; "vou tomar banho" dito na conversa vira banho | "tava no banho" | ✅ v2 em 23/09 (ver "D4 v2 — como ficou"). v1 em 22/09 (1 à noite + 1 pós-treino, ≥ 3 h entre banhos). **v2 decidida em 23/09:** sem teto e sem horário fixo; o banho sai da **necessidade dela** (calor, academia, praia, antes de sair, depois de chegar da rua) e do **emocional** (banho como alívio, revigorar, autocuidado com skincare e cabelo). Ela é vaidosa: gosta de estar cheirosa |
 | D5 | **Milo** | 1 passeio por dia | 2–3 saídas: manhã, fim de tarde e xixi rápido antes de dormir; às vezes ele apronta (comeu algo, latiu pro vizinho) | "o Milo roubou minha meia" | ⬜ |
 | D6 | **Noite em casa** | Bloco vazio de 5 h: "curtindo a noite em casa" | Fatiar em atividades: trabalho da faculdade, série/filme, skincare, rolar o celular, ligação com a família, arrumar o quarto | "tô vendo [série]", "fazendo o trabalho de Tipografia" | ⬜ |
 | D7 | **Faculdade além da aula** | Só a grade | Trabalhos e entregas com prazo, provas, grupo de trabalho com colegas; véspera de entrega muda o sono e a noite | "entrego sexta e não comecei" | ⬜ |
 | D8 | **Fim de semana** | Quase igual a dia útil | Acorda tarde, brunch, praia, rolê sábado à noite, domingo preguiçoso, família | "ressaca de domingo" | ⬜ |
 | D9 | **Casa e vida adulta** | Não existe | Mercado, lavar roupa, arrumar, conta de luz, iFood no fim do mês apertado | "fui no mercado e esqueci o que fui comprar" | ⬜ |
-| D12 | **Laços** (pai, Bia, Patrick) | Pai 30% por dia útil, Bia 80% de **uma** mensagem, proatividade com o Patrick por roleta (20%/20 min, teto 4, 2 h de intervalo) → em 22/09: 0 contato com pai e Bia, 0 iniciativa espontânea | Pai **todo dia** (mensagem de manhã, ligação algumas noites; pergunta se comeu, se chegou, se o dinheiro dá); Bia **várias trocas ao longo do dia**; Patrick: saudade como necessidade — se ele some e ela está livre, ela procura, cada vez mais; com ele ocupado, respeita | "meu pai me ligou perguntando se eu tô comendo", "a Bia me mandou um áudio de 5 min", "sumiu hein" | ⬜ pedido do Patrick em 23/09; vai junto com D1 na frente. **Decidido:** o pai liga quando está livre e manda mensagem quando está ocupado; checa a Marina pelo menos 1×/dia; banca mercado e comida sem ela pedir. Patrick: **sem teto de procura** — é o emocional que decide; de bobeira e sozinha, ele é a primeira pessoa que ela procura |
+| D13 | **Vaidade e se arrumar** (planejamento reverso) | Acorda 07:00 ou 08:30 fixos, sem olhar a que horas é o primeiro compromisso nem quanto tempo ela leva pra ficar pronta | A hora de acordar sai **de trás pra frente**: primeiro compromisso − trajeto (C.4) − café − se arrumar (banho, skincare, cabelo, maquiagem, roupa) − margem. Tempo de se arrumar varia (ensaio > aula > mercado). Se dorme demais ou enrola no espelho → **atraso** real (liga com D7 e C.4) | "perdi 20 min escolhendo roupa e cheguei atrasada" | 🟡 23/09: manhã de trás pra frente e despertador perdido feitos; **chegar atrasada de fato** (o trajeto e a aula se moverem) fica para o D7 |
+| D11 | **Corpo, saúde e ciclo** | Ciclo existe (energia, libido) | Cólica forte → fica em casa; banheiro (bebeu muito líquido, dor de barriga) como sumiço curtinho; farmácia; indisposição. Tom humano e discreto | "tô com cólica, hoje não vou pra aula" | ⬜ a desenhar |
+| D14 | **Motor emocional unificado** | Emoções espalhadas: 5 em `estado_emocional` (carinho, brincadeira, energia, intensidade romântica, bateria social), excitação em tabela própria (`intimacy_state`, C.1), fome agora em `meals.py`, ciclo à parte; cada uma com seu relógio e sem conversar entre si | Um motor só, com **categorias e subcategorias** (ex.: corpo → fome, energia, sono, excitação; coração → carinho, romance, carência/saudade; humor → alegria, irritação, ansiedade, tristeza; social → bateria social, vontade de sair), cada uma com linha de base, velocidade própria de subir/descer e influências cruzadas (fome → irritação, sono ruim → energia e paciência, saudade → procurar o Patrick). Os módulos atuais viram sensores que alimentam o motor | Tudo que ela sente conversa: "tô com fome e com saudade, péssima combinação kkk" | ⬜ pedido do Patrick em 23/09 ("você quem vai brilhar pra pensar nisso"); entra depois de D1/D12, quando houver sensores suficientes |
+| D12 | **Laços** (pai, Bia, Patrick) | Pai 30% por dia útil, Bia 80% de **uma** mensagem, proatividade com o Patrick por roleta (20%/20 min, teto 4, 2 h de intervalo) → em 22/09: 0 contato com pai e Bia, 0 iniciativa espontânea | Pai **todo dia** (mensagem de manhã, ligação algumas noites; pergunta se comeu, se chegou, se o dinheiro dá); Bia **várias trocas ao longo do dia**; Patrick: saudade como necessidade — se ele some e ela está livre, ela procura, cada vez mais; com ele ocupado, respeita | "meu pai me ligou perguntando se eu tô comendo", "a Bia me mandou um áudio de 5 min", "sumiu hein" | ✅ 23/09 (ver "D12 — como ficou"). **Decidido:** o pai liga quando está livre e manda mensagem quando está ocupado; checa a Marina pelo menos 1×/dia; banca mercado e comida sem ela pedir. Patrick: **sem teto de procura** — é o emocional que decide; de bobeira e sozinha, ele é a primeira pessoa que ela procura |
 | D10 | **Freela de modelo** | Agência da Lívia existe, quase não aparece | Casting/ensaio esporádico, prova de roupa, cachê no fim do mês | "fiz um casting pra marca de biquíni" | ⬜ |
 
 #### D1 detalhado — Fome viva (desenhado com o Patrick, 22–23/09)
@@ -457,11 +460,71 @@ travadas em 1,0.
 
 **Decisões do Patrick (23/09):**
 - Faixa de peso aprovada (abaixo).
-- Entram: fome mexe no humor ("desculpa, eu tava com fome kkk") e comer "junto" à distância como ritual de casal.
+- Entram: fome mexe no humor ("desculpa, eu tava com fome kkk") e comer "junto" à distância **quando calhar** — o Patrick às vezes nem janta; ela nunca fica refém do horário dele.
 - **Café da manhã** (a refeição) existe sempre, com horário e tamanho variando; o **café** (a bebida) é paixão dela e à parte: sem café de manhã, sono e pouca paciência.
 - **O pai banca mercado e comida** sem ela pedir: o fim do mês **não** aperta a comida (o iFood não diminui). O aperto do fim do mês continua valendo só pro resto (uber do C.4, compras).
 
 **Faixa de peso:** a agência reclama acima de **56 kg**. Abaixo de **52 kg** quem se preocupa é a saúde dela, não a agência: cansaço, tontura na academia, amigas e o Patrick percebendo. Nenhum lado recompensa emagrecer.
+
+#### D1 — como ficou (implementado em 23/09, madrugada)
+
+`meals.py` (reescrito) + `world_state.resolve` (materializa) + `world_context._social_day_block` (bloco de comida) + `response_availability` (perfil `MEAL`). Sem chamada de modelo: é tudo lógica determinística por data.
+
+| Peça | Como ficou |
+|---|---|
+| Dia de comida | `day_plan(dia)`: café (dia de aula: 15–40 min depois de acordar, **25% pulado** ou pulado se não dá tempo antes da 1ª aula; dia livre: com calma; fim de semana: 35% brunch), almoço (entre aulas ou logo depois da última: restaurante do campus ou Shopping da Gávea; corrido se a janela é curta; senão em casa 12h–14h), lanche da tarde (40%, +25% na TPM, 10% na dieta), jantar (19h–22h, 55% iFood, resto cozinhando) e lanchinho da noite (25%, +25% na TPM) |
+| Vira mundo | Refeição cuja hora chegou vira `life_event` (`meal`/`snack`); em casa também vira estado ("jantando em casa") pelo `pending_transition_json`. Se ela está fora na hora, a refeição de casa espera ela voltar. Mesmas travas do dia social (bootstrap limpo e início da vida registrada) |
+| Promessa | "vou jantar agora" **antecipa** a refeição do dia (mesmo prato do plano); nunca duplica |
+| Prompt | `[SUA COMIDA HOJE — aconteceu de verdade; não invente refeição fora desta lista]`: o que comeu, com hora e lugar; "Hoje você ainda não jantou" quando for o caso; a fome atual; modo disfarce; dieta; último peso conhecido. A comida saiu do [SEU DIA ATÉ AGORA] para não roubar as vagas dos contatos sociais |
+| Apetite | Fome sobe ~0,15/h desde a última comida (glutoninha); ×1,3 com academia no dia, ×1,25 na TPM, ×0,85 na menstruação e com energia baixa, ×1,2 de dieta. Com fome alta o prompt avisa: fica curtinha e impaciente, e volta ao normal quando come |
+| Disfarce | 20% dos dias (35% em dieta), se estiver com fome: "diz que já beliscou alguma coisa" |
+| Peso | Base 54 kg em `estado_relacional.marina_peso_json`. Toda semana: ±0,12 kg por lanche acima/abaixo de 3 e por treino abaixo/acima de 3, ruído de ±0,2, dieta −0,3; nunca mais que 0,6 kg por semana |
+| Pesagem | 1×/semana, depois de treinar: vira acontecimento ("Se pesou na academia: 54,3 kg") e só aí ela sabe o peso |
+| Agência e saúde | Acima de 56 kg: a Lívia cobra (acontecimento) e vem **dieta de 5 dias** (cardápio de dieta, fome maior, humor no prompt). Abaixo de 52 kg: "anda fraca, sentiu tontura no treino" — nunca bronca da agência |
+
+**Fica para depois:** foto do prato (motor de imagem, C.1b), aprender receita como habilidade, lanche nas saídas com as amigas, job perdido pelo peso (depende do D10 freela), fome no motor emocional unificado (D14).
+
+`tests/test_meals.py` (17 testes).
+
+#### D12 — como ficou (implementado em 23/09, madrugada)
+
+| Laço | Como ficou |
+|---|---|
+| **Pai** | Mensagem **todo dia** de manhã, depois de ela acordar (7h40–9h30 em dia de aula, 9h–11h em dia livre, 9h30–11h30 no fim de semana), com assunto de pai (café, comida, tempo, saudade, se chegou bem); **ligação** em 40% das noites úteis e 60% no fim de semana (19h–21h30); **toda segunda** manda o dinheiro do mercado e da comida sem ela pedir |
+| **Bia** | De **2 a 4 trocas** por dia, espalhadas (manhã, almoço, tarde, noite), 30% delas por áudio ("Trocou áudios com a Bia") |
+| **Patrick — saudade** | `ProactivityService.saudade()`: cresce 0,18/h desde a última mensagem dele (×1,3 livre em casa; ×0,8–1,2 pela intensidade romântica); ≥ 0,6 ela te procura (~2h30 livre, ~3h20 neutra), **passando por cima do teto diário e do cooldown**. Ocupada ou dormindo, não. Sem resposta, a próxima espera o dobro (1h30 → 3h) e para depois de 3 seguidas; sua resposta zera tudo. Instrução própria (`saudade`): dengo, provocação, "sumiu hein", ou uma coisa real do dia dela; nada de drama nem cobrança |
+
+`tests/test_lacos_d12.py` (9 testes).
+
+#### D2 + D3 + D13 — como ficou (implementado em 23/09, madrugada)
+
+`sleep_plan.py` é a fonte única do sono, determinístico por data. Kill switch: `SLEEP_PLAN_ENABLED=false` volta às janelas fixas do cânone. Ligado em `RoutineEngine` (janelas de sono e candidatos `dormindo`, `se arrumando`/`acordando` e micro-despertar), `WorldStateManager.resolve` (acordar vira estado na hora — antes ela podia seguir "dormindo" até 60 min), `response_availability` (o limite do sono é o próximo despertar real), `rituals` (bom dia e boa noite seguem o sono de verdade; boa noite depois da meia-noite) e `world_context` (bloco `[SEU SONO]`).
+
+| Peça | Como ficou |
+|---|---|
+| **D13 manhã de trás pra frente** | Dia com aula: despertador = saída do trajeto (C.4) − se arrumar (50–80 min: banho, skincare, cabelo, maquiagem, roupa, café) − margem (0–10 min), nunca antes das 5h. Aula às 7h → acorda ~5h10; às 9h → ~7h20. Em 15% dos dias ela passa 10–30 min do despertador e sai correndo (entra no prompt) |
+| **Banho da manhã** | Se arrumando pra sair, ela toma banho (12–20 min, sem aviso) — começo do D4 v2 |
+| **D2 sono variável** | Com compromisso amanhã: tenta deitar 8 h antes do despertador e passa 10–75 min do ponto (nunca antes de 22h30) → ~7 h de sono. Sem compromisso: 23h–0h30; sexta e sábado +45–150 min (deitou 0h20–1h50 no teste). Saída com as amigas: deita 40–90 min depois de voltar. Dia livre: acorda depois de 7h30–9 h de sono (8h–11h; fim de semana 8h30–11h30) |
+| **D3 micro-despertares** | 0 (45%), 1 (35%) ou 2 (20%) por noite, 3–8 min, nunca entre 2h e 5h30; banheiro, sede, sonho ruim ou celular por reflexo. Estado "acordou de madrugada (…) e já vai deitar de novo" → disponibilidade `MICRO_WAKE` (resposta curtinha). Mensagem que chega com ela dormindo é respondida no próximo micro-despertar (ou de manhã). Nunca puxa conversa de madrugada |
+| **Prompt** | `[SEU SONO — aconteceu de verdade]`: "dormiu das 22:41 às 05:12 (~7h)", "foi pouco: está com sono e com menos paciência" (< 6 h), atraso do despertador, micro-despertares da noite |
+
+**Decisões que ficaram com o Patrick** (não implementadas, aguardando resposta): ela cochila à tarde quando dorme pouco? Ela às vezes demora pra pegar no sono (ansiedade antes de prova/ensaio)?
+
+`tests/test_sleep_plan.py` (14 testes).
+
+#### D4 v2 — como ficou (banho por necessidade e emoção, 23/09)
+
+`rituals.py`. Sem teto diário; só não toma dois banhos com menos de 2 h entre eles.
+
+| Gatilho | Como ficou |
+|---|---|
+| **Se arrumando pra sair** (D13) | Banho de 12–20 min, sem aviso |
+| **Depois da academia** | 20–40 min depois de sair (já existia) |
+| **Chegou da rua** 🆕 | Voltando de trajeto ou de rolê pra casa: 35% de chance, +35% no calor (≥ 28 °C pelo clima observado), +20% voltando de rolê; banho 10–30 min depois |
+| **À noite** | Horário sorteado entre 19h30 e 22h30, pulado se já tomou há pouco |
+| **Emoção** 🆕 | Energia baixa → "banho demorado, pra relaxar" (+10 min); senão "banho, skincare e cabelo: você gosta de ficar cheirosa". Chegando da rua no calor, o aviso fala do calor |
+
+O aviso continua opcional (sempre com conversa rolando) e fora do teto de 2 cotidianos. 3 testes novos em `tests/test_rituals_c3.py`.
 
 **Estacionado para outras fases** (ideias do Patrick que não são D1):
 - Faltar aula por conta própria (preguiça, cansaço, cólica forte), com o Patrick perguntando por quê → D7.
