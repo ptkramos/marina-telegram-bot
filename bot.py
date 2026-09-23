@@ -590,6 +590,10 @@ async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_messag
     bubbles = segment(full_text, response_policy or select_policy())
     if not bubbles:
         return None
+    # O ponto que separava duas frases vira ponto de FIM quando o corte cai
+    # entre elas (23/09 13:59: "…depois da facul." como balão próprio).
+    from chat_naturalness import strip_closing_periods
+    bubbles = [strip_closing_periods(b) for b in bubbles]
     
     if len(bubbles) > 1:
         for idx, bubble in enumerate(bubbles):
@@ -3921,6 +3925,30 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
 # --- VONTADE PRÓPRIA & INICIATIVA ÍNTIMA (DIRECIONADA APENAS AO PATRICK) ---
 
+def _quiet_transition_hint(pending: dict, now: datetime) -> Optional[str]:
+    """Banho quieto (23/09 13:59): o mundo pôs ela no banho sem avisar porque o
+    Patrick não estava conversando; ele escreveu 1 min antes e ela respondeu
+    "tô em casa descansando" — e sumiu no banho. Se ele aparece antes de ela
+    sair, a resposta conta onde ela está indo/está."""
+    if pending.get("told_patrick", True) or pending.get("routine_type") != "shower":
+        return None
+    try:
+        start = datetime.fromisoformat(pending["transition_at"])
+        end = datetime.fromisoformat(pending["end_at"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if now >= end:
+        return None
+    pending["told_patrick"] = True
+    memory_manager.db.set_estado_relacional("pending_transition_json", json.dumps(pending))
+    logger.info("TRANSITION_TOLD type=shower started=%s", now >= start)
+    if now < start:
+        return ("[AVISO — faça nesta resposta] Você ia entrar no banho agora mesmo. Responda ao "
+                "Patrick e avise, do seu jeito, que vai tomar banho e já volta.")
+    return ("[ONDE VOCÊ ESTÁ] Você está no banho agora (pegou o celular rapidinho). Responda "
+            "curto e diga que tá no banho, que já já volta pra conversar.")
+
+
 def _maybe_announce_transition(now: Optional[datetime] = None) -> Optional[str]:
     """Auditoria #6: o aviso "vou levar o Milo, já volto" vivia em
     `determine_proactive_prompt`, que não roda desde a 3.7.0 — e a proatividade
@@ -3930,8 +3958,9 @@ def _maybe_announce_transition(now: Optional[datetime] = None) -> Optional[str]:
     simplesmente não ia. Agora o aviso sai dentro da própria resposta."""
     try:
         now = now or datetime.now()
-        if proactivity_service._pending_transition(now):
-            return None
+        pending = proactivity_service._pending_transition(now)
+        if pending:
+            return _quiet_transition_hint(pending, now)
         intent = proactivity_service._detect_transition_intent(now)
         if not intent:
             return None

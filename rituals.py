@@ -221,7 +221,7 @@ class Rituals:
         if self._get(key) or self._transition_busy(now):
             return
         self._set(key, "quiet", now)
-        self.start_shower(now, self._rng(day, "banho_manha").randint(12, 20))
+        self.start_shower(now, self._rng(day, "banho_manha").randint(12, 20), told_patrick=False)
 
     def _bom_dia(self, now: datetime, kind: str, activity: str = "") -> Optional[Ritual]:
         day = now.date()
@@ -394,7 +394,7 @@ class Rituals:
                         and not (last_init and now - last_init < timedelta(minutes=MIN_GAP_MIN)))
         if not announce:
             self._set(key, "quiet", now)
-            self.start_shower(now, minutes)
+            self.start_shower(now, minutes, told_patrick=False)
             return None
         tom = (" Hoje você está com humor provocador: pode ter um toque de malícia leve, sem ser explícita."
                if flirty else "")
@@ -416,13 +416,16 @@ class Rituals:
         return Ritual("cotidiano", key, "ritual_cotidiano", detail, "Vou tomar banho, já volto 🖤",
                       "banho", {"shower_minutes": minutes})
 
-    def start_shower(self, now: datetime, minutes: int) -> None:
-        """Ela entra no banho em 2 min e some por `minutes`; vira acontecimento do dia."""
+    def start_shower(self, now: datetime, minutes: int, *, told_patrick: bool = True) -> None:
+        """Ela entra no banho em 2 min e some por `minutes`; vira acontecimento do dia.
+
+        `told_patrick=False` é o banho quieto (ele não estava conversando): se ele
+        escrever antes de ela sair do banho, a resposta precisa saber disso."""
         start = now + timedelta(minutes=2)
         end = start + timedelta(minutes=minutes)
         payload = {"routine_type": "shower", "activity": "tomando banho", "place_key": "marina_apartment",
                    "announced_at": now.isoformat(), "transition_at": start.isoformat(),
-                   "end_at": end.isoformat()}
+                   "end_at": end.isoformat(), "told_patrick": told_patrick}
         self.db.set_estado_relacional("pending_transition_json", json.dumps(payload))
         self._set(f"{PREFIX}{now.date().isoformat()}:banho_last", start.isoformat(), now)
         with self.db.get_connection() as conn:

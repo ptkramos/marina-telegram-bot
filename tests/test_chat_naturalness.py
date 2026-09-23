@@ -111,5 +111,41 @@ class ShareNudgeTest(unittest.TestCase):
             self.assertIsNone(share_nudge(self.db, self.now, intent=intent, rng=always))
 
 
+class TodayAfterRestartTest(unittest.TestCase):
+    """23/09 13:59, logo depois do restart."""
+
+    def test_split_bubble_does_not_keep_the_separator_period(self):
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock, patch
+        import bot
+        from response_rhythm import select_policy
+        fake = MagicMock(send_message=AsyncMock(), send_chat_action=AsyncMock())
+        with patch("bot.asyncio.sleep", new=AsyncMock()):
+            asyncio.run(bot.send_human_messages(
+                987, fake, "Tô em casa, descansando um pouquinho depois da facul. O Milo tá aqui comigo fazendo companhia kkk",
+                response_policy=select_policy("tá por onde minha princesa?")))
+        sent = [c.kwargs["text"] for c in fake.send_message.call_args_list]
+        self.assertTrue(all(not t.endswith(".") for t in sent), sent)
+
+    def test_quiet_shower_is_told_when_he_shows_up(self):
+        import json
+        from unittest.mock import patch
+        import bot
+        now = datetime(2026, 9, 23, 13, 59, 5)
+        pending = {"routine_type": "shower", "activity": "tomando banho", "announced_at": "2026-09-23T13:57:23",
+                   "transition_at": "2026-09-23T13:59:23", "end_at": "2026-09-23T14:14:23", "told_patrick": False}
+        with tempfile.TemporaryDirectory() as tmp:
+            db = DatabaseManager(Path(tmp) / "t.db")
+            with patch.object(bot.memory_manager, "db", db):
+                hint = bot._quiet_transition_hint(dict(pending), now)
+                self.assertIn("vai tomar banho", hint)
+                told = json.loads(db.get_estado_relacional("pending_transition_json"))
+                self.assertTrue(told["told_patrick"])
+                self.assertIsNone(bot._quiet_transition_hint(told, now), "avisa uma vez só")
+                inside = bot._quiet_transition_hint(dict(pending), now.replace(minute=5, hour=14))
+                self.assertIn("no banho agora", inside)
+                self.assertIsNone(bot._quiet_transition_hint({**pending, "told_patrick": True}, now))
+
+
 if __name__ == "__main__":
     unittest.main()

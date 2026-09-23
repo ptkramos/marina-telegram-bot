@@ -57,7 +57,11 @@ class PromptBuildDoesNotRefreshTests(unittest.TestCase):
             prompt = self.builder.build(
                 now=datetime(2026, 9, 21, 14, 0), user_message="vamos ver um filme?")
         bloco.assert_called_once()
-        self.assertIn("Duna: Parte Dois", prompt)
+        if "[O QUE VOCÊ ASSISTE" in prompt:
+            # 23/09: a lista real dela (D6 + TMDB) substitui o "em alta" genérico.
+            self.assertNotIn("Duna: Parte Dois", prompt)
+        else:
+            self.assertIn("Duna: Parte Dois", prompt)
 
     def test_falha_no_cache_nao_derruba_o_turno(self):
         """Contrato de fail-open: mídia é enriquecimento, não requisito."""

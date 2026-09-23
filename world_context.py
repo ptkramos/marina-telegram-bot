@@ -71,7 +71,7 @@ class WorldContextBuilder:
         certainty_map = {
             "confirmed_commitment": "compromisso confirmado que você aceitou",
             "explicit_plan": "plano explícito que você combinou",
-            "announced_transition": "atividade que você AVISOU o Patrick que ia fazer",
+            "announced_transition": "atividade já em andamento no seu dia (é fato)",
             "post_event_recovery": "acabou de terminar o compromisso anterior, ainda em casa relaxando",
         }
         certainty = certainty_map.get(reason, "inferência de rotina (probabilística)")
@@ -331,7 +331,10 @@ class WorldContextBuilder:
             try:
                 from media_lookup_service import MediaLookupService
                 media_block = MediaLookupService(self.db).get_prompt_block(now)
-                if media_block:
+                # 23/09: com o [O QUE VOCÊ ASSISTE] (D6 + TMDB) ela já tem a lista
+                # real dela; o "em alta" genérico trazia talk show e "O que está
+                # em alta" como título, contradizendo "não cite fora desta lista".
+                if media_block and not any("[O QUE VOCÊ ASSISTE" in b for b in blocks):
                     blocks.append(media_block)
             except Exception:
                 pass  # fail-open: mídia é enriquecimento, nunca derruba o turno

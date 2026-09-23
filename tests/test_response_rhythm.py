@@ -82,9 +82,11 @@ class TestResponseRhythm(unittest.TestCase):
         with patch('bot.asyncio.sleep',new=AsyncMock()):
             asyncio.run(bot.send_human_messages(987,fake,text,response_policy=select_policy()))
         self.assertEqual(fake.send_message.await_count, 2)
-        # Both bubbles together reconstruct the original content.
+        # Both bubbles together reconstruct the original content, minus the
+        # period that closes each bubble (chat_naturalness).
         calls = [c.kwargs['text'] for c in fake.send_message.call_args_list]
-        self.assertEqual(' '.join(calls), text.strip())
+        self.assertTrue(all(not c.endswith('.') for c in calls), calls)
+        self.assertEqual('. '.join(calls) + '.', text.strip())
 
     def test_dynamic_generation_gets_policy_without_extra_llm(self):
         import bot
