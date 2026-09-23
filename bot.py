@@ -638,11 +638,14 @@ _reaction_capabilities: dict[int, set[str] | None] = {}
 # a TTL cache so a transient rejection does not ban an emoji forever.
 _invalid_reactions: dict[tuple[int, str], float] = {}
 _INVALID_REACTION_TTL_SECONDS = 24 * 3600
+# 23/09: 😂 NÃO é reação válida no Telegram (🤣 é). O alias ia ao contrário
+# (🤣 → 😂), o Telegram recusava e o cache marcava 😂 inválido por 24 h — a
+# Marina nunca conseguia reagir com risada.
 _reaction_aliases = {
-    "💘": "❤️", "😘": "❤️", "😍": "🥰", "🤣": "😂",
+    "💘": "❤️", "😘": "❤️", "😍": "🥰", "😂": "🤣", "😆": "🤣", "😅": "🤣",
     "🎉": "👍", "👌": "👍", "⏰": "👍",
 }
-_safe_reactions = {"❤️", "🥰", "😂", "👍", "🔥"}
+_safe_reactions = {"❤️", "🥰", "🤣", "👍", "🔥"}
 # Values from the LLM planner that mean "no reaction" but come through as
 # truthy strings and used to sneak into set_safe_message_reaction silently.
 _REACTION_SENTINEL_NULLS = {"null", "none", "-", "n/a", ""}
@@ -1135,6 +1138,34 @@ async def set_safe_message_reaction(bot, chat_id: int, message_id: int, emoji: s
         logger.warning(f"Falha ao reagir com {emoji}: {type(exc).__name__}")
         return False
 
+_LAST_REACTION_AT: dict[int, datetime] = {}
+REACTION_ONLY_CHANCE = 0.75
+
+
+def _reaction_chance(chat_id: int, text: str, from_planner: bool) -> float:
+    """Quão provável ela reagir no balão dele. Gente reage de vez em quando."""
+    t = (text or "").lower()
+    chance = 0.35 if from_planner else 0.25
+    if re.search(r"k{4,}|(?:ks){3,}|hahaha", t) or re.search(r"te amo|meu mundo", t):
+        chance = 0.7
+    last = _LAST_REACTION_AT.get(chat_id)
+    if last and datetime.now() - last < timedelta(minutes=3):
+        chance *= 0.3   # acabou de reagir: não reage em tudo seguido
+    return chance
+
+
+def _is_reaction_only_turn(plan: dict | None, text: str) -> bool:
+    """O planner disse que uma reação basta (fecho, risada, ok) e não há pergunta."""
+    if not plan or plan.get("resposta") != "so_reacao" or "?" in (text or ""):
+        return False
+    if plan.get("creates_event") or plan.get("should_offer_reminder") or plan.get("intent") in (
+            "support_needed", "photo_request", "voice_request", "question", "planning_future"):
+        return False
+    if is_photo_request(text) or is_audio_request(text):
+        return False
+    return random.random() < REACTION_ONLY_CHANCE
+
+
 def choose_reaction_for_text(text: str) -> str | None:
     """Seleciona uma reação contextual válida para o Telegram (apenas emojis suportados)."""
     t = text.lower()
@@ -1143,7 +1174,7 @@ def choose_reaction_for_text(text: str) -> str | None:
     if any(w in t for w in ["te amo", "amo você", "amo vc", "meu amor", "vida", "anjo", "princesa", "saudade", "chamego", "carinho", "dormir juntos", "te quero"]):
         return random.choice(["❤️", "🥰", "💘", "😍", "😘"])
     if any(w in t for w in ["kkkk", "hahaha", "rsrs", "engraçado", "engracado", "rindo", "zoeira", "bizarro"]):
-        return random.choice(["😂", "🤣"])
+        return "🤣"
     if any(w in t for w in ["bora", "fechou", "combinado", "partiu", "show", "top", "maravilha", "certeza"]):
         return random.choice(["👍", "🎉", "👌"])
     return None
@@ -3075,15 +3106,31 @@ async def process_incoming_batch(
                     logger.info(f"Oferta de lembrete {last_offered['id']} recusada pelo Patrick.")
 
     # 3. Reação espontânea da Marina no balão de mensagem do Patrick (prioriza emoji do planner)
+    # 23/09 (Patrick): "a intensidade de reações aumentou muito". O emoji do
+    # planner reagia SEMPRE. Agora: de vez em quando, mais quando o momento
+    # pede (risada, declaração), menos logo depois de outra reação — e sempre
+    # quando a reação É a resposta (só_reação).
     planner_emoji = _normalize_planner_emoji(plan.get("reaction_emoji") if plan else None)
     reacao_emoji = planner_emoji or choose_reaction_for_text(texto_usuario)
-    if reacao_emoji and (planner_emoji or random.random() < 0.50):
+    reaction_only = pending_batch_id is None and _is_reaction_only_turn(plan, texto_usuario)
+    if reaction_only and not reacao_emoji:
+        reacao_emoji = "🤣" if re.search(r"k{3,}|(?:ks){2,}|haha|rsrs", texto_usuario.lower()) else "❤️"
+    reacted = False
+    if reacao_emoji and (reaction_only or random.random() < _reaction_chance(chat_id, texto_usuario, bool(planner_emoji))):
         try:
             reacted = await set_safe_message_reaction(context.bot, chat_id, msg_id, reacao_emoji)
-            if not reacted:
+            if reacted:
+                _LAST_REACTION_AT[chat_id] = datetime.now()
+            else:
                 logger.info(f"reaction.on_patrick skipped emoji={reacao_emoji} planner={bool(planner_emoji)}")
         except Exception as e:
             logger.warning(f"Erro ao setar reação na mensagem do Patrick: {e}")
+    if reaction_only and reacted:
+        # "Às vezes só uma reação ou uma risada bastam" (Patrick, 23/09): a
+        # reação é a resposta. A fala dele fica na memória; ela não escreve nada.
+        memory_manager.registrar_mensagem_usuario(texto_usuario)
+        logger.info("turn.reaction_only emoji=%s", reacao_emoji)
+        return
 
     texto_lower = texto_usuario.lower()
 

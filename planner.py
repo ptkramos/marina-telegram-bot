@@ -371,7 +371,8 @@ Responda ESTRITAMENTE neste formato JSON (preserve exatamente os valores de enum
   "intent": "casual_chat|sharing_day|flirting|support_needed|planning_future|photo_request|voice_request|question|other",
   "tone": "carinhosa|brincalhona|dengosa|acolhedora|sensual|tranquila",
   "response_goal": "Uma frase curta de planejamento, EM PORTUGUÊS BRASILEIRO, sobre o que a resposta da Marina precisa fazer",
-  "reaction_emoji": "❤️|🥰|😂|👍|🔥|null",
+  "reaction_emoji": "❤️|🥰|🤣|👍|🔥|null",
+  "resposta": "texto|so_reacao",
   "creates_event": false,
   "event_details": {
     "event_type": "trabalho|medico|viagem|encontro|estudo|compromisso|outro",
@@ -414,14 +415,15 @@ REGRAS DURAS:
 2. Ofereça lembrete apenas para eventos concretos com horário definido a pelo menos 45 minutos no futuro; direct_reminder somente quando ele pedir explicitamente, sem negação.
 3. Open loops servem para assuntos inacabados que não têm alarme marcado.
 4. emotional_deltas sutis, no intervalo [-0.05, +0.05]. social_battery é energia pra GENTE, não pro Patrick: conversa leve, carinhosa ou divertida com ele recarrega um pouco (+0.01 a +0.03); conversa pesada (briga, DR, cobrança, problema sério) gasta um pouco (-0.01 a -0.03). NUNCA mexa nela pelo tamanho da conversa.
-5. reaction_emoji deve ser um emoji comum do Telegram, ou null.
+5. reaction_emoji deve ser um emoji comum do Telegram, ou null. Na MAIORIA das mensagens, null: gente não reage em tudo.
+5b. resposta: "so_reacao" quando uma namorada real só reagiria e não escreveria nada — ele fechou o assunto, só riu, só concordou ("isso aí kkk", "aham", "sim senhora", "tá bom") e não perguntou nem contou nada novo. Nunca quando ele pergunta, conta novidade, está mal, se declara ou pede algo. Na dúvida, "texto".
 6. TODOS os campos de texto (response_goal, description, content, topics, follow_up_prompt, shared_topic) precisam estar em português brasileiro natural — NUNCA em inglês.
 7. NUNCA marque should_offer_reminder=true para eventos próximos (menos de 45 minutos a partir de agora).
 8. media_mentioned: só quando o Patrick CITA pelo nome um anime, série, filme, dorama ou jogo — copie o título exatamente como ele escreveu. Se ele não citou nenhum título, title=null. Nunca complete, traduza nem adivinhe título.
 9. patrick_event: o que a mensagem DELE fez com ela, como uma namorada de verdade sentiria. elogio (elogiou, declarou), cuidado (se preocupou com ela), flerte, provocacao (zoeira de boa), novidade_boa (contou algo bom da vida dele), ele_mal (ele está triste, estressado, doente), desculpa (pediu desculpa ou reconheceu um erro), ciume (citou outra mulher de um jeito que dá ciuminho). Mágoa é JUSTA: grosseria só se ele foi grosso ou desdenhou dela de verdade; esqueceu_importante só se esqueceu algo que importava pra ela; briga só em discussão real. Zoeira entre eles NÃO é grosseria. Na dúvida, "nenhum".
 """
 
-_PLAN_TEXT = ("intent", "tone", "response_goal", "shared_topic", "resolved_loop_hint")
+_PLAN_TEXT = ("intent", "tone", "response_goal", "shared_topic", "resolved_loop_hint", "resposta")
 _PLAN_FLAGS = ("creates_event", "reminder_candidate", "should_offer_reminder",
                "creates_open_loop", "resolves_open_loop")
 _PLAN_OBJECTS = ("event_details", "direct_reminder", "open_loop_details", "media_mentioned", "patrick_event")

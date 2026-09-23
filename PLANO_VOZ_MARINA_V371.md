@@ -778,6 +778,16 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - **dentro do banho ela não pega o celular**: a availability adia a resposta até ela **sair do banho e se vestir** (fim do banho + 2–8 min);
   - o estado atual não diz mais "você AVISOU o Patrick" quando ela não avisou.
 
+### Reações e "só uma reação basta" (23/09, fim de tarde) ✅ — caderno de feedback do Patrick
+
+| Feedback (caderno) | Causa | O que foi feito |
+|---|---|---|
+| "ela não consegue reagir com risada" | O Telegram **não aceita 😂** como reação (aceita 🤣). O alias estava invertido (🤣 → 😂). O Telegram recusava e o cache marcava 😂 como inválido por 24 h | 😂/😆/😅 → 🤣, e 🤣 entra na lista segura |
+| "a intensidade de reações aumentou muito" | O emoji sugerido pelo planner era aplicado **sempre** | Reage de vez em quando: 35% com emoji do planner, 25% pela heurística, 70% em risada forte ou "te amo", ×0,3 se acabou de reagir. O planner foi orientado a sugerir `null` na maioria das mensagens |
+| "não precisa responder tudo; às vezes só uma reação ou uma risada bastam… responde tudo gerando alucinações" | Todo turno gerava texto, com gancho e pergunta | Campo novo do planner, `resposta: texto\|so_reacao`, para quando ele fecha o assunto, só ri ou concorda, sem pergunta nem novidade. Com isso ela **só reage** (🤣 ou ❤️) em 75% das vezes e não escreve; a fala dele vai para a memória. Nunca em pergunta, desabafo, pedido, plano ou foto/áudio. Na voz: "nem toda mensagem pede gancho; nunca invente mania ou passado dele" |
+
+**Anotado para depois:** ela prometeu "te aviso assim que chegar no shopping" e não avisou (o Patrick cobrou 45 min depois). Hoje o bot não transforma a promessa numa mensagem na hora da chegada. Esquecer às vezes é humano, mas deveria ser o normal ela avisar. O caminho: a promessa vira um lembrete dela, disparado quando a saída começa.
+
 ### Limpeza de prompt (23/09, tarde) ✅
 
 O Patrick deu carta branca ("o ideal é a Marina que a gente planeja; vamos testar muito até chegar lá"). Medido no prompt real (`context_builder.build`), com a mensagem "tá por onde minha princesa?":
