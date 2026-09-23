@@ -24,6 +24,17 @@ logger = logging.getLogger("MarinaDB")
 
 BASE_DIR = Path(__file__).resolve().parent
 
+# Auditoria #2b: "me avisa quando chegar" é pendência de conversa, não de
+# projeto. Sem data explícita ela não agenda check-in e vence em poucas horas;
+# antes recebia +24h/+48h e voltava como pergunta proativa dois dias depois.
+SHORT_LIVED_LOOP_TYPES = ("waiting", "promise")
+SHORT_LIVED_LOOP_HOURS = 12
+
+
+def _loop_words(text: Optional[str]) -> set:
+    import re as _re
+    return {w for w in _re.findall(r"\w+", (text or "").casefold()) if len(w) >= 4}
+
 
 def _running_under_tests() -> bool:
     argv0 = sys.argv[0] if sys.argv else ""
@@ -1275,12 +1286,25 @@ class DatabaseManager:
         """Cria um novo assunto/processo em aberto com o Patrick."""
         now_dt = datetime.now()
         now_iso = now_dt.isoformat()
-        if next_check_after is None:
+        short_lived = loop_type in SHORT_LIVED_LOOP_TYPES and next_check_after is None and due_at is None
+        if next_check_after is None and not short_lived:
             # P2.1: Prazo inicial padrão (24h) para evitar check-in imediato em loops sem prazo
             next_check_after = (now_dt + timedelta(days=1)).isoformat()
 
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            # Auditoria #2b: o planner reabria a mesma pendência a cada turno
+            # ("Patrick avisar quando chegar em casa" ×4 em 22/09). Pendência
+            # parecida e aberta do mesmo tipo é tocada, não duplicada.
+            words = _loop_words(content)
+            for row in cursor.execute(
+                    "SELECT id, content FROM open_loops WHERE status='open' AND loop_type=? "
+                    "AND (is_archived = 0 OR is_archived IS NULL)", (loop_type,)).fetchall():
+                other = _loop_words(row["content"])
+                if words and other and len(words & other) / len(words | other) >= 0.5:
+                    cursor.execute("UPDATE open_loops SET last_touched_at=? WHERE id=?", (now_iso, row["id"]))
+                    conn.commit()
+                    return row["id"]
             cursor.execute(
                 """
                 INSERT INTO open_loops
@@ -1308,10 +1332,11 @@ class DatabaseManager:
                 SELECT id, loop_type, content, status, importance, due_at, next_check_after, last_touched_at
                 FROM open_loops
                 WHERE status = 'open' AND (is_archived = 0 OR is_archived IS NULL)
+                  AND NOT (next_check_after IS NULL AND due_at IS NULL AND last_touched_at < ?)
                 ORDER BY importance DESC, last_touched_at DESC
                 LIMIT ?
                 """,
-                (limit,)
+                ((datetime.now() - timedelta(hours=SHORT_LIVED_LOOP_HOURS)).isoformat(), limit)
             )
             return [dict(r) for r in cursor.fetchall()]
 
@@ -1362,11 +1387,42 @@ class DatabaseManager:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE open_loops SET status = 'abandoned', last_touched_at = ? WHERE id = ? AND status = 'open'",
-                (now_iso, loop_id)
+                # resolved_at também: sem ele o arquivamento de 30 dias nunca pegava abandonados.
+                "UPDATE open_loops SET status = 'abandoned', last_touched_at = ?, resolved_at = ? "
+                "WHERE id = ? AND status = 'open'",
+                (now_iso, now_iso, loop_id)
             )
             conn.commit()
             return cursor.rowcount > 0
+
+    def vencer_open_loops_curtos(self, now: Optional[datetime] = None) -> int:
+        """Auditoria #2b: pendência de conversa sem data vence em SHORT_LIVED_LOOP_HOURS."""
+        now_dt = now or datetime.now()
+        limite = (now_dt - timedelta(hours=SHORT_LIVED_LOOP_HOURS)).isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.execute(
+                """UPDATE open_loops SET status='abandoned', resolved_at=?,
+                          resolution_notes=COALESCE(resolution_notes, 'venceu sem data (higiene #2b)')
+                   WHERE status='open' AND next_check_after IS NULL AND due_at IS NULL
+                     AND last_touched_at < ?""",
+                (now_dt.isoformat(), limite))
+            conn.commit()
+            return cursor.rowcount
+
+    def expirar_fatos_contextuais(self, dias: int = 3, now: Optional[datetime] = None) -> int:
+        """Auditoria #2b: fato 'contextual' é o que "só importa nos próximos dias" —
+        e nada o expirava. "Consulta com o dentista amanhã às 10h30" continuava
+        ativo (e errado) para sempre."""
+        now_dt = now or datetime.now()
+        limite = (now_dt - timedelta(days=dias)).isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.execute(
+                """UPDATE fatos_patrick SET active=0, updated_at=?
+                   WHERE active=1 AND memory_tier='contextual'
+                     AND COALESCE(last_confirmed_at, created_at) < ?""",
+                (now_dt.isoformat(), limite))
+            conn.commit()
+            return cursor.rowcount
 
     def atualizar_open_loop_touch(self, loop_id: int, next_check_after: Optional[str] = None) -> bool:
         """Atualiza a data em que o loop foi tocado/mencionado na conversa."""

@@ -47,9 +47,11 @@ class _Base(unittest.TestCase):
 
 class BomDiaTests(_Base):
     def test_acorda_e_da_bom_dia(self):
+        from sleep_plan import SleepPlan
         wake = self.r.wake_at(self.class_day)
-        self.assertEqual(wake.strftime("%H:%M"), "07:00")
-        self.assertEqual(self.r.wake_at(self.free_day).strftime("%H:%M"), "08:30")
+        # Fase D2: o sono é variável — os rituais seguem o plano de sono do dia.
+        self.assertEqual(wake, SleepPlan(self.db).wake(self.class_day))
+        self.assertEqual(self.r.wake_at(self.free_day), SleepPlan(self.db).wake(self.free_day))
         ritual = self._tick(wake + timedelta(minutes=41), ("WAKING", "acordando"))
         self.assertEqual(ritual.kind, "bom_dia")
         self.assertIn("hoje tem aula", ritual.detail)
@@ -70,8 +72,9 @@ class BomDiaTests(_Base):
 
 class BoaNoiteTests(_Base):
     def test_boa_noite_antes_de_deitar(self):
+        from sleep_plan import SleepPlan
         bed = self.r.bed_at(self.class_day)
-        self.assertEqual(bed, datetime.combine(self.class_day + timedelta(days=1), datetime.min.time()))
+        self.assertEqual(bed, SleepPlan(self.db).bed(self.class_day))
         ritual = self._tick(bed - timedelta(minutes=4))
         self.assertEqual(ritual.kind, "boa_noite")
 
@@ -198,6 +201,36 @@ class CotidianoTests(_Base):
         self.assertFalse(self.r.observe_marina_line("vou tomar banho agora", now + timedelta(minutes=40)))
         for fala in ("amanhã vou tomar banho cedo", "vou tomar banho amanhã cedo antes da aula"):
             self.assertFalse(Rituals(self.db).observe_marina_line(fala, now + timedelta(hours=5)))
+
+    def test_d4v2_chegou_da_rua_no_calor_toma_banho(self):
+        with patch.object(Rituals, "_temperature", return_value=33.0), \
+             patch.object(rituals, "SHOWER_STREET_CHANCE", 1.0):
+            self._tick(self._at(17, 0), ("SOCIAL", "na praia com a Bia"))
+            self._tick(self._at(17, 30), ("HOME_RELAXING", "em casa"))
+            planned = datetime.fromisoformat(self.r._get(f"ritual:{self.class_day.isoformat()}:banho_rua_at"))
+            self.assertTrue(self._at(17, 40) <= planned <= self._at(18, 0))
+            ritual = self._tick(planned + timedelta(minutes=1), ("HOME_RELAXING", "em casa"))
+        self.assertEqual(ritual.moment, "banho")
+        self.assertIn("chegar da rua", ritual.detail)
+        self.assertIn("calor", ritual.detail)
+
+    def test_d4v2_sem_teto_mas_nunca_colado(self):
+        self.r.start_shower(self._at(8, 0), 15)
+        self.r.start_shower(self._at(18, 30), 15)
+        self.assertEqual(self.r._last_shower_at(self.class_day), self._at(18, 32))
+        at = self._evening_slot()
+        if at - self._at(18, 32) < rituals.SHOWER_MIN_GAP:
+            self.assertIsNone(self._tick(at))
+
+    def test_d4v2_cansada_banho_demorado(self):
+        at = self._evening_slot()
+        self._msg("user", "e aí", at - timedelta(minutes=2))
+        with patch.object(self.db, "get_estado_emocional",
+                          return_value={"energy": {"valor": 0.2}, "romantic_intensity": {"valor": 0.5},
+                                        "playfulness": {"valor": 0.5}}):
+            ritual = self._tick(at)
+        self.assertIn("relaxar", ritual.detail)
+        self.assertGreaterEqual(ritual.extra["shower_minutes"], 25)
 
     def test_malicia_so_com_humor_provocador(self):
         with patch.object(Rituals, "_flirty", return_value=True):

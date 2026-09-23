@@ -42,7 +42,10 @@ SHOWER_EVENING = ("19:30", "22:30")
 SHOWER_AFTER_GYM_MIN = (20, 40)
 SHOWER_DURATION_MIN = (15, 30)
 SHOWER_DUE_WINDOW_MIN = 60   # se um jantar cobre o horário, o banho espera o próximo tick
-SHOWER_MIN_GAP = timedelta(hours=3)
+# D4 v2 (23/09): sem teto — o banho vem da necessidade dela. Só não toma dois colados.
+SHOWER_MIN_GAP = timedelta(hours=2)
+SHOWER_STREET_CHANCE = 0.35  # chegou da rua (+0.35 no calor, +0.2 voltando de rolê)
+SHOWER_HOT_C = 28
 
 SHOWER_PROMISE_RE = re.compile(
     r"\bvou\s+(?:l[aá]\s+)?(?:tomar\s+(?:um\s+)?banho|pro\s+banho|entrar\s+no\s+banho)\b"
@@ -107,11 +110,17 @@ class Rituals:
         return min(windows) if windows else None
 
     def wake_at(self, day) -> Optional[datetime]:
+        from sleep_plan import SleepPlan, enabled as sleep_plan_enabled
+        if sleep_plan_enabled():
+            return SleepPlan(self.db).wake(day)
         window = self._sleep_window(day)
         return window[1] if window else None
 
     def bed_at(self, day) -> Optional[datetime]:
-        """Hora de deitar da noite de `day` (o sono de amanhã começa à meia-noite)."""
+        """Hora de deitar da noite de `day` (pode passar da meia-noite com o sono variável)."""
+        from sleep_plan import SleepPlan, enabled as sleep_plan_enabled
+        if sleep_plan_enabled():
+            return SleepPlan(self.db).bed(day)
         window = self._sleep_window(day + timedelta(days=1))
         return window[0] if window else None
 
@@ -202,7 +211,17 @@ class Rituals:
         ritual = self._bom_dia(now, kind, activity) or self._boa_noite(now, kind)
         if ritual:
             return ritual
+        if kind == "WAKING" and "se arrumando" in activity:
+            self._banho_manha(now, day)
         return self._cotidiano(now, day, previous, kind, activity)
+
+    def _banho_manha(self, now: datetime, day) -> None:
+        """Fase D13/D4: se arrumando pra sair, ela toma banho (sem aviso: é rotina)."""
+        key = f"{PREFIX}{day.isoformat()}:cotidiano:banho_manha"
+        if self._get(key) or self._transition_busy(now):
+            return
+        self._set(key, "quiet", now)
+        self.start_shower(now, self._rng(day, "banho_manha").randint(12, 20))
 
     def _bom_dia(self, now: datetime, kind: str, activity: str = "") -> Optional[Ritual]:
         day = now.date()
@@ -227,7 +246,14 @@ class Rituals:
                       "Bom dia, amor 🖤")
 
     def _boa_noite(self, now: datetime, kind: str) -> Optional[Ritual]:
+        # Com o sono variável ela pode deitar depois da meia-noite: a noite de
+        # ontem ainda vale até ela dormir.
         day = now.date()
+        for night in (now.date() - timedelta(days=1), now.date()):
+            bed = self.bed_at(night)
+            if bed and bed - timedelta(hours=1) <= now < bed:
+                day = night
+                break
         key = f"{PREFIX}{day.isoformat()}:boa_noite"
         bed = self.bed_at(day)
         if not bed or self._get(key):
@@ -259,6 +285,8 @@ class Rituals:
             moment = "saiu_academia"
             gap = self._rng(day, "banho_pos_treino").randint(*SHOWER_AFTER_GYM_MIN)
             self._set(f"{PREFIX}{day.isoformat()}:banho_at", (now + timedelta(minutes=gap)).isoformat(), now)
+        if previous in ("SOCIAL", "COMMUTE") and kind == "HOME_RELAXING":
+            self._plan_banho_rua(now, day, previous)
         if moment is None and kind == "HOME_RELAXING":
             slot = self._shower_due(now, day)
             return self._banho(now, day, slot) if slot else None
@@ -294,12 +322,37 @@ class Rituals:
     # banhos no dia. Agora o banho é rotina do mundo (acontece todo dia, e de
     # novo depois da academia); só o AVISO é opcional — e com conversa rolando
     # é quando ela mais avisa.
+    def _temperature(self, now: datetime) -> Optional[float]:
+        try:
+            from calendar_world import CalendarWorld
+            observed = CalendarWorld(self.db).context.get("weather:rio", now=now)
+            return float(observed["payload"]["temperature_c"]) if observed else None
+        except Exception:
+            return None
+
+    def _plan_banho_rua(self, now: datetime, day, previous: str) -> None:
+        """D4 v2: chegou da rua — no calor ou voltando de rolê, quase sempre banho."""
+        key = f"{PREFIX}{day.isoformat()}:banho_rua_at"
+        if self._get(key) and now - datetime.fromisoformat(self._get(key)) < SHOWER_MIN_GAP:
+            return
+        rng = random.Random(f"marina-ritual:{now.isoformat(timespec='minutes')}:banho_rua")
+        temp = self._temperature(now)
+        chance = SHOWER_STREET_CHANCE + (0.35 if temp is not None and temp >= SHOWER_HOT_C else 0.0) \
+            + (0.2 if previous == "SOCIAL" else 0.0)
+        if rng.random() < chance:
+            self._set(key, (now + timedelta(minutes=rng.randint(10, 30))).isoformat(), now)
+
     def _shower_due(self, now: datetime, day) -> Optional[str]:
         planned = self._get(f"{PREFIX}{day.isoformat()}:banho_at")
         if planned:
             at = datetime.fromisoformat(planned)
             if at <= now < at + timedelta(minutes=SHOWER_DUE_WINDOW_MIN):
                 return "banho_treino"
+        street = self._get(f"{PREFIX}{day.isoformat()}:banho_rua_at")
+        if street:
+            at = datetime.fromisoformat(street)
+            if at <= now < at + timedelta(minutes=SHOWER_DUE_WINDOW_MIN):
+                return f"banho_rua_{at:%H%M}"
         lo, hi = (datetime.combine(day, time.fromisoformat(t)) for t in SHOWER_EVENING)
         at = lo + timedelta(minutes=self._rng(day, "banho").randint(0, int((hi - lo).total_seconds() // 60)))
         return "banho_noite" if at <= now < at + timedelta(minutes=SHOWER_DUE_WINDOW_MIN) else None
@@ -345,7 +398,21 @@ class Rituals:
             return None
         tom = (" Hoje você está com humor provocador: pode ter um toque de malícia leve, sem ser explícita."
                if flirty else "")
-        detail = COTIDIANO_TEXT["banho"] + "." + tom + self._chat_hint(now)
+        # D4 v2: banho também é alívio e autocuidado — o motivo muda o jeito de avisar.
+        temp = self._temperature(now)
+        try:
+            energy = float(self.db.get_estado_emocional(now)["energy"]["valor"])
+        except Exception:
+            energy = 0.7
+        if slot.startswith("banho_rua"):
+            porque = " Você acabou de chegar da rua" + (" e está um calor absurdo" if temp and temp >= SHOWER_HOT_C else "")
+        elif energy < 0.35:
+            porque = " Vai ser um banho demorado, pra relaxar e se sentir gente de novo (skincare, cabelo)"
+        else:
+            porque = " Banho, skincare e cabelo: você gosta de ficar cheirosa"
+        detail = COTIDIANO_TEXT["banho"] + "." + porque + "." + tom + self._chat_hint(now)
+        if energy < 0.35 and not slot.startswith("banho_rua"):
+            minutes += 10
         return Ritual("cotidiano", key, "ritual_cotidiano", detail, "Vou tomar banho, já volto 🖤",
                       "banho", {"shower_minutes": minutes})
 

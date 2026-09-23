@@ -115,9 +115,12 @@ class AvailabilityPolicyTests(unittest.TestCase):
                             CRITICAL_WAKE_POLICY_ENABLED=False):
             targets = [self.policy.evaluate('bom dia amor', now=now, telegram_message_id=900 + i)
                        .selected_target_at for i in range(20)]
+        # Fase D2/D3: ela acorda no próximo despertar real (micro-despertar ou manhã).
+        from sleep_plan import SleepPlan
+        wake = SleepPlan(self.db).next_wake_boundary(now)
         for target in targets:
-            self.assertGreaterEqual(target, datetime(2026, 9, 22, 7, 5))
-            self.assertLessEqual(target, datetime(2026, 9, 22, 7, 36))
+            self.assertGreaterEqual(target, wake + timedelta(minutes=5))
+            self.assertLessEqual(target, wake + timedelta(minutes=36))
         self.assertGreater(len(set(targets)), 1, "o tempo de pegar o celular varia por mensagem")
 
     def test_patch_015_stale_sleeping_snapshot_still_protects_sleep(self):
@@ -132,10 +135,14 @@ class AvailabilityPolicyTests(unittest.TestCase):
                             CRITICAL_WAKE_POLICY_ENABLED=False):
             decision = self.policy.evaluate('marinocaa tá acordada?',
                                             now=now, telegram_message_id=101)
-        expected_end = datetime(2026, 9, 20, 8, 30)
+        # Fase D2/D3: o sono segue protegido até o próximo despertar real —
+        # um micro-despertar (ela vê e responde curtinho) ou a manhã.
+        from sleep_plan import SleepPlan
+        expected_end = SleepPlan(self.db).next_wake_boundary(now)
         self.assertEqual(decision.activity_type, 'SLEEPING')
         self.assertEqual(decision.decision, 'DEFER')
         self.assertGreaterEqual(decision.selected_target_at, expected_end)
+        self.assertGreater(decision.selected_target_at, now + timedelta(minutes=10))
 
     def test_patch_015_stale_non_sleeping_still_falls_back_to_unknown(self):
         """Regression guard: outside the sleep window (or non-sleeping activity),

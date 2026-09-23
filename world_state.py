@@ -202,6 +202,16 @@ class RoutineEngine:
                 "SELECT * FROM routine_patterns WHERE character_key = 'marina' AND active = 1"
             ).fetchall()
         result: list[RoutineCandidate] = []
+        from sleep_plan import SleepPlan, enabled as sleep_plan_enabled
+        plan = SleepPlan(self.db) if sleep_plan_enabled() else None
+        if plan is not None:
+            reason = plan.micro_wake_at(now)
+            if reason:
+                # Fase D3: acordou rapidinho de madrugada; vê o celular e volta a dormir.
+                result.append(RoutineCandidate(
+                    # Sem "dorm" no texto: vários pontos tratam "dorm" como dormindo.
+                    f"acordou de madrugada ({reason}) e já vai deitar de novo", "marina_apartment",
+                    1.0, "micro_wake", routine_type="micro_wake"))
         for row in rows:
             routine_type = row["routine_type"]
             if not self._day_applies(row["day_scope"], now, has_class):
@@ -211,6 +221,25 @@ class RoutineEngine:
                 # Dia de aula: o passeio vai pra onde couber (manhã antes da
                 # faculdade ou tarde depois dela) — o slot decide o horário.
                 window_start, window_end = CLASS_DAY_PET_WALK_WINDOW
+            if plan is not None and routine_type == "sleep":
+                if not plan.is_asleep(now):
+                    continue
+                result.append(RoutineCandidate("dormindo", "marina_apartment", float(row["probability"]),
+                                               row["canonical_key"], routine_type="sleep"))
+                continue
+            if plan is not None and routine_type == "wake":
+                # Fase D13: a manhã começa quando ela acorda de fato. Com compromisso
+                # ela está se arrumando até sair; sem, acordando com calma.
+                wake = plan.wake(now.date())
+                leave = plan._first_commitment(now.date())
+                end = leave if leave and leave > wake else wake + timedelta(minutes=45)
+                if not (wake <= now < end):
+                    continue
+                activity = ("se arrumando pra faculdade (banho, skincare, cabelo, café)" if leave
+                            else "acordando e tomando café")
+                result.append(RoutineCandidate(activity, "marina_apartment", float(row["probability"]),
+                                               row["canonical_key"], routine_type="wake"))
+                continue
             if not self._within_window(now, window_start, window_end):
                 continue
             if routine_type == "university":
@@ -346,6 +375,10 @@ class RoutineEngine:
         return slot
 
     def _sleep_windows(self, day, has_class: bool) -> list[tuple[datetime, datetime]]:
+        from sleep_plan import SleepPlan, enabled as sleep_plan_enabled
+        if sleep_plan_enabled():
+            # Fase D2: o sono da noite anterior e o desta noite, variáveis por data.
+            return SleepPlan(self.db).windows_on(day)
         with self.db.get_connection() as conn:
             rows = conn.execute(
                 "SELECT window_start, window_end, day_scope FROM routine_patterns "
@@ -587,6 +620,12 @@ class WorldStateManager:
             Commute(self.db).materialize(now)
         except Exception:
             logger.exception("commute.materialize.error")
+        try:
+            # Fase D1: refeições cuja hora chegou viram acontecimento (e estado, em casa).
+            from meals import Meals
+            Meals(self.db).materialize(now)
+        except Exception:
+            logger.exception("meals.materialize.error")
         if has_class is None:
             has_class = bool(academic.blocks_on(now.date()))
         if confirmed_commitment is None:
@@ -677,6 +716,9 @@ class WorldStateManager:
             elif (timedelta(0) <= age < timedelta(minutes=self.stale_minutes)
                     and not weather_changed and not plan_expired
                     and not (sleep_now and not previous_sleeping)
+                    # Fase D2/D3: acordar (de manhã ou num micro-despertar) também
+                    # vira estado na hora — antes ela ficava "dormindo" até 60 min.
+                    and not (previous_sleeping and not sleep_now)
                     and not self._slot_began(now, has_class=has_class, weather=weather,
                                              energy=energy, holiday_scope=holiday_scope)):
                 return previous

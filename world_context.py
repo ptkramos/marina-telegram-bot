@@ -503,8 +503,22 @@ class WorldContextBuilder:
         contatos = day.today_so_far(now)
         historias = day.open_stories()
         planos = day.upcoming_outings(now)
+        # Fase D1: a comida do dia tem bloco próprio (fome, disfarce, dieta, peso) —
+        # sem ele o modelo inventava o jantar.
+        comida = []
+        try:
+            from sleep_plan import SleepPlan, enabled as sleep_plan_enabled
+            if sleep_plan_enabled():
+                sono = SleepPlan(self.db).prompt_lines(now)
+                if sono:
+                    comida += ["[SEU SONO — aconteceu de verdade]", *sono]
+            from meals import Meals
+            comida += Meals(self.db).prompt_lines(now)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("meals.prompt_lines.error")
         if not contatos and not historias and not planos:
-            return []
+            return comida
         lines = ["[SEU DIA ATÉ AGORA — aconteceu de verdade]"]
         lines += [f"- {datetime.fromisoformat(c['event_at']).strftime('%H:%M')} — {c['summary']}"
                   + (" (" + SocialDay.SECRET_NOTE + ")" if c.get('secret') else '') for c in contatos]
@@ -521,7 +535,7 @@ class WorldContextBuilder:
             "Use isto só quando vier ao caso ou se o Patrick perguntar — não despeje a "
             "agenda. Detalhes finos você completa com naturalidade, mas não contradiga "
             "estes fatos nem invente outro encontro ou conversa com essas pessoas hoje.")
-        return lines
+        return lines + comida
 
     def _location_name(self, place_id: Optional[int]) -> Optional[str]:
         if place_id is None:

@@ -383,7 +383,8 @@ async def check_and_trigger_memory_consolidation():
 
                     start_id = novas_mensagens[0]["id"]
                     end_id = novas_mensagens[-1]["id"]
-                    lote = [{"role": m["role"], "content": m["content"]} for m in novas_mensagens]
+                    lote = [{"role": m["role"], "content": m["content"], "timestamp": m.get("timestamp")}
+                            for m in novas_mensagens]
 
                     try:
                         res = await memory_consolidator.consolidate_and_apply_async(
@@ -3921,6 +3922,11 @@ _PROACTIVE_INSTRUCTIONS = {
     'ritual_cotidiano': ("Momento do seu dia agora: {detail} Mande uma mensagem espontânea curta sobre isso, "
                          "do jeito que namorada avisa ou comenta pra chamar atenção e puxar conversa. Fique "
                          "no que está acontecendo: não invente fato novo."),
+    # Fase D12 — saudade (proactivity_service.saudade).
+    'saudade': ("{detail} Você está com saudade dele e foi procurar. Mande uma mensagem curta do seu "
+                "jeito — dengo, provocação, 'sumiu hein', ou puxando uma coisa real do seu dia. Se ele "
+                "não respondeu suas últimas mensagens, nada de drama pesado nem cobrança: no máximo um "
+                "'tá vivo?' carinhoso. Não invente acontecimento novo."),
     'light_affection': ("Mande uma mensagem espontânea curta pro Patrick. Use só o que está no seu "
                         "estado atual e no seu dia — um pensamento sobre o que você está fazendo, uma "
                         "reação ao momento ou só carinho. Não invente acontecimento novo. Varie: não "
@@ -3969,10 +3975,16 @@ async def autonomous_routine_v36(application: Application):
         from calendar_world import CalendarWorld
         if CalendarWorld(memory_manager.db).current(now, include_academic=True):
             return
-        should_run, _ = proactivity_service.should_trigger(now)
+        should_run, why = proactivity_service.should_trigger(now)
         if not should_run:
             return
         candidate = proactivity_service.determine_living_world_candidate(now)
+        if why == 'saudade' and candidate['reason'] in ('light_affection', 'no_candidate'):
+            s = proactivity_service.saudade(now)
+            sem = (f"Faz {s['hours']:.0f}h que o Patrick não fala com você"
+                   + (f" e ele ainda não respondeu suas {s['unanswered']} últimas mensagens." if s['unanswered']
+                      else "."))
+            candidate = dict(candidate, reason='saudade', detail=sem)
         reason = candidate['reason']
         event_id = candidate.get('event_id')
         loop_id = candidate.get('loop_id')
@@ -3999,6 +4011,11 @@ async def autonomous_routine_v36(application: Application):
                 if news:
                     reason = 'social_day_share'
                     detail = news['summary']
+            elif reason == 'saudade':
+                from social_day import SocialDay
+                news = SocialDay(memory_manager.db).fresh_news(now)
+                if news:
+                    detail = f"{detail} Uma coisa real do seu dia que você pode puxar: {news['summary']}"
             if reason == 'pending_event_followup':
                 fallback = f"Amor, lembrei do seu compromisso: {detail}. Como foi?"
             elif reason == 'open_loop_checkin':

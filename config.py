@@ -82,6 +82,9 @@ class Settings:
     INTIMACY_ENABLED: bool = os.getenv("INTIMACY_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
     # Fase C.3 — rituais (bom dia, boa noite, cotidiano). Ver rituals.py.
     RITUALS_ENABLED: bool = os.getenv("RITUALS_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
+    # Fases D2/D3/D13 — sono variável, micro-despertares e manhã de trás pra frente (sleep_plan.py).
+    # false = volta às janelas fixas do cânone (00:00–06:59 / 00:00–08:29).
+    SLEEP_PLAN_ENABLED: bool = os.getenv("SLEEP_PLAN_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
     # Fase C.4 — tempo real dos trajetos (distancematrix.ai). Sem chave, vale a tabela do commute.py.
     DISTANCE_MATRIX_KEY: str = os.getenv("DISTANCE_MATRIX_KEY", "").strip()
     COMMUTE_LIVE_TIMES: bool = os.getenv("COMMUTE_LIVE_TIMES", "true").strip().lower() in ("1", "true", "yes", "on")

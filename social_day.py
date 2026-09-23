@@ -81,6 +81,19 @@ NPC_POOLS = {
     ),
 }
 NPC_INDEX = {row[0]: row for pool in NPC_POOLS.values() for row in pool}
+
+# Fase D12 — laços. O pai (Henrique) liga quando está livre e manda mensagem
+# quando está ocupado; checa a filha pelo menos 1×/dia e banca a comida dela.
+DAD_MORNING_TOPICS = ("bom dia e se ela já tomou café", "se ela está comendo direito",
+                      "o tempo no Rio e se ela vai precisar de guarda-chuva", "saudade dela",
+                      "se ela chegou bem ontem")
+DAD_CALL_TOPICS = ("como foi a faculdade", "se ela está comendo direito", "o Milo",
+                   "as contas do apartamento", "saudade e quando ela vai visitar ele",
+                   "o trabalho dele", "se ela está dormindo direito")
+BIA_WINDOWS = ((time(9, 30), time(12, 0)), (time(12, 0), time(15, 0)),
+               (time(15, 0), time(19, 0)), (time(19, 0), time(23, 30)))
+BIA_WINDOWS_WEEKEND = ((time(10, 30), time(13, 0)), (time(13, 0), time(17, 0)),
+                       (time(17, 0), time(20, 0)), (time(20, 0), time(23, 59)))
 NPC_CHANCE = {"puc": 0.35, "gym": 0.25, "walk": 0.2, "outing": 0.45}
 CANON_AFTER = "recurring"
 # Lugares que ela pode descobrir nas saídas de sexta (ficção interna, sem
@@ -246,9 +259,9 @@ class SocialDay:
         contacts: list[Contact] = []
         outings = self._outings_on(day)
 
-        def add(character_key, at, channel, place_key=None, *, salt, requires=None, valence=0.3):
+        def add(character_key, at, channel, place_key=None, *, salt, requires=None, valence=0.3, topic=None):
             rng = _rng(day, f"topic:{character_key}:{salt}")
-            topic = self._topic(character_key, rng)
+            topic = topic or self._topic(character_key, rng)
             secret = topic in SECRET_TOPICS and rng.random() < SECRET_CHANCE
             about = None
             ties = [next(iter(pair - {character_key})) for pair in FRIEND_TIES if character_key in pair]
@@ -288,16 +301,28 @@ class SocialDay:
             add("celia_ribeiro", walk[0] + timedelta(minutes=1), "presencial", "marina_apartment",
                 salt="predio", requires="pet_walk")
 
-        # À distância.
+        # À distância. Fase D12 (laços): pai e melhor amiga são laço, não acaso —
+        # antes o pai tinha 30% de chance num dia útil e a Bia 80% de UMA mensagem;
+        # em 22/09 ela não falou com nenhum dos dois.
+        # Bia: de 2 a 4 trocas espalhadas no dia (mensagem ou áudio).
         rng = _rng(day, "bia_andrade")
-        if rng.random() < 0.8:
-            window = (time(11, 0), time(22, 0)) if weekend else (
-                (time(12, 0), time(14, 0)) if rng.random() < 0.3 else (time(19, 0), time(22, 30)))
-            add("bia_andrade", _at(day, *window, rng), "mensagem", salt="msg", valence=0.4)
+        windows = BIA_WINDOWS_WEEKEND if weekend else BIA_WINDOWS
+        for i, window in enumerate(sorted(rng.sample(windows, rng.choice((2, 3, 3, 4))))):
+            add("bia_andrade", _at(day, *window, rng), "áudio" if rng.random() < 0.3 else "mensagem",
+                salt="msg" if i == 0 else f"msg{i}", valence=0.4)
+        # Pai: checa a filha todo dia (mensagem de manhã, quando ela já acordou),
+        # liga à noite quando está livre, e toda segunda manda o dinheiro da comida.
         rng = _rng(day, "henrique_salles")
-        if rng.random() < (0.5 if weekend else 0.3):
-            add("henrique_salles", _at(day, time(18, 30), time(21, 30), rng),
-                "ligação" if rng.random() < 0.6 else "mensagem", salt="contato", valence=0.4)
+        manha = (time(9, 30), time(11, 30)) if weekend else (
+            (time(7, 40), time(9, 30)) if has_class else (time(9, 0), time(11, 0)))
+        add("henrique_salles", _at(day, *manha, rng), "mensagem", salt="bomdia", valence=0.4,
+            topic=rng.choice(DAD_MORNING_TOPICS))
+        if rng.random() < (0.6 if weekend else 0.4):
+            add("henrique_salles", _at(day, time(19, 0), time(21, 30), rng), "ligação", salt="contato",
+                valence=0.4, topic=rng.choice(DAD_CALL_TOPICS))
+        if day.weekday() == 0:
+            add("henrique_salles", _at(day, time(10, 0), time(12, 0), rng), "mensagem", salt="mercado",
+                valence=0.3, topic="mandou o dinheiro do mercado e da comida da semana, sem ela pedir")
         rng = _rng(day, "livia_vasconcelos")
         if not weekend and rng.random() < 0.2:
             add("livia_vasconcelos", _at(day, time(10, 0), time(18, 0), rng), "mensagem", salt="trabalho", valence=0.2)
@@ -529,6 +554,7 @@ class SocialDay:
         summary = {
             "presencial": f"{verbo} {name}{quem_e}" + (f" ({place['name']})" if place else ""),
             "mensagem": f"Trocou mensagens com {name}",
+            "áudio": f"Trocou áudios com {name}",
             "ligação": f"Falou por telefone com {name}",
         }[contact.channel] + f"; assunto: {contact.topic}"
         if contact.about:
@@ -659,7 +685,7 @@ class SocialDay:
                           EXISTS (SELECT 1 FROM knowledge_items k WHERE k.subject_type='event'
                                   AND k.subject_id=e.id AND k.holder_character_key='marina'
                                   AND k.privacy_level='CONFIDENTIAL' AND k.revoked_at IS NULL) AS secret
-                   FROM life_events e WHERE e.event_type IN ('social_contact', 'commute', 'meal', 'routine')
+                   FROM life_events e WHERE e.event_type IN ('social_contact', 'commute', 'routine')
                    AND e.event_at>=? AND e.event_at<=? ORDER BY e.event_at DESC LIMIT ?""",
                 (start, now.isoformat(), limit)).fetchall()
         return [dict(r) for r in reversed(rows)]

@@ -778,7 +778,11 @@ class InternalPlanner:
                         loop_type = old.get("loop_type", "task")
                         imp = float(old.get("importance", 0.5))
                         hint = old.get("next_check_hint")
-                        next_check = parse_iso_or_relative_datetime(hint, default_offset_hours=48) if hint else None
+                        # Auditoria #2b: espera/promessa de conversa com dica descritiva
+                        # ("quando chegar em casa") não vira check-in em +48h.
+                        from db import SHORT_LIVED_LOOP_TYPES
+                        default_h = None if loop_type in SHORT_LIVED_LOOP_TYPES else 48
+                        next_check = parse_iso_or_relative_datetime(hint, default_offset_hours=default_h) if hint else None
                         self.db.adicionar_open_loop(
                             loop_type=loop_type,
                             content=content.strip(),

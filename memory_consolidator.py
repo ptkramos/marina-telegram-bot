@@ -46,6 +46,15 @@ REGRAS DE CLASSIFICAÇÃO:
 8. Associe canonical_key (snake_case, ex.: jogo_atual, energetico_favorito, rotina_treino) para conceitos que mudam com o tempo.
 9. Defina volatility: 'stable' (família, identidade, gostos fundamentais), 'medium' (jogos e projetos atuais), 'volatile' (rotina temporária, agenda da semana).
 
+DE ONDE VEM A EVIDÊNCIA (Auditoria #2b):
+- Só o que o PATRICK diz é evidência. As falas da Marina são contexto: o que ela supõe, interpreta ou descreve (inclusive sobre uma foto dele) NUNCA vira fato sobre ele. Foto conta só pelo que ele mesmo escreveu na legenda.
+- Nunca grave fato sobre a Marina (planos, rotina, humor dela). Esta memória é só sobre o Patrick; a vida dela é registrada pelo mundo, não aqui.
+- Uma ocorrência não é hábito. "Costuma", "sempre", "geralmente" só quando o PRÓPRIO Patrick disser que é recorrente ("sempre", "todo dia", "costumo"). O que aconteceu uma vez é 'contextual' — ou 'ignore', se não tiver importância.
+- O que ele está fazendo agora (saindo do trabalho, no ônibus, preso no trânsito) é narração do momento: decision='ignore'. Agenda com data (consulta, prova, viagem) é 'contextual' com a DATA ABSOLUTA no texto ("em 23/09/2026 às 10h30"), nunca "amanhã" ou "hoje".
+- Padrão de relacionamento que já aparece nos fatos conhecidos (cuidado, carinho, preocupação) é decision='same' com o ID dele, não fato novo com outra canonical_key.
+
+MOMENTOS MARCANTES: só o que o casal lembraria daqui a meses — primeira vez, declaração forte, conflito e reconciliação, conquista ou notícia grande da vida dele. Conversa carinhosa do dia a dia não é momento. Em geral um diálogo rende ZERO momentos.
+
 COMO ESCOLHER memory_tier:
 - 'core' — identidade dele (nome, família, trabalho), projeto ou meta central da vida dele, fato forte do relacionamento de vocês, preferência muito importante, ou algo que ele pediu para lembrar. São os fatos que a Marina deveria ter presentes em qualquer conversa, mesmo sem ele mencionar o assunto.
 - 'standard' — preferências, rotinas, projetos e planos normais. É o padrão: use quando estiver em dúvida.
@@ -145,7 +154,19 @@ class MemoryConsolidator:
             conversation_repr.append(f"{role}: {m.get('content', '')}")
         dialogue_block = "\n".join(conversation_repr)
 
+        from datetime import datetime as _dt
+        dias = ("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")
+        # A referência é a hora da conversa, não a da consolidação: lote atrasado
+        # (backlog, reinício) converteria "amanhã" para o dia errado.
+        hoje = _dt.now()
+        for m in reversed(messages):
+            try:
+                hoje = _dt.fromisoformat(str(m.get("timestamp")))
+                break
+            except (TypeError, ValueError):
+                continue
         user_content = (
+            f"HOJE: {dias[hoje.weekday()]}, {hoje:%d/%m/%Y %H:%M} (use para converter datas relativas).\n\n"
             f"FATOS CONHECIDOS RELEVANTES AO DIÁLOGO:\n{facts_block}\n\n"
             f"LOTE DE CONVERSA RECENTE PARA ANÁLISE:\n{dialogue_block}\n\n"
             "Analise o diálogo e retorne estritamente o JSON com decisões categorizadas, desativações, momentos e resumo."

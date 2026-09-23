@@ -28,6 +28,13 @@ TRANSITION_ANNOUNCE_LEAD_MINUTES = 3
 # Duração default da atividade externa quando não há end_at explícito.
 TRANSITION_DEFAULT_DURATION_MINUTES = 75
 
+# Fase D12 — saudade do Patrick. Livre e com o coração quente, ela chega ao
+# gatilho em ~2h30 sem notícia dele; num estado neutro, em ~3h20.
+SAUDADE_RATE_PER_HOUR = 0.18
+SAUDADE_THRESHOLD = 0.6
+SAUDADE_BACKOFF_MINUTES = 90
+SAUDADE_MAX_UNANSWERED = 3
+
 # Atividades externas que fazem sentido anunciar naturalmente.
 EXTERNAL_TRANSITION_TEMPLATES = {
     "gym": {
@@ -143,6 +150,17 @@ class ProactivityService:
             else:
                 return False, "sleep_window"
 
+        # 1.5 Fase D12 — saudade. Decisão do Patrick (23/09): "não existe limite,
+        # é coisa do emocional; de bobeira e sozinha, eu seria a primeira pessoa
+        # que ela procuraria". A saudade passa por cima do teto diário e do
+        # cooldown fixo; quem segura a repetição é a espera crescente quando ele
+        # não responde.
+        saudade = self.saudade(dt)
+        if saudade["trigger"]:
+            logger.info("proactivity.saudade level=%.2f hours=%.1f unanswered=%d",
+                        saudade["level"], saudade["hours"], saudade["unanswered"])
+            return True, "saudade"
+
         # 2. Limite diário de proatividade
         count_today = self.get_autonomous_count_today(dt)
         if count_today >= settings.MAX_AUTONOMOUS_MESSAGES_PER_DAY:
@@ -205,6 +223,50 @@ class ProactivityService:
 
         return False, "stochastic_miss"
 
+    def _unanswered_initiatives(self, since: Optional[datetime]) -> int:
+        with self.db.get_connection() as conn:
+            if since is None:
+                row = conn.execute("SELECT COUNT(*) FROM conversas WHERE role='assistant' AND is_initiative=1").fetchone()
+            else:
+                row = conn.execute("SELECT COUNT(*) FROM conversas WHERE role='assistant' AND is_initiative=1 "
+                                   "AND timestamp > ?", (since.isoformat(),)).fetchone()
+        return int(row[0] or 0)
+
+    def saudade(self, now: datetime) -> dict:
+        """Saudade do Patrick: cresce com as horas sem ele, mais rápido quando ela
+        está livre e sozinha e com o coração quente.
+
+        * gatilho em SAUDADE_THRESHOLD, só acordada e fora de compromisso;
+        * se as iniciativas dela ficam sem resposta, a próxima espera o dobro
+          (1h30, 3h, 6h) e para depois de SAUDADE_MAX_UNANSWERED seguidas —
+          como gente de verdade manda um "sumiu?", não uma enxurrada.
+        """
+        last_user, last_auto = self.get_last_messages_timestamps()
+        out = {"trigger": False, "level": 0.0, "hours": 0.0, "unanswered": 0}
+        if last_user is None:
+            return out
+        hours = max(0.0, (now - last_user).total_seconds() / 3600)
+        factor, label = self._compute_state_factor(now)
+        if label == "sleeping" or label.startswith("busy"):
+            return dict(out, hours=hours)
+        mult = 1.3 if label == "free_time" else 1.0
+        try:
+            emo = {k: v["valor"] for k, v in self.db.get_estado_emocional(now).items()}
+            mult *= 0.8 + 0.4 * float(emo.get("romantic_intensity", 0.8))
+        except Exception:
+            pass
+        level = min(1.0, SAUDADE_RATE_PER_HOUR * hours * mult)
+        unanswered = self._unanswered_initiatives(last_user)
+        out.update(level=level, hours=hours, unanswered=unanswered)
+        if level < SAUDADE_THRESHOLD or unanswered >= SAUDADE_MAX_UNANSWERED:
+            return out
+        if unanswered and last_auto:
+            wait = timedelta(minutes=SAUDADE_BACKOFF_MINUTES * (2 ** (unanswered - 1)))
+            if now - last_auto < wait:
+                return out
+        out["trigger"] = True
+        return out
+
     def _compute_state_factor(self, now: datetime) -> Tuple[float, str]:
         """Devolve o multiplicador de proatividade baseado no WorldState atual.
 
@@ -241,7 +303,8 @@ class ProactivityService:
             source = {}
         reason = str(source.get("reason") or "").casefold()
 
-        if any(x in activity for x in ("dorm", "sleep", "sono")):
+        if any(x in activity for x in ("dorm", "sleep", "sono", "acordou de madrugada")):
+            # Micro-despertar (D3) responde se ele escreveu, mas nunca puxa conversa.
             return 0.0, "sleeping"
 
         # Busy: confirmed commitments, class, gym, work, casting.

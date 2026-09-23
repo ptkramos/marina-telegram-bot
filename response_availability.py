@@ -65,6 +65,13 @@ DEFAULT_PROFILES = {
         'soft_delay_min_s': 300, 'soft_delay_max_s': 1200, 'guardrail_s': 1800,
         'brief_likelihood': 0.2, 'prefer': 'DEFER',
     },
+    # Fase D3: acordou de madrugada (banheiro, sede…) — vê o celular e responde
+    # curtinho antes de voltar a dormir.
+    'MICRO_WAKE': {
+        'phone_access': 'HIGH', 'attention': 'LOW', 'interruptibility': 'HIGH',
+        'soft_delay_min_s': 20, 'soft_delay_max_s': 150, 'guardrail_s': 300,
+        'brief_likelihood': 0.95, 'prefer': 'REPLY_NOW',
+    },
     # Soak 22/09: "vou jantar agora" e seguia respondendo em 6 segundos. Comendo,
     # ela olha o celular entre uma garfada e outra — nem some, nem é instantânea.
     'MEAL': {
@@ -340,6 +347,16 @@ class ResponseAvailabilityPolicy:
         """Return the first minute outside the active deterministic sleep window."""
         if snapshot_id is None:
             return None
+        from sleep_plan import SleepPlan, enabled as sleep_plan_enabled
+        if sleep_plan_enabled():
+            # Fases D2/D3: o próximo despertar de verdade — um micro-despertar
+            # (ela vê a mensagem e responde curtinho) ou a manhã.
+            naive = now.replace(tzinfo=None) if now.tzinfo else now
+            boundary = SleepPlan(self.db).next_wake_boundary(naive)
+            if boundary is None:
+                return None
+            boundary = boundary.replace(tzinfo=now.tzinfo) if now.tzinfo else boundary
+            return boundary if boundary > now else None
         with self.db.get_connection() as conn:
             snapshot = conn.execute(
                 'SELECT source_json FROM world_state WHERE id=?', (snapshot_id,)
@@ -378,12 +395,14 @@ class ResponseAvailabilityPolicy:
         text = f'{place_key or ""} {activity}'.casefold()
         act = (activity or '').casefold()
         # Priority: explicit activity keywords override place heuristic
+        if 'acordou de madrugada' in act:
+            return 'MICRO_WAKE'
         if any(x in act for x in ('dorm', 'sleep', 'sono')):
             return 'SLEEPING'
         # Patch 030: 'acordando' tem de vir ANTES da heurística de 'tomando
         # café', senão a rotina canônica "acordando e tomando café" cai em
         # SOCIAL (bar/amigos) durante a janela de wake das 07:00-08:30.
-        if any(x in act for x in ('acordando', 'acabou de acordar', 'levantando')):
+        if any(x in act for x in ('acordando', 'acabou de acordar', 'levantando', 'se arrumando')):
             return 'WAKING'
         if any(x in act for x in ('tomando banho', 'no banho', 'banho')):
             return 'SHOWER'

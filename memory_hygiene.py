@@ -47,6 +47,12 @@ class MemoryHygieneService:
         if dedup_count > 0:
             logger.info(f"Memory Hygiene: {dedup_count} fatos redundantes inativados.")
 
+        # 2.1 Auditoria #2b: contexto de curto prazo vence de verdade.
+        expired_facts = self.db.expirar_fatos_contextuais(dias=3, now=now_dt)
+        expired_loops = self.db.vencer_open_loops_curtos(now=now_dt)
+        if expired_facts or expired_loops:
+            logger.info(f"Memory Hygiene: {expired_facts} fatos contextuais e {expired_loops} pendências curtas vencidos.")
+
         # 3. Arquivamento de Open Loops antigos
         archived_loops = self.db.arquivar_open_loops_antigos(dias=30)
         if archived_loops > 0:
@@ -64,6 +70,8 @@ class MemoryHygieneService:
             "timestamp": now_dt.isoformat(),
             "decay": decay_stats,
             "deduplicated_count": dedup_count,
+            "expired_contextual_facts": expired_facts,
+            "expired_short_loops": expired_loops,
             "archived_loops_count": archived_loops,
             "reconfirmation_candidates_count": len(reconf_cands),
             "reconfirmation_candidates": [c["fato"] for c in reconf_cands],
