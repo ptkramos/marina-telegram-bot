@@ -29,7 +29,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **C.2** Assistir junto (watch-along) | ⬜ | nada implementado |
 | **C.3** Rituais de namorada (bom dia, boa noite, cotidiano) | ✅ | `rituals.py` + job de 5 min: bom dia ao acordar, boa noite antes de deitar, momentos do cotidiano (saiu da aula, Milo, academia, banho) com teto de 2/dia; o banho vira estado `SHOWER` e ela some de verdade. Foto do banho espera o motor de imagem (C.1b) |
 | **C.4** Locomoção viva (uber, a pé, ônibus/metrô, carona) | ✅ tabela + API + carona | `commute.py`: ida e volta da PUC e das saídas viram estado ("voltando da PUC pra casa de ônibus"), modo sorteado por dia (pico, noite, chuva, fim de mês, cansaço, uber dividido com a amiga), imprevistos viram acontecimento do dia. Minutos pela Distance Matrix API quando há `DISTANCE_MATRIX_KEY` (1 consulta por trecho), tabela como reserva. Carona com o Theo (cânone: ele tem carro) |
-| **D** Rotina viva (refeições, sono, Milo, noite, faculdade, fim de semana, casa, freela) | 🟡 | Tabela desenhada com o Patrick em 22–23/09 (seção Fase D). **Feito:** D1 fome viva (refeições, lanches, apetite, disfarce, peso, agência), D12 laços (pai diário, Bia várias vezes, saudade do Patrick sem teto), D2+D3+D13 sono (variável, micro-despertares, manhã de trás pra frente), D4 banho v2 (por necessidade e emoção). **Próximos:** D5 Milo, D6+D7 noite e faculdade (todos com perguntas abertas para o Patrick) |
+| **D** Rotina viva (refeições, sono, Milo, noite, faculdade, fim de semana, casa, freela) | 🟡 | Tabela desenhada com o Patrick em 22–23/09 (seção Fase D). **Feito:** D1 fome viva (refeições, lanches, apetite, disfarce, peso, agência), D12 laços (pai diário, Bia várias vezes, saudade do Patrick sem teto), D2+D3+D13 sono (variável, micro-despertares, manhã de trás pra frente), D4 banho v2 (por necessidade e emoção), D5 Milo + cochilo, D6 parte 1 (o que ela assiste, cânone de gostos, descoberta sozinha, curiosidade pelo que o Patrick cita), pegar no sono pelo corpo/emoção, D8 fim de semana (convites + decisão dela), D7 faculdade (trabalhos, véspera, faltas, atrasos). **Próximos:** D6 parte 2 (TMDB, aguardando chave), D9 casa, D10 freela, D11 saúde, D14 motor emocional |
 | **C** Consolidação | 🟡 | **C1:** o rótulo `[COMO O PATRICK ESCREVE]` e os campos estão em pt-BR (#2 e #7), mas ainda é descrição ("risada: kkkk"), não amostras reais das mensagens dele. **C2** e **C3** ⬜ |
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
@@ -429,10 +429,10 @@ travadas em 1,0.
 | D2 | **Sono variável** | Deita **meia-noite em ponto**, acorda 07:00 ou 08:30 fixos | Hora de deitar varia (série, trabalho, rolê, ansiedade); com compromisso cedo ela **tenta** dormir 8 h e quase sempre dorme menos; sexta/sábado estica; déficit de sono vira energia baixa e cochilo no dia seguinte; às vezes demora a pegar no sono | "dormi 5h, tô um zumbi", "capotei no sofá à tarde" | ✅ 23/09 (ver "D2 + D3 + D13 — como ficou"). Patrick: "o sono dela é variado… com compromisso tento dormir 8 h, geralmente durmo menos" |
 | D3 | **Micro-despertares** | Sono binário (= Fase B.6) | Desenho da B.6: banheiro, sede, sonho ruim, celular por reflexo; 0–2 por noite; resposta curtinha e volta a dormir | "acordei pra beber água e vi tua mensagem" | ✅ 23/09 (desenho da B.6, aprovado em 20/09) |
 | D4 | **Banho** | Só existia se a mensagem saísse → 0 banhos em 22/09 | Rotina do mundo: todo dia à noite + depois da academia (≥ 3 h entre banhos); aviso opcional, sempre com conversa rolando; "vou tomar banho" dito na conversa vira banho | "tava no banho" | ✅ v2 em 23/09 (ver "D4 v2 — como ficou"). v1 em 22/09 (1 à noite + 1 pós-treino, ≥ 3 h entre banhos). **v2 decidida em 23/09:** sem teto e sem horário fixo; o banho sai da **necessidade dela** (calor, academia, praia, antes de sair, depois de chegar da rua) e do **emocional** (banho como alívio, revigorar, autocuidado com skincare e cabelo). Ela é vaidosa: gosta de estar cheirosa |
-| D5 | **Milo** | 1 passeio por dia | 2–3 saídas: manhã, fim de tarde e xixi rápido antes de dormir; às vezes ele apronta (comeu algo, latiu pro vizinho) | "o Milo roubou minha meia" | ⬜ |
-| D6 | **Noite em casa** | Bloco vazio de 5 h: "curtindo a noite em casa" | Fatiar em atividades: trabalho da faculdade, série/filme, skincare, rolar o celular, ligação com a família, arrumar o quarto | "tô vendo [série]", "fazendo o trabalho de Tipografia" | ⬜ |
-| D7 | **Faculdade além da aula** | Só a grade | Trabalhos e entregas com prazo, provas, grupo de trabalho com colegas; véspera de entrega muda o sono e a noite | "entrego sexta e não comecei" | ⬜ |
-| D8 | **Fim de semana** | Quase igual a dia útil | Acorda tarde, brunch, praia, rolê sábado à noite, domingo preguiçoso, família | "ressaca de domingo" | ⬜ |
+| D5 | **Milo** | 1 passeio por dia | 2–3 saídas: manhã, fim de tarde e xixi rápido antes de dormir; às vezes ele apronta (comeu algo, latiu pro vizinho) | "o Milo roubou minha meia" | ✅ 23/09 (ver "Cochilo (D2) e D5 Milo — como ficou") |
+| D6 | **Noite em casa** | Bloco vazio de 5 h: "curtindo a noite em casa" | Fatiar em atividades: trabalho da faculdade, série/filme, skincare, rolar o celular, ligação com a família, arrumar o quarto | "tô vendo [série]", "fazendo o trabalho de Tipografia" | 🟡 23/09: o que ela assiste + descoberta sozinha (ver "D6 parte 1"); faltam as outras fatias da noite |
+| D7 | **Faculdade além da aula** | Só a grade | Trabalhos e entregas com prazo, provas, grupo de trabalho com colegas; véspera de entrega muda o sono e a noite | "entrego sexta e não comecei" | ✅ 23/09 (ver "D7 — faculdade além da grade") |
+| D8 | **Fim de semana** | Quase igual a dia útil | Acorda tarde, brunch, praia, rolê sábado à noite, domingo preguiçoso, família | "ressaca de domingo" | ✅ 23/09: convites + decisão dela pelo emocional (ver "D8 — fim de semana"); acordar tarde e domingo preguiçoso já vêm do D2 |
 | D9 | **Casa e vida adulta** | Não existe | Mercado, lavar roupa, arrumar, conta de luz, iFood no fim do mês apertado | "fui no mercado e esqueci o que fui comprar" | ⬜ |
 | D13 | **Vaidade e se arrumar** (planejamento reverso) | Acorda 07:00 ou 08:30 fixos, sem olhar a que horas é o primeiro compromisso nem quanto tempo ela leva pra ficar pronta | A hora de acordar sai **de trás pra frente**: primeiro compromisso − trajeto (C.4) − café − se arrumar (banho, skincare, cabelo, maquiagem, roupa) − margem. Tempo de se arrumar varia (ensaio > aula > mercado). Se dorme demais ou enrola no espelho → **atraso** real (liga com D7 e C.4) | "perdi 20 min escolhendo roupa e cheguei atrasada" | 🟡 23/09: manhã de trás pra frente e despertador perdido feitos; **chegar atrasada de fato** (o trajeto e a aula se moverem) fica para o D7 |
 | D11 | **Corpo, saúde e ciclo** | Ciclo existe (energia, libido) | Cólica forte → fica em casa; banheiro (bebeu muito líquido, dor de barriga) como sumiço curtinho; farmácia; indisposição. Tom humano e discreto | "tô com cólica, hoje não vou pra aula" | ⬜ a desenhar |
@@ -508,9 +508,95 @@ travadas em 1,0.
 | **D3 micro-despertares** | 0 (45%), 1 (35%) ou 2 (20%) por noite, 3–8 min, nunca entre 2h e 5h30; banheiro, sede, sonho ruim ou celular por reflexo. Estado "acordou de madrugada (…) e já vai deitar de novo" → disponibilidade `MICRO_WAKE` (resposta curtinha). Mensagem que chega com ela dormindo é respondida no próximo micro-despertar (ou de manhã). Nunca puxa conversa de madrugada |
 | **Prompt** | `[SEU SONO — aconteceu de verdade]`: "dormiu das 22:41 às 05:12 (~7h)", "foi pouco: está com sono e com menos paciência" (< 6 h), atraso do despertador, micro-despertares da noite |
 
-**Decisões que ficaram com o Patrick** (não implementadas, aguardando resposta): ela cochila à tarde quando dorme pouco? Ela às vezes demora pra pegar no sono (ansiedade antes de prova/ensaio)?
+**Decisões do Patrick (23/09, manhã):**
+- **Cochilo:** sim, à tarde, a depender do cansaço ("às vezes nosso corpo simplesmente precisa disso").
+- **Pegar no sono:** "às vezes ela pode demorar a pegar no sono ou pegar mais cedo; tudo depende do emocional, da saúde e do que tá rolando no mundo dela (doente, repousa e dorme mais; ansiedade…)". **Implementado** (`SleepPlan._onset`):
+  - **mais cedo:** noite anterior com menos de 6,5 h (−30 a −60 min, "capotou"), treinou no dia (−15), menstruada (−20), energia muito baixa (−30). Exausta, pode deitar a partir de 21h30.
+  - **mais tarde:** 12% das noites demora de 20 a 60 min pra pegar no sono ("cabeça cheia"), +20% na TPM.
+  - Sempre só depois de voltar de uma saída.
+  - **Congelado:** a noite de hoje é decidida a partir das 20h e não muda mais (uma emoção que mexe de madrugada não a "acorda").
+  - O prompt conta: "Ontem à noite você dormiu pouco na noite anterior e capotou mais cedo".
+  - **Ganchos prontos:** doença (D11, dorme mais) e ansiedade de prova/ensaio (D7/D10, demora a dormir) entram em `_onset` quando essas fases existirem.
 
 `tests/test_sleep_plan.py` (14 testes).
+
+#### Cochilo (D2) e D5 Milo — como ficou (23/09, manhã)
+
+**Cochilo** (`sleep_plan.nap`): depois de noite curta — menos de 6 h de sono, 70% de chance; entre 6 e 6,5 h, 35% — ela cochila de 20 a 60 min entre 13h30 e 17h30, fora das aulas (com 1 h de folga). No mundo é sono de verdade: `dormindo`, responde quando acorda, e o prompt conta depois ("Cochilou das 15:10 às 15:50 — o corpo pediu").
+
+**Milo** (`milo.py`, Shih Tzu do cânone):
+
+| Saída | Como ficou |
+|---|---|
+| Xixi da manhã | 5–25 min depois de acordar, 10–15 min (acontecimento do dia) |
+| Passeio principal | O slot da agenda de sempre, agora **nunca entre 11h30 e 15h30** (focinho curto + sol do Rio), nem quando o remanejamento pela academia o empurraria pra lá |
+| Passeador | **Decisão dela**: 55% de chance em dia com aula até 16h ou mais, 35% depois de noite com menos de 6 h, +20% com energia baixa. Com passeador ela não passeia; vira acontecimento ("Pagou o passeador pra levar o Milo hoje — dia puxado") |
+| Xixi da noite | Entre 21h30 e 15 min antes de deitar, 8–12 min; vira estado ("passeio rapidinho com o Milo") → disponibilidade `PET_WALK`. Se ela está na rua, espera ela voltar |
+| Milo aprontando | 25% dos dias: roubou uma meia, latiu pro entregador, deitou na roupa que ela ia usar… (acontecimento do dia, assunto real) |
+
+`tests/test_milo_d5.py` (7 testes, inclui o cochilo).
+
+#### D6 parte 1 — o que ela assiste (23/09, manhã)
+
+**Cânone de gostos** (decidido com o Patrick, `migrations/023_marina_taste_canon.sql`, títulos reais):
+- **Séries e filmes:** *Elite* (na época do auge), *Emily em Paris*, *Bridgerton*, *Gossip Girl*, *Para Todos os Garotos que Já Amei*.
+- **Doramas:** *Pousando no Amor*, *Pretendente Surpresa*.
+- **Animes** (Marin Kitagawa como inspiração, não cópia): *Sakura Card Captor*, *Sailor Moon*, *Kaguya-sama*, *Sono Bisque Doll*, *Highschool of the Dead*, *High School DxD*, *Zero no Tsukaima*, *To Love-Ru*, *Dandadan*; **One Piece**, que ela começou por causa do Patrick.
+- **Jogos:** *It Takes Two*, *Stardew Valley*, *The Sims*.
+
+**Motor** (`watch.py`):
+- **Sessão da noite:** em 65% das noites, depois do jantar e antes de deitar, ela vê de 1 a 3 episódios do que está vendo. Vira estado ("vendo Paradise Kiss no sofá") e acontecimento do dia. Na véspera de aula às 7h ela deita 22h30 e não sobra tempo, então não assiste.
+- **One Piece:** um episódio em 30% das sessões, a partir do ep. 95 (começo de Alabasta), devagar.
+- **Descoberta sozinha** (pedido do Patrick): ao terminar um título, ela escolhe o próximo numa lista de **títulos reais** parecidos com os gostos dela (*Paradise Kiss*, *Nana*, *Horimiya*, *Toradora!*, *Spy x Family*, *Oshi no Ko*, *Chainsaw Man*, *Jujutsu Kaisen*, *Heartstopper*, *XO, Kitty*, doramas…), com o motivo ("viu um edit no TikTok", "a Bia disse que era a cara dela"). Anime pesa mais. Se ela amar (70%), vira `discovered_preference`. Nunca repete o que já terminou.
+- **Prompt:** `[O QUE VOCÊ ASSISTE — real; não cite título fora desta lista]` com o que está vendo, em que episódio, o One Piece e o que já viu.
+
+- **O que o Patrick comenta vira curiosidade dela** (pedido do Patrick, 23/09: "como namorada, ela vai acabar procurando saber e pode acabar assistindo depois"): o planner, que já roda em toda mensagem, ganhou o campo `media_mentioned` — **sem chamada extra de modelo**. O título só vale se estiver escrito na mensagem dele (o planner não completa nem inventa). Entra numa lista "o Patrick falou disso" (jogo não entra; o que ela já viu também não). Na próxima escolha, o que ele falou ganha 65% das vezes ("o Patrick falou dele e ela ficou curiosa"). O prompt mostra que ela anotou pra ver.
+
+**Falta no D6:** as outras fatias da noite (trabalho da faculdade → D7, skincare, arrumar o quarto).
+
+`tests/test_watch_d6.py` (6 testes).
+
+#### D7 — faculdade além da grade (23/09, manhã)
+
+`college.py`, chamado pelo resolvedor do mundo **antes** do trajeto (faltar cancela a ida). Sem chamada de modelo.
+
+| Peça | Como ficou |
+|---|---|
+| **Trabalhos** | Cada disciplina do período tem entregas a cada 4–6 semanas, numa aula dela (primeira na 3ª–4ª semana). Tipo: trabalho, exercício (cabe numa noite) ou apresentação; perto do fim do período vira "entrega final" (maior). Horas pelo tamanho × créditos. Ritmo sorteado por trabalho: adiantada (30%, 5 noites), normal (45%, 3 noites), **última hora** (25%, só a véspera) |
+| **Noites de trabalho** | Nas noites antes da entrega (o trabalho mais urgente), 1–2h30 a partir das 19h30–20h30; última hora pode ir a 4 h. Sábado à noite só se for véspera. Vira estado ("fazendo o trabalho de Ergodesign em casa" → disponibilidade `WORK`) e acontecimento ("Trabalhou no exercício de Desenho Técnico (entrega amanhã), enrolando um pouco"). A série vem depois do trabalho; na véspera de última hora não tem série |
+| **Véspera** | Gancho do sono: última hora → +60–120 min ("virou a noite terminando o trabalho de…"); senão, 0–30 min ("ficou ansiosa com a entrega") |
+| **Faltar aula** | Decidido de manhã, depois de acordar, uma vez por dia: dormiu < 5h30 (35%), cólica no começo da menstruação (25%), chuva forte (10%), preguiça (3%). Nunca em dia de entrega; no máximo 2 faltas por disciplina em 30 dias. Cancela as aulas do dia (`cancel_class_occurrence`), o trajeto some, o almoço vira em casa, e o acontecimento guarda o motivo ("Faltou a aula hoje (…): dormiu muito mal e não teve condição") — pra quando o Patrick perguntar por quê |
+| **Atraso de verdade** | Se, acordando no horário real, ela não chega a tempo (30 min pra se arrumar + trajeto do C.4): "Chegou 12 min atrasada na aula de … — perdeu o despertador" |
+| **Manhã congelada** | Depois que ela acorda, a hora fica gravada: uma falta decidida às 6h não "desfaz" o despertador |
+| **Prompt** | `[FACULDADE — prazos reais; não invente trabalho fora desta lista]`: próximas entregas da semana e em que pé está cada uma (ainda nem começou / já começou / na reta final) |
+
+Checagem de 3 semanas (banco de teste): ~1,5 entrega por semana, noites de trabalho curtas (~1 h) na maioria, folgas e algumas vésperas.
+
+`tests/test_college_d7.py` (9 testes).
+
+#### D6 parte 2 — TMDB (proposta, aguardando o Patrick)
+
+Sugerido pelo Patrick em 23/09 (developer.themoviedb.org). Gratuito para uso não comercial **com crédito** (logo + "This product uses the TMDB API but is not endorsed or certified by TMDB" numa seção Sobre/Créditos); ~40 req/s de limite; precisa de chave da conta dele (`TMDB_API_KEY`). Usos:
+1. obra citada pelo Patrick → título real em pt-BR, tipo, nº de episódios e duração (hoje: tamanho padrão);
+2. descoberta sozinha viva → recomendações a partir do que ela amou + o que está em alta no Brasil agora (hoje: lista fixa minha);
+3. onde assistir no Brasil ("tá na Netflix") e episódio novo saindo do que ela acompanha.
+Com cache por título: poucas chamadas por dia.
+
+#### D8 — fim de semana (23/09, manhã)
+
+Decisão do Patrick: "ela é jovem, de uma bolha social com boa condição; é normal receber convites dos amigos, mais ativos no fim de semana — mas a decisão é dela, e o emocional é o que conta".
+
+`social_day.py` (`WEEKEND_INVITES`, `process_invites`):
+
+| Peça | Como ficou |
+|---|---|
+| **Convites** | Sábado: praia de manhã (55%) e Quartinho Bar à noite (75%). Domingo: praia (45%) e cinema/shopping na Gávea (40%). Chegam de 1 a 3 dias antes ou na manhã do próprio dia (30%), de quem estiver no convite (Bia, Carol, Júlia, às vezes o Theo junto). Viram acontecimento ("A Bia te chamou: Praia com a Bia (sábado às 10:00)") |
+| **Decisão dela, no dia** | 2 a 5 h antes, pelo estado **daquele momento**: base 65%, bateria social puxa pra cima ou pra baixo, energia baixa −30%, noite com menos de 6 h −20%, convite da Bia +10%, já ter outro rolê no dia −20% |
+| **Resposta** | "Topou o convite" → vira compromisso confirmado (trajeto, estado SOCIAL, contatos no lugar, hora de dormir, tudo como as outras saídas). "Recusou o convite (…): tava sem energia / dormiu mal / quis ficar de boa em casa" → acontecimento com o motivo |
+| **Prompt** | Enquanto não decide: "Convite em aberto: … — você ainda não decidiu se vai; depende de como estiver no dia" |
+| **Dia útil** | Café de quarta/quinta e bar de sexta seguem como compromisso combinado com antecedência |
+
+`tests/test_weekend_d8.py` (6 testes).
 
 #### D4 v2 — como ficou (banho por necessidade e emoção, 23/09)
 
@@ -537,6 +623,11 @@ O aviso continua opcional (sempre com conversa rolando) e fora do teto de 2 coti
 3. **D5 Milo** — pequeno, e dá assunto todo dia.
 4. **D6 + D7 noite e faculdade** — o maior ganho de conversa: a noite é quando ele fala com ela.
 5. **D8 fim de semana**, **D9 casa**, **D10 freela**.
+
+**Respostas do Patrick (23/09, manhã):**
+- **D5 Milo:** Shih Tzu (já era cânone). Em dia puxado ela pode pagar um passeador ("na zona sul isso é normal"). **Quem decide é ela**: o sistema dá o ponto de partida e o emocional/cansaço dela decide.
+- **D6 o que ela assiste:** já viu *Elite* (na época do auge); romance e comédia romântica. Para o lado "cult", a **Marin Kitagawa** (*Sono Bisque Doll*) serve de **inspiração, não de cópia**. A lista é decidida junto com o Patrick.
+- **D8 fim de semana:** tudo depende do emocional dela. Ela é jovem, de uma bolha social com boa condição, então é normal receber **convites dos amigos** (mais ativos no fim de semana). A decisão de ir é dela, e o emocional é o que conta.
 
 **Perguntas em aberto para o Patrick** (ele responde solto, eu transformo em regra):
 - D1: ela cozinha ou é mais de iFood/bandejão? Tem comida que ela odeia?
