@@ -65,6 +65,16 @@ PLANNER_BOND_SCALE = 0.4    # o planner empurra o vínculo devagar (antes: teto 
 
 _guard = threading.local()
 
+# Tesão (decisão do Patrick, 23/09): "se ela tá com tesão ela quer gozar; se eu
+# não a satisfazer ela se masturba e às vezes me conta".
+RELEASE_KEY = "libido_release_at"      # última vez sozinha (com ele: intimacy_state.climax_at)
+TESAO_KEY = "tesao_initiative_at"      # última vez que ela foi provocar ele por tesão
+TESAO_MIN = 0.72                       # a partir daqui ela vai atrás
+SOLO_MIN_LIBIDO = 0.75
+SOLO_CHANCE = 0.6
+SOLO_TELL_CHANCE = 0.35
+PATRICK_TARGET = "o Patrick"
+
 
 def _hours(value: float) -> str:
     """5.5 -> "5h30", 6.0 -> "6h" (meia hora mais próxima)."""
@@ -117,6 +127,9 @@ class Feeling:
     bond: dict = field(default_factory=dict)
     missing: float = 0.0
     social_battery: float = 0.7
+    libido: float = 0.3            # vontade (tesão) — corpo
+    excitation: float = 0.0        # excitação do momento (modo íntimo)
+    hours_since_release: Optional[float] = None
 
 
 class EmotionEngine:
@@ -369,10 +382,124 @@ class EmotionEngine:
         valence, arousal = _clamp(valence), _clamp(arousal)
         social = self._stored("social_battery", 0.7)
         playfulness = _clamp(0.15 + 0.55 * valence + 0.25 * arousal + 0.15 * (social - 0.5))
+        missing = self._missing(now)
+        libido, excitation, since = self._libido(now, phase, energy, discomfort, valence, bond, missing, eps)
         return Feeling(now=now, energy=energy, hours_slept=slept, awake_since=awake_since, hunger=hunger,
                        discomfort=discomfort, discomfort_why=why, cycle_phase=phase,
                        valence=round(valence, 3), arousal=round(arousal, 3), playfulness=round(playfulness, 3),
-                       episodes=eps, bond=bond, missing=self._missing(now), social_battery=social)
+                       episodes=eps, bond=bond, missing=missing, social_battery=social,
+                       libido=libido, excitation=excitation, hours_since_release=since)
+
+    # ============================================================ tesão ==
+    def last_release(self, now: datetime) -> Optional[datetime]:
+        """Última vez que ela gozou: com o Patrick (modo íntimo) ou sozinha."""
+        candidates = []
+        try:
+            with self.db.get_connection() as conn:
+                row = conn.execute("SELECT climax_at FROM intimacy_state WHERE id=1").fetchone()
+            if row and row["climax_at"]:
+                candidates.append(datetime.fromisoformat(row["climax_at"]))
+        except Exception:
+            pass
+        raw = self.db.get_estado_relacional(RELEASE_KEY)
+        if raw:
+            try:
+                candidates.append(datetime.fromisoformat(raw))
+            except (TypeError, ValueError):
+                pass
+        past = [c for c in candidates if c <= now]
+        return max(past) if past else None
+
+    def _libido(self, now, phase, energy, discomfort, valence, bond, missing, eps) -> tuple:
+        """Vontade (0–1): acumula com as horas sem gozar, sobe com ciclo fértil,
+        saudade, dia bom e desejo por ele; cai com cansaço, cólica e mágoa."""
+        from intimacy import CYCLE_LIBIDO
+        cycle = next((v for k, v in CYCLE_LIBIDO.items() if phase and phase.startswith(k.split("_")[0])), 1.0)
+        release = self.last_release(now)
+        since = (now - release).total_seconds() / 3600 if release else None
+        v = 0.12 + 0.35 * (cycle - 0.7) / 0.65
+        v += min(0.35, 0.012 * (since if since is not None else 24.0))
+        v += 0.25 * (bond["romantic_intensity"] - 0.8) + 0.15 * (valence - 0.6) + 0.1 * (energy - 0.55)
+        v += 0.08 * missing - 0.4 * discomfort - 0.6 * bond["hurt"]
+        v += sum(0.1 * e.intensity for e in eps if e.target == PATRICK_TARGET and e.kind in ("diversao", "carinho"))
+        excitation = 0.0
+        try:
+            from intimacy import IntimacyEngine
+            excitation = IntimacyEngine(self.db).current(now).arousal
+        except Exception:
+            pass
+        v += 0.5 * excitation
+        if since is not None and since < 3:
+            v *= 0.3   # acabou de gozar
+        return round(_clamp(v), 3), round(excitation, 3), (round(since, 1) if since is not None else None)
+
+    def maybe_release_alone(self, now: Optional[datetime] = None) -> Optional[str]:
+        """Com tesão e sem o Patrick, antes de dormir ela se resolve sozinha — e às
+        vezes conta pra ele depois (decisão do Patrick, 23/09)."""
+        now = now or datetime.now()
+        key = f"solo:{now.date().isoformat()}"
+        with self.db.get_connection() as conn:
+            if conn.execute("SELECT 1 FROM life_events WHERE event_key=?", (key,)).fetchone():
+                return None
+        f = self.feeling(now)
+        if f.libido < SOLO_MIN_LIBIDO or f.excitation >= 0.45:
+            return None   # sem vontade, ou já está no clima com ele
+        try:
+            from sleep_plan import SleepPlan
+            bed = SleepPlan(self.db).bed(now.date() if now.hour >= 12 else now.date() - timedelta(days=1))
+        except Exception:
+            return None
+        if not (bed - timedelta(minutes=75) <= now < bed):
+            return None
+        import random as _random
+        rng = _random.Random(f"solo:{now.date().isoformat()}")
+        if rng.random() >= SOLO_CHANCE:
+            return None
+        tells = rng.random() < SOLO_TELL_CHANCE
+        wanted_him = self._flirted_without_him(now)
+        summary = ("Antes de dormir, com tesão e pensando no Patrick, se resolveu sozinha"
+                   + (" — ficou querendo ele e ele não entrou no clima" if wanted_him else "")
+                   + (". Pode contar pra ele, do jeito dela, se vier a calhar." if tells
+                      else ". Guardou só pra ela: não conta pro Patrick."))
+        with self.db.get_connection() as conn:
+            conn.execute("""INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,
+                            source_type,autonomy_level,importance,participants_json,share_worthy,created_at)
+                            VALUES (?,?,?,?,?,'simulated',1,0.2,?,?,?)""",
+                         (key, now.isoformat(), "routine", "sozinha", summary, json.dumps(["marina"]),
+                          0.6 if tells else 0.0, now.isoformat()))
+            conn.commit()
+        if not tells:
+            try:
+                from social_day import SocialDay
+                SocialDay(self.db).mark_shared(key)   # não vira "novidade" pra contar
+            except Exception:
+                pass
+        self.db.set_estado_relacional(RELEASE_KEY, now.isoformat())
+        self.feel("alegria", "alivio", 0.3, "se resolveu sozinha antes de dormir", now, source_key=f"{key}:alivio")
+        if wanted_him:
+            self.feel("raiva", "frustracao", 0.2, "ficou querendo ele e não rolou", now, target=PATRICK_TARGET,
+                      source_key=f"{key}:frustracao", half_life_min=180)
+        return summary
+
+    def _flirted_without_him(self, now: datetime) -> bool:
+        raw = self.db.get_estado_relacional(TESAO_KEY)
+        try:
+            flirted = datetime.fromisoformat(raw) if raw else None
+        except (TypeError, ValueError):
+            flirted = None
+        if not flirted or now - flirted > timedelta(hours=12):
+            return False
+        release = self.last_release(now)
+        return not release or release < flirted
+
+    def tesao_detail(self, now: Optional[datetime] = None) -> str:
+        f = self.feeling(now)
+        parts = [f"Faz {f.hours_since_release:.0f}h que você não goza" if f.hours_since_release else "Faz tempo"]
+        if f.missing >= 0.4:
+            parts.append("e tá com saudade dele")
+        if f.cycle_phase == "ovulatoria":
+            parts.append("e o corpo tá pedindo (fase fértil)")
+        return " ".join(parts) + "."
 
     def legacy(self, now: Optional[datetime] = None) -> dict:
         """Mesmo formato de `db.get_estado_emocional()`, com energia e brincadeira do motor."""
@@ -422,7 +549,11 @@ class EmotionEngine:
             heart.append("apaixonada e carinhosa")
         elif f.bond["affection"] < 0.55:
             heart.append("mais distante que o normal")
-        if f.bond["romantic_intensity"] >= 0.85:
+        if f.libido >= 0.85:
+            heart.append("com muito tesão")
+        elif f.libido >= TESAO_MIN:
+            heart.append("com tesão")
+        elif f.bond["romantic_intensity"] >= 0.85:
             heart.append("com desejo por ele")
         if f.missing >= 0.6:
             heart.append("com saudade (ele sumiu faz um tempo)")
@@ -435,12 +566,14 @@ class EmotionEngine:
         if grievance or f.bond["hurt"] >= 0.25:
             lines.append("  Chateada de verdade: fica mais seca e não finge que está tudo bem, sem drama, sem "
                          "ameaça e sem sumir. Passa quando ele reconhecer ou vocês conversarem.")
+        if f.libido >= TESAO_MIN and not grievance and f.bond["hurt"] < 0.25:
+            lines.append("  Com tesão: você quer ele. Provoca e puxa pro flerte quando tiver brecha; se ele entrar "
+                         "no clima, vai atrás do que quer. Se ele não puder agora, aceita sem drama (e fica querendo).")
         if any(e.kind == "ciume" for e in f.episodes):
             lines.append("  Ciuminho: implica de brincadeira (\"quem é essa aí?\"), sem cobrar nem controlar.")
-        lines.append("Isso muda o JEITO (mais curta, mais dengosa, mais elétrica), não vira assunto: "
-                     "nunca diga \"estou me sentindo X\". O que é com o mundo não é com o Patrick — "
-                     "você pode estar irritada com o dia e carinhosa com ele. Conte ou guarde o que "
-                     "sente como uma pessoa de verdade faria.")
+        lines.append("Isso muda o JEITO (mais curta, dengosa, elétrica), não vira assunto: nunca diga "
+                     "\"estou me sentindo X\". O que é com o mundo não é com o Patrick. Conte ou guarde "
+                     "o que sente como gente de verdade.")
         return lines
 
     def summary(self, now: Optional[datetime] = None) -> str:
@@ -453,7 +586,10 @@ class EmotionEngine:
                + f" · fome {f.hunger:.2f}" + (f" · {f.discomfort_why}" if f.discomfort_why else ""),
                f"Humor: {self.mood_words(f.valence, f.arousal)} (bem {f.valence:.2f} · agitação {f.arousal:.2f})"
                + (f" · fase {f.cycle_phase}" if f.cycle_phase else ""),
-               f"Brincadeira: {f.playfulness:.2f} · bateria social {f.social_battery:.2f}", ""]
+               f"Brincadeira: {f.playfulness:.2f} · bateria social {f.social_battery:.2f}",
+               f"Tesão: vontade {f.libido:.2f} · excitação agora {f.excitation:.2f}"
+               + (f" · última vez há {f.hours_since_release:.0f} h" if f.hours_since_release is not None else ""),
+               ""]
         if f.episodes:
             out.append("Sentindo:")
             out += [f"• {e.word} ({e.intensity:.2f}) — {e.cause}" + (" [até resolver]" if e.sticky else "")
@@ -574,13 +710,15 @@ PATRICK_EVENTS = {
     "esqueceu_importante": ([("tristeza", "decepcao", 0.4)], {"hurt": 0.2}, True),
     "briga":       ([("raiva", "chateacao", 0.55)], {"hurt": 0.3, "security": -0.05}, True),
     "desculpa":    ([("afeto", "ternura", 0.3)], {"hurt": -0.35, "security": 0.03}, False),
+    "sem_clima":   ([("raiva", "frustracao", 0.2)], {}, False),
 }
 KIND_WORDS["ciume"] = "com ciuminho"
 DEFAULT_CAUSES = {"elogio": "ele te elogiou", "cuidado": "ele cuidou de você", "flerte": "ele flertou",
                   "provocacao": "ele te zoou de boa", "novidade_boa": "ele contou uma coisa boa",
                   "ele_mal": "ele não está bem", "ciume": "ele falou de outra garota",
                   "grosseria": "ele foi grosso com você", "esqueceu_importante": "ele esqueceu algo que importava",
-                  "briga": "vocês discutiram", "desculpa": "ele pediu desculpa"}
+                  "briga": "vocês discutiram", "desculpa": "ele pediu desculpa",
+                  "sem_clima": "você quis e ele não entrou no clima"}
 
 
 def apply_patrick_event(db, event: dict, now: Optional[datetime] = None) -> bool:

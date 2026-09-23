@@ -140,6 +140,17 @@ class IntimacyEngine:
         return st
 
     def _libido(self) -> float:
+        # Fase D14: a fase do ciclo continua pesando, e a vontade do motor (horas
+        # sem gozar, saudade, humor, cansaço, mágoa) multiplica por cima: com
+        # tesão ela entra no clima rápido; chateada ou exausta, devagar.
+        cycle = self._cycle_libido()
+        try:
+            from emotion import EmotionEngine
+            return cycle * (0.7 + 0.6 * EmotionEngine(self.db).feeling().libido)
+        except Exception:
+            return cycle
+
+    def _cycle_libido(self) -> float:
         try:
             key = _norm(self.cycle_mgr.get_cycle_info().get("phase_key", "")) if self.cycle_mgr else ""
         except Exception:

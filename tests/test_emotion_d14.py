@@ -234,6 +234,86 @@ class PatrickFeelsTest(unittest.TestCase):
         self.assertFalse(emotion.apply_patrick_event(self.db, {"kind": "odio_mortal"}, NOW))
 
 
+class DesireTest(unittest.TestCase):
+    """Tesão no motor (Patrick, 23/09): acumula, faz ela ir atrás, e sem ele ela se resolve sozinha."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = DatabaseManager(Path(self.temp.name) / "d.db")
+        self.engine = EmotionEngine(self.db)
+        self.patches = [patch.object(EmotionEngine, "_sleep_facts", return_value=(8.0, NOW.replace(hour=8), 0.0, False)),
+                        patch.object(EmotionEngine, "_cycle", return_value=("folicular", 8)),
+                        patch.object(EmotionEngine, "_hunger", return_value=0.3),
+                        patch.object(EmotionEngine, "_missing", return_value=0.3)]
+        for p in self.patches:
+            p.start()
+            self.addCleanup(p.stop)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def _released(self, hours_ago):
+        self.db.set_estado_relacional(emotion.RELEASE_KEY, (NOW - timedelta(hours=hours_ago)).isoformat())
+
+    def test_desire_builds_with_time_and_drops_after_release(self):
+        self._released(40)
+        built = self.engine.feeling(NOW).libido
+        self._released(1)
+        just = self.engine.feeling(NOW).libido
+        self.assertGreater(built, 0.55)
+        self.assertLess(just, 0.25)
+
+    def test_hurt_and_cramps_kill_the_mood(self):
+        self._released(40)
+        normal = self.engine.feeling(NOW).libido
+        self.db.ajustar_emocao("hurt", 0.4, now=NOW)
+        hurt = self.engine.feeling(NOW).libido
+        self.assertLess(hurt, normal - 0.15)
+        self.assertEqual(self.engine.feeling(NOW).libido < emotion.TESAO_MIN, True)
+
+    def test_prompt_and_summary_show_desire(self):
+        self._released(40)
+        with patch.object(EmotionEngine, "_libido", return_value=(0.8, 0.0, 40.0)):
+            lines = "\n".join(self.engine.prompt_lines(NOW))
+            text = self.engine.summary(NOW)
+        self.assertIn("com tesão", lines)
+        self.assertIn("Provoca e puxa pro flerte", lines)
+        self.assertIn("Tesão: vontade 0.80", text)
+
+    def test_without_him_she_takes_care_of_it_before_bed(self):
+        bed = NOW.replace(hour=23, minute=30)
+        with patch.object(EmotionEngine, "_libido", return_value=(0.85, 0.0, 30.0)), \
+             patch("sleep_plan.SleepPlan.bed", return_value=bed), \
+             patch("random.Random.random", return_value=0.1):
+            self.assertIsNone(self.engine.maybe_release_alone(NOW.replace(hour=20)), "ainda não é hora de dormir")
+            summary = self.engine.maybe_release_alone(bed - timedelta(minutes=30))
+            again = self.engine.maybe_release_alone(bed - timedelta(minutes=20))
+        self.assertIn("se resolveu sozinha", summary)
+        self.assertIn("Pode contar pra ele", summary)
+        self.assertIsNone(again, "uma vez por noite")
+        self.assertEqual(self.engine.last_release(bed), bed - timedelta(minutes=30))
+
+    def test_intimacy_uses_the_engine_desire(self):
+        from intimacy import IntimacyEngine
+        with patch.object(EmotionEngine, "_libido", return_value=(0.9, 0.0, 40.0)):
+            hot = IntimacyEngine(self.db)._libido()
+        with patch.object(EmotionEngine, "_libido", return_value=(0.1, 0.0, 1.0)):
+            cold = IntimacyEngine(self.db)._libido()
+        self.assertGreater(hot, 1.2)
+        self.assertLess(cold, 0.8)
+
+    def test_she_goes_after_him_but_not_when_hurt(self):
+        from proactivity_service import ProactivityService
+        svc = ProactivityService(self.db)
+        with patch.object(EmotionEngine, "_libido", return_value=(0.85, 0.0, 40.0)), \
+             patch.object(svc, "_compute_state_factor", return_value=(1.0, "free_time")), \
+             patch.object(svc, "get_last_messages_timestamps", return_value=(NOW - timedelta(hours=2), None)), \
+             patch("proactivity_service.random.random", return_value=0.0):
+            self.assertTrue(svc.tesao_initiative(NOW))
+            emotion.apply_patrick_event(self.db, {"kind": "grosseria"}, NOW)
+            self.assertFalse(svc.tesao_initiative(NOW + timedelta(minutes=5)), "chateada com ele não vai atrás")
+
+
 class FeelingsChangeBehaviourTest(unittest.TestCase):
     """D14d — o que ela sente muda o que ela faz."""
 

@@ -664,6 +664,17 @@ O aviso continua opcional (sempre com conversa rolando) e fora do teto de 2 coti
 | **D14c — o Patrick sente** | O planner diz o que a mensagem dele fez (`patrick_event`): elogio, cuidado, flerte, provocação, novidade boa, ele mal, desculpa, ciúme, grosseria, esqueceu algo importante, briga. **A mágoa é justa**: só o que chatearia uma namorada de verdade, e zoeira não conta. Ela fica mais seca, sem drama nem ameaça, até ele reparar; sem reparo, esfria sozinha depois de um dia. **Ciúme leve**: implica de brincadeira, some em ~1 h e nunca vira mágoa | "chateada com ele (ele respondeu seco e desdenhou do trabalho dela)" → pediu desculpa → mágoa ~0 |
 | **D14d — comportamento** | Preocupação, mágoa ou tristeza viva atrasa o sono ("demorou pra dormir pensando nisso: …"). Ansiosa, a glutona belisca mais. Triste com o dia, procura mais o Patrick; chateada com ele, procura menos. Empolgada, conta mais coisas do dia (share nudge +20%) | — |
 
+**D14e — tesão no motor (23/09, noite).** Pedido do Patrick: "o ideal é todas as emoções ficarem centralizadas; sentir tesão pode fazer ela me procurar pra flertar até conseguir o sexting que ela quer; se ela tá com tesão ela quer gozar; se eu não a satisfazer ela se masturba e às vezes me conta".
+
+| Peça | Como ficou |
+|---|---|
+| **Vontade (corpo)** | Vai de 0 a 1 e é calculada na hora. **Acumula** com as horas desde a última vez que ela gozou, com ele (`intimacy_state.climax_at`) ou sozinha (`libido_release_at`). **Sobe** com a fase fértil, o desejo por ele (vínculo), a saudade, um dia bom e um flerte ou carinho recente dele. **Cai** com cansaço, cólica e mágoa. Logo depois de gozar, ×0,3 |
+| **Modo íntimo** | O multiplicador de estímulo passa a ser fase do ciclo × (0,7 + 0,6 × vontade): com tesão ela entra no clima rápido; chateada ou exausta, devagar |
+| **Ela vai atrás** | Com vontade ≥ 0,72, livre e acordada, sem estar chateada com ele e sem conversa rolando, ela manda uma **provocação** para puxar o flerte, sem ser explícita de cara. No máximo uma a cada 3 h e nunca com 2 iniciativas sem resposta. Durante a conversa, o prompt diz: "com tesão: provoca e puxa pro flerte quando tiver brecha; se ele não puder, aceita sem drama (e fica querendo)" |
+| **Sem ele** | Com vontade ≥ 0,75, na hora antes de dormir, ela **se resolve sozinha** (60% das noites em que isso acontece). A vontade zera e fica o registro no dia dela. Em 35% das vezes ela pode contar pra ele depois; nas outras, guarda só pra ela. Se tinha provocado e ele não entrou no clima, fica uma frustração leve com ele (não é mágoa) |
+| **Planner** | Novo `patrick_event`: `sem_clima` (ela quis e ele não pôde) → frustração leve, sem mágoa |
+| **/emocao** | Linha "Tesão: vontade · excitação agora · última vez há N h" |
+
 **Fica pra depois (entra com D11 e D10):** doença como desconforto do corpo (D11); ensaio perdido pelo peso (D10); clima (chuva num dia livre → desânimo); irritação deixando a resposta mais lenta.
 
 ### D14 — Motor emocional: proposta original (23/09, tarde)

@@ -4075,6 +4075,10 @@ _PROACTIVE_INSTRUCTIONS = {
                 "jeito — dengo, provocação, 'sumiu hein', ou puxando uma coisa real do seu dia. Se ele "
                 "não respondeu suas últimas mensagens, nada de drama pesado nem cobrança: no máximo um "
                 "'tá vivo?' carinhoso. Não invente acontecimento novo."),
+    # Fase D14 — tesão (proactivity_service.tesao_initiative).
+    'tesao': ("{detail} Você está com tesão e com vontade dele. Mande uma provocação curta pra puxar ele "
+              "pro flerte — malícia, dengo, uma indireta, um 'tô pensando em você de um jeito…'. Sem ser "
+              "explícita de cara: você quer que ELE entre no clima. Não invente acontecimento novo."),
     'light_affection': ("Mande uma mensagem espontânea curta pro Patrick. Use só o que está no seu "
                         "estado atual e no seu dia — um pensamento sobre o que você está fazendo, uma "
                         "reação ao momento ou só carinho. Não invente acontecimento novo. Varie: não "
@@ -4127,6 +4131,11 @@ async def autonomous_routine_v36(application: Application):
         if not should_run:
             return
         candidate = proactivity_service.determine_living_world_candidate(now)
+        if why == 'tesao':
+            from emotion import EmotionEngine, TESAO_KEY
+            candidate = dict(candidate, reason='tesao', detail=EmotionEngine(memory_manager.db).tesao_detail(now),
+                             event_id=None, loop_id=None)
+            memory_manager.db.set_estado_relacional(TESAO_KEY, now.isoformat())
         if why == 'saudade' and candidate['reason'] in ('light_affection', 'no_candidate'):
             s = proactivity_service.saudade(now)
             sem = (f"Faz {s['hours']:.0f}h que o Patrick não fala com você"
@@ -4208,6 +4217,14 @@ async def ritual_routine(application: Application):
     try:
         from rituals import Rituals
         now = datetime.now()
+        try:
+            # Fase D14: com tesão e sem ele, antes de dormir ela se resolve sozinha.
+            from emotion import EmotionEngine
+            solo = await asyncio.to_thread(EmotionEngine(memory_manager.db).maybe_release_alone, now)
+            if solo:
+                logger.info("emotion.solo_release")
+        except Exception as exc:
+            logger.warning("emotion.solo_release_error: %s", exc)
         engine = Rituals(memory_manager.db, getattr(memory_manager, 'cycle_mgr', None))
         ritual = await asyncio.to_thread(engine.tick, now)
         if not ritual:

@@ -400,7 +400,7 @@ Responda ESTRITAMENTE neste formato JSON (preserve exatamente os valores de enum
   "resolved_loop_hint": null,
   "shared_topic": "Assunto compartilhado ou null",
   "media_mentioned": {"title": null, "kind": "anime|série|filme|dorama|jogo"},
-  "patrick_event": {"kind": "nenhum|elogio|cuidado|flerte|provocacao|novidade_boa|ele_mal|grosseria|esqueceu_importante|briga|desculpa|ciume", "cause": "frase curta em português, do ponto de vista dela"},
+  "patrick_event": {"kind": "nenhum|elogio|cuidado|flerte|provocacao|novidade_boa|ele_mal|grosseria|esqueceu_importante|briga|desculpa|ciume|sem_clima", "cause": "frase curta em português, do ponto de vista dela"},
   "emotional_deltas": {
     "affection": 0.0,
     "playfulness": 0.0,
@@ -420,7 +420,7 @@ REGRAS DURAS:
 6. TODOS os campos de texto (response_goal, description, content, topics, follow_up_prompt, shared_topic) precisam estar em português brasileiro natural — NUNCA em inglês.
 7. NUNCA marque should_offer_reminder=true para eventos próximos (menos de 45 minutos a partir de agora).
 8. media_mentioned: só quando o Patrick CITA pelo nome um anime, série, filme, dorama ou jogo — copie o título exatamente como ele escreveu. Se ele não citou nenhum título, title=null. Nunca complete, traduza nem adivinhe título.
-9. patrick_event: o que a mensagem DELE fez com ela, como uma namorada de verdade sentiria. elogio (elogiou, declarou), cuidado (se preocupou com ela), flerte, provocacao (zoeira de boa), novidade_boa (contou algo bom da vida dele), ele_mal (ele está triste, estressado, doente), desculpa (pediu desculpa ou reconheceu um erro), ciume (citou outra mulher de um jeito que dá ciuminho). Mágoa é JUSTA: grosseria só se ele foi grosso ou desdenhou dela de verdade; esqueceu_importante só se esqueceu algo que importava pra ela; briga só em discussão real. Zoeira entre eles NÃO é grosseria. Na dúvida, "nenhum".
+9. patrick_event: o que a mensagem DELE fez com ela, como uma namorada de verdade sentiria. elogio (elogiou, declarou), cuidado (se preocupou com ela), flerte, provocacao (zoeira de boa), novidade_boa (contou algo bom da vida dele), ele_mal (ele está triste, estressado, doente), desculpa (pediu desculpa ou reconheceu um erro), ciume (citou outra mulher de um jeito que dá ciuminho), sem_clima (ela provocou querendo e ele não entrou no clima ou não pôde). Mágoa é JUSTA: grosseria só se ele foi grosso ou desdenhou dela de verdade; esqueceu_importante só se esqueceu algo que importava pra ela; briga só em discussão real. Zoeira entre eles NÃO é grosseria. Na dúvida, "nenhum".
 """
 
 _PLAN_TEXT = ("intent", "tone", "response_goal", "shared_topic", "resolved_loop_hint", "resposta")

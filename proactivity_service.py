@@ -161,6 +161,13 @@ class ProactivityService:
                         saudade["level"], saudade["hours"], saudade["unanswered"])
             return True, "saudade"
 
+        # 1.6 Fase D14 — tesão. Decisão do Patrick (23/09): "sentir tesão pode
+        # fazer ela me procurar pra flertar até conseguir o sexting que ela
+        # quer". Como a saudade, passa por cima do teto diário; quem segura é
+        # o intervalo entre uma investida e outra.
+        if self.tesao_initiative(dt):
+            return True, "tesao"
+
         # 2. Limite diário de proatividade
         count_today = self.get_autonomous_count_today(dt)
         if count_today >= settings.MAX_AUTONOMOUS_MESSAGES_PER_DAY:
@@ -222,6 +229,39 @@ class ProactivityService:
             return True, "stochastic_trigger"
 
         return False, "stochastic_miss"
+
+    TESAO_GAP_HOURS = 3.0
+    TESAO_CHANCE_PER_CHECK = 0.15
+
+    def tesao_initiative(self, now: datetime) -> bool:
+        """Ela vai provocar o Patrick porque está com tesão?"""
+        try:
+            from emotion import EmotionEngine, TESAO_KEY, TESAO_MIN
+            f = EmotionEngine(self.db).feeling(now)
+        except Exception:
+            return False
+        if f.libido < TESAO_MIN or f.excitation >= 0.45 or f.bond.get("hurt", 0) >= 0.25 or f.energy < 0.3:
+            return False
+        if any(e.target == "o Patrick" and e.family in ("tristeza", "raiva") and e.intensity >= 0.15
+               for e in f.episodes):
+            return False   # chateada com ele não vai atrás
+        _factor, label = self._compute_state_factor(now)
+        if label == "sleeping" or label.startswith("busy"):
+            return False
+        last_user, _last_auto = self.get_last_messages_timestamps()
+        idle = max(10, int(getattr(settings, "USER_IDLE_MINUTES_BEFORE_PROACTIVE", 10)))
+        if last_user and now - last_user < timedelta(minutes=idle):
+            return False   # conversando: o flerte sai dentro da conversa (prompt)
+        if self._unanswered_initiatives(last_user) >= 2:
+            return False
+        raw = self.db.get_estado_relacional(TESAO_KEY)
+        try:
+            last = datetime.fromisoformat(raw) if raw else None
+        except (TypeError, ValueError):
+            last = None
+        if last and now - last < timedelta(hours=self.TESAO_GAP_HOURS):
+            return False
+        return random.random() < self.TESAO_CHANCE_PER_CHECK
 
     def _unanswered_initiatives(self, since: Optional[datetime]) -> int:
         with self.db.get_connection() as conn:
