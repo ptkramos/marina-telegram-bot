@@ -418,7 +418,7 @@ class EmotionEngine:
         release = self.last_release(now)
         since = (now - release).total_seconds() / 3600 if release else None
         v = 0.12 + 0.35 * (cycle - 0.7) / 0.65
-        v += min(0.35, 0.012 * (since if since is not None else 24.0))
+        v += min(0.35, 0.012 * (since if since is not None else 12.0))   # sem registro: meio dia
         v += 0.25 * (bond["romantic_intensity"] - 0.8) + 0.15 * (valence - 0.6) + 0.1 * (energy - 0.55)
         v += 0.08 * missing - 0.4 * discomfort - 0.6 * bond["hurt"]
         v += sum(0.1 * e.intensity for e in eps if e.target == PATRICK_TARGET and e.kind in ("diversao", "carinho"))

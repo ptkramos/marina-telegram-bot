@@ -66,6 +66,7 @@ from prompt_policy import (
     reminder_offer_constraint,
     reminder_clarification_constraint,
     TURN_CONSTRAINTS,
+    format_web_evidence,
 )
 
 PHOTO_UNAVAILABLE_INSTRUCTION = (

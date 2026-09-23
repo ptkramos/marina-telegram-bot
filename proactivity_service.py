@@ -166,7 +166,9 @@ class ProactivityService:
         # quer". Como a saudade, passa por cima do teto diário; quem segura é
         # o intervalo entre uma investida e outra.
         if self.tesao_initiative(dt):
-            return True, "tesao"
+            # Assunto importante dele (compromisso pra perguntar como foi) vem antes.
+            if self.determine_living_world_candidate(dt).get("rank", 0) < 70:
+                return True, "tesao"
 
         # 2. Limite diário de proatividade
         count_today = self.get_autonomous_count_today(dt)

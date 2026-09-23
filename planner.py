@@ -426,6 +426,8 @@ REGRAS DURAS:
 _PLAN_TEXT = ("intent", "tone", "response_goal", "shared_topic", "resolved_loop_hint", "resposta")
 _PLAN_FLAGS = ("creates_event", "reminder_candidate", "should_offer_reminder",
                "creates_open_loop", "resolves_open_loop")
+PLANNER_MAX_TOKENS = 900   # JSON completo do plano (~1.200 caracteres) com folga
+
 _PLAN_OBJECTS = ("event_details", "direct_reminder", "open_loop_details", "media_mentioned", "patrick_event")
 
 
@@ -565,7 +567,9 @@ class InternalPlanner:
                         {"role": "user", "content": user_content}
                     ],
                     temperature=0.2,
-                    **llm_kwargs(350, model or settings.LLM_MODEL),
+                    # 23/09: 350 cortava o JSON no meio (schema cresceu com patrick_event
+                    # e resposta) e o turno caía no plano de contingência.
+                    **llm_kwargs(PLANNER_MAX_TOKENS, model or settings.LLM_MODEL),
                     response_format={"type": "json_object"}
                 )
                 raw_text = response.choices[0].message.content.strip()
