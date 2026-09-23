@@ -48,9 +48,9 @@ class TestWiringAuditoria(unittest.TestCase):
         with patch.object(settings, 'LIVING_WORLD_ENABLED', False), \
              patch.object(settings, 'RESPONSE_RHYTHM_ENABLED', False):
             prompt = cb.build_system_prompt()
-        self.assertIn("[SEU ESTADO EMOCIONAL INTERNO ATUAL]", prompt)
-        self.assertIn("carinho e afeto", prompt)
-        self.assertIn("energia e disposição", prompt)
+        self.assertIn("[COMO VOCÊ ESTÁ POR DENTRO", prompt)   # D14: motor emocional
+        self.assertIn("Com o Patrick:", prompt)   # D14: vínculo em palavras, não números
+        self.assertIn("- Humor:", prompt)   # D14: humor sempre presente
 
     def test_context_builder_accepts_planner_tone_and_goal(self):
         """Valida que diretrizes estratégicas do planner são incorporadas ao system prompt."""

@@ -55,9 +55,9 @@ class TestV360Acceptance(unittest.TestCase):
                 self.assertIn(heading, prompt)
                 self.assertIn('fonte única: MenstrualCycleManager', prompt)
                 self.assertIn('Marina Salles', prompt)
-            # Cada construção consulta o ciclo para energia emocional e para
-            # o bloco canônico de contexto.
-            self.assertEqual(cycle.call_count, 4)
+            # Cada construção consulta o ciclo para o bloco canônico de contexto
+            # (D14: a energia emocional lê a fase direto do motor, não do cycle_mgr).
+            self.assertEqual(cycle.call_count, 2)
         with self.db.get_connection() as conn:
             count = conn.execute('SELECT COUNT(*) FROM world_state').fetchone()[0]
         with patch.object(settings, 'LIVING_WORLD_ENABLED', False), \

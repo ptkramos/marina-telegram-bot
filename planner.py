@@ -842,12 +842,13 @@ class InternalPlanner:
         if deltas and isinstance(deltas, dict):
             # Auditoria #5: sem este log não havia como medir o viés dos deltas.
             logger.info("EMOTIONAL_DELTAS %s", json.dumps(deltas, ensure_ascii=False))
-            for emotion, delta in deltas.items():
-                if delta != 0.0:
-                    try:
-                        self.db.ajustar_emocao(emotion, float(delta))
-                    except Exception:
-                        pass
+            try:
+                # Fase D14: só o vínculo (devagar) e a bateria social; energia é
+                # do corpo e brincadeira sai do humor.
+                from emotion import apply_planner_deltas
+                apply_planner_deltas(self.db, deltas)
+            except Exception:
+                pass
 
         return plan
 

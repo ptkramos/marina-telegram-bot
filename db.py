@@ -2093,6 +2093,10 @@ class DatabaseManager:
     # Bateria social não relaxa pelo relógio: gasta/recarrega pela agenda
     # (social_battery.accrue) e pelo tipo de conversa com o Patrick.
     EMOTIONS_WITHOUT_TIME_RELAX = frozenset({"social_battery"})
+    # Fase D14: o vínculo com o Patrick é lento — um dia sem ele não apaga o
+    # carinho. Meia-vida em horas por chave (as outras usam a padrão).
+    EMOTION_HALF_LIFE_BY_KEY = {"affection": 72.0, "romantic_intensity": 48.0,
+                                "security": 96.0, "hurt": 36.0}
 
     @classmethod
     def _relaxar(cls, valor: float, baseline: float, updated_at: Optional[str],
@@ -2104,7 +2108,8 @@ class DatabaseManager:
         except (TypeError, ValueError):
             return valor
         horas = max(0.0, ((now or datetime.now()) - desde).total_seconds() / 3600.0)
-        fator = 0.5 ** (horas / cls.EMOTION_HALF_LIFE_HOURS)
+        meia_vida = cls.EMOTION_HALF_LIFE_BY_KEY.get(chave, cls.EMOTION_HALF_LIFE_HOURS)
+        fator = 0.5 ** (horas / meia_vida)
         return baseline + (valor - baseline) * fator
 
     def get_estado_emocional(self, now: Optional[datetime] = None) -> dict[str, dict]:
@@ -2143,10 +2148,12 @@ class DatabaseManager:
                     (round(novo_valor, 3), now_iso, chave)
                 )
             else:
-                novo_valor = max(0.0, min(1.0, 0.75 + delta))
+                # D14: mágoa nasce em zero e segurança em 0,8 — não em 0,75.
+                base = {"hurt": 0.0, "security": 0.8}.get(chave, 0.75)
+                novo_valor = max(0.0, min(1.0, base + delta))
                 cursor.execute(
-                    "INSERT INTO estado_emocional (chave, valor, baseline, updated_at) VALUES (?, ?, 0.75, ?)",
-                    (chave, round(novo_valor, 3), now_iso)
+                    "INSERT INTO estado_emocional (chave, valor, baseline, updated_at) VALUES (?, ?, ?, ?)",
+                    (chave, round(novo_valor, 3), base, now_iso)
                 )
             conn.commit()
 

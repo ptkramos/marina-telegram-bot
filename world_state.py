@@ -60,25 +60,18 @@ CLASS_COMMUTE_BACK_MINUTES = 45  # voltar da Gávea pra Botafogo
 
 
 
-def current_energy(db: DatabaseManager) -> float:
-    """Energia atual da Marina (estado emocional). Fonte única para todo
-    leitor de rotina — antes só o prompt usava a real e o resto supunha 0,7,
-    então a vontade de ir à academia divergia entre prompt e disponibilidade."""
+def current_energy(db: DatabaseManager, now: Optional[datetime] = None) -> float:
+    """Energia atual da Marina. Fonte única para todo leitor de rotina.
+
+    Fase D14: vem do corpo (motor emocional) — sono da última noite, dívida de
+    sono, horas acordada, moleza pós-almoço, cochilo e ciclo. Antes era um
+    número que o planner empurrava pra cima a cada mensagem (0,91 depois de
+    dormir 6 h)."""
     try:
-        emotional = db.get_estado_emocional()
-        value = float(emotional.get("energy", {}).get("valor", 0.7))
+        from emotion import EmotionEngine
+        return EmotionEngine(db).energy(now)
     except Exception:
         return 0.7
-    # Auditoria #5: o prompt já multiplicava pela fase do ciclo ("energia:
-    # baixa" na menstrual), mas a rotina usava o valor cru — ela dizia estar
-    # sem energia e ia à academia. Mesma conta nos dois lados agora.
-    try:
-        from cycle import MenstrualCycleManager
-        multipliers = MenstrualCycleManager(db.get_data_inicio_ciclo()).get_emotional_multipliers() or {}
-        value *= float(multipliers.get("energy", 1.0))
-    except Exception:
-        pass
-    return max(0.0, min(1.0, value))
 
 @dataclass(frozen=True)
 class RoutineCandidate:

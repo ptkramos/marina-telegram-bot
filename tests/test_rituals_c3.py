@@ -225,9 +225,8 @@ class CotidianoTests(_Base):
     def test_d4v2_cansada_banho_demorado(self):
         at = self._evening_slot()
         self._msg("user", "e aí", at - timedelta(minutes=2))
-        with patch.object(self.db, "get_estado_emocional",
-                          return_value={"energy": {"valor": 0.2}, "romantic_intensity": {"valor": 0.5},
-                                        "playfulness": {"valor": 0.5}}):
+        # D14: energia vem do corpo (motor emocional), não do número guardado.
+        with patch("world_state.current_energy", return_value=0.2):
             ritual = self._tick(at)
         self.assertIn("relaxar", ritual.detail)
         self.assertGreaterEqual(ritual.extra["shower_minutes"], 25)

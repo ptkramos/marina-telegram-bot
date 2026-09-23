@@ -108,7 +108,7 @@ class TestInternalPlanner(unittest.TestCase):
         # baseline era 0.85, subiu para 0.88
         # Auditoria #5: retorno decrescente perto do teto — a 0,15 do máximo,
         # um delta de +0,03 rende metade (0,85 → 0,865, não 0,88).
-        self.assertAlmostEqual(emocoes["affection"]["valor"], 0.865, places=2)
+        self.assertAlmostEqual(emocoes["affection"]["valor"], 0.856, places=3)  # D14: vínculo anda devagar (×0,4)
 
     def test_parse_iso_or_relative_datetime(self):
         """Valida que datas relativas e strings em português viram timestamps ISO rigorosos."""

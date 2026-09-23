@@ -179,8 +179,9 @@ class Rituals:
             phase = ""
         if phase == "menstrual":
             return False
-        emo = {k: v["valor"] for k, v in self.db.get_estado_emocional(now).items()}
-        warm = emo.get("romantic_intensity", 0) >= 0.85 and emo.get("playfulness", 0) >= 0.78
+        from emotion import EmotionEngine
+        feel = EmotionEngine(self.db).feeling(now)
+        warm = feel.bond["romantic_intensity"] >= 0.85 and feel.playfulness >= 0.72
         fertile = phase in ("ovulatoria", "folicular")
         return warm or (fertile and self._rng(now.date(), "flerte").random() < 0.35)
 
@@ -401,7 +402,8 @@ class Rituals:
         # D4 v2: banho também é alívio e autocuidado — o motivo muda o jeito de avisar.
         temp = self._temperature(now)
         try:
-            energy = float(self.db.get_estado_emocional(now)["energy"]["valor"])
+            from world_state import current_energy
+            energy = current_energy(self.db, now)
         except Exception:
             energy = 0.7
         if slot.startswith("banho_rua"):

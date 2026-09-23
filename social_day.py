@@ -503,7 +503,8 @@ class SocialDay:
         p += 0.3 * (battery - 0.5)
         if battery < 0.35:
             reasons.append("tava sem bateria social")
-        if float(emo.get("energy", 0.7)) < 0.35:
+        from world_state import current_energy
+        if current_energy(self.db, now) < 0.35:
             p -= 0.3
             reasons.append("tava sem energia")
         try:

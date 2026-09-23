@@ -151,7 +151,8 @@ class SleepPlan:
             why.append("menstruada, mais cansada")
         if live:
             try:
-                energy = float(self.db.get_estado_emocional()["energy"]["valor"])
+                from world_state import current_energy
+                energy = current_energy(self.db)
                 if energy < 0.35:
                     minutes -= 30
                     why.append("estava sem energia nenhuma")

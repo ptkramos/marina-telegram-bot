@@ -30,17 +30,25 @@ class EmotionalDynamicsTests(unittest.TestCase):
         return self.db.get_estado_emocional(now=when)["affection"]["valor"]
 
     def test_emocao_volta_ao_baseline_com_o_tempo_sem_proatividade(self):
+        # D14: carinho é vínculo — volta devagar (meia-vida de 72 h), não em 6 h.
         with self.db.get_connection() as conn:
             conn.execute("UPDATE estado_emocional SET valor=1.0")
-        self.assertAlmostEqual(self._val(self.t0 + timedelta(hours=6)), 0.925, places=2)
-        self.assertLess(self._val(self.t0 + timedelta(hours=24)), 0.87)
+        self.assertAlmostEqual(self._val(self.t0 + timedelta(hours=72)), 0.925, places=2)
+        self.assertLess(self._val(self.t0 + timedelta(days=10)), 0.87)
 
     def test_conversa_longa_nao_trava_no_teto(self):
+        # D14: o planner só mexe no vínculo, devagar; energia e brincadeira
+        # (as que travavam em 1,0) saem do corpo e do humor.
+        from emotion import apply_planner_deltas
+        with self.db.get_connection() as conn:
+            conn.execute("INSERT INTO estado_emocional VALUES ('energy', 0.75, 0.75, ?)", (self.t0.isoformat(),))
         for i in range(56):
-            self.db.ajustar_emocao("affection", 0.05, now=self.t0 + timedelta(minutes=5 * i))
+            applied = apply_planner_deltas(self.db, {"affection": 0.05, "energy": 0.05, "playfulness": 0.05},
+                                           now=self.t0 + timedelta(minutes=5 * i))
+            self.assertEqual(set(applied), {"affection"})
         fim = self.t0 + timedelta(minutes=5 * 55)
         self.assertLess(self._val(fim), 1.0)
-        self.assertLess(self._val(fim + timedelta(hours=12)), 0.9)
+        self.assertEqual(self.db.get_estado_emocional(now=self.t0)["energy"]["valor"], 0.75)
 
     def test_briga_derruba_mesmo_no_alto(self):
         with self.db.get_connection() as conn:
@@ -62,14 +70,19 @@ class EmotionalDynamicsTests(unittest.TestCase):
 
 class EnergyAndLabelsTests(unittest.TestCase):
     def test_energia_da_rotina_usa_a_fase_do_ciclo_como_o_prompt(self):
+        # D14: rotina e prompt leem a mesma energia (a do corpo), e a menstruação pesa.
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         db = DatabaseManager(Path(temp.name) / "en.db")
         from world_state import current_energy
-        from cycle import MenstrualCycleManager
-        mult = MenstrualCycleManager(db.get_data_inicio_ciclo()).get_emotional_multipliers()["energy"]
-        cru = db.get_estado_emocional()["energy"]["valor"]
-        self.assertAlmostEqual(current_energy(db), max(0.0, min(1.0, cru * mult)), places=2)
+        from emotion import EmotionEngine
+        now = datetime(2026, 9, 23, 11, 0)
+        self.assertEqual(current_energy(db, now), EmotionEngine(db).energy(now))
+        with patch.object(EmotionEngine, "_cycle", return_value=("menstrual", 1)):
+            menstruada = current_energy(db, now)
+        with patch.object(EmotionEngine, "_cycle", return_value=("folicular", 8)):
+            folicular = current_energy(db, now)
+        self.assertLess(menstruada, folicular)
 
     def test_playfulness_tem_rotulo_em_portugues(self):
         src = (Path(__file__).resolve().parent.parent / "world_context.py").read_text(encoding="utf-8")

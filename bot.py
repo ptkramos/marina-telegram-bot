@@ -2548,6 +2548,27 @@ async def mundo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=90.0))
 
 
+async def emocao_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/emocao — Fase D14: como a Marina está por dentro, camada por camada e
+    com as causas (corpo, humor, emoções, vínculo). Só pro Patrick conferir se
+    o que ela sente bate com o dia dela; some sozinho."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+    from emotion import EmotionEngine
+    text = EmotionEngine(memory_manager.db).summary(datetime.now())
+    text = text[:3400] + "\n\n(Toque no botão abaixo para fechar ou aguarde 90 s)"
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🗑️ Apagar", callback_data="status_delete")]
+    ])
+    msg = await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=keyboard)
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=90.0))
+
+
 async def memory_hygiene_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /memoryhygiene para disparar manualmente o ciclo de manutenção da memória."""
     if not is_authorized(update):
@@ -3525,7 +3546,7 @@ async def process_incoming_batch(
             voice_ctx = VoiceSelectionContext(
                 intent=plan.get("intent", "") if plan else "",
                 tone=plan.get("tone", "") if plan else "",
-                emotional_state=memory_manager.db.get_estado_emocional() if hasattr(memory_manager, "db") else {},
+                emotional_state=_emotional_state_for_voice(),
                 user_text=texto_usuario,
                 is_proactive=False
             )
@@ -3918,6 +3939,18 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
         )
 
 # --- VONTADE PRÓPRIA & INICIATIVA ÍNTIMA (DIRECIONADA APENAS AO PATRICK) ---
+
+def _emotional_state_for_voice() -> dict:
+    """Fase D14: a voz lê energia e brincadeira do motor, não os números velhos."""
+    try:
+        from emotion import EmotionEngine
+        return EmotionEngine(memory_manager.db).legacy()
+    except Exception:
+        try:
+            return memory_manager.db.get_estado_emocional()
+        except Exception:
+            return {}
+
 
 def _quiet_transition_hint(pending: dict, now: datetime) -> Optional[str]:
     """Banho quieto (23/09 13:59): o mundo pôs ela no banho sem avisar porque o
@@ -4457,6 +4490,7 @@ def main():
     app.add_handler(CommandHandler("memoryhygiene", memory_hygiene_command))
     app.add_handler(CommandHandler("worlddebug", worlddebug_command))
     app.add_handler(CommandHandler("mundo", mundo_command))
+    app.add_handler(CommandHandler("emocao", emocao_command))
     app.add_handler(CommandHandler("refletir", refletir_command))
     app.add_handler(CommandHandler("jogo", jogo_command))
     app.add_handler(CommandHandler("botafogo", jogo_command))

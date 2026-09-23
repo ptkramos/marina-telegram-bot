@@ -197,9 +197,9 @@ class WorldContextBuilder:
             blocks.append(f'[CONTINUIDADE] {reminders} lembretes confirmados; '
                           f'{open_loops} assuntos em aberto.')
 
-        emotional = self._emotional_context()
+        emotional = self._emotional_context(now)
         if emotional:
-            blocks.extend(["[SEU ESTADO EMOCIONAL INTERNO ATUAL]", *emotional])
+            blocks.extend(emotional)
             social = self.db.get_estado_emocional().get('social_battery', {}).get('valor')
             if social is not None and social < 0.40:
                 # Auditoria #5: bateria baixa = cansada de GENTE, nunca do Patrick.
@@ -432,7 +432,16 @@ class WorldContextBuilder:
         from world_state import current_energy
         return current_energy(self.db)
 
-    def _emotional_context(self) -> list[str]:
+    def _emotional_context(self, now: Optional[datetime] = None) -> list[str]:
+        # Fase D14: corpo, humor, emoções com causa e vínculo, do motor.
+        try:
+            from emotion import EmotionEngine
+            return EmotionEngine(self.db).prompt_lines(now)
+        except Exception:
+            pass
+        return ["[SEU ESTADO EMOCIONAL INTERNO ATUAL]", *self._legacy_emotional_context()]
+
+    def _legacy_emotional_context(self) -> list[str]:
         emotional = self.db.get_estado_emocional()
         multipliers = {}
         if self.cycle_mgr and hasattr(self.cycle_mgr, 'get_emotional_multipliers'):

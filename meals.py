@@ -420,8 +420,8 @@ class Meals:
         if self.on_diet(now.date()):
             rate *= 1.2
         try:
-            emo = {k: v["valor"] for k, v in self.db.get_estado_emocional(now).items()}
-            if emo.get("energy", 0.7) < 0.35:
+            from world_state import current_energy
+            if current_energy(self.db, now) < 0.35:
                 rate *= 0.85
         except Exception:
             pass

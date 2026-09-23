@@ -653,6 +653,97 @@ O aviso continua opcional (sempre com conversa rolando) e fora do teto de 2 coti
 - D6: que séries/filmes ela vê (títulos reais)? Ela liga pra quem da família, e com que frequência?
 - D8: como é um sábado e um domingo dela?
 
+### D14 — Motor emocional: proposta (23/09, tarde) 🟡 aguardando o Patrick
+
+Pedido do Patrick: "estamos fazendo um bot praticamente humano, então pode ser profundo e realista".
+
+**Diagnóstico (DB de produção, 23/09 15h):**
+
+| Dimensão | Valor | Linha de base |
+|---|---|---|
+| carinho | 0,98 | 0,85 |
+| brincadeira | 0,95 | 0,75 |
+| energia | 0,91 | 0,75 |
+| paixão | 0,95 | 0,80 |
+| bateria social | 0,93 | 0,90 |
+
+1. **Ela só sente coisa boa.** O planner soma "+carinho, +paixão" a cada mensagem do Patrick ("EMOTIONAL_DELTAS" no log), e tudo vive no teto. Não existe frustração, tristeza, ansiedade, tédio nem mágoa.
+2. **O mundo não toca o emocional.** Dormiu 6 h, está com fome, o uber errou o caminho, o pai ligou: nada muda o que ela sente. A energia estava em 0,91 depois de uma noite curta.
+3. **Não há causa.** O prompt recebe "carinho: muito alto" sem o porquê. Gente de verdade sabe por que está irritada.
+4. **Cada módulo lê a emoção do seu jeito** (comida, banho, Milo, sono, academia), com fórmulas próprias.
+
+**A ideia central: cinco camadas, cada uma com seu relógio.** É como a psicologia separa: corpo ≠ humor ≠ emoção ≠ vínculo ≠ personalidade.
+
+| Camada | Relógio | De onde vem | Exemplos |
+|---|---|---|---|
+| **1. Corpo** | calculado na hora, nunca "deriva" | fatos do mundo: sono (horas + dívida + tempo acordada + ritmo do dia), refeições, ciclo, cólica/doença (D11), calor, esforço do dia (faculdade, deslocamento, academia) | energia/cansaço, fome, dor/desconforto, tesão (vem do `intimacy`), sonolência |
+| **2. Humor de fundo** | horas a dias (meia-vida ~10 h) | soma do corpo e das emoções do dia, clima, fase do ciclo, "temporada" da vida (semana de provas, férias) | dois eixos: **bem ↔ mal** (valência) e **agitada ↔ quieta** (ativação). "Dia bom mas cansada", "ansiosa e elétrica", "meio pra baixo e sem pique" |
+| **3. Emoções (episódios)** | minutos a horas; cada tipo com meia-vida própria | **acontecimentos com causa**: cada episódio guarda o que causou, com quem, quando e a intensidade | ver a tabela de categorias abaixo |
+| **4. Vínculo com o Patrick** | dias a semanas; sobe devagar, com retorno decrescente | como ele trata ela ao longo do tempo: presença, cuidado, promessas cumpridas, brigas e reconciliações | proximidade, segurança, saudade (cresce com o silêncio), desejo, mágoa pendente |
+| **5. Personalidade** | fixa | cânone | expressiva, afetuosa, espontânea, independente, vaidosa, glutona, precisa de silêncio às vezes. **Modula tudo**: vaidosa → o peso dói mais; independente → não reclama de coisa pequena; glutona → come quando está ansiosa |
+
+**Categorias e subcategorias das emoções (camada 3):**
+
+| Família | Subcategorias | Meia-vida típica | Gatilhos reais já existentes no mundo |
+|---|---|---|---|
+| **Alegria** | empolgação, diversão, orgulho, alívio, gratidão, contentamento | 1–4 h | trabalho entregue (D7), elogio da professora, convite pra praia (D8), episódio novo de *One Piece* (TMDB), mesada do pai (D12), fofoca boa da Bia |
+| **Afeto** (pessoas) | carinho, saudade, admiração, ternura | vínculo (lento) + picos curtos | ligação do pai, Milo fazendo gracinha, Patrick cuidando dela |
+| **Tristeza** | desânimo, decepção, solidão, saudade de casa, luto (mãe) | 4–24 h | plano furado, chuva num dia livre, dia sozinha em casa, data sensível |
+| **Raiva** | irritação, frustração, impaciência, chateação com alguém | 30 min–3 h (mágoa com alguém dura mais) | uber errou o caminho (já existe!), fome (hangry, D1), sono ruim, trânsito, professor chato |
+| **Medo** | ansiedade, preocupação, insegurança | enquanto a causa existir | véspera de entrega (D7), prova, Patrick no deslocamento de noite, balança/agência (D1/D10) |
+| **Vergonha/culpa** | vergonha, culpa | 1–6 h | faltou aula, comeu demais "fora da dieta", esqueceu de responder alguém |
+| **Tédio/inquietação** | tédio, inquietação | até mudar de atividade | tarde livre sem plano, aula arrastada |
+
+**Como o sentimento nasce ("avaliação").** Tudo é determinístico e **não gasta chamada de LLM a mais**:
+- **Mundo:** um avaliador lê os `life_events` novos (tipo + detalhes) e decide qual emoção cada um provoca e com que força, filtrado pela personalidade e pelo humor do momento. O mesmo uber errado irrita mais quem dormiu mal. Os módulos atuais continuam iguais e viram **sensores**.
+- **Patrick:** o planner, que já roda a cada mensagem, deixa de mandar "+carinho +paixão" fixos e passa a dizer **o que a mensagem fez**: elogiou, cuidou, provocou, sumiu, esqueceu algo importante, está triste (→ preocupação), brigou, pediu desculpa. O motor transforma isso em episódio e em vínculo.
+- **Silêncio:** a saudade que já existe (proatividade) passa a morar no vínculo, crescendo com as horas sem ele.
+
+**Regulação (como passa).** Cada emoção esfria pela meia-vida. Algumas **só passam quando a causa resolve**: a ansiedade da entrega some quando entrega. E existem **alívios reais**:
+- banho, que no D4 já é "alívio emocional";
+- comer (fome some → irritação cai);
+- cochilo (energia);
+- desabafar com a Bia ou com o Patrick (tristeza cai mais rápido);
+- colo do Milo.
+
+**Como aparece na conversa (regras de expressão).** O prompt não recebe números. Recebe 1 ou 2 linhas humanas com causa e jeito de mostrar, por exemplo:
+> "Tá cansada (dormiu 6 h) e meio irritadinha com o uber que errou o caminho. Isso deixa você mais curta e sem paciência pra enrolação, mas não desconta no Patrick."
+
+Três regras:
+- ela **mostra, não narra**: nada de "estou me sentindo frustrada";
+- ela **decide se conta ou guarda**, conforme a personalidade e a intimidade do momento (a insegurança com o peso ela esconde, e solta se ele for carinhoso);
+- **o que ela sente pelo Patrick é separado do humor do dia**: dá pra estar de mau humor com o mundo e carinhosa com ele.
+
+**O que muda no comportamento (além da fala):**
+- energia do corpo → academia, passeio do Milo, cochilo, hora de dormir (substitui as fórmulas soltas);
+- ansiedade → demora pra pegar no sono (o gancho já existe no `SleepPlan`) e come mais (glutona) ou perde a fome;
+- tristeza/solidão → procura mais o Patrick e a Bia;
+- irritação → respostas mais curtas e um pouco mais lentas; menos brincadeira;
+- alegria/empolgação → conta mais coisas do dia dela (o share nudge fica mais provável);
+- tédio → puxa assunto, procura série nova.
+
+**Visibilidade pra gente:** um comando `/emocao` (só pro Patrick, some sozinho) mostra camada por camada com as causas. Assim dá pra conferir se o que ela sente bate com o dia dela.
+
+**Fatias de implementação** (cada uma testada e entregue separada):
+- **D14a — núcleo:**
+  - tabela de episódios, humor, vínculo e corpo calculado;
+  - bloco novo no prompt (troca o `[SEU ESTADO EMOCIONAL INTERNO]`);
+  - `current_energy` e os leitores atuais passam a ler do motor;
+  - migração dos 5 números atuais: carinho → vínculo, paixão → desejo, energia → corpo, brincadeira → derivada do humor, bateria social fica.
+- **D14b — o mundo sente:** o avaliador dos acontecimentos (sono, fome, faculdade, deslocamento, amigos, pai, Milo, TV, clima, ciclo).
+- **D14c — o Patrick sente:** o planner passa a mandar o evento emocional da mensagem; vínculo e mágoa; saudade no vínculo.
+- **D14d — comportamento:** rotina, sono, apetite, proatividade e ritmo de resposta passam a ouvir o motor.
+- **`/emocao`**.
+
+**Decisões do Patrick (23/09):**
+
+| Pergunta | Resposta |
+|---|---|
+| Mágoa **com ele** | **Real, mas justa.** Só quando ele faz algo que chatearia uma namorada de verdade: sumir sem avisar, esquecer algo importante, ser grosso. Ela fica mais seca, e a mágoa só passa quando conversam ou ele repara |
+| Ciúme | **Leve e brincalhão.** Implica de brincadeira ("quem é essa aí?"), um pouco mais sensível na TPM, sem cobrança nem controle |
+| Luto (mãe) | **Não mexer.** Fica só como fato da biografia; o motor não cria episódio de luto nem data sensível |
+| TPM | **Moderada.** Mais sensível, irritável e carente, com vontade de doce. Perceptível, sem caricatura |
+
 ### Naturalidade de chat ✅ (23/09, tarde — conversa real do Patrick)
 
 Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **lembram que é bot**. Tudo fica em `chat_naturalness.py` (sem LLM e sem rede), com testes em `tests/test_chat_naturalness.py`.

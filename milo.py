@@ -64,7 +64,8 @@ class Milo:
             pass
         if chance:
             try:
-                energy = float(self.db.get_estado_emocional()["energy"]["valor"])
+                from world_state import current_energy
+                energy = current_energy(self.db)
                 if energy < 0.35:
                     chance += WALKER_EXTRA_LOW_ENERGY
             except Exception:
