@@ -65,6 +65,13 @@ DEFAULT_PROFILES = {
         'soft_delay_min_s': 300, 'soft_delay_max_s': 1200, 'guardrail_s': 1800,
         'brief_likelihood': 0.2, 'prefer': 'DEFER',
     },
+    # Soak 22/09: "vou jantar agora" e seguia respondendo em 6 segundos. Comendo,
+    # ela olha o celular entre uma garfada e outra — nem some, nem é instantânea.
+    'MEAL': {
+        'phone_access': 'HIGH', 'attention': 'MEDIUM', 'interruptibility': 'MEDIUM',
+        'soft_delay_min_s': 45, 'soft_delay_max_s': 480, 'guardrail_s': 900,
+        'brief_likelihood': 0.4, 'prefer': 'MIXED',
+    },
     'GYM': {
         'phone_access': 'HIGH', 'attention': 'MEDIUM', 'interruptibility': 'MEDIUM',
         'soft_delay_min_s': 60, 'soft_delay_max_s': 900, 'guardrail_s': 1500,
@@ -380,6 +387,8 @@ class ResponseAvailabilityPolicy:
             return 'WAKING'
         if any(x in act for x in ('tomando banho', 'no banho', 'banho')):
             return 'SHOWER'
+        if any(x in act for x in ('jantando', 'almoçando', 'almocando', 'lanchando', 'comendo')):
+            return 'MEAL'
         # Patch 030: passeio com o Milo — sem isso o estado ia pra UNKNOWN.
         if any(x in act for x in ('passeando', 'passeio', 'caminhando')):
             return 'PET_WALK'

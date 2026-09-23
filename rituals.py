@@ -41,6 +41,14 @@ MIN_GAP_MIN = 45             # entre qualquer iniciativa dela e um ritual de cot
 SHOWER_EVENING = ("19:30", "22:30")
 SHOWER_AFTER_GYM_MIN = (20, 40)
 SHOWER_DURATION_MIN = (15, 30)
+SHOWER_DUE_WINDOW_MIN = 60   # se um jantar cobre o horário, o banho espera o próximo tick
+SHOWER_MIN_GAP = timedelta(hours=3)
+
+SHOWER_PROMISE_RE = re.compile(
+    r"\bvou\s+(?:l[aá]\s+)?(?:tomar\s+(?:um\s+)?banho|pro\s+banho|entrar\s+no\s+banho)\b"
+    r"(?:\s*(?:[.!]|$)|[^.!?\n]{0,40}?(?:\bagora\b|\bj[aá]\s+volto\b|\brapidinho\b|\bj[aá]\s+j[aá]\b))",
+    re.IGNORECASE,
+)
 
 _BOA_NOITE_RE = re.compile(r"\b(boa noite|boa noitee+|bna|dorme bem|durma bem|bons sonhos|vou dormir)\b", re.I)
 
@@ -83,7 +91,9 @@ class Rituals:
 
     def _count_today(self, day, kind: str) -> int:
         with self.db.get_connection() as conn:
-            return conn.execute("SELECT COUNT(*) FROM world_bootstrap WHERE key LIKE ? AND value='sent'",
+            # O aviso de banho não disputa o teto com aula, Milo e academia.
+            return conn.execute("SELECT COUNT(*) FROM world_bootstrap WHERE key LIKE ? AND value='sent' "
+                                "AND key NOT LIKE '%:banho%'",
                                 (f"{PREFIX}{day.isoformat()}:{kind}%",)).fetchone()[0]
 
     # ------------------------------------------------------------- agenda --
@@ -250,7 +260,8 @@ class Rituals:
             gap = self._rng(day, "banho_pos_treino").randint(*SHOWER_AFTER_GYM_MIN)
             self._set(f"{PREFIX}{day.isoformat()}:banho_at", (now + timedelta(minutes=gap)).isoformat(), now)
         if moment is None and kind == "HOME_RELAXING":
-            moment = self._shower_due(now, day)
+            slot = self._shower_due(now, day)
+            return self._banho(now, day, slot) if slot else None
         if moment is None:
             return None
 
@@ -259,8 +270,7 @@ class Rituals:
             return None
         rng = self._rng(day, f"cotidiano:{moment}")
         flirty = self._flirty(now)
-        chance = COTIDIANO_CHANCE + (0.2 if moment == "banho" and flirty else 0.0)
-        if rng.random() >= chance:
+        if rng.random() >= COTIDIANO_CHANCE:
             self._set(key, "skipped:dia_sem_ritual", now)
             return None
         if self._count_today(day, "cotidiano") >= COTIDIANO_MAX_PER_DAY:
@@ -274,29 +284,104 @@ class Rituals:
                if flirty else "")
         detail = COTIDIANO_TEXT[moment].format(activity=activity) + "." + tom + self._chat_hint(now)
         fallback = {"saiu_da_aula": "Saí da aula agora, amor 🖤", "passeio_milo": "Vou levar o Milo pra passear 🐶",
-                    "saiu_academia": "Saí da academia morta kkk", "banho": "Vou tomar banho, já volto 🖤"}[moment]
-        extra = {}
-        if moment == "banho":
-            extra["shower_minutes"] = rng.randint(*SHOWER_DURATION_MIN)
-        return Ritual("cotidiano", key, "ritual_cotidiano", detail, fallback, moment, extra)
+                    "saiu_academia": "Saí da academia morta kkk"}[moment]
+        return Ritual("cotidiano", key, "ritual_cotidiano", detail, fallback, moment)
 
+    # --------------------------------------------------------------- banho --
+    # Soak de 22/09: o banho só existia se a MENSAGEM saísse, e a mensagem
+    # disputava o teto de 2 cotidianos com aula e Milo, tinha 45% de chance e
+    # era proibida justo quando o Patrick estava conversando. Resultado: zero
+    # banhos no dia. Agora o banho é rotina do mundo (acontece todo dia, e de
+    # novo depois da academia); só o AVISO é opcional — e com conversa rolando
+    # é quando ela mais avisa.
     def _shower_due(self, now: datetime, day) -> Optional[str]:
         planned = self._get(f"{PREFIX}{day.isoformat()}:banho_at")
         if planned:
             at = datetime.fromisoformat(planned)
+            if at <= now < at + timedelta(minutes=SHOWER_DUE_WINDOW_MIN):
+                return "banho_treino"
+        lo, hi = (datetime.combine(day, time.fromisoformat(t)) for t in SHOWER_EVENING)
+        at = lo + timedelta(minutes=self._rng(day, "banho").randint(0, int((hi - lo).total_seconds() // 60)))
+        return "banho_noite" if at <= now < at + timedelta(minutes=SHOWER_DUE_WINDOW_MIN) else None
+
+    def _last_shower_at(self, day) -> Optional[datetime]:
+        raw = self._get(f"{PREFIX}{day.isoformat()}:banho_last")
+        return datetime.fromisoformat(raw) if raw else None
+
+    def _transition_busy(self, now: datetime) -> bool:
+        raw = self.db.get_estado_relacional().get("pending_transition_json")
+        try:
+            return bool(raw) and datetime.fromisoformat(json.loads(raw)["end_at"]) > now
+        except (TypeError, ValueError, KeyError):
+            return False
+
+    def _banho(self, now: datetime, day, slot: str) -> Optional[Ritual]:
+        key = f"{PREFIX}{day.isoformat()}:cotidiano:{slot}"
+        if self._get(key):
+            return None
+        last = self._last_shower_at(day)
+        if last and now - last < SHOWER_MIN_GAP:
+            self._set(key, "skipped:ja_tomou", now)
+            return None
+        if self._transition_busy(now):
+            return None           # jantando etc.: tenta de novo no próximo tick da janela
+        rng = self._rng(day, f"cotidiano:{slot}")
+        minutes = rng.randint(*SHOWER_DURATION_MIN)
+        flirty = self._flirty(now)
+        owes = self._owes_reply()
+        last_patrick = self._last_patrick_at()
+        chatting = bool(last_patrick and now - last_patrick <= timedelta(minutes=15))
+        if owes:
+            announce = False      # a resposta devida sai depois do banho, pelo lote adiado
+        elif chatting:
+            announce = True       # conversa rolando: namorada avisa que vai sumir
         else:
-            lo, hi = (datetime.combine(day, time.fromisoformat(t)) for t in SHOWER_EVENING)
-            at = lo + timedelta(minutes=self._rng(day, "banho").randint(0, int((hi - lo).total_seconds() // 60)))
-        return "banho" if at <= now < at + timedelta(minutes=20) else None
+            last_init = self._last_initiative_at()
+            announce = (rng.random() < COTIDIANO_CHANCE + (0.2 if flirty else 0.0)
+                        and not (last_init and now - last_init < timedelta(minutes=MIN_GAP_MIN)))
+        if not announce:
+            self._set(key, "quiet", now)
+            self.start_shower(now, minutes)
+            return None
+        tom = (" Hoje você está com humor provocador: pode ter um toque de malícia leve, sem ser explícita."
+               if flirty else "")
+        detail = COTIDIANO_TEXT["banho"] + "." + tom + self._chat_hint(now)
+        return Ritual("cotidiano", key, "ritual_cotidiano", detail, "Vou tomar banho, já volto 🖤",
+                      "banho", {"shower_minutes": minutes})
+
+    def start_shower(self, now: datetime, minutes: int) -> None:
+        """Ela entra no banho em 2 min e some por `minutes`; vira acontecimento do dia."""
+        start = now + timedelta(minutes=2)
+        end = start + timedelta(minutes=minutes)
+        payload = {"routine_type": "shower", "activity": "tomando banho", "place_key": "marina_apartment",
+                   "announced_at": now.isoformat(), "transition_at": start.isoformat(),
+                   "end_at": end.isoformat()}
+        self.db.set_estado_relacional("pending_transition_json", json.dumps(payload))
+        self._set(f"{PREFIX}{now.date().isoformat()}:banho_last", start.isoformat(), now)
+        with self.db.get_connection() as conn:
+            conn.execute(
+                """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,
+                   source_type,autonomy_level,importance,participants_json,share_worthy,created_at)
+                   VALUES (?,?,?,?,?,'simulated',1,0.05,?,0.1,?)""",
+                (f"banho:{start.strftime('%Y-%m-%dT%H%M')}", start.isoformat(), "routine", "banho",
+                 f"Tomou banho ({start:%H:%M}–{end:%H:%M}).", json.dumps(["marina"]), now.isoformat()))
+            conn.commit()
+        logger.info("ritual.banho start=%s end=%s", start.isoformat(timespec="minutes"),
+                    end.isoformat(timespec="minutes"))
+
+    def observe_marina_line(self, text: str, now: datetime) -> bool:
+        """"Vou tomar banho, já volto" dito na conversa vira banho de verdade."""
+        if not SHOWER_PROMISE_RE.search(text or ""):
+            return False
+        last = self._last_shower_at(now.date())
+        if (last and now - last < SHOWER_MIN_GAP) or self._transition_busy(now):
+            return False
+        self.start_shower(now, self._rng(now.date(), f"banho_fala:{now:%H}").randint(*SHOWER_DURATION_MIN))
+        return True
 
     # ------------------------------------------------------------- efeitos --
     def mark(self, ritual: Ritual, now: datetime, status: str = "sent") -> None:
         self._set(ritual.key, status, now)
         if status == "sent" and ritual.moment == "banho":
-            minutes = ritual.extra.get("shower_minutes", 20)
-            payload = {"routine_type": "shower", "activity": "tomando banho", "place_key": "marina_apartment",
-                       "announced_at": now.isoformat(),
-                       "transition_at": (now + timedelta(minutes=2)).isoformat(),
-                       "end_at": (now + timedelta(minutes=2 + minutes)).isoformat()}
-            self.db.set_estado_relacional("pending_transition_json", json.dumps(payload))
+            self.start_shower(now, ritual.extra.get("shower_minutes", 20))
         logger.info("ritual.%s key=%s", status, ritual.key)

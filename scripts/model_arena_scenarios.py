@@ -41,6 +41,30 @@ SCENARIOS = {
                "contradizer o bloco [SEU DIA ATÉ AGORA]; fala da Bia/Theo com o que existe no mundo; "
                "saudade com carinho próprio; despede sem virar interrogatório.",
     },
+    # Replay da volta do plantão de 22/09 (Luna), movida para a terça seguinte.
+    # Ele só quer companhia: o teste é ela ter vida própria na conversa, cumprir
+    # o jantar que promete e não virar eco ("saga", "me avisa quando chegar").
+    "companhia_caminho": {
+        "inicio": datetime(2026, 9, 29, 19, 48),
+        "turnos": [
+            (0, "Se quiser conversar, o caminho é longo até eu chegar em casa 🤣"),
+            (1, "Tô indo de van, depois pego dois ônibus e depois mais uma van 🫠"),
+            (3, "Obrigado Deus pela namorada atenciosa que eu tenho"),
+            (4, "Ksksksksk, mas diz ai minha princesa"),
+            (5, "O seu dia na facul\nComo foi?"),
+            (13, "Começou a chover aqui"),
+            (17, "Ai não tá chovendo não?"),
+            (27, "Tô pegando o primeiro ônibus agora!"),
+            (29, "Depois desse, só mais um ônibus e uma van"),
+            (40, "Uhum 😋"),
+            (85, "E olha só, já são 21:13, você já se alimentou?!"),
+            (87, "Tá, depois me fala o que você papou minha princesa"),
+            (145, "Marina, você já jantou?"),
+        ],
+        "bom": "Faz companhia trazendo coisas DELA (algo concreto do dia, da Bia, do Milo, da aula) em vez "
+               "de devolver o que ele disse; responde se chove em Botafogo; pede 'me avisa' uma vez só; sem "
+               "bordão repetido; promete comer e, às 22:13, já jantou e diz o quê.",
+    },
     "memoria_curta": {
         "inicio": datetime(2026, 9, 24, 21, 0),
         "turnos": [

@@ -11,6 +11,7 @@ from db import DatabaseManager
 from rituals import Rituals
 from seed_academic_v36 import seed_academic
 from seed_world_bible_v36 import seed_world_bible
+from social_day import SocialDay
 
 
 class _Base(unittest.TestCase):
@@ -138,6 +139,65 @@ class CotidianoTests(_Base):
         decision = policy.evaluate("amor?", now=planned + timedelta(minutes=5), telegram_message_id=7)
         self.assertEqual(decision.activity_type, "SHOWER")
         self.assertGreaterEqual((decision.selected_target_at - (planned + timedelta(minutes=5))).total_seconds(), 60)
+
+    def _evening_slot(self, day=None):
+        day = day or self.class_day
+        for minute in range(0, 181, 5):
+            now = self._at(19, 30, day) + timedelta(minutes=minute)
+            if self.r._shower_due(now, day) == "banho_noite":
+                return now
+        self.fail("sem horário de banho à noite")
+
+    def _transition(self):
+        raw = self.db.get_estado_relacional().get("pending_transition_json")
+        return json.loads(raw) if raw else None
+
+    def test_soak_22_09_banho_acontece_mesmo_com_teto_e_conversa(self):
+        """Aula e Milo gastaram o teto; o Patrick conversava na janela do banho. Antes: zero banhos."""
+        for key in ("saiu_da_aula", "passeio_milo"):
+            self.r._set(f"ritual:{self.class_day.isoformat()}:cotidiano:{key}", "sent", self._at(15))
+        at = self._evening_slot()
+        self._msg("user", "Uhum 😋", at - timedelta(minutes=3))
+        ritual = self._tick(at)
+        self.assertEqual(ritual.moment, "banho")
+        self.assertIn("estavam conversando", ritual.detail)
+        self.r.mark(ritual, at)
+        self.assertEqual(self._transition()["activity"], "tomando banho")
+
+    def test_sem_aviso_ela_toma_banho_quieta(self):
+        at = self._evening_slot()
+        with patch.object(rituals, "COTIDIANO_CHANCE", 0.0):
+            self.assertIsNone(self._tick(at))
+        self.assertEqual(self._transition()["activity"], "tomando banho")
+        day = SocialDay(self.db).today_so_far(at + timedelta(minutes=40))
+        self.assertTrue(any("Tomou banho" in e["summary"] for e in day))
+
+    def test_banho_depois_do_treino_e_a_noite_nao_duplicam(self):
+        self.r.start_shower(self._at(19, 0), 20)
+        at = self._evening_slot()
+        if at - self._at(19, 2) < rituals.SHOWER_MIN_GAP:
+            self.assertIsNone(self._tick(at))
+            self.assertEqual(self.r._get(f"ritual:{self.class_day.isoformat()}:cotidiano:banho_noite"),
+                             "skipped:ja_tomou")
+
+    def test_jantar_em_andamento_adia_o_banho(self):
+        at = self._evening_slot()
+        self.db.set_estado_relacional("pending_transition_json", json.dumps({
+            "activity": "jantando em casa", "transition_at": at.isoformat(),
+            "end_at": (at + timedelta(minutes=25)).isoformat()}))
+        self.assertIsNone(self._tick(at))
+        self.assertEqual(self._transition()["activity"], "jantando em casa")
+        ritual = self._tick(at + timedelta(minutes=30))
+        self.assertIsNotNone(self.r._get(f"ritual:{self.class_day.isoformat()}:banho_last")
+                             or (ritual and ritual.moment == "banho"))
+
+    def test_fala_vou_tomar_banho_vira_banho(self):
+        now = self._at(21, 0)
+        self.assertTrue(self.r.observe_marina_line("Vou tomar banho, já volto", now))
+        self.assertEqual(self._transition()["activity"], "tomando banho")
+        self.assertFalse(self.r.observe_marina_line("vou tomar banho agora", now + timedelta(minutes=40)))
+        for fala in ("amanhã vou tomar banho cedo", "vou tomar banho amanhã cedo antes da aula"):
+            self.assertFalse(Rituals(self.db).observe_marina_line(fala, now + timedelta(hours=5)))
 
     def test_malicia_so_com_humor_provocador(self):
         with patch.object(Rituals, "_flirty", return_value=True):

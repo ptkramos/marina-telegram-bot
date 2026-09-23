@@ -69,9 +69,12 @@ from prompt_policy import (
 )
 
 PHOTO_UNAVAILABLE_INSTRUCTION = (
-    "Patrick requested a photo, but photo generation is currently unavailable due to maintenance. "
-    "Respond warmly in Portuguese as Marina explaining that you cannot send a photo right now, "
-    "without falsely claiming you already took or sent it, and continue the conversation naturally."
+    "Patrick asked for a photo, and you are not sending one right now. "
+    "Answer warmly in Portuguese as Marina with a reason a real girl would give, taken from what "
+    "you are doing right now (messy hair, bad light, busy, out on the street, just got out of the shower). "
+    "Never mention maintenance, functions, systems, the app, bugs or anything technical: "
+    "you are a person, not a service. Do not claim you took or sent a photo, do not promise a "
+    "specific time for it, and continue the conversation naturally."
 )
 
 availability_service = ResponseAvailabilityService(memory_manager.db)
@@ -504,34 +507,37 @@ def is_avatar_request(texto: str) -> bool:
     ]
     return any(f in t for f in frases)
 
+# Pedido de mídia exige verbo de pedido perto do objeto. Palavra solta não basta:
+# "o importante vai ser ver você feliz" disparava o pedido de foto, e "te mandei
+# um áudio" ou "adoro sua voz" disparavam a mensagem de voz. O intervalo entre
+# verbo e objeto não pode conter "te"/"eu" nem os infinitivos de envio, para que
+# o Patrick oferecendo a mídia dele ("quero te mandar uma foto") não conte.
+_PEDIDO_MIDIA = (
+    r"\b(?:manda|mande|envia|envie|tira|tire|bate|bata|mostra|mostre|posta|poste|"
+    r"grava|grave|solta|cad[eê]|quero|queria|deixa\s+eu\s+ver)\b"
+)
+_INTERVALO_PEDIDO = r"(?:(?!\b(?:te|eu|mandar|mostrar|enviar)\b)[^.!?\n]){0,25}?"
+_FOTO_PEDIDO_RE = re.compile(
+    _PEDIDO_MIDIA + _INTERVALO_PEDIDO + r"\b(?:fotos?|fotinhas?|selfies?|nudes?)\b"
+    r"|\bdeixa\s+eu\s+te\s+ver\b"
+    r"|\bquero\s+(?:te\s+ver|ver\s+(?:voc[eê]|vc))\s+agora\b"
+    r"|\bme\s+mostr[ae]\s+(?:voc[eê]|vc|como\s+(?:voc[eê]|vc)\s+t[aá]|o\s+look|(?:seu|teu)\s+look)\b"
+)
+_AUDIO_PEDIDO_RE = re.compile(
+    _PEDIDO_MIDIA + _INTERVALO_PEDIDO + r"\b(?:[áa]udios?|audinhos?|mensagem\s+de\s+voz|voz)\b"
+    r"|\bfala\s+(?:comigo\s+)?(?:em|por)\s+(?:[áa]udio|voz)\b"
+    r"|\b(?:quero|queria|deixa\s+eu)\s+ouvir\s+(?:a\s+)?(?:sua|tua)\s+voz\b"
+)
+
+
 def is_photo_request(texto: str) -> bool:
     """Pedido de foto no chat (não confundir com foto de perfil)."""
     if is_avatar_request(texto):
         return False
-    t = (texto or "").lower()
-    palavras = [
-        "selfie", "nude", "fotinha", "tira uma foto", "manda foto", "manda uma foto",
-        "me manda foto", "me manda uma foto", "quero ver você", "ver você",
-        "manda um nude", "manda nude", "tira foto", "uma foto",
-        "foto do look", "foto do seu look", "foto de agora", "foto sua",
-    ]
-    if any(p in t for p in palavras):
-        return True
-    # "foto" sozinho só conta se não for perfil (já filtrado acima)
-    return bool(re.search(r'\bfoto\b', t) or re.search(r'\bfotos\b', t))
+    return bool(_FOTO_PEDIDO_RE.search((texto or "").lower()))
 
 def is_audio_request(texto: str) -> bool:
-    t = (texto or "").lower()
-    palavras = [
-        "áudio", "audio", "ouvir sua voz", "ouvir tua voz", "manda voz",
-        "grava um áudio", "grava audio", "grava um audio", "fala comigo em áudio",
-        "manda áudio", "manda um audio", "manda um áudio", "fala por áudio",
-        "me manda um audio", "me manda áudio", "sua voz", "fala por voz",
-        "manda mensagem de voz", "grava uma mensagem de voz", "grava áudio",
-        "grava audio amor", "manda áudio amor", "quero ouvir sua voz",
-        "solta a voz", "manda um áudio amor",
-    ]
-    return any(p in t for p in palavras)
+    return bool(_AUDIO_PEDIDO_RE.search((texto or "").lower()))
 
 def is_reminder_offer_question(text: str) -> bool:
     """
@@ -3548,6 +3554,15 @@ async def process_incoming_batch(
             notice_text or fala_limpa or resposta_marin, model=turn_model)
         if plan and u_id is not None:
             planner.apply_plan_effects(plan, conversation_id=u_id)
+    if sent_mid and fala_limpa:
+        # "Vou jantar agora" / "vou tomar banho, já volto" viram estado de verdade.
+        try:
+            from meals import Meals
+            from rituals import Rituals
+            if not Meals(memory_manager.db).observe_marina_line(fala_limpa, datetime.now()):
+                Rituals(memory_manager.db).observe_marina_line(fala_limpa, datetime.now())
+        except Exception:
+            logger.exception("meals.observe.error")
     if sent_mid and avail_decision and getattr(avail_decision, 'telemetry_event_id', None):
         actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
         availability_service.repo.record_actual_latency(

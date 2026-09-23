@@ -659,7 +659,7 @@ class SocialDay:
                           EXISTS (SELECT 1 FROM knowledge_items k WHERE k.subject_type='event'
                                   AND k.subject_id=e.id AND k.holder_character_key='marina'
                                   AND k.privacy_level='CONFIDENTIAL' AND k.revoked_at IS NULL) AS secret
-                   FROM life_events e WHERE e.event_type IN ('social_contact', 'commute')
+                   FROM life_events e WHERE e.event_type IN ('social_contact', 'commute', 'meal', 'routine')
                    AND e.event_at>=? AND e.event_at<=? ORDER BY e.event_at DESC LIMIT ?""",
                 (start, now.isoformat(), limit)).fetchall()
         return [dict(r) for r in reversed(rows)]
