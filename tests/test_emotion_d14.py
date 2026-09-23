@@ -185,5 +185,88 @@ class WorldFeelsTest(unittest.TestCase):
         self.assertIn("se divertindo com o Caio — Conheceu o Caio.", lines)
 
 
+class PatrickFeelsTest(unittest.TestCase):
+    """D14c — o que a mensagem dele faz com ela; mágoa real mas justa, ciúme leve."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = DatabaseManager(Path(self.temp.name) / "p.db")
+        self.engine = EmotionEngine(self.db)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_care_warms_and_builds_security(self):
+        before = self.engine.bond()["security"]
+        self.assertTrue(emotion.apply_patrick_event(self.db, {"kind": "cuidado", "cause": "ele mandou ela comer"}, NOW))
+        self.assertGreater(self.engine.bond()["security"], before)
+        self.assertEqual(self.engine.episodes(NOW)[0].word, "carinhosa")
+
+    def test_rudeness_hurts_until_he_repairs(self):
+        emotion.apply_patrick_event(self.db, {"kind": "grosseria", "cause": "ele respondeu seco e desdenhou do trabalho dela"}, NOW)
+        self.assertGreater(self.engine.bond()["hurt"], 0.2)
+        hours_later = NOW + timedelta(hours=6)
+        grievance = [e for e in self.engine.episodes(hours_later) if e.target == "o Patrick"][0]
+        self.assertAlmostEqual(grievance.intensity, 0.4, places=2, msg="sem reparo, a mágoa não passa sozinha em horas")
+        lines = "\n".join(self.engine.prompt_lines(hours_later))
+        self.assertIn("chateada com ele (ele respondeu seco e desdenhou do trabalho dela)", lines)
+        self.assertIn("sem drama", lines)
+        emotion.apply_patrick_event(self.db, {"kind": "desculpa", "cause": "ele pediu desculpa"}, hours_later)
+        self.assertLess(self.engine.bond()["hurt"], 0.05)
+        later = [e for e in self.engine.episodes(hours_later + timedelta(hours=12))
+                 if e.target == "o Patrick" and e.family == "tristeza"]
+        self.assertTrue(not later or later[0].intensity < 0.2, "depois do reparo, esfria")
+
+    def test_grievance_cools_by_itself_after_a_day(self):
+        emotion.apply_patrick_event(self.db, {"kind": "briga"}, NOW)
+        next_days = [e for e in self.engine.episodes(NOW + timedelta(hours=60)) if e.target == "o Patrick"]
+        self.assertEqual(next_days, [], "real, mas não guarda rancor pra sempre")
+
+    def test_jealousy_is_light_and_playful(self):
+        emotion.apply_patrick_event(self.db, {"kind": "ciume", "cause": "ele comentou da colega nova do trabalho"}, NOW)
+        self.assertEqual(self.engine.bond()["hurt"], 0.0, "ciuminho não vira mágoa")
+        lines = "\n".join(self.engine.prompt_lines(NOW))
+        self.assertIn("implica de brincadeira", lines)
+        self.assertEqual([e for e in self.engine.episodes(NOW + timedelta(hours=5)) if e.kind == "ciume"], [])
+
+    def test_unknown_or_none_does_nothing(self):
+        self.assertFalse(emotion.apply_patrick_event(self.db, {"kind": "nenhum"}, NOW))
+        self.assertFalse(emotion.apply_patrick_event(self.db, {"kind": "odio_mortal"}, NOW))
+
+
+class FeelingsChangeBehaviourTest(unittest.TestCase):
+    """D14d — o que ela sente muda o que ela faz."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = DatabaseManager(Path(self.temp.name) / "b.db")
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def _worry(self, family="medo", intensity=0.6, target=None):
+        return emotion.Episode(1, family, "ansiedade", intensity, intensity, "trabalho pra entregar amanhã",
+                               target, NOW, True)
+
+    def test_a_worried_mind_falls_asleep_later(self):
+        from sleep_plan import SleepPlan
+        plan = SleepPlan(self.db)
+        with patch.object(EmotionEngine, "episodes", return_value=[]):
+            calm, _ = plan._onset(NOW.date(), live=True)
+        with patch.object(EmotionEngine, "episodes", return_value=[self._worry()]):
+            worried, why = plan._onset(NOW.date(), live=True)
+        self.assertGreaterEqual(worried - calm, 20)
+        self.assertIn("pensando nisso: trabalho pra entregar amanhã", " ".join(why))
+
+    def test_anxious_glutton_gets_hungry_faster(self):
+        from meals import Meals
+        meals = Meals(self.db)
+        with patch.object(EmotionEngine, "episodes", return_value=[]):
+            calm = meals.hunger(NOW)
+        with patch.object(EmotionEngine, "episodes", return_value=[self._worry()]):
+            anxious = meals.hunger(NOW)
+        self.assertGreaterEqual(anxious, calm)
+
+
 if __name__ == "__main__":
     unittest.main()

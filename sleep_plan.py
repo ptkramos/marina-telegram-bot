@@ -166,6 +166,17 @@ class SleepPlan:
             why += reasons
         except Exception:
             pass
+        if live:
+            try:
+                # Fase D14d: cabeça cheia de verdade (ansiedade, preocupação, mágoa) atrasa o sono.
+                from emotion import EmotionEngine
+                worry = next((e for e in EmotionEngine(self.db).episodes()
+                              if e.family in ("medo", "tristeza", "raiva") and e.intensity >= 0.35), None)
+                if worry:
+                    minutes += 20 + int(40 * min(1.0, worry.intensity))
+                    why.append(f"demorou pra dormir pensando nisso: {worry.cause}")
+            except Exception:
+                pass
         chance = ONSET_TROUBLE_CHANCE + (ONSET_TROUBLE_TPM if phase == "tpm" else 0.0)
         if rng.random() < chance:
             minutes += rng.randint(20, 60)

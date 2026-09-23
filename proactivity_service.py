@@ -255,6 +255,17 @@ class ProactivityService:
             mult *= 0.8 + 0.4 * float(emo.get("romantic_intensity", 0.8))
         except Exception:
             pass
+        try:
+            # Fase D14d: triste, sozinha ou com o dia ruim, ela procura mais o Patrick;
+            # chateada COM ele, procura menos.
+            from emotion import EmotionEngine
+            eps = EmotionEngine(self.db).episodes(now)
+            if any(e.family == "tristeza" and e.target != "o Patrick" and e.intensity >= 0.25 for e in eps):
+                mult *= 1.3
+            if any(e.target == "o Patrick" and e.family in ("tristeza", "raiva") and e.intensity >= 0.25 for e in eps):
+                mult *= 0.5
+        except Exception:
+            pass
         level = min(1.0, SAUDADE_RATE_PER_HOUR * hours * mult)
         unanswered = self._unanswered_initiatives(last_user)
         out.update(level=level, hours=hours, unanswered=unanswered)

@@ -420,6 +420,13 @@ class Meals:
         if self.on_diet(now.date()):
             rate *= 1.2
         try:
+            # Fase D14d: glutoninha ansiosa belisca mais.
+            from emotion import EmotionEngine
+            if any(e.family == "medo" and e.intensity >= 0.3 for e in EmotionEngine(self.db).episodes(now)):
+                rate *= 1.15
+        except Exception:
+            pass
+        try:
             from world_state import current_energy
             if current_energy(self.db, now) < 0.35:
                 rate *= 0.85

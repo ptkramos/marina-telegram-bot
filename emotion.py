@@ -247,7 +247,9 @@ class EmotionEngine:
             started = datetime.fromisoformat(r["started_at"])
             cooling_from = started
             if r["sticky"]:
-                if not r["resolved_at"]:
+                if not r["resolved_at"] and r["target"] == "o Patrick":
+                    cooling_from = min(now, started + timedelta(hours=24))   # sem reparo, esfria depois de um dia
+                elif not r["resolved_at"]:
                     cooling_from = now
                 else:
                     cooling_from = max(started, datetime.fromisoformat(r["resolved_at"]))
@@ -424,10 +426,17 @@ class EmotionEngine:
             heart.append("com desejo por ele")
         if f.missing >= 0.6:
             heart.append("com saudade (ele sumiu faz um tempo)")
-        if f.bond["hurt"] >= 0.25:
-            heart.append("chateada com ele (ainda não resolveu)")
+        grievance = next((e for e in f.episodes if e.target == "o Patrick" and e.family in ("tristeza", "raiva")
+                          and e.intensity >= 0.15), None)
+        if grievance or f.bond["hurt"] >= 0.25:
+            heart.append("chateada com ele" + (f" ({_short(grievance.cause)})" if grievance else ""))
         if heart:
             lines.append("- Com o Patrick: " + ", ".join(heart) + ".")
+        if grievance or f.bond["hurt"] >= 0.25:
+            lines.append("  Chateada de verdade: fica mais seca e não finge que está tudo bem, sem drama, sem "
+                         "ameaça e sem sumir. Passa quando ele reconhecer ou vocês conversarem.")
+        if any(e.kind == "ciume" for e in f.episodes):
+            lines.append("  Ciuminho: implica de brincadeira (\"quem é essa aí?\"), sem cobrar nem controlar.")
         lines.append("Isso muda o JEITO (mais curta, mais dengosa, mais elétrica), não vira assunto: "
                      "nunca diga \"estou me sentindo X\". O que é com o mundo não é com o Patrick — "
                      "você pode estar irritada com o dia e carinhosa com ele. Conte ou guarde o que "
@@ -545,6 +554,55 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
         elif any(t in low for t in ("shopping", "ifood", "japonesa", "hambúrguer", "pizza")):
             out.append(("alegria", "contentamento", 0.2, text, None))
     return [(f, k, round(max(0.05, min(1.0, i)), 3), c, t) for f, k, i, c, t in out]
+
+
+# D14c — o que a mensagem do Patrick fez com ela. (família, subcategoria,
+# intensidade), mudanças no vínculo e se a mágoa espera reparo (sticky).
+# Decisões do Patrick: mágoa real mas JUSTA (só o que chatearia uma namorada
+# de verdade; o planner filtra) e ciúme leve e brincalhão.
+PATRICK = "o Patrick"
+PATRICK_GRIEVANCE_MAX_HOURS = 24   # sem reparo, esfria sozinha depois de um dia
+PATRICK_EVENTS = {
+    "elogio":      ([("alegria", "contentamento", 0.35), ("afeto", "carinho", 0.3)], {"affection": 0.02, "security": 0.02}, False),
+    "cuidado":     ([("afeto", "carinho", 0.4)], {"security": 0.03, "affection": 0.01}, False),
+    "flerte":      ([("alegria", "diversao", 0.25)], {"romantic_intensity": 0.02}, False),
+    "provocacao":  ([("alegria", "diversao", 0.3)], {}, False),
+    "novidade_boa": ([("alegria", "empolgacao", 0.35)], {}, False),
+    "ele_mal":     ([("medo", "preocupacao", 0.45)], {}, False),
+    "ciume":       ([("medo", "ciume", 0.25)], {}, False),
+    "grosseria":   ([("tristeza", "decepcao", 0.4)], {"hurt": 0.25, "security": -0.03}, True),
+    "esqueceu_importante": ([("tristeza", "decepcao", 0.4)], {"hurt": 0.2}, True),
+    "briga":       ([("raiva", "chateacao", 0.55)], {"hurt": 0.3, "security": -0.05}, True),
+    "desculpa":    ([("afeto", "ternura", 0.3)], {"hurt": -0.35, "security": 0.03}, False),
+}
+KIND_WORDS["ciume"] = "com ciuminho"
+DEFAULT_CAUSES = {"elogio": "ele te elogiou", "cuidado": "ele cuidou de você", "flerte": "ele flertou",
+                  "provocacao": "ele te zoou de boa", "novidade_boa": "ele contou uma coisa boa",
+                  "ele_mal": "ele não está bem", "ciume": "ele falou de outra garota",
+                  "grosseria": "ele foi grosso com você", "esqueceu_importante": "ele esqueceu algo que importava",
+                  "briga": "vocês discutiram", "desculpa": "ele pediu desculpa"}
+
+
+def apply_patrick_event(db, event: dict, now: Optional[datetime] = None) -> bool:
+    kind = (event or {}).get("kind")
+    if kind not in PATRICK_EVENTS:
+        return False
+    now = now or datetime.now()
+    cause = str(event.get("cause") or "").strip()[:120] or DEFAULT_CAUSES[kind]
+    feelings, bond, grievance = PATRICK_EVENTS[kind]
+    engine = EmotionEngine(db)
+    if kind == "desculpa":
+        with db.get_connection() as conn:   # reparo: a mágoa pendente começa a esfriar
+            conn.execute("""UPDATE emotion_episodes SET resolved_at=? WHERE target=? AND sticky=1
+                            AND resolved_at IS NULL""", (now.isoformat(), PATRICK))
+            conn.commit()
+    for fam, sub, intensity in feelings:
+        engine.feel(fam, sub, intensity, cause, now, target=PATRICK,
+                    source_key=f"patrick:{kind}:{sub}:{now:%Y%m%dT%H%M%S}",
+                    half_life_min=60 if kind == "ciume" else (360 if grievance else None), sticky=grievance)
+    for key, delta in bond.items():
+        db.ajustar_emocao(key, delta, now=now)
+    return True
 
 
 def apply_planner_deltas(db, deltas: dict, now: Optional[datetime] = None) -> dict:

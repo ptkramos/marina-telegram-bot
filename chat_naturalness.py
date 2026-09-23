@@ -141,7 +141,15 @@ def share_nudge(db, now: datetime, *, intent: Optional[str], rng=random) -> Opti
                                  (last,)).fetchone()[0]
         if turns < SHARE_MIN_TURNS:
             return None
-    if rng.random() >= SHARE_CHANCE:
+    chance = SHARE_CHANCE
+    try:
+        # Fase D14d: empolgada ou se divertindo, ela conta mais coisas do dia.
+        from emotion import EmotionEngine
+        if any(e.family == "alegria" and e.intensity >= 0.3 for e in EmotionEngine(db).episodes(now)):
+            chance = min(0.8, chance + 0.2)
+    except Exception:
+        pass
+    if rng.random() >= chance:
         return None
     from social_day import SocialDay
     news = SocialDay(db).fresh_news(now, within=SHARE_WITHIN)
