@@ -73,6 +73,12 @@ def _hours(value: float) -> str:
     return f"{h}h{m:02d}" if m else f"{h}h"
 
 
+def _short(cause: str, limit: int = 80) -> str:
+    """Causa enxuta pro prompt: sem o parêntese de lugar nem o "; assunto: ..."."""
+    text = cause.split(" (")[0].split("; ")[0].strip().rstrip(".")
+    return text if len(text) <= limit else text[:limit].rsplit(" ", 1)[0] + "…"
+
+
 def _clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
     return max(lo, min(hi, x))
 
@@ -252,6 +258,59 @@ class EmotionEngine:
                                    r["cause"], r["target"], started, bool(r["sticky"])))
         return sorted(out, key=lambda e: e.intensity, reverse=True)
 
+    # ==================================================== D14b: o mundo sente ==
+    def appraise_world(self, now: Optional[datetime] = None, *, lookback_hours: int = 12) -> int:
+        """Transforma os acontecimentos recentes do dia dela em sentimentos com causa.
+
+        Idempotente: cada acontecimento vira no máximo um episódio (source_key).
+        Os módulos do mundo (comida, deslocamento, Milo, faculdade, amigos, pai,
+        TV, peso) continuam iguais — são sensores; a leitura emocional é aqui."""
+        now = now or datetime.now()
+        with self.db.get_connection() as conn:
+            rows = conn.execute(
+                """SELECT event_key, event_at, event_type, summary, participants_json FROM life_events
+                   WHERE event_at<=? AND event_at>=?""",
+                (now.isoformat(), (now - timedelta(hours=lookback_hours)).isoformat())).fetchall()
+        tired = self.energy(now) < 0.5
+        created = 0
+        for r in rows:
+            for fam, kind, intensity, cause, target in appraise_event(dict(r), tired=tired):
+                at = datetime.fromisoformat(r["event_at"])
+                created += self.feel(fam, kind, intensity, cause, at, target=target,
+                                     source_key=f"ev:{r['event_key']}:{kind}")
+        created += self._appraise_deadlines(now)
+        return created
+
+    def _appraise_deadlines(self, now: datetime) -> int:
+        """Entrega chegando aperta o peito até entregar; depois vem o alívio."""
+        try:
+            from college import College
+            items = College(self.db).assignments(now.date(), horizon_days=2)
+        except Exception:
+            return 0
+        created = 0
+        for a in items:
+            due = date.fromisoformat(a["due"])
+            key = f"entrega:{a['key']}"
+            delivered_at = datetime.combine(due, datetime.min.time()).replace(hour=18)
+            if now >= delivered_at:
+                self.resolve(key, delivered_at)
+                created += self.feel("alegria", "alivio", 0.45, f"entregou o {a['kind']} de {a['course']}",
+                                     delivered_at, source_key=f"entregou:{a['key']}")
+                continue
+            if a["pace"] == "adiantada":
+                continue   # já fez com folga
+            days = (due - now.date()).days
+            intensity = 0.3 + (0.25 if days <= 1 else 0.0) + (0.15 if a["pace"] == "ultima_hora" else 0.0)
+            started = max(datetime.combine(due - timedelta(days=2), datetime.min.time()).replace(hour=9),
+                          now - timedelta(hours=48))
+            if started <= now:
+                created += self.feel("medo", "ansiedade", intensity,
+                                     f"{a['kind']} de {a['course']} pra entregar "
+                                     f"{'amanhã' if days == 1 else 'hoje' if days == 0 else f'em {days} dias'}",
+                                     started, source_key=key, sticky=True)
+        return created
+
     # =========================================================== vínculo ==
     def _stored(self, key: str, default: float) -> float:
         try:
@@ -279,6 +338,10 @@ class EmotionEngine:
     # ============================================================= agora ==
     def feeling(self, now: Optional[datetime] = None) -> Feeling:
         now = now or datetime.now()
+        try:
+            self.appraise_world(now)
+        except Exception:
+            pass   # o que ela sente do mundo é enriquecimento; nunca derruba o turno
         energy = self.energy(now)
         try:
             slept, awake_since, _, _ = self._sleep_facts(now)
@@ -351,7 +414,7 @@ class EmotionEngine:
         lines.append(f"- Humor: {self.mood_words(f.valence, f.arousal)}.")
         for ep in f.episodes[:2]:
             about = f" com {ep.target}" if ep.target else ""
-            lines.append(f"- Sentindo agora: {ep.word}{about} — {ep.cause}.")
+            lines.append(f"- Sentindo agora: {ep.word}{about} — {_short(ep.cause)}.")
         heart = []
         if f.bond["affection"] >= 0.8:
             heart.append("apaixonada e carinhosa")
@@ -392,6 +455,96 @@ class EmotionEngine:
         out += ["", f"Com o Patrick: carinho {b['affection']:.2f} · desejo {b['romantic_intensity']:.2f} · "
                     f"segurança {b['security']:.2f} · mágoa {b['hurt']:.2f} · saudade {f.missing:.2f}"]
         return "\n".join(out)
+
+
+def _person(participants_json: Optional[str]) -> Optional[str]:
+    try:
+        from social_day import short_name
+        people = [p for p in json.loads(participants_json or "[]") if p != "marina"]
+        return short_name(people[0]) if people else None
+    except Exception:
+        return None
+
+
+# Milo: travessura que diverte, que irrita ou que derrete.
+MILO_ANTICS = (("xixi no tapete", "raiva", "irritacao", 0.3), ("manha pedindo colo a noite", "raiva", "impaciencia", 0.25),
+               ("roubou uma meia", "alegria", "diversao", 0.35), ("latiu pro entregador", "alegria", "diversao", 0.25),
+               ("deitou em cima da roupa", "alegria", "diversao", 0.25), ("encarando ela", "afeto", "ternura", 0.3),
+               ("dormiu encostado", "afeto", "ternura", 0.4))
+
+
+def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
+    """(família, subcategoria, intensidade, causa, alvo) que um acontecimento provoca.
+
+    A mesma coisa pesa diferente conforme o estado dela: cansada, o imprevisto
+    irrita mais. Sem acontecimento reconhecível → nada (silêncio é melhor que
+    emoção inventada)."""
+    key, kind_ev = ev["event_key"], ev["event_type"]
+    text = (ev.get("summary") or "").strip().rstrip(".")
+    low = text.casefold()
+    who = _person(ev.get("participants_json"))
+    out = []
+    if kind_ev == "commute" and key.endswith(":imprevisto"):
+        cause = text.split(": ", 1)[-1]
+        if "açaí" in low:
+            out.append(("alegria", "diversao", 0.3, cause, None))
+        else:
+            out.append(("raiva", "irritacao", 0.4 + (0.15 if tired else 0.0) - (0.2 if "garoar" in low else 0.0),
+                        cause, None))
+    elif key.startswith("milo:") and key.endswith(":arte"):
+        for needle, fam, kind, intensity in MILO_ANTICS:
+            if needle in low:
+                out.append((fam, kind, intensity + (0.1 if tired and fam == "raiva" else 0.0), text, None))
+                break
+    elif key.startswith("banho:"):
+        out.append(("alegria", "alivio", 0.2, "banho quentinho, se sentiu gente de novo", None))
+    elif key.startswith("tv:novo:") or low.startswith("saiu episódio novo"):
+        out.append(("alegria", "empolgacao", 0.45, text, None))
+    elif key.startswith("tv:"):
+        if " e amou" in low:
+            out.append(("alegria", "contentamento", 0.4, text.split("; ")[-1], None))
+        elif "achou só ok" in low:
+            out.append(("tristeza", "decepcao", 0.2, text.split("; ")[-1], None))
+        elif low.startswith("viu "):
+            out.append(("alegria", "diversao", 0.2, text.split("; ")[0], None))
+    elif key.startswith("peso:"):
+        if key.endswith(":agencia"):
+            out.append(("medo", "inseguranca", 0.6, "a Lívia da agência cobrou o peso", "a Lívia"))
+            out.append(("vergonha", "vergonha", 0.3, "levou bronca da agência pelo peso", None))
+        elif key.endswith(":saude"):
+            out.append(("medo", "preocupacao", 0.35, "sentiu tontura no treino", None))
+    elif key.startswith("falta:"):
+        out.append(("vergonha", "culpa", 0.35, text, None))
+    elif key.startswith("atraso:"):
+        out.append(("raiva", "frustracao", 0.4, "perdeu o despertador e chegou atrasada", None))
+    elif key.startswith("facul:sessao:"):
+        if "virando a noite" in low:
+            out.append(("medo", "ansiedade", 0.5, "virando a noite no trabalho da facul", None))
+        elif "enrolando" in low:
+            out.append(("vergonha", "culpa", 0.2, "enrolou no trabalho da facul", None))
+        elif "rendendo bem" in low:
+            out.append(("alegria", "orgulho", 0.3, "rendeu bem no trabalho da facul", None))
+    elif kind_ev == "social_invite":
+        if key.endswith(":convite"):
+            out.append(("alegria", "empolgacao", 0.35, text, who))
+    elif kind_ev == "social_contact":
+        if "henrique" in (ev.get("participants_json") or ""):
+            if "dinheiro" in low:
+                out.append(("alegria", "gratidao", 0.4, "o pai mandou o dinheiro da semana sem ela pedir", "o pai"))
+            elif "saudade" in low or "ligou" in low or "ligação" in low:
+                out.append(("afeto", "saudade_casa", 0.3, "falou com o pai", "o pai"))
+            else:
+                out.append(("afeto", "carinho", 0.25, "o pai deu bom dia e perguntou dela", "o pai"))
+        elif "conflitos leves" in low:
+            out.append(("raiva", "chateacao", 0.3, text, who))
+        elif any(t in low for t in ("fofoca", "festas", "música", "moda", "fotografia", "humor")):
+            out.append(("alegria", "diversao", 0.25, text, who))
+    elif kind_ev == "meal" and "beliscou" not in low and "pulou" not in low:
+        if "açaí" in low:
+            out.append(("alegria", "contentamento", 0.35, text, None))
+        elif any(t in low for t in ("shopping", "ifood", "japonesa", "hambúrguer", "pizza")):
+            out.append(("alegria", "contentamento", 0.2, text, None))
+    return [(f, k, round(max(0.05, min(1.0, i)), 3), c, t) for f, k, i, c, t in out]
 
 
 def apply_planner_deltas(db, deltas: dict, now: Optional[datetime] = None) -> dict:

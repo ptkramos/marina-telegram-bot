@@ -118,5 +118,72 @@ class EmotionCoreTest(unittest.TestCase):
             self.assertIn(part, text)
 
 
+class WorldFeelsTest(unittest.TestCase):
+    """D14b — o dia dela vira sentimento com causa."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = DatabaseManager(Path(self.temp.name) / "w.db")
+        self.engine = EmotionEngine(self.db)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def _event(self, key, event_type, summary, at, participants='["marina"]'):
+        with self.db.get_connection() as conn:
+            conn.execute("""INSERT INTO life_events (event_key,event_at,event_type,title,summary,source_type,
+                            autonomy_level,importance,participants_json,share_worthy,created_at)
+                            VALUES (?,?,?,?,?,'simulated',1,0.3,?,0.3,?)""",
+                         (key, at.isoformat(), event_type, "t", summary, participants, at.isoformat()))
+            conn.commit()
+
+    def test_real_day_becomes_feelings_once(self):
+        self._event("commute:2026-09-23:puc:volta:imprevisto", "commute",
+                    "No caminho (voltando da PUC, de uber): o motorista do uber errou o caminho.", NOW - timedelta(minutes=20))
+        self._event("milo:2026-09-23:arte", "routine", "O Milo dormiu encostado nela no sofá.", NOW - timedelta(minutes=10))
+        self._event("outing:2026-09-26:c1:convite", "social_invite",
+                    "A Bia te chamou: Saindo com a Bia no Quartinho Bar (sábado às 21:00).", NOW - timedelta(minutes=5),
+                    '["marina", "bia_fontes"]')
+        with patch.object(EmotionEngine, "energy", return_value=0.4):
+            first = self.engine.appraise_world(NOW)
+            again = self.engine.appraise_world(NOW)
+        self.assertEqual((first, again), (3, 0), "cada acontecimento vira sentimento uma vez só")
+        words = {e.word: e for e in self.engine.episodes(NOW)}
+        self.assertEqual(words["irritada"].cause, "o motorista do uber errou o caminho")
+        self.assertGreater(words["irritada"].intensity, 0.4, "cansada, o imprevisto irrita mais")
+        self.assertIn("derretida", words)
+        self.assertIn("empolgada", words)
+
+    def test_agency_scolding_hurts_a_vain_girl(self):
+        out = emotion.appraise_event({"event_key": "peso:2026-W39:agencia", "event_type": "routine",
+                                      "summary": "A Lívia viu o peso e cobrou.", "participants_json": "[]"})
+        self.assertEqual({(f, k) for f, k, *_ in out}, {("medo", "inseguranca"), ("vergonha", "vergonha")})
+
+    def test_unknown_event_invents_nothing(self):
+        self.assertEqual(emotion.appraise_event({"event_key": "x:1", "event_type": "routine",
+                                                 "summary": "Arrumou a gaveta.", "participants_json": "[]"}), [])
+
+    def test_deadline_worry_holds_until_she_delivers_then_relief(self):
+        due = NOW.date() + timedelta(days=1)
+        item = {"key": "2026.2:7:0", "course": "Práticas VI", "kind": "trabalho", "due": due.isoformat(),
+                "pace": "ultima_hora"}
+        with patch("college.College.assignments", return_value=[item]):
+            self.engine._appraise_deadlines(NOW)
+        worry = [e for e in self.engine.episodes(NOW) if e.kind == "ansiedade"][0]
+        self.assertTrue(worry.sticky)
+        self.assertIn("pra entregar amanhã", worry.cause)
+        after = datetime.combine(due, NOW.time()).replace(hour=19)
+        with patch("college.College.assignments", return_value=[item]):
+            self.engine._appraise_deadlines(after)
+        kinds = {e.kind for e in self.engine.episodes(after)}
+        self.assertIn("alivio", kinds)
+
+    def test_prompt_cause_is_short(self):
+        self.engine.feel("alegria", "diversao", 0.5, "Conheceu o Caio (Starbucks do Shopping da Gávea); assunto: música",
+                         NOW, target="o Caio")
+        lines = "\n".join(self.engine.prompt_lines(NOW))
+        self.assertIn("se divertindo com o Caio — Conheceu o Caio.", lines)
+
+
 if __name__ == "__main__":
     unittest.main()
