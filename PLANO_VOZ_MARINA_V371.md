@@ -574,7 +574,24 @@ Checagem de 3 semanas (banco de teste): ~1,5 entrega por semana, noites de traba
 
 `tests/test_college_d7.py` (9 testes).
 
-#### D6 parte 2 — TMDB (proposta, aguardando o Patrick)
+#### D6 parte 2 — TMDB ✅ (23/09, tarde; chave do Patrick no `.env`)
+
+`tmdb.py` + migration 024 (`tmdb_cache`). Validado ao vivo com a chave: *Dandadan* e *Frieren* (Netflix, HBO Max, Crunchyroll), *One Piece* anime com 1.181 episódios e o próximo previsto para 27/09, título inexistente rejeitado, doramas populares no Brasil sem reality/suspense.
+
+| Uso | Como ficou |
+|---|---|
+| **Obra citada pelo Patrick** | Vira dado real: título oficial em pt-BR, tipo, episódios e duração. O tipo que o planner deu desempata ("One Piece" anime ≠ série live-action da Netflix). **Obra que não existe no TMDB não entra** |
+| **Descoberta sozinha** | 65% das escolhas vêm do TMDB: recomendações a partir de um título que ela ama ("parecido com Dandadan, que ela amou") ou o que está popular nos streamings do Brasil pro gosto dela ("tá em alta no streaming aqui"); o resto, da lista fixa. Obra com mais de 60 episódios não vira "o que ela está vendo" |
+| **Onde assistir** | O prompt diz "vendo X (anime, na Crunchyroll)" |
+| **Episódio novo** | *One Piece*, *Dandadan* e o que ela estiver vendo: no dia em que sai episódio, vira acontecimento ("Saiu episódio novo de One Piece hoje (temporada 23, ep. 7)") |
+| **Custo e segurança** | Gratuito (uso não comercial). Cache: busca 30 dias, detalhes 1 dia, recomendações 14, onde assistir 3, populares 1. Offline ou sem chave, volta sozinho ao comportamento anterior. A suíte nunca chama a API real |
+| **Crédito** | Só no README (seção Créditos): "This product uses the TMDB API but is not endorsed or certified by TMDB". Decisão do Patrick: nada de crédito nas mensagens nem no `/mundo` |
+
+**Fora do TMDB:** jogos (IGDB/RAWG, se um dia os jogos dela ganharem motor) e trends reais do TikTok (o UnifAPI tem, mas é pago e de operador desconhecido — avaliado e deixado de lado em 23/09).
+
+`tests/test_tmdb_d6.py` (6 testes, rede simulada).
+
+#### D6 parte 2 — proposta original
 
 Sugerido pelo Patrick em 23/09 (developer.themoviedb.org). Gratuito para uso não comercial **com crédito** (logo + "This product uses the TMDB API but is not endorsed or certified by TMDB" numa seção Sobre/Créditos); ~40 req/s de limite; precisa de chave da conta dele (`TMDB_API_KEY`). Usos:
 1. obra citada pelo Patrick → título real em pt-BR, tipo, nº de episódios e duração (hoje: tamanho padrão);
@@ -635,6 +652,22 @@ O aviso continua opcional (sempre com conversa rolando) e fora do teto de 2 coti
 - D5: o Milo é de que porte/raça? Ela paga passeador em dia puxado?
 - D6: que séries/filmes ela vê (títulos reais)? Ela liga pra quem da família, e com que frequência?
 - D8: como é um sábado e um domingo dela?
+
+### Naturalidade de chat ✅ (23/09, tarde — conversa real do Patrick)
+
+Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **lembram que é bot**. Tudo fica em `chat_naturalness.py` (sem LLM e sem rede), com testes em `tests/test_chat_naturalness.py`.
+
+| Problema (caso real) | O que foi feito |
+|---|---|
+| **Repetição da própria fala**: 13:05 e 13:07 saíram com a mesma frase ("agora você consegue beijar sem esse aparelho te sabotando"). "É quando lembro que ela é só um bot" | Antes de enviar, o bot procura trecho de **6+ palavras já dito nas últimas 6 falas dela**. Se sobra fala sem a frase repetida, **corta** a frase (custo zero). Se não sobra, faz **uma** reescrita com a frase proibida. Log `chat.self_repeat` |
+| **Ponto final fechando balão** ("vou comer direitinho sim.") | Sai o ponto do fim de cada balão/linha. Ficam o ponto entre frases, as reticências, "?" e "!" |
+| **Ela só reage, nunca conta do dia dela**: o Patrick é que tinha que perguntar | **Puxa assunto próprio**: em conversa casual, a cada 5+ falas dela e 20+ min, com chance de 50%, ela recebe uma coisa do dia que ainda não contou (últimas 6 h: Theo, Bia, almoço…) pra puxar depois de reagir. Não entra em apoio emocional, flerte ou sexting, nem em pedido de foto/áudio ou lembrete. Marca como contado. Log `chat.share_nudge` |
+| **"amor" em todo turno** + devolver o que ele disse com outras palavras ("sua escala é toda quebradinha", "ela te entregou vermelho e chamou de laranja") | Se as 2 falas anteriores já tinham "amor", o vocativo de enfeite sai desta. O prompt (EN e PT) ganhou a regra: "nunca devolva o que ele acabou de dizer com outras palavras; acrescente algo novo" |
+| **Ideia do Patrick: esperar ele terminar de digitar.** Ele manda 5 balões do mesmo assunto e ela responde no 2º | O Telegram **não avisa o bot** que a pessoa está digitando, então a espera é **lida do texto**. Balão pendurado ("e", "porque", "tipo", vírgula, "...") espera ~12 s. Rajada em andamento soma +2 s, balão curtinho +1,5 s. Pergunta, "!", risada (kkk/ksks) ou emoji no fim fecham rápido (~4 s). Teto de 14 s. Cada balão novo reinicia a espera |
+
+**Já corrigido antes (madrugada de 23/09):** "a função de foto tá em manutenção" (o "ver você feliz" disparava o pedido de foto) e "vou jantar agora" 4× sem jantar (a comida dela não existia no mundo; hoje existe, D1).
+
+**Limite conhecido:** se o Patrick manda mais uma bolha **depois** que ela já começou a gerar (5–10 s de LLM), essa bolha vira o turno seguinte. Juntar isso no turno em andamento exigiria abortar o turno no meio (planner, emoção e memória já rodaram). Fica pra depois, se ainda incomodar com a espera nova.
 
 ### Fase C — Consolidação 🟡 (C1 parcial; C2/C3 pendentes)
 - **C1** Substituir `[LEARNED STYLE]` (meta-descrição) por `[COMO O PATRICK

@@ -1271,8 +1271,9 @@ class MessageDebouncer:
     terminar e, ao assumir, drena o buffer de novo (juntando o que chegou
     durante a espera).
     """
-    def __init__(self, delay_seconds: float = 2.8):
+    def __init__(self, delay_seconds: float = 2.8, adaptive: bool = False):
         self.delay = delay_seconds
+        self.adaptive = adaptive
         self.buffers: dict[int, list[str]] = {}
         self.tasks: dict[int, asyncio.Task] = {}
         self.latest_updates: dict[int, Update] = {}
@@ -1307,8 +1308,14 @@ class MessageDebouncer:
         self.tasks[chat_id] = task
 
     async def _wait_and_trigger(self, chat_id: int, context: ContextTypes.DEFAULT_TYPE, callback):
+        # A espera sai do texto: bolha pendurada ("e", "porque", vírgula) ou
+        # rajada em andamento esperam mais; pergunta/risada/emoji fecham.
+        wait = self.delay
+        if self.adaptive:
+            from chat_naturalness import debounce_delay
+            wait = debounce_delay(self.buffers.get(chat_id, []), self.delay)
         try:
-            await asyncio.sleep(self.delay)
+            await asyncio.sleep(wait)
         except asyncio.CancelledError:
             return
         # Saiu da janela de espera: daqui pra frente esta task não é cancelável
@@ -1332,7 +1339,7 @@ class MessageDebouncer:
             texto_acumulado = "\n".join(mensagens).strip()
             await callback(update, context, texto_acumulado)
 
-debouncer = MessageDebouncer(delay_seconds=settings.MESSAGE_DEBOUNCE_SECONDS)
+debouncer = MessageDebouncer(delay_seconds=settings.MESSAGE_DEBOUNCE_SECONDS, adaptive=True)
 
 # --- ROTINA DE ESCOLHA DE AVATAR ---
 
@@ -3213,6 +3220,18 @@ async def process_incoming_batch(
                 "role": "system",
                 "content": TURN_CONSTRAINTS['photo_request'],
             })
+    # Ela conta do dia dela sem esperar o Patrick perguntar (chat_naturalness).
+    if (not pediu_foto and not pediu_audio and intimacy_turn.state == "off"
+            and not reminder_decision_instruction):
+        try:
+            from chat_naturalness import share_nudge, share_constraint, mark_nudged
+            news = share_nudge(memory_manager.db, datetime.now(), intent=plan.get("intent") if plan else None)
+            if news:
+                messages.append({"role": "system", "content": share_constraint(news)})
+                mark_nudged(memory_manager.db, datetime.now(), news["event_key"])
+                logger.info("chat.share_nudge event=%s", news["event_key"])
+        except Exception as exc:
+            logger.warning("chat.share_nudge_error: %s", exc)
     if response_policy and response_policy.mode == "casual_short" and not pediu_foto and not pediu_audio:
         messages.append({
             "role": "system",
@@ -3351,6 +3370,34 @@ async def process_incoming_batch(
                 resposta_marin = "Amor, deu uma osciladinha aqui no sinal do apê! Me manda de novo? 🥺"
         else:
             resposta_marin = "Amor, deu uma osciladinha aqui no sinal do apê! Me manda de novo? 🥺"
+
+    # Naturalidade: não repetir frase própria, "amor" não em todo turno,
+    # sem ponto final fechando o balão (chat_naturalness).
+    try:
+        from chat_naturalness import (repeated_run, drop_repeated, repetition_constraint,
+                                      thin_vocative, strip_closing_periods)
+        anteriores = [m["content"] for m in memory_manager.db.get_mensagens_recentes(limit=16)
+                      if m["role"] == "assistant"][-6:]
+        run = repeated_run(resposta_marin, anteriores)
+        if run:
+            cortada = drop_repeated(resposta_marin, anteriores)
+            if cortada:
+                logger.info("chat.self_repeat cut=%r", run)
+                resposta_marin = cortada
+            else:
+                logger.info("chat.self_repeat retry=%r", run)
+                completion = llm_client.chat.completions.create(
+                    model=turn_model,
+                    messages=messages + [{"role": "system", "content": repetition_constraint(run)}],
+                    **llm_kwargs((response_policy.token_budget if response_policy else 160), turn_model),
+                    temperature=0.9, frequency_penalty=0.15, presence_penalty=0.05,
+                )
+                nova = (completion.choices[0].message.content or "").strip()
+                if nova and not _needs_retry_for_junk(nova)[0] and not repeated_run(nova, anteriores):
+                    resposta_marin = nova
+        resposta_marin = strip_closing_periods(thin_vocative(resposta_marin, anteriores))
+    except Exception as exc:
+        logger.warning("chat.naturalness_error: %s", exc)
 
     # 1. Verifica tag [CORRIGIR_ANTERIOR: ...]
     match_corr = re.search(r'\[CORRIGIR_ANTERIOR:\s*(.*?)\]', resposta_marin, re.DOTALL | re.IGNORECASE)
