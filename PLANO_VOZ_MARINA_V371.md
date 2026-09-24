@@ -1009,6 +1009,13 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
     - **Base e LoRAs:** Krea 2 Turbo oficial + marinaX **1.0** (**0.9** de longe) + Realism Engine 0.8 + Detailed Emotions 0.6 + slider **2.5** + NSFW Helper −1, e Lenovo 1.0 **só na selfie**.
     - **NiceGirls saiu.** Foi testado em 0.8, 0.6 e sem.
     - **Foto de longe:** o enquadramento vem no começo do prompt ("Full body shot… four meters away"), e com isso ela deixou de virar selfie. Hoje o enquadramento vai até a coxa. O Patrick achou bom por enquanto; a pose vai ser revista quando a Marina decidir as poses.
+- **Rodada 2 (fotos adultas, 24/09, tarde):** a pilha **c** (Yogi + Realism Engine) foi descartada. **a** e **d** foram as melhores no rosto, e a **a** ficou (padrão `CIVITAI_KREA2_NSFW_STACK=a`: Turbo oficial + SNOFS 1.0 + NSFW Helper 0.5).
+- **Corpo canônico** (`visual_profile.KREA2_BODY_CANON`, em toda foto adulta), tirado da foto `adulta_a`:
+  - seios cheios, redondos e naturais, aréolas médias rosa-claro, mamilos pequenos rosados;
+  - marquinha de biquíni em triângulo e na parte de baixo;
+  - **uma pinta só, fixa, na curva de cima do seio esquerdo** (decisão do Patrick);
+  - depilada, pequena, lábios rosa-claro; ânus pequeno e rosado.
+  - Se as mesmas palavras não bastarem, o próximo passo é um LoRA só de corpo, treinado com as fotos em que ele sair certo.
 - **Teste quando o LoRA chegar:** 2 cenas normais × (n1, n2), 2 cenas adultas × (a, b, c, d) e a grade do slider. Mesma semente, uns 16 retratos, ~400 Buzz. O Patrick escolhe pelo olho.
 
 ### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅

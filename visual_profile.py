@@ -93,13 +93,20 @@ KREA2_BODY_SFW = "She has a fit, slim body with a natural sun-kissed tan."
 KREA2_BODY_NSFW = "She has a fit, slim body with a natural sun-kissed tan and visible bikini tan lines."
 KREA2_CLOTHED = "She is fully clothed, her outfit covers her chest and body."
 KREA2_NUDE = {
-    "frontal": ("She is completely naked, showing her natural perky breasts with pink nipples, her slim "
-                "waist and her shaved pussy."),
+    "frontal": "She is completely naked, facing the camera.",
     "behind": ("Seen from behind, she is completely naked, showing her round firm butt with cheeky bikini "
                "tan lines, looking back over her shoulder."),
-    "side": ("Seen from the side, she is completely naked, her natural breast with a pink nipple in profile, "
-             "her slim waist and arched lower back."),
+    "side": "Seen from the side, she is completely naked, her slim waist and arched lower back in profile.",
 }
+# Corpo canônico (Patrick, 24/09): o da foto "adulta_a" da rodada 2 (pilha a, slider 2.5).
+# Sempre as MESMAS palavras em toda foto adulta — é o que segura o corpo igual de uma
+# foto pra outra. Uma pinta só, fixa, no seio esquerdo (decisão do Patrick).
+KREA2_BODY_CANON = (
+    "Her breasts are full, round and natural, with medium soft light-pink areolas and small pink nipples, "
+    "and pale triangle bikini tan lines on them. A single small dark beauty mark sits on the upper inner "
+    "curve of her left breast; no other moles on her body. Her pussy is fully shaved, small and neat with "
+    "light pink inner lips, framed by a pale bikini-bottom tan line. Her anus is small, tight and light pink."
+)
 KREA2_MIRROR = ("She is taking a mirror selfie, holding a black iPhone 16 Pro, her hand and the phone "
                 "visible in the reflection.")
 KREA2_PHOTO = ("It looks like a real iPhone photo: natural light, real skin texture with visible pores, "
@@ -132,6 +139,7 @@ def krea2_prompt(scene: str, *, is_nsfw: bool, focus_angle: str = "frontal", is_
     if is_nsfw:
         parts.append(KREA2_NUDE.get(focus_angle, KREA2_NUDE["frontal"]))
         parts.append(KREA2_BODY_NSFW)
+        parts.append(KREA2_BODY_CANON)
     else:
         parts.append(KREA2_CLOTHED)
         parts.append(KREA2_BODY_SFW)
