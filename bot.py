@@ -1628,7 +1628,7 @@ async def sistema_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         camera_str = "em manutenção"
     else:
         online = await sd_client.is_online()
-        engine = "Novita FLUX" if settings.IMAGE_ENGINE == "novita" else "SD local"
+        engine = {"novita": "Novita FLUX", "civitai": "Civitai FLUX"}.get(settings.IMAGE_ENGINE, "SD local")
         camera_str = f"{engine} ({'online' if online else 'indisponível'})"
     text = "\n".join([
         f"⚙️ Sistema · {settings.APP_NAME} v{settings.APP_VERSION}", "",

@@ -133,6 +133,8 @@ class Settings:
     PATRICK_FEEDBACK_IN_PROMPT: bool = os.getenv("PATRICK_FEEDBACK_IN_PROMPT", "false").lower() in ("true", "1", "yes")
     PHOTO_PROVIDER_MAINTENANCE: bool = os.getenv("PHOTO_PROVIDER_MAINTENANCE", "false").lower() in ("true", "1", "yes")
     NOVITA_API_KEY: str = os.getenv("NOVITA_API_KEY", "").strip()
+    # 24/09: fotos pelo Civitai (Orchestration API) — IMAGE_ENGINE=civitai.
+    CIVITAI_API_KEY: str = os.getenv("CIVITAI_API_KEY", "").strip().strip('"')
 
     # Ciclo de vontade própria e iniciativa autônoma
     AUTONOMOUS_CHECK_INTERVAL_MINUTES: int = int(os.getenv("AUTONOMOUS_CHECK_INTERVAL_MINUTES", "30"))

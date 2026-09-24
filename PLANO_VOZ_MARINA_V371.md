@@ -789,6 +789,24 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - **dentro do banho ela não pega o celular**: a availability adia a resposta até ela **sair do banho e se vestir** (fim do banho + 2–8 min);
   - o estado atual não diz mais "você AVISOU o Patrick" quando ela não avisou.
 
+### Fotos pelo Civitai (24/09, madrugada) 🟡 código pronto, falta o Patrick ligar
+
+**Problema (Patrick):** a Novita ficou sem GPU pra alugar, nem mantendo instâncias em várias regiões (a voz da Novita segue normal). Alternativa: **Civitai**, onde o LoRA da Marina foi treinado.
+
+**O que o Civitai oferece:** a Orchestration API (`https://orchestration.civitai.com`, `Bearer` com a chave que já estava no `.env`). Cada foto é um *workflow* pago em **Buzz**, sem alugar máquina. Conferido ao vivo em 24/09:
+- A conta `psrxxx` tem o **`marina_flux` V1 (Flux.1 D)** → `urn:air:flux1:lora:civitai:2936925@3324653`.
+- **Todos os 8 LoRAs do pipeline existem no Civitai.** Os achados pelo nome exato do arquivo são NSFW_master (667086@746602), roundassv16_FLUX (131822@1041921) e FluxSideboob-E3 (454099@766170). Os três de iPhone já tinham ID no `gpu_manager.py`. O Hand v2 muito provavelmente é o 200255@804967 (arquivo "Hand v2.safetensors").
+- **`whatif` (estimativa grátis) com Flux Dev + LoRA da Marina + iPhone + mãos, SFW e adulto:** aceito. Custo **10 Buzz/foto no motor comfy** (~1 centavo de dólar) ou 24 no sdcpp.
+
+**Conteúdo adulto:** `allowMatureContent: true` + `currencies: ["yellow"]` (Buzz **amarelo**, o comprado; o azul/verde grátis não serve pra adulto). Problema conhecido de outros projetos: saídas adultas às vezes não abrem pela URL assinada (redireciona pra `/blobs/blocked` → 403). Por isso o download vai pelo endpoint autenticado `/v2/consumer/blobs/{id}`, com a URL assinada como reserva.
+
+**Código (`civitai_images.py`):** mesmo pipeline do ComfyUI da Novita — Flux.1 Dev, 832×1216, 24 passos, guidance 3.5, euler/simple — e os mesmos LoRAs e pesos, por AIR (sobrescrevíveis por `CIVITAI_LORA_<NOME>` no `.env`). Envia, acompanha o andamento, baixa, e registra no log o custo de cada foto. `sd_client` usa isso quando `IMAGE_ENGINE=civitai`. Avatar e `/foto` passam pelo mesmo caminho. A suíte nunca chama a API de verdade.
+
+**Para ligar (Patrick):**
+1. Ter **Buzz amarelo** na conta (necessário pra foto adulta).
+2. No `.env`: `IMAGE_ENGINE=civitai` e `PHOTO_PROVIDER_MAINTENANCE=false`.
+3. `/restart` e pedir uma foto. No log aparecem `civitai.submitted … cost=10` e `civitai.image_ok`.
+
 ### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅
 
 | Item | Como ficou |

@@ -72,6 +72,9 @@ class ImageGeneratorClient:
         self._lock = asyncio.Semaphore(1)
 
     async def is_online(self) -> bool:
+        if settings.IMAGE_ENGINE == "civitai":
+            import civitai_images
+            return civitai_images.available()
         if settings.IMAGE_ENGINE == "novita" and self.novita_key:
             return True
         check_url = f"{self.base_url}sdapi/v1/options"
@@ -437,7 +440,16 @@ class ImageGeneratorClient:
             )
 
             img = None
-            if settings.IMAGE_ENGINE == "novita" and self.novita_key:
+            is_mirror = any(
+                kw in scene_description.lower() or kw in user_intent.lower()
+                for kw in MIRROR_SELFIE_KEYWORDS
+            )
+            if settings.IMAGE_ENGINE == "civitai":
+                # 24/09: Novita sem GPU pra alugar; Civitai gera por foto (Buzz), sem máquina.
+                import civitai_images
+                img = await civitai_images.generate(full_prompt, is_nsfw=is_nsfw, focus_angle=focus_angle,
+                                                    is_mirror_selfie=is_mirror)
+            elif settings.IMAGE_ENGINE == "novita" and self.novita_key:
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=300)) as session:
                     try:
                         ready = await self._ensure_instance_running(session)
@@ -465,7 +477,7 @@ class ImageGeneratorClient:
                     finally:
                         await self._stop_instance(session)
 
-            if not img:
+            if not img and settings.IMAGE_ENGINE != "civitai":
                 logger.warning("Tentando fallback para SD local...")
                 img = await self._generate_local_sd(full_prompt)
 
