@@ -105,7 +105,7 @@ KREA2_FINEPORN = "urn:air:krea2:checkpoint:civitai:2762538@3215452"
 KREA2_SQUEEZE = "urn:air:krea2:lora:civitai:2761661@3161094"   # Breast squeezing V1 (gatilho "squeezing breasts")
 KREA2_WETNESS = "urn:air:krea2:lora:civitai:2738333@3079282"   # Wetness Slider (−1..1; o FinePorn embute negativo)
 KREA2_PHONE = "urn:air:krea2:lora:civitai:2796343@3151907"     # Elusarca Smartphone Photography Slider (1–2)
-PHONE_SELFIE_WEIGHT = 1.5
+PHONE_SELFIE_WEIGHT = 0.8   # 1.5 enchia de purpurina; 0.8 = "realismo perfeito" (Patrick, 24/09) — em TODA foto
 PHONE_DESATURATE = 0.83   # o autor corrige −15 a −20 de saturação depois de gerar; fazemos no download
 KREA2_NICEGIRLS = "urn:air:krea2:lora:civitai:1862761@3075498"         # NiceGirls UltraReal (0.6-0.8)
 KREA2_LENOVO = "urn:air:krea2:lora:civitai:1662740@3075606"            # Lenovo UltraReal (1.2-2 no Turbo)
@@ -129,14 +129,13 @@ KREA2_STACKS = {
     "n2": {"model": KREA2_YOGI, "steps": 8, "loras": {KREA2_SNAPSHOT: 0.6}},
     # n3 (teste 24/09): FinePorn como base da foto normal — o rosto dela ficou lindo nele. A trava
     # −1 (NSFW Helper) é obrigatória aqui: o checkpoint tem NSFW embutido.
-    # 24/09: o slider de smartphone (1.5) em cima do FinePorn encheu a foto de granulado/purpurina —
-    # o autor usa sampler de 2 passadas que a API não tem. Fica fora (o código de selfie + cor fica pronto).
-    "n3": {"model": KREA2_FINEPORN, "steps": 10, "scheduler": "beta", "loras": {}},
+    # Smartphone slider em 0.8 em toda foto (1.5 enchia de purpurina), com a correção de cor no download.
+    "n3": {"model": KREA2_FINEPORN, "steps": 10, "scheduler": "beta", "loras": {KREA2_PHONE: PHONE_SELFIE_WEIGHT}},
     "a": {"model": None, "steps": 8, "loras": {KREA2_SNOFS: 1.0, KREA2_NSFW_HELPER: 0.5}},
     "b": {"model": KREA2_AIO, "steps": 12, "loras": {}},
     "c": {"model": KREA2_YOGI, "steps": 8, "loras": {KREA2_REALISM_ENGINE: 0.7, KREA2_NSFW_HELPER: 0.5}},
     "d": {"model": None, "steps": 8, "loras": {KREA2_NSFW_V4: 1.0, KREA2_NSFW_HELPER: 0.5}},
-    "e": {"model": KREA2_FINEPORN, "steps": 10, "scheduler": "beta", "loras": {}},
+    "e": {"model": KREA2_FINEPORN, "steps": 10, "scheduler": "beta", "loras": {KREA2_PHONE: PHONE_SELFIE_WEIGHT}},
 }
 SFW_STACKS, NSFW_STACKS = ("n1", "n2", "n3"), ("a", "b", "c", "d", "e")
 
@@ -163,12 +162,12 @@ def krea2_stack_name(*, is_nsfw: bool, stack: Optional[str] = None) -> str:
 # 24/09 (Patrick): o Lenovo ("cara de foto de celular") só na selfie — em foto de
 # corpo inteiro, junto com o LoRA dela (dataset quase todo de perto), ele virava
 # tudo selfie, mesmo com o prompt dizendo "não é selfie".
-SELFIE_ONLY = {KREA2_LENOVO, KREA2_PHONE}
+SELFIE_ONLY = {KREA2_LENOVO}
 # (lora, peso, palavras da cena que ligam, só adulta?, frase-gatilho que o LoRA precisa no prompt)
 CONDITIONAL = (
-    (KREA2_SQUEEZE, 0.8, ("squeezing her breast", "grabbing her breast", "holding her breasts", "squeezing breasts",
+    (KREA2_SQUEEZE, 0.6, ("squeezing her breast", "grabbing her breast", "holding her breasts", "squeezing breasts",
                           "grabbing breasts", "cupping her breasts", "apertando os seios", "segurando os seios"),
-     True, "squeezing breasts"),
+     True, "squeezing breasts, her nipples stay small and delicate"),   # 0.8 aumentava o mamilo
     (KREA2_WETNESS, 1.2, ("wet ", "wet,", "wet.", "soaked", "dripping", "rain", "shower", "bath", "pool", "sea water",
                           "molhad", "chuva", "banho", "piscina"), False, ""),
 )
@@ -222,8 +221,6 @@ def build_workflow_krea2(prompt: str, *, is_nsfw: bool, width: int = 1024, heigh
             "quantity": 1, "loras": select_loras_krea2(is_nsfw=is_nsfw, stack=name, breast_slider=breast_slider,
                                                        selfie=NOT_SELFIE_MARK not in prompt)}
     step["loras"].update(extra)
-    if KREA2_PHONE in KREA2_STACKS[name]["loras"] and NOT_SELFIE_MARK in prompt:
-        step["loras"].pop(KREA2_PHONE, None)
     if spec["model"]:
         step["diffusionModel"] = spec["model"]
     body = {"steps": [{"$type": "imageGen", "input": step}], "allowMatureContent": bool(is_nsfw)}

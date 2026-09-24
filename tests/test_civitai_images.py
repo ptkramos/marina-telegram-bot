@@ -169,6 +169,7 @@ class Krea2Test(unittest.TestCase):
         e = ci.build_workflow_krea2("p", is_nsfw=True, stack="e")["steps"][0]["input"]
         self.assertEqual((e["diffusionModel"], e["steps"], e["scheduler"]), (ci.KREA2_FINEPORN, 10, "beta"))
         self.assertFalse({ci.KREA2_SNOFS, ci.KREA2_NSFW_HELPER} & set(e["loras"]))
+        self.assertEqual(e["loras"][ci.KREA2_PHONE], 0.8)
         self.assertEqual(e["loras"][ci.KREA2_BREAST_SLIDER], 1.5)
 
     def test_a_normal_stack_name_never_serves_an_adult_photo(self):
@@ -180,8 +181,9 @@ class Krea2Test(unittest.TestCase):
     def test_occasion_loras_follow_the_scene(self):
         grab = ci.build_workflow_krea2("She is naked, squeezing her breasts with both hands", is_nsfw=True, stack="e")
         inp = grab["steps"][0]["input"]
-        self.assertEqual(inp["loras"][ci.KREA2_SQUEEZE], 0.8)
-        self.assertIn("Squeezing breasts.", inp["prompt"], "gatilho do LoRA entra no prompt")
+        self.assertEqual(inp["loras"][ci.KREA2_SQUEEZE], 0.6)
+        self.assertIn("Squeezing breasts, her nipples stay small and delicate.", inp["prompt"],
+                      "gatilho do LoRA + mamilo pequeno entram no prompt")
         wet = ci.build_workflow_krea2("right after the shower, wet hair", is_nsfw=False, stack="n3")["steps"][0]["input"]
         self.assertIn(ci.KREA2_WETNESS, wet["loras"])
         self.assertNotIn(ci.KREA2_SQUEEZE, wet["loras"])
@@ -190,14 +192,11 @@ class Krea2Test(unittest.TestCase):
         sfw_grab = ci.build_workflow_krea2("holding her breasts", is_nsfw=False, stack="n3")["steps"][0]["input"]
         self.assertNotIn(ci.KREA2_SQUEEZE, sfw_grab["loras"], "LoRA de apertar os seios só na foto adulta")
 
-    def test_phone_slider_only_on_selfies_and_colors_are_corrected(self):
-        stacks = dict(ci.KREA2_STACKS)
-        stacks["n3"] = {**stacks["n3"], "loras": {ci.KREA2_PHONE: ci.PHONE_SELFIE_WEIGHT}}
-        with patch.object(ci, "KREA2_STACKS", stacks):
-            selfie = ci.build_workflow_krea2("a close-up selfie", is_nsfw=False, stack="n3")["steps"][0]["input"]["loras"]
-            far = ci.build_workflow_krea2("whole body, not a selfie", is_nsfw=False, stack="n3")["steps"][0]["input"]["loras"]
-        self.assertEqual(selfie[ci.KREA2_PHONE], ci.PHONE_SELFIE_WEIGHT)
-        self.assertNotIn(ci.KREA2_PHONE, far)
+    def test_phone_slider_on_every_photo_and_colors_are_corrected(self):
+        for nsfw, stack in ((False, "n3"), (True, "e")):
+            for text in ("a close-up selfie", "whole body, not a selfie"):
+                loras = ci.build_workflow_krea2(text, is_nsfw=nsfw, stack=stack)["steps"][0]["input"]["loras"]
+                self.assertEqual(loras[ci.KREA2_PHONE], 0.8, (stack, text))
         import io as _io
         from PIL import Image
         buf = _io.BytesIO()
