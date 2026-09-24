@@ -34,7 +34,6 @@ SESSION_MINUTES = (60, 150)
 SKIP_CHANCE_BASE = 0.03
 SKIP_CHANCE_BAD_SLEEP = 0.35      # dormiu menos de 5h30
 SKIP_CHANCE_RAIN = 0.10
-SKIP_CHANCE_CRAMPS = 0.25         # 1º–2º dia da menstruação
 SKIP_MAX_PER_COURSE_30D = 2
 MIN_PREP_WHEN_LATE = 30           # atrasada, se arruma em 30 min
 
@@ -158,8 +157,13 @@ class College:
             from sleep_plan import SleepPlan
             if SleepPlan(self.db).hours_slept(day) < 5.5:
                 options.append((SKIP_CHANCE_BAD_SLEEP, "dormiu muito mal e não teve condição"))
-            if SleepPlan(self.db)._phase_on(day) == "menstrual":
-                options.append((SKIP_CHANCE_CRAMPS, "cólica forte, ficou em casa"))
+        except Exception:
+            pass
+        try:
+            from health import Health   # D11: cólica pela intensidade do ciclo, virose, resfriado forte
+            sick = Health(self.db).skip_option(day)
+            if sick:
+                options.append(sick)
         except Exception:
             pass
         try:

@@ -639,6 +639,12 @@ class WorldStateManager:
         except Exception:
             logger.exception("college.materialize.error")
         try:
+            # Fase D10: a Lívia oferece, casting, resposta, prova, job, cachê (antes do trajeto).
+            from freela import Freela
+            Freela(self.db).materialize(now)
+        except Exception:
+            logger.exception("freela.materialize.error")
+        try:
             from commute import Commute
             Commute(self.db).materialize(now)
         except Exception:

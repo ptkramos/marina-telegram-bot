@@ -295,8 +295,9 @@ class Commute:
         with self.db.get_connection() as conn:
             outings = [dict(r) for r in conn.execute(
                 """SELECT source_key, event_at, end_at, location_key, metadata_json FROM eventos_pendentes
-                   WHERE source_key LIKE ? AND confirmed=1 AND status != 'cancelled' ORDER BY event_at""",
-                (f"outing:{day.isoformat()}:%",))]
+                   WHERE (source_key LIKE ? OR source_key LIKE ?) AND confirmed=1 AND status != 'cancelled'
+                   ORDER BY event_at""",
+                (f"outing:{day.isoformat()}:%", f"freela:{day.isoformat()}:%"))]   # D10: casting, prova, job
         for o in outings:
             place = self._place(o["location_key"])
             if not place or not o["end_at"]:

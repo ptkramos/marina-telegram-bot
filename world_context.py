@@ -535,6 +535,8 @@ class WorldContextBuilder:
             comida += Watching(self.db).prompt_lines()
             from college import College
             comida += College(self.db).prompt_lines(now)
+            from freela import Freela
+            comida += Freela(self.db).prompt_lines(now)
         except Exception:
             import logging
             logging.getLogger(__name__).exception("meals.prompt_lines.error")

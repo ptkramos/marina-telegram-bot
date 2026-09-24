@@ -178,7 +178,7 @@ class CalendarWorld:
             # generic activity; disclosure uses KnowledgePrivacy separately.
             if row['event_type'] in ACADEMIC_EVENTS:
                 activity = 'em um compromisso da faculdade'
-            elif row['event_type'] in ('social', 'lazer', 'encontro') and row.get('description'):
+            elif row['event_type'] in ('social', 'lazer', 'encontro', 'trabalho') and row.get('description'):
                 activity = row['description']
             else:
                 activity = 'em um compromisso'

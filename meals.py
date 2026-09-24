@@ -420,6 +420,11 @@ class Meals:
         if self.on_diet(now.date()):
             rate *= 1.2
         try:
+            from health import Health
+            rate *= Health(self.db).appetite(now)   # D11: virose tira a fome, resfriado diminui
+        except Exception:
+            pass
+        try:
             # Fase D14d: glutoninha ansiosa belisca mais.
             from emotion import EmotionEngine
             if any(e.family == "medo" and e.intensity >= 0.3 for e in EmotionEngine(self.db).episodes(now)):

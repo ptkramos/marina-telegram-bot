@@ -136,7 +136,7 @@ class SleepPlan:
 
         Decisão do Patrick (23/09): "tudo depende do emocional, saúde e do que tá
         rolando no mundo dela". Cansaço e corpo antecipam; TPM e cabeça cheia
-        atrasam. Doença (D11) e ansiedade de prova (D7) entram aqui quando existirem."""
+        atrasam. Doença (D11, `health.onset`) antecipa; véspera de entrega (D7) atrasa."""
         rng = _rng(day, "pegar_no_sono")
         minutes, why = 0, []
         if self._approx_hours_slept(day) < 6.5:
@@ -158,6 +158,13 @@ class SleepPlan:
                     why.append("estava sem energia nenhuma")
             except Exception:
                 pass
+        try:
+            from health import Health   # D11: doente dorme mais cedo
+            extra, reasons = Health(self.db).onset(day)
+            minutes += extra
+            why += reasons
+        except Exception:
+            pass
         try:
             # Fase D7: véspera de entrega — última hora vira a noite, senão ansiedade leve.
             from college import College

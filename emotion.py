@@ -217,6 +217,11 @@ class EmotionEngine:
                 e -= 0.12 if day_of_cycle <= 2 else 0.06
             elif phase == "tpm":
                 e -= 0.05
+            try:
+                from health import Health
+                e -= Health(self.db).energy_penalty(now)       # D11: gripada/virose/dor de cabeça
+            except Exception:
+                pass
             return round(_clamp(e, 0.05, 1.0), 3)
         except Exception:
             return self._stored("energy", 0.7)
@@ -224,9 +229,15 @@ class EmotionEngine:
             _guard.busy = False
 
     def _discomfort(self, now: datetime) -> tuple[float, str]:
+        """D11: a cólica tem intensidade por ciclo e soma com doença e dor de cabeça."""
         phase, day_of_cycle = self._cycle(now)
-        if phase == "menstrual" and day_of_cycle <= 2:
-            return 0.5, "cólica"
+        try:
+            from health import Health
+            value, why = Health(self.db).discomfort(now)
+        except Exception:
+            value, why = 0.0, ""
+        if value:
+            return value, why
         if phase == "menstrual":
             return 0.2, "menstruada, corpo meio dolorido"
         if phase == "tpm" and day_of_cycle >= 26:
@@ -311,6 +322,31 @@ class EmotionEngine:
                 created += self.feel(fam, kind, intensity, cause, at, target=target,
                                      source_key=f"ev:{r['event_key']}:{kind}")
         created += self._appraise_deadlines(now)
+        created += self._appraise_work(now)
+        return created
+
+    def _appraise_work(self, now: datetime) -> int:
+        """D10: frio na barriga na véspera do casting ou do job, até ele começar."""
+        try:
+            from freela import Freela
+            items = Freela(self.db).upcoming(now, horizon_days=1)
+        except Exception:
+            return 0
+        created = 0
+        for item in items:
+            if item["kind"] == "prova":
+                continue
+            key = f"trabalho:{item['kind']}:{item['start'].isoformat()}"
+            if now >= item["start"]:
+                self.resolve(key, item["start"])
+                continue
+            if item["start"] - now <= timedelta(hours=18):
+                job = item["kind"] == "job"
+                created += self.feel("medo", "ansiedade", 0.35 if job else 0.25,
+                                     f"{'job' if job else 'casting'} amanhã: {item['what']}"
+                                     if item["start"].date() != now.date()
+                                     else f"{'job' if job else 'casting'} hoje: {item['what']}",
+                                     now, source_key=key, sticky=True)
         return created
 
     def _appraise_deadlines(self, now: datetime) -> int:
@@ -553,10 +589,16 @@ class EmotionEngine:
             body.append("cheia de energia")
         if f.hours_slept is not None and f.hours_slept < 6.5 and f.energy < 0.7:
             body.append(f"dormiu só {_hours(f.hours_slept)}")
-        if f.discomfort_why:
+        try:
+            from health import Health
+            health = Health(self.db).prompt_lines(f.now)
+        except Exception:
+            health = []
+        if f.discomfort_why and not health:
             body.append(f.discomfort_why)
         if body:
             lines.append("- Corpo: " + ", ".join(body) + ".")
+        lines += health
         lines.append(f"- Humor: {self.mood_words(f.valence, f.arousal)}.")
         for ep in f.episodes[:2]:
             about = f" com {ep.target}" if ep.target else ""
@@ -693,6 +735,24 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
             out.append(("vergonha", "vergonha", 0.3, "levou bronca da agência pelo peso", None))
         elif key.endswith(":saude"):
             out.append(("medo", "preocupacao", 0.35, "sentiu tontura no treino", None))
+    elif key.startswith("freela:"):          # D10 — trabalho de modelo
+        step = key.rsplit(":", 1)[-1]
+        if step == "oferta":
+            out.append(("alegria", "empolgacao", 0.35, "a Lívia mandou um casting", "a Lívia"))
+        elif step == "resultado" and "passou no casting" in low and "não passou" not in low:
+            if "abrir mão" in low:
+                out.append(("tristeza", "decepcao", 0.4, "passou no casting mas o job batia com a faculdade", None))
+            else:
+                out.append(("alegria", "empolgacao", 0.65, "passou no casting", None))
+                out.append(("alegria", "orgulho", 0.45, "foi escolhida pro job", None))
+        elif step == "resultado":
+            out.append(("tristeza", "decepcao", 0.4, "não passou no casting", None))
+        elif step == "job":
+            out.append(("alegria", "orgulho", 0.45, text.split(". ")[0], None))
+        elif step in ("job_perdido", "casting_perdido"):
+            out.append(("tristeza", "decepcao", 0.5 if step == "job_perdido" else 0.3, text, None))
+        elif step == "cache":
+            out.append(("alegria", "contentamento", 0.45, text, None))
     elif key.startswith("falta:"):
         out.append(("vergonha", "culpa", 0.35, text, None))
     elif key.startswith("atraso:"):

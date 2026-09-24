@@ -1592,6 +1592,12 @@ def _status_life_text(now: datetime, atividade: str, local_str: str, disp_str: s
         logger.warning(f"Erro ao ler o motor emocional no status: {e}")
     lines.append(f"🌸 Dia {ciclo_info['day']} do ciclo ({ciclo_info['name'].split(' (')[0].lower()})")
     try:
+        from health import Health   # D11
+        for cond in Health(memory_manager.db).conditions(now):
+            lines.append(f"🤒 {cond.label} · {cond.remedy}")
+    except Exception as e:
+        logger.warning(f"Erro ao ler a saúde no status: {e}")
+    try:
         from calendar_world import CalendarWorld
         nxt = CalendarWorld(memory_manager.db).next(now, include_academic=True)
         if nxt:

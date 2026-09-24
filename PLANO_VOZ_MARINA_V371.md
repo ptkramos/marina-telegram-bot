@@ -29,7 +29,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **C.2** Assistir junto (watch-along) | ⬜ | nada implementado |
 | **C.3** Rituais de namorada (bom dia, boa noite, cotidiano) | ✅ | `rituals.py` + job de 5 min: bom dia ao acordar, boa noite antes de deitar, momentos do cotidiano (saiu da aula, Milo, academia, banho) com teto de 2/dia; o banho vira estado `SHOWER` e ela some de verdade. Foto do banho espera o motor de imagem (C.1b) |
 | **C.4** Locomoção viva (uber, a pé, ônibus/metrô, carona) | ✅ tabela + API + carona | `commute.py`: ida e volta da PUC e das saídas viram estado ("voltando da PUC pra casa de ônibus"), modo sorteado por dia (pico, noite, chuva, fim de mês, cansaço, uber dividido com a amiga), imprevistos viram acontecimento do dia. Minutos pela Distance Matrix API quando há `DISTANCE_MATRIX_KEY` (1 consulta por trecho), tabela como reserva. Carona com o Theo (cânone: ele tem carro) |
-| **D** Rotina viva (refeições, sono, Milo, noite, faculdade, fim de semana, casa, freela) | 🟡 | Tabela desenhada com o Patrick em 22–23/09 (seção Fase D). **Feito:** D1 fome viva (refeições, lanches, apetite, disfarce, peso, agência), D12 laços (pai diário, Bia várias vezes, saudade do Patrick sem teto), D2+D3+D13 sono (variável, micro-despertares, manhã de trás pra frente), D4 banho v2 (por necessidade e emoção), D5 Milo + cochilo, D6 parte 1 (o que ela assiste, cânone de gostos, descoberta sozinha, curiosidade pelo que o Patrick cita), pegar no sono pelo corpo/emoção, D8 fim de semana (convites + decisão dela), D7 faculdade (trabalhos, véspera, faltas, atrasos), D6 parte 2 (TMDB), D14 motor emocional (corpo, emoções com causa, humor, vínculo, mágoa justa, ciúme leve). **Próximos (ordem do Claude, 23/09):** D11 saúde, D10 freela, D9 casa |
+| **D** Rotina viva (refeições, sono, Milo, noite, faculdade, fim de semana, casa, freela) | 🟡 | Tabela desenhada com o Patrick em 22–23/09 (seção Fase D). **Feito:** D1 fome viva (refeições, lanches, apetite, disfarce, peso, agência), D12 laços (pai diário, Bia várias vezes, saudade do Patrick sem teto), D2+D3+D13 sono (variável, micro-despertares, manhã de trás pra frente), D4 banho v2 (por necessidade e emoção), D5 Milo + cochilo, D6 parte 1 (o que ela assiste, cânone de gostos, descoberta sozinha, curiosidade pelo que o Patrick cita), pegar no sono pelo corpo/emoção, D8 fim de semana (convites + decisão dela), D7 faculdade (trabalhos, véspera, faltas, atrasos), D6 parte 2 (TMDB), D14 motor emocional (corpo, emoções com causa, humor, vínculo, mágoa justa, ciúme leve), D11 saúde e D10 freela (24/09, decisões provisórias ⚠️). **Próximo:** D9 casa |
 | **C** Consolidação | 🟡 | **C1:** o rótulo `[COMO O PATRICK ESCREVE]` e os campos estão em pt-BR (#2 e #7), mas ainda é descrição ("risada: kkkk"), não amostras reais das mensagens dele. **C2** e **C3** ⬜ |
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
@@ -435,10 +435,10 @@ travadas em 1,0.
 | D8 | **Fim de semana** | Quase igual a dia útil | Acorda tarde, brunch, praia, rolê sábado à noite, domingo preguiçoso, família | "ressaca de domingo" | ✅ 23/09: convites + decisão dela pelo emocional (ver "D8 — fim de semana"); acordar tarde e domingo preguiçoso já vêm do D2 |
 | D9 | **Casa e vida adulta** | Não existe | Mercado, lavar roupa, arrumar, conta de luz, iFood no fim do mês apertado | "fui no mercado e esqueci o que fui comprar" | ⬜ |
 | D13 | **Vaidade e se arrumar** (planejamento reverso) | Acorda 07:00 ou 08:30 fixos, sem olhar a que horas é o primeiro compromisso nem quanto tempo ela leva pra ficar pronta | A hora de acordar sai **de trás pra frente**: primeiro compromisso − trajeto (C.4) − café − se arrumar (banho, skincare, cabelo, maquiagem, roupa) − margem. Tempo de se arrumar varia (ensaio > aula > mercado). Se dorme demais ou enrola no espelho → **atraso** real (liga com D7 e C.4) | "perdi 20 min escolhendo roupa e cheguei atrasada" | 🟡 23/09: manhã de trás pra frente e despertador perdido feitos; **chegar atrasada de fato** (o trajeto e a aula se moverem) fica para o D7 |
-| D11 | **Corpo, saúde e ciclo** | Ciclo existe (energia, libido) | Cólica forte → fica em casa; banheiro (bebeu muito líquido, dor de barriga) como sumiço curtinho; farmácia; indisposição. Tom humano e discreto | "tô com cólica, hoje não vou pra aula" | ⬜ a desenhar |
+| D11 | **Corpo, saúde e ciclo** | Ciclo existe (energia, libido) | Cólica forte → fica em casa; banheiro (bebeu muito líquido, dor de barriga) como sumiço curtinho; farmácia; indisposição. Tom humano e discreto | "tô com cólica, hoje não vou pra aula" | ✅ 24/09 (ver "D11 — Corpo e saúde"). ⚠️ Decisões provisórias do Claude pra o Patrick revisar; banheiro e farmácia ficaram de fora |
 | D14 | **Motor emocional unificado** | Emoções espalhadas: 5 em `estado_emocional` (carinho, brincadeira, energia, intensidade romântica, bateria social), excitação em tabela própria (`intimacy_state`, C.1), fome agora em `meals.py`, ciclo à parte; cada uma com seu relógio e sem conversar entre si | Um motor só, com **categorias e subcategorias** (ex.: corpo → fome, energia, sono, excitação; coração → carinho, romance, carência/saudade; humor → alegria, irritação, ansiedade, tristeza; social → bateria social, vontade de sair), cada uma com linha de base, velocidade própria de subir/descer e influências cruzadas (fome → irritação, sono ruim → energia e paciência, saudade → procurar o Patrick). Os módulos atuais viram sensores que alimentam o motor | Tudo que ela sente conversa: "tô com fome e com saudade, péssima combinação kkk" | ⬜ pedido do Patrick em 23/09 ("você quem vai brilhar pra pensar nisso"); entra depois de D1/D12, quando houver sensores suficientes |
 | D12 | **Laços** (pai, Bia, Patrick) | Pai 30% por dia útil, Bia 80% de **uma** mensagem, proatividade com o Patrick por roleta (20%/20 min, teto 4, 2 h de intervalo) → em 22/09: 0 contato com pai e Bia, 0 iniciativa espontânea | Pai **todo dia** (mensagem de manhã, ligação algumas noites; pergunta se comeu, se chegou, se o dinheiro dá); Bia **várias trocas ao longo do dia**; Patrick: saudade como necessidade — se ele some e ela está livre, ela procura, cada vez mais; com ele ocupado, respeita | "meu pai me ligou perguntando se eu tô comendo", "a Bia me mandou um áudio de 5 min", "sumiu hein" | ✅ 23/09 (ver "D12 — como ficou"). **Decidido:** o pai liga quando está livre e manda mensagem quando está ocupado; checa a Marina pelo menos 1×/dia; banca mercado e comida sem ela pedir. Patrick: **sem teto de procura** — é o emocional que decide; de bobeira e sozinha, ele é a primeira pessoa que ela procura |
-| D10 | **Freela de modelo** | Agência da Lívia existe, quase não aparece | Casting/ensaio esporádico, prova de roupa, cachê no fim do mês | "fiz um casting pra marca de biquíni" | ⬜ |
+| D10 | **Freela de modelo** | Agência da Lívia existe, quase não aparece | Casting/ensaio esporádico, prova de roupa, cachê no fim do mês | "fiz um casting pra marca de biquíni" | ✅ 24/09 (ver "D10 — Freela de modelo"). ⚠️ Decisões provisórias do Claude pra o Patrick revisar |
 
 #### D1 detalhado — Fome viva (desenhado com o Patrick, 22–23/09)
 
@@ -652,6 +652,99 @@ O aviso continua opcional (sempre com conversa rolando) e fora do teto de 2 coti
 - D5: o Milo é de que porte/raça? Ela paga passeador em dia puxado?
 - D6: que séries/filmes ela vê (títulos reais)? Ela liga pra quem da família, e com que frequência?
 - D8: como é um sábado e um domingo dela?
+
+### D10 — Freela de modelo ✅ (24/09, madrugada) — ⚠️ decisões provisórias pra revisar
+
+**Antes:** a agência da Lívia existia no cânone (booker em Ipanema) e só aparecia pra cobrar o peso (D1). Nenhum casting, nenhum job, nenhum cachê.
+
+**Agora (`freela.py`):** mesmo desenho do D8 e do D7. O **plano** de cada oferta sai da data (determinístico); o que já **aconteceu** vira acontecimento do dia e o motor emocional sente.
+
+| Etapa | Quando | O que acontece |
+|---|---|---|
+| **Oferta** | ⚠️ ~2,6 por mês, só em dia útil, entre 10h e 18h | a Lívia manda o casting → empolgação |
+| **Casting** | 2 a 5 dias depois, 1h30 na agência, em horário sem aula (10h, 11h30, 14h, 15h30 ou 17h) | vira **compromisso** na agenda: ela fica "em casting", tem trajeto e o `/status` mostra. Na véspera dá frio na barriga (ansiedade até começar) |
+| **Resposta** | 2 a 4 dias depois do casting | ⚠️ passa ~35% das vezes (×0,6 acima de 56 kg, ×1,15 com até 54 kg). Passou → empolgação e orgulho; não passou → decepção |
+| **Prova de roupa** | 1 a 3 dias antes do job, 1 h no estúdio | compromisso |
+| **Job** | 4 a 12 dias depois da resposta, num dia sem aula (costuma cair no sábado), 4 a 6 h de set | compromisso + frio na barriga na véspera + orgulho depois |
+| **Cachê** | ⚠️ ~30 dias depois do job | "caiu o cachê" → contentamento |
+
+- ⚠️ **Tipos de job e cachê** (fictícios, sem marca real):
+
+  | Job | Cachê |
+  |---|---|
+  | catálogo de e-commerce | R$ 600–900 |
+  | campanha de moda praia | R$ 1.500–2.500 |
+  | marca de biquíni | R$ 900–1.500 |
+  | roupa fitness | R$ 800–1.200 |
+  | editorial de revista pequena | R$ 300–500 |
+  | campanha de óculos | R$ 1.200–2.000 |
+  | vídeo de cosméticos | R$ 700–1.100 |
+- **Saúde (D11):** com virose ou cólica forte no dia, ela perde o casting ou o job ("a agência mandou outra menina").
+- **Agenda:** se o job bate com aula em todos os dias possíveis, ela abre mão ("passou, mas…"). ⚠️ Ela nunca falta aula por um job, o que pode mudar se você quiser.
+- **Prompt:** bloco `[TRABALHO DE MODELO — agenda real; não invente casting nem job fora daqui]` com o que vem por aí, a resposta que ela está esperando e o cachê a receber.
+- **Nada no passado:** nada é inventado antes do início da vida registrada.
+- **Onde encosta:**
+  - `world_state` (tick);
+  - `commute` (trajeto dos compromissos `freela:`);
+  - `calendar_world.current` (o tipo `trabalho` mostra a descrição, então a disponibilidade vira CASTING);
+  - `world_context` (bloco do prompt);
+  - `emotion.appraise_event` e `_appraise_work` (véspera).
+
+**⚠️ Decisões provisórias (Patrick, confirma ou troca):**
+1. **Frequência:** ~2–3 castings por mês e ~1 em 3 vira job, então mais ou menos 1 job por mês.
+2. **Faculdade primeiro:** ela não falta aula por job.
+3. **Tabela de jobs e cachês:** a de cima.
+4. **Pagamento:** cachê em ~30 dias. Ela ainda não gasta o dinheiro (isso é o D9, casa e vida adulta).
+
+**Ficou de fora:** job fora do Rio ou viagem, ensaio pessoal (TFP ou permuta), a Lívia ligando pra negociar cachê, fotos do job (esperam o motor de imagem).
+
+`tests/test_freela_d10.py` (8 testes).
+
+### D11 — Corpo e saúde ✅ (24/09, madrugada) — ⚠️ decisões provisórias pra revisar
+
+O Patrick foi dormir e pediu: "toma as decisões que dependem de mim, mas cataloga e deixa sinalizado". As 4 perguntas de 24/09 (frequência, jeito, remédio, condição fixa) ficaram **sem resposta**, então decidi eu. Cada decisão abaixo está marcada com ⚠️ e é uma constante em `health.py`, fácil de trocar.
+
+**Antes:** o ciclo dava uma "cólica" fixa nos dias 1 e 2, e mais nada. Ela nunca ficava gripada, nunca tinha dor de cabeça, nunca tomava remédio.
+
+**Agora (`health.py`):** fatos do corpo calculados a partir da data, no mesmo estilo do `sleep_plan`. O mesmo dia sempre dá o mesmo resfriado, a mesma cólica e o remédio na mesma hora. Não chama LLM nem rede, e não cria tabela nova.
+
+| Condição | Frequência | Duração | Remédio / o que ela faz | Efeitos |
+|---|---|---|---|---|
+| **Cólica** | todo ciclo, intensidade sorteada por ciclo: ⚠️ leve 55% · moderada 30% · forte 15% | dia 1 pior, dia 2 um degrau abaixo; forte ainda incomoda no dia 3 | leve: bolsa de água quente · moderada: Buscopan · forte: Buscopan + bolsa + cama | forte: falta 85%, deita 30 min mais cedo; moderada: falta 20% |
+| **Resfriado** | ⚠️ ~3 por ano de base; sobe com a **imunidade baixa** | 3 a 5 dias; 35% das vezes é forte nos 1–2 primeiros dias | Benegrip e chá de gengibre com mel, depois só o chá | energia −0,1/−0,2, fome ×0,8, dorme 35–60 min mais cedo; forte: falta 50% |
+| **Virose** | ⚠️ ~2,5 por ano | 1–2 dias | soro caseiro, torrada e caldo | fome ×0,35, energia −0,25, dorme 1 h mais cedo, falta 95% |
+| **Dor de cabeça** | ⚠️ ~2 por mês; **30%** no dia seguinte a uma noite com menos de 5h30 de sono | uma janela da tarde/noite | ⚠️ em geral toma uma dipirona e passa 40 min depois; 20% das vezes não toma nada e aguenta 3 a 5 h | energia −0,1, fome ×0,9 |
+
+**Imunidade** (dica do Patrick: "imunidade, chuva, e etc"): a chance de pegar resfriado num dia é multiplicada por:
+- ×1,8 se ela dormiu menos de 6 h;
+- ×2 se choveu no Rio naquele dia (pelo clima observado);
+- ×1,3 se tem entrega da faculdade em até 2 dias.
+
+Tudo junto chega a ×4,7. Numa simulação de 3 anos deram 5, 0 e 2 resfriados, que é a variação de gente de verdade.
+
+**Onde entra:**
+- **Motor emocional:**
+  - o desconforto da doença pesa na valência e no tesão;
+  - a energia do corpo cai;
+  - o prompt ganha a linha "- Saúde: resfriada — Benegrip e chá…" e, embaixo, como ela lida com isso.
+- **Fome** (`meals.hunger`), **hora de dormir** (`sleep_plan._onset`, no gancho que já existia) e **faltas** (`college.skip_reason`). A regra antiga de "25% de faltar na menstruação" saiu; agora depende da intensidade da cólica.
+- **`/status`:** uma linha 🤒 com a condição e o que ela tomou. O `/emocao` já mostrava o desconforto.
+
+**⚠️ Decisões provisórias (Patrick, confirma ou troca):**
+1. **Frequência:** a da tabela acima.
+2. **Jeito, manhosa ou durona:** as duas, dependendo da intensidade. Coisa pequena ela minimiza e segue a vida ("é só uma dorzinha"), porque o cânone diz independente. Quando está mal de verdade (cólica forte, virose, resfriado forte), fica manhosa com o Patrick e aceita dengo, como o cânone do ciclo já dizia ("reclama manhosa que está com cólica").
+3. **Médico ou remédio:** ela se automedica em tudo isso e não vai ao médico. O pai, se souber, se preocupa e manda ela ir.
+4. **Condição fixa:** nenhuma além da cólica. Enxaqueca, rinite ou estômago sensível são fáceis de acrescentar se você quiser.
+
+**Ficou de fora (anotado):**
+- **Banheiro como sumiço curtinho na virose:** precisa mexer na disponibilidade.
+- **O pai ligar mais quando ela está doente:** hoje isso é só uma linha no prompt, não um evento.
+- **Farmácia como saída:** o remédio "já está em casa".
+- **Contágio (a Bia gripada passa pra ela).**
+
+Custo por turno medido numa cópia do banco real: ~0 com um cache de 30 s dos fatos do dia. Sem o cache eram +0,5 s. Na suíte o cache fica desligado.
+
+`tests/test_health_d11.py` (12 testes).
 
 ### D14 — Motor emocional ✅ (23/09, tarde) — a, b, c e d entregues
 
