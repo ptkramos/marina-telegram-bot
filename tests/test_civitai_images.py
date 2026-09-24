@@ -200,7 +200,9 @@ class Krea2Test(unittest.TestCase):
         self.assertLess(ci.weight_slider(56.5), ci.weight_slider(54.0), "mais pesada = mais cheinha")
         self.assertGreater(ci.weight_slider(52.0), ci.weight_slider(54.0))
         self.assertEqual(ci.weight_slider(80), -3.0, "nunca passa do limite do LoRA")
-        with patch.object(ci, "weight_slider", return_value=-0.7):
+        self.assertNotIn(ci.KREA2_WEIGHT, ci.build_workflow_krea2("p", is_nsfw=False, stack="n3")["steps"][0]["input"]["loras"],
+                         "desligado: mexia na cabeça")
+        with patch.object(ci, "WEIGHT_SLIDER_ENABLED", True), patch.object(ci, "weight_slider", return_value=-0.7):
             loras = ci.build_workflow_krea2("p", is_nsfw=False, stack="n3")["steps"][0]["input"]["loras"]
         self.assertEqual(loras[ci.KREA2_WEIGHT], -0.7)
 
@@ -212,7 +214,14 @@ class Krea2Test(unittest.TestCase):
         self.assertEqual(came["loras"][ci.KREA2_CREAMY], 0.5)
         self.assertIn("creamythings, creamy vagina", came["prompt"].lower())
         plain = ci.build_workflow_krea2("standing in her bedroom", is_nsfw=True, stack="e")["steps"][0]["input"]["loras"]
-        self.assertFalse({ci.KREA2_SPREAD, ci.KREA2_CREAMY} & set(plain))
+        self.assertFalse({ci.KREA2_SPREAD, ci.KREA2_CREAMY, ci.KREA2_BETTER} & set(plain))
+        shown = ci.build_workflow_krea2("lying back, legs spread, showing her pussy", is_nsfw=True, stack="e")["steps"][0]["input"]
+        self.assertEqual(shown["loras"][ci.KREA2_BETTER], 0.8)
+        self.assertIn("hairless_pussy", shown["prompt"].lower())
+        both = ci.build_workflow_krea2("legs spread, spreading her pussy open", is_nsfw=True, stack="e")["steps"][0]["input"]
+        self.assertIn(ci.KREA2_SPREAD, both["loras"])
+        self.assertNotIn(ci.KREA2_BETTER, both["loras"], "nunca junto com o Spread")
+        self.assertNotIn("hairless_pussy", both["prompt"].lower())
 
     def test_phone_slider_on_every_photo_and_colors_are_corrected(self):
         for nsfw, stack in ((False, "n3"), (True, "e")):
