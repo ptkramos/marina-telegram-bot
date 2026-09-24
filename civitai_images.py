@@ -187,9 +187,11 @@ CONDITIONAL = (
                          "gozou", "gozando", "gozar", "creamy"), True, "creamythings, creamy vagina"),
     # Óleo/creme no corpo no pós-banho, provocando (Patrick, 24/09). Força baixa (o autor usa 1.0 pro
     # máximo); só na adulta — o autor avisa que o LoRA "quer muito" deixar a mulher nua.
-    (KREA2_OILED, 0.5, ("body oil", "oiled", "oiling", "rubbing lotion", "body lotion", "moisturizer",
+    (KREA2_OILED, 0.25, ("body oil", "oiled", "oiling", "rubbing lotion", "body lotion", "moisturizer",
                         "cream on her body", "applying cream", "passando creme", "passando óleo", "óleo no corpo",
-                        "hidratante"), True, "OiledSkin"),
+                        "hidratante"), True,
+     # 0.4/0.6 pareceram esperma: o óleo tem que ser TRANSPARENTE, e "cream/lotion" puxa pro branco.
+     "OiledSkin, clear transparent body oil making her skin glossy and shiny, no white cream, no white drops"),
     # Molhada só de ÁGUA (banho, chuva, piscina, mar). Molhada de excitação ficou melhor SEM o slider
     # (teste do Patrick, 24/09) — aí quem descreve é o texto do prompt.
     (KREA2_WETNESS, 1.2, ("shower", "bath", "bathtub", "rain", "pool", "swimming", "in the sea", "ocean", "beach water",

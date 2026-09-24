@@ -192,7 +192,8 @@ class Krea2Test(unittest.TestCase):
         oil = ci.build_workflow_krea2("after the shower, applying body oil on her legs", is_nsfw=True,
                                       stack="e")["steps"][0]["input"]
         self.assertIn(ci.KREA2_OILED, oil["loras"])
-        self.assertIn("OiledSkin", oil["prompt"])
+        self.assertIn("OiledSkin, clear transparent body oil", oil["prompt"])
+        self.assertIn("no white cream", oil["prompt"])
         post = ci.build_workflow_krea2("right after the shower, applying body oil", is_nsfw=True, stack="e")["steps"][0]["input"]
         self.assertIn(ci.KREA2_OILED, post["loras"])
         self.assertNotIn(ci.KREA2_WETNESS, post["loras"], "óleo no pós-banho: sem a molhada por cima")
