@@ -1026,6 +1026,15 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - **Wetness slider** (1.2): entra com "wet", "rain", "shower", "molhada", "chuva", "banho"… Testado na foto do pós-banho, ficou ótimo.
   - **Smartphone Photography slider:** em 1.5 encheu a foto de purpurina. **Em 0.8 ficou "perfeito"** (Patrick). Entra em **todas** as fotos (normal e adulta, selfie e de longe), com −17% de saturação no download.
   - **Breast squeezing aprovado em 0.6** (em 0.8 o mamilo crescia), sempre com "her nipples stay small and delicate".
+  - **SNOFS 0.5 por cima do FinePorn:** testado com o prompt de close do Patrick. **Sem SNOFS ficou melhor.** Fica fora, assim como o TextFusion: o FinePorn não se recusa a nada.
+- **Referência de pose pra quando a Marina decidir as fotos (C.1b):** o prompt de close que o Patrick trouxe, adaptado a ela, deu a pose que ele mais gostou até agora. Os padrões que funcionaram:
+  - cabeçalho de foto amadora ("screenshot from a phone video, slight motion blur");
+  - foco travado num ponto ("focus locked sharply on…");
+  - enquadramento concreto ("extreme close-up low-angle shot, … filling the frame");
+  - luz com direção ("strong directional light from the upper left…");
+  - textura e cor ("skin texture detailed and natural, warm colour").
+
+  O diretor de cena da Marina deve escrever assim: frases concretas de câmera, luz e foco, não adjetivos soltos.
 - **Teste quando o LoRA chegar:** 2 cenas normais × (n1, n2), 2 cenas adultas × (a, b, c, d) e a grade do slider. Mesma semente, uns 16 retratos, ~400 Buzz. O Patrick escolhe pelo olho.
 
 ### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅
