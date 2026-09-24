@@ -136,6 +136,17 @@ class DirectorTest(unittest.TestCase):
         self.assertFalse(pd.may_self_initiate(self.db, NOW + timedelta(minutes=5), hot))
         self.assertTrue(pd.may_self_initiate(self.db, NOW + timedelta(minutes=pd.SELF_PHOTO_GAP_MIN + 1), hot))
 
+    def test_tripod_frees_both_hands(self):
+        import civitai_images as ci
+        pose = pd.BY_ID["cama_tripe_duas_maos"]
+        self.assertEqual(pose.framing, "timer")
+        fingers = dict(pose.beats)["fingers"]
+        self.assertIn("inside her wet pussy", fingers)
+        self.assertIn("squeezing her breast", fingers)
+        loras, _ = ci.conditional_loras(fingers, is_nsfw=True)
+        self.assertIn(ci.KREA2_SQUEEZE, loras, "o LoRA de apertar entra sozinho")
+        self.assertNotIn("squeezing", dict(pd.BY_ID["cama_pernas_abertas"].beats)["fingers"], "selfie: uma mão")
+
     def test_panties_go_as_adult_workflow(self):
         s = self.shot("manda uma foto", turn=IntimacyTurn(state="warming", arousal=0.35))
         if s.outfit and "panties" in s.outfit:

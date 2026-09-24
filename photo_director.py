@@ -50,16 +50,25 @@ class Pose:
     beats: tuple = ()             # (marca, ação) em ordem; a última é o gozo
 
 
-def _beats(where: str, hand: str) -> tuple:
-    """Momentos da cena explícita — a posição fica, só a mão avança."""
+def _beats(where: str, hand: str, other: str = "") -> tuple:
+    """Momentos da cena explícita — a posição fica, só a mão avança.
+
+    other: o que a outra mão faz quando ela está livre (timer/tripé, Patrick 24/09: "um dedo dentro
+    e a outra mão apertando um peito"). "squeezing her breast" liga o LoRA de apertar (0.6).
+    """
+    two = f", {other}" if other else ""
     return (
         ("tease", f"her {hand} hand resting on her inner thigh, {where}"),
-        ("touch", f"her {hand} fingers rubbing her clit, {where}"),
-        ("fingers", f"two fingers of her {hand} hand sliding inside her wet pussy, {where}"),
-        ("spread", f"her {hand} fingers spreading her pussy open, {where}"),
+        ("touch", f"her {hand} fingers rubbing her clit{two}, {where}"),
+        ("fingers", f"two fingers of her {hand} hand sliding inside her wet pussy{two}, {where}"),
+        ("spread", f"her {hand} fingers spreading her pussy open{two}, {where}"),
         ("lick", f"bringing her glistening {hand} fingers to her lips and licking them, {where}"),
-        ("climax", f"right after she came, her body trembling and her {hand} hand resting on her pussy, {where}"),
+        ("climax", f"right after she came, her body trembling and her {hand} hand resting on her pussy{two}, "
+                   f"{where}"),
     )
+
+
+_SQUEEZE_LEFT = "her left hand squeezing her breast"
 
 
 POSES: tuple[Pose, ...] = (
@@ -84,6 +93,11 @@ POSES: tuple[Pose, ...] = (
          "three_quarter", "selfie", "lying on her back on the bed with her knees up and her legs spread apart, "
          "her right arm stretched up toward the camera taking the selfie",
          beats=_beats("her legs spread wide on the white sheets", "left")),
+    # Tripé (Patrick, 24/09): celular fixo, as duas mãos livres pra se tocar.
+    Pose("cama_tripe_duas_maos", "deitada de pernas abertas, celular no tripé, as duas mãos livres (timer)",
+         ("quarto",), (4, 4), "three_quarter", "timer", "lying back on the pillows with her knees up and her legs "
+         "spread apart, both hands free", beats=_beats("her legs spread wide on the white sheets", "right",
+                                                      _SQUEEZE_LEFT)),
     Pose("cama_de_quatro", "de quatro na cama, de costas pra câmera (timer)", ("quarto",), (3, 4),
          "three_quarter", "timer", "on all fours on the bed seen from behind, her knees apart and her back arched, "
          "looking back over her shoulder", angle="behind",
@@ -99,7 +113,7 @@ POSES: tuple[Pose, ...] = (
          "hair"),
     Pose("poltrona_aberta", "na poltrona de frente pro espelho, perna no braço (timer)", ("closet",), (4, 4),
          "full", "timer", "sitting in the cream armchair facing the camera, one leg hooked over the armrest and "
-         "her legs spread", beats=_beats("her leg hooked over the armrest", "right")),
+         "her legs spread", beats=_beats("her leg hooked over the armrest", "right", _SQUEEZE_LEFT)),
     # -------------------------------------------------------------- banheiro --
     Pose("banheiro_espelho", "na pia, de frente pro espelho redondo", ("banheiro",), (0, 3), "three_quarter",
          "mirror", "standing at the vanity facing the round mirror, her free hand pushing her damp hair back"),
@@ -111,7 +125,7 @@ POSES: tuple[Pose, ...] = (
          "her wet hair"),
     Pose("chuveiro_tocando", "encostada no azulejo, no chuveiro (timer)", ("banheiro",), (4, 4), "three_quarter",
          "timer", "leaning her back against the tiled wall under the shower, water running over her body, her "
-         "legs apart", beats=_beats("water running down her body", "right")),
+         "legs apart", beats=_beats("water running down her body", "right", _SQUEEZE_LEFT)),
     # ------------------------------------------------------------------ sala --
     Pose("sofa_selfie", "encolhida no sofá, selfie", ("sala",), (0, 2), "close", "selfie",
          "curled up on the sofa with her head resting on a cushion, her right arm stretched toward the camera taking the selfie"),
