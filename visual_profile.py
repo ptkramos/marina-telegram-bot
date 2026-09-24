@@ -90,12 +90,14 @@ KREA2_IDENTITY = (
     "semi-straight with soft waves at the ends"
 )
 KREA2_BODY_SFW = "She has a fit, slim body with a natural sun-kissed tan."
-KREA2_BODY_NSFW = "She has a fit, slim body with a natural sun-kissed tan and visible bikini tan lines."
+# 24/09 (Patrick): a marquinha estava grande demais — agora é de micro biquíni. Não escrever
+# "G-string"/"string": o modelo desenha a calcinha em vez da marca.
+KREA2_BODY_NSFW = "She has a fit, slim body with a natural sun-kissed tan and small micro bikini tan lines."
 KREA2_CLOTHED = "She is fully clothed, her outfit covers her chest and body."
 KREA2_NUDE = {
     "frontal": "She is completely naked, facing the camera.",
-    "behind": ("Seen from behind, she is completely naked, showing her round firm butt with cheeky bikini "
-               "tan lines, looking back over her shoulder."),
+    "behind": ("Seen from behind, she is completely naked, showing her round firm butt with a thin thong "
+               "tan line, looking back over her shoulder."),
     "side": "Seen from the side, she is completely naked, her slim waist and arched lower back in profile.",
 }
 # Corpo canônico (Patrick, 24/09): o da foto "adulta_a" da rodada 2 (pilha a, slider 2.5).
@@ -109,9 +111,9 @@ KREA2_NUDE = {
 KREA2_BODY_CANON = (
     "Light pink nipples and light pink pussy: her small nipples and medium areolas are a clear soft pink, "
     "the same light pink as her lips, and her pussy lips are that same soft pink. Her breasts are round and "
-    "natural, with pale triangle bikini tan lines on them. Her skin is clear and smooth, with no moles or "
-    "dots on her chest or body. Her pussy is fully shaved, small and neat, framed by a pale bikini-bottom "
-    "tan line. Her anus is small, tight and light pink."
+    "natural, with tiny pale micro bikini triangle tan lines that only cover her areolas. Her skin is clear and smooth, with no moles or "
+    "dots on her chest or body. Her pussy is fully shaved, small and neat, framed by a thin, narrow, "
+    "high-cut micro bikini tan line on her hips. Her anus is small, tight and light pink."
 )
 KREA2_MIRROR = ("She is taking a mirror selfie, holding a black iPhone 16 Pro, her hand and the phone "
                 "visible in the reflection.")
