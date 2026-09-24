@@ -799,6 +799,16 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
 
 Não precisa reset do soak: o banco está coerente. Era o planner.
 
+**Iniciativas em bloco e com ponto final (print do Patrick, 23/09 20:53 e 22:13) + auditoria das frases fixas:**
+- **Causa:** a saudade e o boa-noite (proatividade e rituais) iam **direto pro Telegram** (`application.bot.send_message`), sem passar por `send_human_messages`, que divide em balões e tira o ponto final. Só as respostas passavam por lá. Agora as duas usam o mesmo envio, e o texto gravado na memória também sai sem ponto de fechamento (`_proactive_text`).
+- **Auditoria (todo `send_message`/`reply_text` do bot):** o resto da fala dela já passava pelo envio em balões (respostas, lembretes, reservas de foto/áudio, avatar). Sobravam:
+  - **respostas de privacidade** → agora sem ponto de fechamento;
+  - **"Amor, queria te contar uma coisa: {resumo cru do evento}"** → agora a voz dela conta, e a frase fixa só entra se o LLM falhar;
+  - **"deu uma osciladinha aqui no sinal do apê"**, a reserva quando o LLM cai, se repetia igual a cada falha → agora sorteia entre 4.
+  - Mensagens pra estranhos e textos de comandos (`/status`, `/lembretes`, testes de voz) ficam como estão: não são conversa.
+- **Achado no caminho:** o sono podia devolver uma hora de dormir diferente da que ficava gravada. A conta da energia congelava a mesma noite no meio. Agora vale o valor gravado.
+- **Elogio do Patrick:** o áudio "parece realmente uma pessoa de verdade falando".
+
 ### Reações e "só uma reação basta" (23/09, fim de tarde) ✅ — caderno de feedback do Patrick
 
 | Feedback (caderno) | Causa | O que foi feito |

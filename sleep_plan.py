@@ -152,7 +152,7 @@ class SleepPlan:
         if live:
             try:
                 from world_state import current_energy
-                energy = current_energy(self.db)
+                energy = current_energy(self.db, min(datetime.now(), datetime.combine(day, time(22, 0))))
                 if energy < 0.35:
                     minutes -= 30
                     why.append("estava sem energia nenhuma")
@@ -170,7 +170,8 @@ class SleepPlan:
             try:
                 # Fase D14d: cabeça cheia de verdade (ansiedade, preocupação, mágoa) atrasa o sono.
                 from emotion import EmotionEngine
-                worry = next((e for e in EmotionEngine(self.db).episodes()
+                ref = min(datetime.now(), datetime.combine(day, time(23, 0)))   # a noite DAQUELE dia
+                worry = next((e for e in EmotionEngine(self.db).episodes(ref)
                               if e.family in ("medo", "tristeza", "raiva") and e.intensity >= 0.35), None)
                 if worry:
                     minutes += 20 + int(40 * min(1.0, worry.intensity))
@@ -243,6 +244,12 @@ class SleepPlan:
             at = max(at, outing + timedelta(minutes=30))   # cansada ou não, só dorme depois de voltar
         if live:
             self._freeze(day, at, reasons)
+            # D14: a conta da energia pode ter congelado esta mesma noite no meio
+            # do caminho (energia → dívida de sono → noites anteriores). O que
+            # ficou gravado é a verdade; devolver outro valor dava duas horas.
+            frozen = self._frozen(day)
+            if frozen:
+                return datetime.fromisoformat(frozen["bed"])
         return at
 
     def _bed_ceiling(self, day: date) -> datetime:

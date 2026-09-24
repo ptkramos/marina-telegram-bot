@@ -326,7 +326,8 @@ async def send_registered_privacy_replies(chat_id: int, bot, replies, *, reply_t
     privacy = KnowledgePrivacy(db or memory_manager.db)
     sent_ids = []
     for reply in replies:
-        sent = await bot.send_message(chat_id=chat_id, text=reply.text,
+        from chat_naturalness import strip_closing_periods
+        sent = await bot.send_message(chat_id=chat_id, text=strip_closing_periods(reply.text),
                                       reply_to_message_id=reply_to_message_id)
         message_id = getattr(sent, 'message_id', None)
         if not isinstance(message_id, int) or message_id <= 0:
@@ -1140,6 +1141,14 @@ async def set_safe_message_reaction(bot, chat_id: int, message_id: int, emoji: s
         return False
 
 _LAST_REACTION_AT: dict[int, datetime] = {}
+# Reserva quando o modelo não responde (auditoria de frases fixas, 23/09): uma
+# frase só se repetia igual a cada falha.
+_SIGNAL_FALLBACKS = (
+    "Amor, deu uma osciladinha aqui no sinal do apê! Me manda de novo? 🥺",
+    "Ai, o 4G aqui tá horrível hoje kkk manda de novo?",
+    "Perdi sua mensagem no meio do caminho, amor, repete?",
+    "Travou tudo aqui agora 😭 me manda de novo?",
+)
 REACTION_ONLY_CHANCE = 0.75
 
 
@@ -3434,9 +3443,9 @@ async def process_incoming_batch(
                 resposta_marin = completion.choices[0].message.content.strip()
             except Exception as e2:
                 logger.error(f"Erro também no modelo reserva: {e2}")
-                resposta_marin = "Amor, deu uma osciladinha aqui no sinal do apê! Me manda de novo? 🥺"
+                resposta_marin = random.choice(_SIGNAL_FALLBACKS)
         else:
-            resposta_marin = "Amor, deu uma osciladinha aqui no sinal do apê! Me manda de novo? 🥺"
+            resposta_marin = random.choice(_SIGNAL_FALLBACKS)
 
     # Naturalidade: não repetir frase própria, "amor" não em todo turno,
     # sem ponto final fechando o balão (chat_naturalness).
@@ -4088,6 +4097,11 @@ _PROACTIVE_INSTRUCTIONS = {
 
 
 def _proactive_text(reason: str, detail, fallback: str) -> str:
+    from chat_naturalness import strip_closing_periods
+    return strip_closing_periods(_proactive_text_raw(reason, detail, fallback))
+
+
+def _proactive_text_raw(reason: str, detail, fallback: str) -> str:
     """Auditoria #6: a proatividade viva mandava só frases prontas (4 variações
     de "oi amor"). O caminho que usava o LLM (`determine_proactive_prompt`) foi
     desligado na 3.7.0 para ela não inventar eventos — correto na época, porque
@@ -4154,7 +4168,12 @@ async def autonomous_routine_v36(application: Application):
             current = RelationshipWorld(memory_manager.db).shareable_events(now)
             if not any(row['id'] == subject_id for row in current):
                 return
-            text = f"Amor, queria te contar uma coisa: {candidate['detail']}"
+            # 23/09 (auditoria de frases fixas): antes era "Amor, queria te contar
+            # uma coisa: <resumo cru do evento>". Agora a voz dela conta, com os
+            # mesmos guards das outras iniciativas; a frase fixa só se o LLM falhar.
+            text = await asyncio.to_thread(
+                _proactive_text, 'social_day_share', candidate['detail'],
+                f"Amor, queria te contar uma coisa: {candidate['detail']}")
             reply = PrivacyReply('event', subject_id, text, 'details')
             await send_registered_privacy_replies(
                 settings.TARGET_CHAT_ID, application.bot, [reply], db=memory_manager.db)
@@ -4193,7 +4212,9 @@ async def autonomous_routine_v36(application: Application):
             text = await asyncio.to_thread(_proactive_text, reason, detail, fallback)
             if news:
                 SocialDay(memory_manager.db).mark_shared(news['event_key'])
-            sent = await application.bot.send_message(chat_id=settings.TARGET_CHAT_ID, text=text)
+            # 23/09: iniciativa também sai em balões e sem ponto final, como as respostas
+            # (antes ia direto pro Telegram: "Tô com saudade." num bloco só).
+            sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
             if not isinstance(getattr(sent, 'message_id', None), int) or sent.message_id <= 0:
                 raise RuntimeError('Telegram did not confirm proactive message')
         if event_id:
@@ -4231,7 +4252,7 @@ async def ritual_routine(application: Application):
         if not ritual:
             return
         text = await asyncio.to_thread(_proactive_text, ritual.reason, ritual.detail, ritual.fallback)
-        sent = await application.bot.send_message(chat_id=settings.TARGET_CHAT_ID, text=text)
+        sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
         if not isinstance(getattr(sent, 'message_id', None), int) or sent.message_id <= 0:
             raise RuntimeError('Telegram did not confirm ritual message')
         memory_manager.db.registrar_iniciativa_marina(text, media_type='text')

@@ -127,6 +127,30 @@ class TodayAfterRestartTest(unittest.TestCase):
         sent = [c.kwargs["text"] for c in fake.send_message.call_args_list]
         self.assertTrue(all(not t.endswith(".") for t in sent), sent)
 
+    def test_her_initiative_also_goes_in_bubbles_without_closing_period(self):
+        """Print do Patrick, 23/09 20:53: a saudade saiu num bloco só, com pontos finais."""
+        import asyncio
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock, MagicMock, patch
+        import bot
+        from config import settings
+        fake_bot = MagicMock(send_message=AsyncMock(return_value=SimpleNamespace(message_id=5)),
+                             send_chat_action=AsyncMock())
+        service = MagicMock()
+        service.should_trigger.return_value = (True, "saudade")
+        service.determine_living_world_candidate.return_value = {"reason": "light_affection", "rank": 10}
+        service.saudade.return_value = {"hours": 3, "unanswered": 0}
+        text = ("Amor, sumiu hein? Tá vivo? kkk\n"
+                "Tava trocando mensagem com a Bia e lembrei de você. Tô com saudade.")
+        with patch.object(settings, "TARGET_CHAT_ID", 123), patch("bot.proactivity_service", service), \
+             patch("bot._proactive_text_raw", return_value=text), patch("bot.memory_manager.db", MagicMock()), \
+             patch("bot.asyncio.sleep", AsyncMock()), \
+             patch("social_day.SocialDay.fresh_news", return_value=None):
+            asyncio.run(bot.autonomous_routine_v36(SimpleNamespace(bot=fake_bot)))
+        sent = [c.kwargs["text"] for c in fake_bot.send_message.call_args_list]
+        self.assertGreaterEqual(len(sent), 2, sent)
+        self.assertTrue(all(not t.endswith(".") for t in sent), sent)
+
     def test_quiet_shower_is_told_when_he_shows_up(self):
         import json
         from unittest.mock import patch

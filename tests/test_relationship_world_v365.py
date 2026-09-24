@@ -135,8 +135,9 @@ class LivingWorldDeliveryTests(unittest.IsolatedAsyncioTestCase):
         fake_service.determine_living_world_candidate.return_value = candidate
         fake_bot = MagicMock()
         fake_bot.send_message = AsyncMock(return_value=SimpleNamespace(message_id=42))
+        fake_bot.send_chat_action = AsyncMock()   # 23/09: iniciativa sai em balões (send_human_messages)
         fake_db = MagicMock()
-        with patch.object(settings, 'TARGET_CHAT_ID', 123), \
+        with patch.object(settings, 'TARGET_CHAT_ID', 123),              patch('bot.asyncio.sleep', AsyncMock()), \
              patch.object(settings, 'KNOWLEDGE_PRIVACY_ENABLED', True), \
              patch.object(settings, 'CALENDAR_CONTINUITY_ENABLED', False), \
              patch('bot.proactivity_service', fake_service), \
