@@ -170,6 +170,9 @@ class Krea2Test(unittest.TestCase):
         self.assertEqual((e["diffusionModel"], e["steps"], e["scheduler"]), (ci.KREA2_FINEPORN, 10, "beta"))
         self.assertFalse({ci.KREA2_SNOFS, ci.KREA2_NSFW_HELPER} & set(e["loras"]))
         self.assertEqual(e["loras"][ci.KREA2_PHONE], 0.8)
+        self.assertEqual(e["loras"][ci.KREA2_TANLINES], 0.6, "marquinha só na foto adulta")
+        n3 = ci.build_workflow_krea2("p", is_nsfw=False, stack="n3")["steps"][0]["input"]
+        self.assertNotIn(ci.KREA2_TANLINES, n3["loras"])
         self.assertEqual(e["loras"][ci.KREA2_BREAST_SLIDER], 1.5)
 
     def test_a_normal_stack_name_never_serves_an_adult_photo(self):
@@ -232,6 +235,8 @@ class Krea2PromptTest(unittest.TestCase):
         import visual_profile as vp
         p = vp.krea2_prompt("bathroom", is_nsfw=True, focus_angle="behind", is_mirror=True)
         self.assertIn("Seen from behind", p)
+        self.assertIn("bikini tan-lines", p, "gatilho da marquinha na foto adulta")
+        self.assertNotIn("tan-lines", vp.krea2_prompt("couch", is_nsfw=False))
         self.assertIn("no moles or dots", p, "corpo canônico: sem pinta (Patrick, 24/09)")
         self.assertIn(vp.KREA2_BODY_CANON, vp.krea2_prompt("bed", is_nsfw=True))
         self.assertNotIn("areolas", vp.krea2_prompt("bed", is_nsfw=False))

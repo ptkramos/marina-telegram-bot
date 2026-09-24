@@ -104,6 +104,7 @@ KREA2_FINEPORN = "urn:air:krea2:checkpoint:civitai:2762538@3215452"
 # LoRAs de ocasião (Patrick, 24/09) — entram só quando a cena pede (CONDITIONAL abaixo).
 KREA2_SQUEEZE = "urn:air:krea2:lora:civitai:2761661@3161094"   # Breast squeezing V1 (gatilho "squeezing breasts")
 KREA2_WETNESS = "urn:air:krea2:lora:civitai:2738333@3079282"   # Wetness Slider (−1..1; o FinePorn embute negativo)
+KREA2_TANLINES = "urn:air:krea2:lora:civitai:2840638@3206585"  # Bikini Tan Lines (AiMami) — gatilho "bikini tan-lines"
 KREA2_PHONE = "urn:air:krea2:lora:civitai:2796343@3151907"     # Elusarca Smartphone Photography Slider (1–2)
 PHONE_SELFIE_WEIGHT = 0.8   # 1.5 enchia de purpurina; 0.8 = "realismo perfeito" (Patrick, 24/09) — em TODA foto
 PHONE_DESATURATE = 0.83   # o autor corrige −15 a −20 de saturação depois de gerar; fazemos no download
@@ -135,7 +136,9 @@ KREA2_STACKS = {
     "b": {"model": KREA2_AIO, "steps": 12, "loras": {}},
     "c": {"model": KREA2_YOGI, "steps": 8, "loras": {KREA2_REALISM_ENGINE: 0.7, KREA2_NSFW_HELPER: 0.5}},
     "d": {"model": None, "steps": 8, "loras": {KREA2_NSFW_V4: 1.0, KREA2_NSFW_HELPER: 0.5}},
-    "e": {"model": KREA2_FINEPORN, "steps": 10, "scheduler": "beta", "loras": {KREA2_PHONE: PHONE_SELFIE_WEIGHT}},
+    # Marquinha de biquíni realista (tirinhas, borda suave) só na foto adulta, em 0.6 (Patrick, 24/09).
+    "e": {"model": KREA2_FINEPORN, "steps": 10, "scheduler": "beta",
+          "loras": {KREA2_PHONE: PHONE_SELFIE_WEIGHT, KREA2_TANLINES: 0.6}},
 }
 SFW_STACKS, NSFW_STACKS = ("n1", "n2", "n3"), ("a", "b", "c", "d", "e")
 

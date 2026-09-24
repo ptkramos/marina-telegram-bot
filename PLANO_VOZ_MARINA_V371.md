@@ -1026,6 +1026,7 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - **Wetness slider** (1.2): entra com "wet", "rain", "shower", "molhada", "chuva", "banho"… Testado na foto do pós-banho, ficou ótimo.
   - **Smartphone Photography slider:** em 1.5 encheu a foto de purpurina. **Em 0.8 ficou "perfeito"** (Patrick). Entra em **todas** as fotos (normal e adulta, selfie e de longe), com −17% de saturação no download.
   - **Breast squeezing aprovado em 0.6** (em 0.8 o mamilo crescia), sempre com "her nipples stay small and delicate".
+  - **Marquinha de biquíni:** o texto passou a pedir "micro biquíni" (menor embaixo; em cima o FinePorn resiste). Não escrever "G-string", porque o modelo desenha a calcinha. O **LoRA Bikini Tan Lines (AiMami) em 0.6** entra só na foto adulta, com o gatilho "bikini tan-lines". Ele deixa a marca realista (tirinhas, borda suave), mas não muda o tamanho.
   - **SNOFS 0.5 por cima do FinePorn:** testado com o prompt de close do Patrick. **Sem SNOFS ficou melhor.** Fica fora, assim como o TextFusion: o FinePorn não se recusa a nada.
 - **Referência de pose pra quando a Marina decidir as fotos (C.1b):** o prompt de close que o Patrick trouxe, adaptado a ela, deu a pose que ele mais gostou até agora. Os padrões que funcionaram:
   - cabeçalho de foto amadora ("screenshot from a phone video, slight motion blur");

@@ -92,7 +92,8 @@ KREA2_IDENTITY = (
 KREA2_BODY_SFW = "She has a fit, slim body with a natural sun-kissed tan."
 # 24/09 (Patrick): a marquinha estava grande demais — agora é de micro biquíni. Não escrever
 # "G-string"/"string": o modelo desenha a calcinha em vez da marca.
-KREA2_BODY_NSFW = "She has a fit, slim body with a natural sun-kissed tan and small micro bikini tan lines."
+KREA2_BODY_NSFW = ("She has a fit, slim body with a natural sun-kissed tan and small micro bikini tan lines "
+                   "(bikini tan-lines).")   # gatilho do LoRA de marquinha, que só entra na foto adulta
 KREA2_CLOTHED = "She is fully clothed, her outfit covers her chest and body."
 KREA2_NUDE = {
     "frontal": "She is completely naked, facing the camera.",
