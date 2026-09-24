@@ -205,7 +205,7 @@ class Krea2PromptTest(unittest.TestCase):
         import visual_profile as vp
         p = vp.krea2_prompt("bathroom", is_nsfw=True, focus_angle="behind", is_mirror=True)
         self.assertIn("Seen from behind", p)
-        self.assertIn("Exactly one tiny dark mole, just above her left nipple", p, "corpo canônico")
+        self.assertIn("single unique tiny dark mole just above her left nipple", p, "corpo canônico")
         self.assertIn(vp.KREA2_BODY_CANON, vp.krea2_prompt("bed", is_nsfw=True))
         self.assertNotIn("mole", vp.krea2_prompt("bed", is_nsfw=False))
         self.assertIn("mirror selfie", p)

@@ -121,13 +121,16 @@ KREA2_STACKS = {
     "n1": {"model": None, "steps": 8,
            "loras": {KREA2_LENOVO: 1.0, KREA2_REALISM_ENGINE: 0.8}},
     "n2": {"model": KREA2_YOGI, "steps": 8, "loras": {KREA2_SNAPSHOT: 0.6}},
+    # n3 (teste 24/09): FinePorn como base da foto normal — o rosto dela ficou lindo nele. A trava
+    # −1 (NSFW Helper) é obrigatória aqui: o checkpoint tem NSFW embutido.
+    "n3": {"model": KREA2_FINEPORN, "steps": 10, "scheduler": "beta", "loras": {}},
     "a": {"model": None, "steps": 8, "loras": {KREA2_SNOFS: 1.0, KREA2_NSFW_HELPER: 0.5}},
     "b": {"model": KREA2_AIO, "steps": 12, "loras": {}},
     "c": {"model": KREA2_YOGI, "steps": 8, "loras": {KREA2_REALISM_ENGINE: 0.7, KREA2_NSFW_HELPER: 0.5}},
     "d": {"model": None, "steps": 8, "loras": {KREA2_NSFW_V4: 1.0, KREA2_NSFW_HELPER: 0.5}},
     "e": {"model": KREA2_FINEPORN, "steps": 10, "scheduler": "beta", "loras": {}},
 }
-SFW_STACKS, NSFW_STACKS = ("n1", "n2"), ("a", "b", "c", "d", "e")
+SFW_STACKS, NSFW_STACKS = ("n1", "n2", "n3"), ("a", "b", "c", "d", "e")
 
 
 def ecosystem() -> str:
