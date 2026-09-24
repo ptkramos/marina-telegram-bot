@@ -101,6 +101,12 @@ KREA2_YOGI_25 = "urn:air:krea2:checkpoint:civitai:2786499@3231611"
 # FinePorn v4 (Patrick, 24/09): Turbo com Realism Engine, NSFW V4.3, Breasts&Nipples etc. já
 # embutidos → sem SNOFS/NSFW Helper por cima. Só a v4 nvfp4 fica no ar (a bf16 não carrega).
 KREA2_FINEPORN = "urn:air:krea2:checkpoint:civitai:2762538@3215452"
+# LoRAs de ocasião (Patrick, 24/09) — entram só quando a cena pede (CONDITIONAL abaixo).
+KREA2_SQUEEZE = "urn:air:krea2:lora:civitai:2761661@3161094"   # Breast squeezing V1 (gatilho "squeezing breasts")
+KREA2_WETNESS = "urn:air:krea2:lora:civitai:2738333@3079282"   # Wetness Slider (−1..1; o FinePorn embute negativo)
+KREA2_PHONE = "urn:air:krea2:lora:civitai:2796343@3151907"     # Elusarca Smartphone Photography Slider (1–2)
+PHONE_SELFIE_WEIGHT = 1.5
+PHONE_DESATURATE = 0.83   # o autor corrige −15 a −20 de saturação depois de gerar; fazemos no download
 KREA2_NICEGIRLS = "urn:air:krea2:lora:civitai:1862761@3075498"         # NiceGirls UltraReal (0.6-0.8)
 KREA2_LENOVO = "urn:air:krea2:lora:civitai:1662740@3075606"            # Lenovo UltraReal (1.2-2 no Turbo)
 KREA2_REALISM_V2 = "urn:air:krea2:lora:civitai:2728365@3090634"        # Krea2-realism V2 (1.0)
@@ -123,6 +129,8 @@ KREA2_STACKS = {
     "n2": {"model": KREA2_YOGI, "steps": 8, "loras": {KREA2_SNAPSHOT: 0.6}},
     # n3 (teste 24/09): FinePorn como base da foto normal — o rosto dela ficou lindo nele. A trava
     # −1 (NSFW Helper) é obrigatória aqui: o checkpoint tem NSFW embutido.
+    # 24/09: o slider de smartphone (1.5) em cima do FinePorn encheu a foto de granulado/purpurina —
+    # o autor usa sampler de 2 passadas que a API não tem. Fica fora (o código de selfie + cor fica pronto).
     "n3": {"model": KREA2_FINEPORN, "steps": 10, "scheduler": "beta", "loras": {}},
     "a": {"model": None, "steps": 8, "loras": {KREA2_SNOFS: 1.0, KREA2_NSFW_HELPER: 0.5}},
     "b": {"model": KREA2_AIO, "steps": 12, "loras": {}},
@@ -146,16 +154,24 @@ def ecosystem() -> str:
 def krea2_stack_name(*, is_nsfw: bool, stack: Optional[str] = None) -> str:
     s = _settings()
     if is_nsfw:
-        name = (stack or getattr(s, "CIVITAI_KREA2_NSFW_STACK", "") or "a").strip().lower()
-        return name if name in NSFW_STACKS else "a"
-    name = (stack or getattr(s, "CIVITAI_KREA2_SFW_STACK", "") or "n1").strip().lower()
-    return name if name in SFW_STACKS else "n1"
+        name = (stack or getattr(s, "CIVITAI_KREA2_NSFW_STACK", "") or "e").strip().lower()
+        return name if name in NSFW_STACKS else "e"
+    name = (stack or getattr(s, "CIVITAI_KREA2_SFW_STACK", "") or "n3").strip().lower()
+    return name if name in SFW_STACKS else "n3"
 
 
 # 24/09 (Patrick): o Lenovo ("cara de foto de celular") só na selfie — em foto de
 # corpo inteiro, junto com o LoRA dela (dataset quase todo de perto), ele virava
 # tudo selfie, mesmo com o prompt dizendo "não é selfie".
-SELFIE_ONLY = {KREA2_LENOVO}
+SELFIE_ONLY = {KREA2_LENOVO, KREA2_PHONE}
+# (lora, peso, palavras da cena que ligam, só adulta?, frase-gatilho que o LoRA precisa no prompt)
+CONDITIONAL = (
+    (KREA2_SQUEEZE, 0.8, ("squeezing her breast", "grabbing her breast", "holding her breasts", "squeezing breasts",
+                          "grabbing breasts", "cupping her breasts", "apertando os seios", "segurando os seios"),
+     True, "squeezing breasts"),
+    (KREA2_WETNESS, 1.2, ("wet ", "wet,", "wet.", "soaked", "dripping", "rain", "shower", "bath", "pool", "sea water",
+                          "molhad", "chuva", "banho", "piscina"), False, ""),
+)
 # De longe o rosto aparece pequeno: o LoRA dela um pouco mais fraco deixa a pose livre
 # (o Patrick viu isso na época 6 do treino).
 MARINA_WEIGHT_DISTANT = 0.9   # 0.8 soltou a pose; 0.9 = escolha do Patrick pra segurar mais o rosto
@@ -177,17 +193,37 @@ def select_loras_krea2(*, is_nsfw: bool, stack: Optional[str] = None,
     return loras
 
 
+def conditional_loras(prompt: str, *, is_nsfw: bool) -> tuple[dict, list[str]]:
+    """LoRAs de ocasião que a cena liga, e as frases-gatilho que faltam no prompt."""
+    low = (prompt or "").lower()
+    loras, triggers = {}, []
+    for air, weight, words, adult_only, trigger in CONDITIONAL:
+        if adult_only and not is_nsfw:
+            continue
+        if any(w in low for w in words):
+            loras[air] = weight
+            if trigger and trigger not in low:
+                triggers.append(trigger)
+    return loras, triggers
+
+
 def build_workflow_krea2(prompt: str, *, is_nsfw: bool, width: int = 1024, height: int = 1536,
                          seed: Optional[int] = None, stack: Optional[str] = None,
                          breast_slider: Optional[float] = None) -> dict:
     name = krea2_stack_name(is_nsfw=is_nsfw, stack=stack)
     spec = KREA2_STACKS[name]
+    extra, triggers = conditional_loras(prompt, is_nsfw=is_nsfw)
+    if triggers:
+        prompt = f"{prompt} {', '.join(triggers).capitalize()}."
     step = {"engine": "comfy", "ecosystem": "krea2", "model": "turbo", "operation": "createImage",
             "prompt": prompt, "width": width, "height": height, "steps": spec["steps"], "cfgScale": 1,
             "sampler": "euler", "scheduler": spec.get("scheduler", "simple"),
             "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
             "quantity": 1, "loras": select_loras_krea2(is_nsfw=is_nsfw, stack=name, breast_slider=breast_slider,
                                                        selfie=NOT_SELFIE_MARK not in prompt)}
+    step["loras"].update(extra)
+    if KREA2_PHONE in KREA2_STACKS[name]["loras"] and NOT_SELFIE_MARK in prompt:
+        step["loras"].pop(KREA2_PHONE, None)
     if spec["model"]:
         step["diffusionModel"] = spec["model"]
     body = {"steps": [{"$type": "imageGen", "input": step}], "allowMatureContent": bool(is_nsfw)}
@@ -302,6 +338,8 @@ async def generate(prompt: str, *, is_nsfw: bool, focus_angle: str = "frontal",
                 logger.warning("civitai.blob_unavailable id=%s reason=%s", image.get("id"), image.get("blockedReason"))
                 continue
             data = await _download(session, headers, image)
+            if data and KREA2_PHONE in (body["steps"][0]["input"].get("loras") or {}):
+                data = _desaturate(data, PHONE_DESATURATE)
             if data:
                 logger.info("civitai.image_ok id=%s bytes=%d", wf_id, len(data))
                 return io.BytesIO(data)
@@ -313,6 +351,19 @@ async def generate(prompt: str, *, is_nsfw: bool, focus_angle: str = "frontal",
     finally:
         if own:
             await session.close()
+
+
+def _desaturate(data: bytes, factor: float) -> bytes:
+    """Correção de cor do slider de smartphone (o autor pede −15 a −20 de saturação)."""
+    try:
+        from PIL import Image, ImageEnhance
+        img = Image.open(io.BytesIO(data)).convert("RGB")
+        out = io.BytesIO()
+        ImageEnhance.Color(img).enhance(factor).save(out, format="JPEG", quality=93)
+        return out.getvalue()
+    except Exception as exc:
+        logger.warning("civitai.desaturate_failed %s", type(exc).__name__)
+        return data
 
 
 async def _download(session: aiohttp.ClientSession, headers: dict, image: dict) -> Optional[bytes]:

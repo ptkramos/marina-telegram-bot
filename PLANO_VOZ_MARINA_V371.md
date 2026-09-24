@@ -1016,6 +1016,15 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - **uma pinta só, fixa, na curva de cima do seio esquerdo** (decisão do Patrick);
   - depilada, pequena, lábios rosa-claro; ânus pequeno e rosado.
   - Se as mesmas palavras não bastarem, o próximo passo é um LoRA só de corpo, treinado com as fotos em que ele sair certo.
+- **Motor decidido (Patrick, 24/09, noite): FinePorn v4 (nvfp4) nas duas.** Padrões: `CIVITAI_KREA2_SFW_STACK=n3`, `CIVITAI_KREA2_NSFW_STACK=e`.
+  - **Configuração:** 10 passos, euler/beta, CFG 1; por cima só marinaX, Emotions 0.6 e slider 2.5; na foto normal, a trava −1.
+  - **Corpo canônico:** **sem pinta nenhuma** ("no moles or dots"). Toda tentativa de "uma pinta só" gerava 3 ou 4.
+  - **Cor do mamilo e da vulva:** amarrada ao rosa da boca. Segundo o Patrick, na foto explícita ainda não mudou; o FinePorn embute um LoRA de seios e mamilos que deve pesar mais.
+  - **Foto normal:** a camiseta branca marca o mamilo (o NSFW embutido vaza).
+- **LoRAs de ocasião** (`civitai_images.CONDITIONAL`, entram quando a cena pede):
+  - **Breast squeezing** (0.8, só na foto adulta): entra com "squeezing/grabbing/holding her breasts" ou "apertando/segurando os seios" e põe o gatilho "squeezing breasts" no prompt. ⚠️ A licença do autor proíbe uso em "produto, serviço ou API comercial"; o nosso uso é pessoal, pelo gerador do Civitai. O Patrick ficou sabendo.
+  - **Wetness slider** (1.2): entra com "wet", "rain", "shower", "molhada", "chuva", "banho"… Testado na foto do pós-banho, ficou ótimo.
+  - **Smartphone Photography slider:** em 1.5 em cima do FinePorn, encheu a selfie de granulado e purpurina. **Fora.** O código de selfie + correção de cor (−17% de saturação) ficou pronto, se quisermos tentar de novo.
 - **Teste quando o LoRA chegar:** 2 cenas normais × (n1, n2), 2 cenas adultas × (a, b, c, d) e a grade do slider. Mesma semente, uns 16 retratos, ~400 Buzz. O Patrick escolhe pelo olho.
 
 ### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅

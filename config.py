@@ -139,8 +139,8 @@ class Settings:
     CIVITAI_ECOSYSTEM: str = os.getenv("CIVITAI_ECOSYSTEM", "flux1").strip().lower()   # flux1 | krea2
     CIVITAI_LORA_MARINA_KREA2: str = os.getenv("CIVITAI_LORA_MARINA_KREA2", "").strip()   # AIR do LoRA Krea 2 dela
     CIVITAI_BREAST_SLIDER: float = float(os.getenv("CIVITAI_BREAST_SLIDER", "2.5") or 0)   # -5..5 nua; 2.5 = escolha do Patrick (24/09)
-    CIVITAI_KREA2_SFW_STACK: str = os.getenv("CIVITAI_KREA2_SFW_STACK", "n1").strip().lower()     # n1 | n2
-    CIVITAI_KREA2_NSFW_STACK: str = os.getenv("CIVITAI_KREA2_NSFW_STACK", "a").strip().lower()    # a | b | c | d | e (FinePorn)
+    CIVITAI_KREA2_SFW_STACK: str = os.getenv("CIVITAI_KREA2_SFW_STACK", "n3").strip().lower()     # n1 | n2
+    CIVITAI_KREA2_NSFW_STACK: str = os.getenv("CIVITAI_KREA2_NSFW_STACK", "e").strip().lower()    # a | b | c | d | e (FinePorn)
 
     # Ciclo de vontade própria e iniciativa autônoma
     AUTONOMOUS_CHECK_INTERVAL_MINUTES: int = int(os.getenv("AUTONOMOUS_CHECK_INTERVAL_MINUTES", "30"))

@@ -100,14 +100,14 @@ KREA2_NUDE = {
 }
 # Corpo canônico (Patrick, 24/09): o da foto "adulta_a" da rodada 2 (pilha a, slider 2.5).
 # Sempre as MESMAS palavras em toda foto adulta — é o que segura o corpo igual de uma
-# foto pra outra. Uma pinta só, fixa, no seio esquerdo (decisão do Patrick).
+# foto pra outra. Pinta: tentativas de "uma só" viraram 3–4 → sem pinta nenhuma (Patrick, 24/09).
 # 24/09 (teste): "full" + slider 2.5 aumentou demais — o tamanho fica só com o slider;
 # "single beauty mark… no other moles" virou 3–4 pintas: posição concreta obedece melhor.
 # 24/09 (FinePorn): "rosa" solto saía bege/amarronzado — amarrar a cor à boca dela segura o tom.
 KREA2_BODY_CANON = (
     "Her breasts are round and natural, with medium areolas and small nipples in a clear soft pink, the "
-    "same light pink as her lips, and pale triangle bikini tan lines on them. She has a single unique "
-    "tiny dark mole just above her left nipple; no freckles or dots anywhere else on her chest. Her pussy "
+    "same light pink as her lips, and pale triangle bikini tan lines on them. Her skin is clear and smooth, with no moles or dots "
+    "on her chest or body. Her pussy "
     "is fully shaved, small and neat, with clear light pink inner lips, the same soft pink as her nipples, "
     "framed by a pale bikini-bottom tan line. Her anus is small, tight and light pink."
 )

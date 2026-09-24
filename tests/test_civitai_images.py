@@ -173,9 +173,37 @@ class Krea2Test(unittest.TestCase):
 
     def test_a_normal_stack_name_never_serves_an_adult_photo(self):
         self.fake.CIVITAI_KREA2_NSFW_STACK = "n1"
-        self.assertEqual(ci.krea2_stack_name(is_nsfw=True), "a")
+        self.assertEqual(ci.krea2_stack_name(is_nsfw=True), "e")
         self.fake.CIVITAI_KREA2_SFW_STACK = "c"
-        self.assertEqual(ci.krea2_stack_name(is_nsfw=False), "n1")
+        self.assertEqual(ci.krea2_stack_name(is_nsfw=False), "n3")
+
+    def test_occasion_loras_follow_the_scene(self):
+        grab = ci.build_workflow_krea2("She is naked, squeezing her breasts with both hands", is_nsfw=True, stack="e")
+        inp = grab["steps"][0]["input"]
+        self.assertEqual(inp["loras"][ci.KREA2_SQUEEZE], 0.8)
+        self.assertIn("Squeezing breasts.", inp["prompt"], "gatilho do LoRA entra no prompt")
+        wet = ci.build_workflow_krea2("right after the shower, wet hair", is_nsfw=False, stack="n3")["steps"][0]["input"]
+        self.assertIn(ci.KREA2_WETNESS, wet["loras"])
+        self.assertNotIn(ci.KREA2_SQUEEZE, wet["loras"])
+        plain = ci.build_workflow_krea2("sitting on the couch", is_nsfw=True, stack="e")["steps"][0]["input"]
+        self.assertFalse({ci.KREA2_SQUEEZE, ci.KREA2_WETNESS} & set(plain["loras"]))
+        sfw_grab = ci.build_workflow_krea2("holding her breasts", is_nsfw=False, stack="n3")["steps"][0]["input"]
+        self.assertNotIn(ci.KREA2_SQUEEZE, sfw_grab["loras"], "LoRA de apertar os seios só na foto adulta")
+
+    def test_phone_slider_only_on_selfies_and_colors_are_corrected(self):
+        stacks = dict(ci.KREA2_STACKS)
+        stacks["n3"] = {**stacks["n3"], "loras": {ci.KREA2_PHONE: ci.PHONE_SELFIE_WEIGHT}}
+        with patch.object(ci, "KREA2_STACKS", stacks):
+            selfie = ci.build_workflow_krea2("a close-up selfie", is_nsfw=False, stack="n3")["steps"][0]["input"]["loras"]
+            far = ci.build_workflow_krea2("whole body, not a selfie", is_nsfw=False, stack="n3")["steps"][0]["input"]["loras"]
+        self.assertEqual(selfie[ci.KREA2_PHONE], ci.PHONE_SELFIE_WEIGHT)
+        self.assertNotIn(ci.KREA2_PHONE, far)
+        import io as _io
+        from PIL import Image
+        buf = _io.BytesIO()
+        Image.new("RGB", (8, 8), (255, 0, 0)).save(buf, format="JPEG")
+        out = Image.open(_io.BytesIO(ci._desaturate(buf.getvalue(), 0.5))).getpixel((4, 4))
+        self.assertLess(out[0] - out[1], 200, "menos saturada")
 
 
 class Krea2PromptTest(unittest.TestCase):
@@ -205,9 +233,9 @@ class Krea2PromptTest(unittest.TestCase):
         import visual_profile as vp
         p = vp.krea2_prompt("bathroom", is_nsfw=True, focus_angle="behind", is_mirror=True)
         self.assertIn("Seen from behind", p)
-        self.assertIn("single unique tiny dark mole just above her left nipple", p, "corpo canônico")
+        self.assertIn("no moles or dots", p, "corpo canônico: sem pinta (Patrick, 24/09)")
         self.assertIn(vp.KREA2_BODY_CANON, vp.krea2_prompt("bed", is_nsfw=True))
-        self.assertNotIn("mole", vp.krea2_prompt("bed", is_nsfw=False))
+        self.assertNotIn("areolas", vp.krea2_prompt("bed", is_nsfw=False))
         self.assertIn("mirror selfie", p)
         self.assertIn("unblemished skin", p)
 
