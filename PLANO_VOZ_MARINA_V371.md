@@ -818,6 +818,26 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
 - **Treinar o LoRA Krea 2** também é possível pela API (`Krea2AIToolkitTrainingInput`), mas pelo site é mais simples.
 - **Plano:** o Patrick treina a Marina em Krea 2 no Civitai → eu troco o pipeline para Krea 2 Turbo + AIO + LoRA da Marina + LoRAs de realismo (e os adultos só em foto adulta), por configuração, e comparamos com o Flux. Obs.: o "BeMyHero - ScarlettX" do print é LoRA de personagem/rosto; no nosso pipeline, o rosto é o da Marina.
 
+**Krea 2: código pronto, esperando o LoRA novo (24/09):**
+
+| Pilha | LoRAs (AIR em `civitai_images.py`) | whatif |
+|---|---|---|
+| Normal | Krea 2 Turbo oficial + **Marina Krea 2 1.0** + NiceGirls UltraReal 0.8 + Lenovo UltraReal 1.0 + Krea2-realism V2 0.8 + Detailed Emotions 0.6 + Breast Size Slider (`CIVITAI_BREAST_SLIDER`) | 25 Buzz |
+| Adulta | Os mesmos + checkpoint **Krea2 turbo NSFW AIO** + TextFusion 1.0 + NSFW Helper 0.5 + SNOFS 0.7 | 28 Buzz (1344×2016: 44) |
+
+- Parâmetros dos prints: 8 passos, cfg 1, euler/simple, e **prompt em linguagem natural, longo e descritivo**. Nosso `visual_profile` hoje monta lista de tags. Próximo passo, quando o LoRA chegar: montar o prompt do Krea 2 em frases.
+- O "museByStableYogi" do primeiro prompt é SDXL/Pony/Illustrious, não Krea 2 (provável pós-processo). Ficou de fora.
+- **Receita de treino (inspirada no BeMyHero):**
+  - gatilho `marinaX, voluminous wavy chocolate brown hair with golden blonde tips`;
+  - ~60% rosto (ângulos, expressões e luzes variadas) e ~40% meio-corpo **vestida**, sem nudez, com o corpo vindo dos sliders;
+  - 25 a 40 fotos, em **1024** (o `marina_flux` foi treinado em 512: 2.500 passos, dim 32, lr 5e-4);
+  - legendas descrevem só o que não é ela.
+- **Para ligar:**
+  - `CIVITAI_ECOSYSTEM=krea2`;
+  - `CIVITAI_LORA_MARINA_KREA2=urn:air:krea2:lora:civitai:<modelo>@<versão>`;
+  - `CIVITAI_BREAST_SLIDER=<valor>`, calibrado numa grade de teste.
+  - Sem o LoRA dela, o bot fica no Flux: foto sem o rosto dela não serve.
+
 ### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅
 
 | Item | Como ficou |

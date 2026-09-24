@@ -80,6 +80,64 @@ def select_loras(*, is_nsfw: bool, focus_angle: str = "frontal", is_mirror_selfi
     return loras
 
 
+# ---------------------------------------------------------------- Krea 2 --
+# 24/09: o Patrick vai retreinar a Marina em Krea 2 ("outro nível"). A receita
+# pública do Krea 2 (FAL) não aceita LoRA, mas o motor Comfy aceita:
+# engine=comfy, ecosystem=krea2, model=turbo|raw, loras, diffusionModel.
+# Pilhas montadas a partir de dois prints da galeria que o Patrick trouxe e
+# aceitas no whatif: normal 25 Buzz, adulta 28 Buzz (1024×1536, 8 passos).
+KREA2_AIO = "urn:air:krea2:checkpoint:civitai:2732185@3071970"        # Krea2 turbo NSFW AIO v1.0
+KREA2_REALISM = {
+    "urn:air:krea2:lora:civitai:1862761@3075498": 0.8,   # NiceGirls UltraReal
+    "urn:air:krea2:lora:civitai:1662740@3075606": 1.0,   # Lenovo UltraReal
+    "urn:air:krea2:lora:civitai:2728365@3090634": 0.8,   # Krea2-realism V2
+    "urn:air:krea2:lora:civitai:2829908@3193133": 0.6,   # Detailed Emotions and Expressions
+}
+KREA2_BREAST_SLIDER = "urn:air:krea2:lora:civitai:2540187@3131773"   # valor padrão da Marina: CIVITAI_BREAST_SLIDER
+KREA2_ADULT = {
+    "urn:air:krea2:lora:civitai:2775340@3125118": 1.0,   # TextFusion Refusal-Reduction
+    "urn:air:krea2:lora:civitai:2779347@3130045": 0.5,   # NSFW Helper Slider
+    "urn:air:krea2:lora:civitai:1972981@3290120": 0.7,   # SNOFS Krea 2 v1.4
+}
+
+
+def ecosystem() -> str:
+    """flux1 (padrão) ou krea2 — krea2 só vale com o LoRA Krea 2 da Marina configurado."""
+    s = _settings()
+    wanted = (getattr(s, "CIVITAI_ECOSYSTEM", "") or "flux1").strip().lower()
+    if wanted == "krea2" and not (getattr(s, "CIVITAI_LORA_MARINA_KREA2", "") or "").strip():
+        logger.warning("civitai.krea2_sem_lora_da_marina — usando Flux (foto sem o rosto dela não serve)")
+        return "flux1"
+    return wanted if wanted in ("flux1", "krea2") else "flux1"
+
+
+def select_loras_krea2(*, is_nsfw: bool) -> dict:
+    s = _settings()
+    loras = {getattr(s, "CIVITAI_LORA_MARINA_KREA2").strip(): 1.0}   # o rosto dela manda (BeMyHero: sempre 1.0)
+    loras.update(KREA2_REALISM)
+    slider = float(getattr(s, "CIVITAI_BREAST_SLIDER", 1.0) or 0)
+    if slider:
+        loras[KREA2_BREAST_SLIDER] = slider
+    if is_nsfw:
+        loras.update(KREA2_ADULT)
+    return loras
+
+
+def build_workflow_krea2(prompt: str, *, is_nsfw: bool, width: int = 1024, height: int = 1536,
+                         seed: Optional[int] = None) -> dict:
+    step = {"engine": "comfy", "ecosystem": "krea2", "model": "turbo", "operation": "createImage",
+            "prompt": prompt, "width": width, "height": height, "steps": 8, "cfgScale": 1,
+            "sampler": "euler", "scheduler": "simple",
+            "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
+            "quantity": 1, "loras": select_loras_krea2(is_nsfw=is_nsfw)}
+    if is_nsfw:
+        step["diffusionModel"] = KREA2_AIO   # checkpoint sem censura só na adulta
+    body = {"steps": [{"$type": "imageGen", "input": step}], "allowMatureContent": bool(is_nsfw)}
+    if is_nsfw:
+        body["currencies"] = ["yellow"]
+    return body
+
+
 def base_model() -> str:
     """Modelo base (Flux.1 família, onde o LoRA da Marina funciona). CIVITAI_BASE_MODEL no .env troca."""
     return (getattr(_settings(), "CIVITAI_BASE_MODEL", "") or "").strip() or FLUX_DEV
@@ -132,9 +190,12 @@ async def generate(prompt: str, *, is_nsfw: bool, focus_angle: str = "frontal",
         return None
     headers = {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json",
                "User-Agent": USER_AGENT}
-    body = build_workflow(prompt, select_loras(is_nsfw=is_nsfw, focus_angle=focus_angle,
-                                               is_mirror_selfie=is_mirror_selfie), is_nsfw=is_nsfw,
-                          model=model, seed=seed)
+    if ecosystem() == "krea2" and model is None:
+        body = build_workflow_krea2(prompt, is_nsfw=is_nsfw, seed=seed)
+    else:
+        body = build_workflow(prompt, select_loras(is_nsfw=is_nsfw, focus_angle=focus_angle,
+                                                   is_mirror_selfie=is_mirror_selfie), is_nsfw=is_nsfw,
+                              model=model, seed=seed)
     own = session is None
     session = session or aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT_S + 30))
     try:

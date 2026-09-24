@@ -99,5 +99,37 @@ class CivitaiTest(unittest.TestCase):
             self.assertEqual(s.calls, [])
 
 
+class Krea2Test(unittest.TestCase):
+    """Pipeline Krea 2 (24/09): só liga com o LoRA Krea 2 da Marina."""
+
+    def setUp(self):
+        self.fake = SimpleNamespace(CIVITAI_API_KEY="tok", CIVITAI_ECOSYSTEM="krea2",
+                                    CIVITAI_LORA_MARINA_KREA2="urn:air:krea2:lora:civitai:1@2", CIVITAI_BREAST_SLIDER=1.5)
+        p = patch.object(ci, "_settings", return_value=self.fake)
+        p.start()
+        self.addCleanup(p.stop)
+
+    def test_without_her_krea2_lora_it_stays_on_flux(self):
+        self.fake.CIVITAI_LORA_MARINA_KREA2 = ""
+        self.assertEqual(ci.ecosystem(), "flux1")
+
+    def test_normal_photo_uses_official_turbo_and_no_adult_loras(self):
+        body = ci.build_workflow_krea2("p", is_nsfw=False)
+        step = body["steps"][0]["input"]
+        self.assertEqual((step["ecosystem"], step["model"], step["steps"], step["cfgScale"]), ("krea2", "turbo", 8, 1))
+        self.assertNotIn("diffusionModel", step)
+        self.assertEqual(step["loras"]["urn:air:krea2:lora:civitai:1@2"], 1.0)
+        self.assertEqual(step["loras"][ci.KREA2_BREAST_SLIDER], 1.5)
+        self.assertFalse(set(ci.KREA2_ADULT) & set(step["loras"]))
+        self.assertFalse(body["allowMatureContent"])
+
+    def test_adult_photo_uses_the_uncensored_checkpoint_and_yellow_buzz(self):
+        body = ci.build_workflow_krea2("p", is_nsfw=True)
+        step = body["steps"][0]["input"]
+        self.assertEqual(step["diffusionModel"], ci.KREA2_AIO)
+        self.assertTrue(set(ci.KREA2_ADULT) <= set(step["loras"]))
+        self.assertEqual(body["currencies"], ["yellow"])
+
+
 if __name__ == "__main__":
     unittest.main()
