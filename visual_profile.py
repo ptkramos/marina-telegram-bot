@@ -83,8 +83,9 @@ ANATOMY_NSFW_SIDE = (
 # loiras. "unblemished skin" segura as pintas que o Emotions adora inventar.
 KREA2_TRIGGER = "marinaX"
 KREA2_EMOTIONS_TRIGGER = "Detailed Emotions and Expressions"
+# 24/09 (bateria com o LoRA): "warm light amber" saiu amarelo demais na luz do dia.
 KREA2_IDENTITY = (
-    "a candid smartphone photo of a young Brazilian woman with warm light amber eyes, a few faint light "
+    "a candid smartphone photo of a young Brazilian woman with soft light amber-hazel eyes, a few faint light "
     "freckles across her nose and cheeks, and long chestnut brown hair with golden blonde tips, "
     "semi-straight with soft waves at the ends"
 )
@@ -103,6 +104,13 @@ KREA2_MIRROR = ("She is taking a mirror selfie, holding a black iPhone 16 Pro, h
                 "visible in the reflection.")
 KREA2_PHOTO = ("It looks like a real iPhone photo: natural light, real skin texture with visible pores, "
                "unblemished skin.")
+# 24/09: "corpo inteiro, câmera a alguns metros" saiu SELFIE nas duas pilhas —
+# "smartphone photo" + "iPhone photo" puxavam tudo pra câmera na mão dela.
+# Quando a cena é de longe, é alguém (amiga, fotógrafo) tirando a foto.
+KREA2_DISTANT = ("full body", "full-body", "corpo inteiro", "corpo todo", "few meters", "from a distance",
+                 "wide shot", "photographer", "taken by", "de longe", "walking", "standing on")
+KREA2_PHOTO_DISTANT = ("It is a real photo taken by a friend a few meters away with a phone, her whole body in the "
+                       "frame, not a selfie: natural light, real skin texture, unblemished skin.")
 _NOT_A_PHOTO = re.compile(r"\b(photo[- ]?realistic|hyper[- ]?realistic|ultra[- ]?realistic|high realism|realism|8k|masterpiece)\b",
                           re.IGNORECASE)
 
@@ -112,7 +120,9 @@ def krea2_prompt(scene: str, *, is_nsfw: bool, focus_angle: str = "frontal", is_
     scene = _NOT_A_PHOTO.sub("", scene or "")
     scene = re.sub(r"\s*,(\s*,)+\s*", ", ", scene)
     scene = re.sub(r"\s{2,}", " ", scene).strip(" ,.")
-    parts = [f"{KREA2_TRIGGER}, {KREA2_EMOTIONS_TRIGGER}. {KREA2_IDENTITY[0].upper()}{KREA2_IDENTITY[1:]}."]
+    distant = not is_mirror and any(k in scene.lower() for k in KREA2_DISTANT)
+    identity = KREA2_IDENTITY.replace("a candid smartphone photo of", "a candid full body photo of") if distant         else KREA2_IDENTITY
+    parts = [f"{KREA2_TRIGGER}, {KREA2_EMOTIONS_TRIGGER}. {identity[0].upper()}{identity[1:]}."]
     if scene:
         parts.append(f"Scene: {scene}.")
     if is_nsfw:
@@ -123,7 +133,7 @@ def krea2_prompt(scene: str, *, is_nsfw: bool, focus_angle: str = "frontal", is_
         parts.append(KREA2_BODY_SFW)
     if is_mirror:
         parts.append(KREA2_MIRROR)
-    parts.append(KREA2_PHOTO)
+    parts.append(KREA2_PHOTO_DISTANT if distant else KREA2_PHOTO)
     return " ".join(parts)
 
 

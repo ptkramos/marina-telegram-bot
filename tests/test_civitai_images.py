@@ -165,12 +165,22 @@ class Krea2PromptTest(unittest.TestCase):
         import visual_profile as vp
         p = vp.krea2_prompt("sitting on the couch, wearing pajamas, photorealistic, 8k", is_nsfw=False)
         self.assertTrue(p.startswith("marinaX, Detailed Emotions and Expressions."))
-        self.assertIn("amber eyes", p)
+        self.assertIn("amber-hazel eyes", p)
         self.assertIn("golden blonde tips", p)
         self.assertIn("fully clothed", p)
         self.assertNotIn("photorealistic", p.lower())
         self.assertNotIn("8k", p)
         self.assertNotIn("naked", p)
+
+    def test_distant_scene_is_not_a_selfie(self):
+        import visual_profile as vp
+        p = vp.krea2_prompt("A full body photo standing on a sidewalk, the camera a few meters away", is_nsfw=False)
+        self.assertIn("full body photo of", p)
+        self.assertIn("not a selfie", p)
+        self.assertNotIn("iPhone photo", p)
+        close = vp.krea2_prompt("A close-up selfie on the couch", is_nsfw=False)
+        self.assertIn("smartphone photo", close)
+        self.assertNotIn("not a selfie", close)
 
     def test_adult_prompt_follows_the_angle(self):
         import visual_profile as vp

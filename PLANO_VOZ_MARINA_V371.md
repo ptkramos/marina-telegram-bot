@@ -983,6 +983,14 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - traços dela e "unblemished skin";
   - "photo", nunca "photorealistic" (pedido do autor do SNOFS);
   - só vale quando `IMAGE_ENGINE=civitai` e o ecossistema é krea2.
+- **LoRA da Marina no ar (24/09, manhã):**
+  - A primeira publicação (`2960609@3354015`) nunca ficou disponível pra geração: ficou "queued" e depois passou pra "unavailable", com `requiresAuthorization`. Toda geração falhava e era estornada.
+  - O Patrick republicou como **`urn:air:krea2:lora:civitai:2961250@3354783`** (v1.1, época 8), que ficou "available" em 1 minuto.
+  - Pra conferir antes de gastar: `GET /v2/resources/{air}` → `availability.status`. A receita `prepareResource` pede pra carregar o recurso nos servidores.
+- **Rodada 1 (fotos normais, n1 × n2):**
+  - **O Patrick escolheu a n1**, que já é o padrão.
+  - O prompt puxava tudo pra selfie ("smartphone photo" + "iPhone photo"). Agora uma cena de corpo inteiro ou de longe vira "foto tirada por uma amiga a alguns metros, não é selfie".
+  - O âmbar dos olhos ficou mais suave ("soft light amber-hazel").
 - **Teste quando o LoRA chegar:** 2 cenas normais × (n1, n2), 2 cenas adultas × (a, b, c, d) e a grade do slider. Mesma semente, uns 16 retratos, ~400 Buzz. O Patrick escolhe pelo olho.
 
 ### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅
