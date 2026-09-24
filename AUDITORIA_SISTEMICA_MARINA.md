@@ -1395,6 +1395,12 @@ O disco tem 256 GB livres; foi pontual. Fica a mudança pra VPS, que já estava 
 - **D9:** faxineira paga pelo pai, **Dona Neide**, toda quinta; porteiro **Seu Jorge** (`canon_extras.py`: o seed é travado e as migrations são só de esquema); o pai paga só o apê e a mesada da comida; sem perrengue de gás e água.
 - **PLANO_VOZ:** o painel de status (seção 0) estava parado em 21/09. Foi refeito com o estado real, uma lista única de pendências e o resumo da pilha oficial de fotos.
 
+## Depois da auditoria (24/09, noite) — fotos e limpeza
+
+- **Código morto de imagem removido:** a GPU da Novita (`gpu_manager.py`, liga/desliga no `sd_client`), o ComfyUI, o SD local e todo o caminho do Flux (DNA, anatomias, LoRAs, `build_flux_prompt`, `CIVITAI_ECOSYSTEM`). Com o Flux como "plano B", uma foto sem o LoRA Krea 2 sairia com outro rosto; agora sem o LoRA não sai foto. A Novita segue só na voz. Linhas antigas do `.env` também saíram.
+- **C.1b feita:** apartamento canônico, zoom por palavras e diretor de cena (`photo_director.py`). Detalhes no PLANO_VOZ, seção C.1.
+- **Soak não resetado:** simulado o primeiro tick numa cópia do banco de produção (vida registrada desde 22/09): entram só 4 eventos plausíveis da casa (roupa na máquina ontem, Dona Neide hoje), nenhum casting e nenhuma doença retroativa. Um reset apagaria a conversa de 23–24/09 que as correções da #11 usam.
+
 ## O que estava certo
 
 "Tô na rua, saí pra encontrar a Júlia" às 14:53 e "cheguei sim" às 15:52 batiam com o mundo (a caminho 14:49–15:30).

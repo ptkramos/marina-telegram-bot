@@ -25,7 +25,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **B1/B2** Banco do que evitar e captura pelo chat | ✅ | `[COMO NÃO SOAR]`, `/bom`, `/ruim`, `/registro`. O `/feedback` virou caderno de correções (não vai pro prompt) |
 | **B3** Modelo | ✅ | Arena (Auditoria #9). Principal **GPT-5.6 Luna**, íntimo **Gemini 3.8 Flash**, reserva DeepSeek V4 Flash |
 | **B.5/B.6** Proatividade pelo estado e micro-despertares | ✅ | Micro-despertares feitos como D3 |
-| **C.1** Modo sexting | ✅ conversa · 🟡 fotos | Conversa: `intimacy.py`. **Fotos:** o motor está pronto (Krea 2, ver "Fotos"); falta a **C.1b**: ela decidir a foto e a pose pelo nível de excitação (diretor de cena) |
+| **C.1** Modo sexting | ✅ conversa · ✅ fotos (C.1b, 24/09) | Conversa: `intimacy.py`. Fotos: `photo_director.py` decide cômodo, roupa, pose, momento e expressão; no clima ela manda foto sozinha. Falta ver no uso real |
 | **C.2** Assistir junto | ⬜ | nada implementado |
 | **C.3** Rituais | ✅ | Bom dia, boa noite, cotidiano. Desde 24/09 nada sai de dentro do chuveiro |
 | **C.4** Locomoção viva | ✅ | `commute.py` + Distance Matrix + carona com o Theo |
@@ -44,7 +44,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
 | # | Pendência | De onde |
 |---|---|---|
-| 1 | **C.1b:** diretor de cena dela pras fotos. Feito: apê canônico, zoom, timer, regras. Falta: catálogo de poses, sessão com gancho, ela decidir mandar, expressão pelo humor (ver seção C.1) | Fotos |
+| 1 | **C.1b no uso real:** ver se as fotos que ela manda fazem sentido (nível, pose, cadência). Crescer o catálogo com as poses que o Patrick trouxer do site. Marquinha de cima larga na foto explícita (resistência do FinePorn, já conhecida) | Fotos |
 | 2 | **Trocar a chave do Civitai** (vazou num log local em 24/09) | Fotos |
 | 3 | **Mudar pra VPS** (o "disk is full" de 24/09 foi pontual) | Auditoria #11 |
 | 4 | D11 pra depois: "no médico" como estado, banheiro na virose, o pai ligando mais quando ela está doente, farmácia como saída, contágio | D11 |
@@ -234,7 +234,7 @@ claro de que vai voltar a dormir. Não é insônia — é o padrão humano real.
 "vigiar" o Patrick de madrugada; não persistir o micro-wake como evento
 memorável. É ruído humano, dá contexto, some.
 
-### Fase C.1 — Modo Sexting ✅ conversa (2026-09-22) · C.1b fotos 🟡 (motor de imagem pronto em 24/09; falta o diretor de cena)
+### Fase C.1 — Modo Sexting ✅ conversa (2026-09-22) · C.1b fotos ✅ (24/09)
 
 **Como ficou (decisões tomadas na implementação, com carta branca do Patrick):**
 - **Excitação fora de `estado_emocional`:** as emoções relaxam em horas; a excitação precisa subir e descer em minutos. Tabela própria `intimacy_state` (migration 021), meia-vida de 10 min, zerada pelo reset do soak.
@@ -252,9 +252,19 @@ memorável. É ruído humano, dá contexto, some.
 - **Foto de timer ✅:** ela mora sozinha — corpo inteiro em casa é "self-timer", sem citar o celular (citar desenhava o aparelho na foto).
 - **Regras do diretor ✅** (`KREA2_DIRECTOR_RULES`): roupa sem bojo exagerado (o slider fica em 2.5 — o exagero vem do bojo e do FinePorn, testado); postura variada, com a cabeça reta por padrão (o Krea 2 entorta em toda foto); todo objeto numa mão ou numa superfície (garrafa flutuante no teste da academia); **expressão pelo humor e pelo tesão dela**, como o corpo segue o peso.
 - **Poses:** eu escrevo a base (~40) e o Patrick traz as que achar no site (a API do Civitai não mostra mais os prompts das imagens — testado).
-- **Sessão com gancho (a fazer):** a primeira foto fixa cômodo, roupa, posição base e câmera; as seguintes só mexem o que faz sentido (mão, dedos, intensidade, lamber os dedos, gozar). Troca de posição só se a conversa pedir.
-- **Ela decide (a fazer):** meio-termo entre "um passo por vez" e "ela decide sozinha" — no modo íntimo ela manda foto quando quer provocar; pedido tipo "goza pra mim" vira o próximo momento da mesma cena.
+- **Sessão com gancho ✅:** a primeira foto fixa cômodo, roupa, posição base e câmera; as seguintes só mexem o que faz sentido (mão, dedos, intensidade, lamber os dedos, gozar). Troca de posição só se a conversa pedir.
+- **Ela decide ✅:** meio-termo entre "um passo por vez" e "ela decide sozinha" — no modo íntimo ela manda foto quando quer provocar; pedido tipo "goza pra mim" vira o próximo momento da mesma cena.
 - **Limpeza ✅:** a GPU da Novita, o ComfyUI, o SD local e o Flux saíram do código (a Novita fica só com a voz).
+
+**C.1b — como ficou o diretor (`photo_director.py`, 24/09, noite):**
+- **Catálogo:** 28 poses por cômodo, cada uma com a faixa de nível que aceita (0 dia a dia · 1 provocante vestida · 2 lingerie · 3 nua · 4 explícita), o zoom, quem segura a câmera e as mãos nomeadas. As explícitas têm **momentos em sequência**: mão na coxa → se tocando → dedos dentro → abrindo → lambendo os dedos → gozou (o Creamy entra sozinho no último).
+- **Nível:** teto pelo clima (`intimacy`: fora do clima 1, esquentando 2, desejo 3, explícito/clímax 4, depois do gozo 3). Se ele pede acima do teto, ela vai **um degrau além**; se pede dois acima do que já mandou, 30% das vezes ela provoca com um degrau só. Sem pedido de nível, no clima ela decide.
+- **Sessão (45 min):** guarda cômodo, pose, roupa, nível, momento e a **seed**. A foto seguinte repete a cena e só avança a mão; tirar a roupa mantém a cena. Troca de posição só com "deita/vira/de quatro/no chuveiro…". A sessão só grava depois que a foto chega no Telegram.
+- **Onde:** em casa, o cômodo vem do pedido, do que ela está fazendo (tomando banho → banheiro) ou da hora; fora de casa ela fica vestida (e a legenda provoca prometendo pra depois); "amiga tirando" só se tem alguém com ela.
+- **Expressão:** clímax, tesão, desejo, depois do gozo; fora do clima, o sentimento mais forte (saudade, chateação, empolgação…), cansaço, doença.
+- **Ela manda sozinha:** no modo íntimo o bloco oferece `[FOTO]`; no máximo uma a cada 12 min. O LLM do turno só escolhe a pose entre as que cabem.
+- **Selfie:** "braço direito esticado pra câmera", sem citar o celular (citar desenhava o aparelho na mão — mesmo bug do timer).
+- **Teste real:** 5 fotos (normal com saudade, provocante, lingerie, se tocando, gozou) em `scratchpad/fotos/07_diretor`. A cena se manteve entre as fotos e a expressão acompanhou.
 
 **Plano original (referência):**
 
