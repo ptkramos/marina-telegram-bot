@@ -112,9 +112,9 @@ KREA2_EMOTIONS_WEIGHT = 0.6
 KREA2_SFW_GUARD = -1.0   # NSFW Helper negativo na foto normal: trava extra contra nudez acidental
 
 KREA2_STACKS = {
-    # n1 = escolha do Patrick (24/09): Stable Yogi v2.5 INT8 Turbo, CFG 1, NiceGirls 0.8 + Lenovo 1.0 +
-    # Realism Engine 0.8 (+ Emotions, slider 2 e a trava −1, que entram em todas as fotos normais)
-    "n1": {"model": KREA2_YOGI_25, "steps": 8,
+    # n1 = escolha do Patrick (24/09): Krea 2 Turbo oficial (o da corpo_n1), CFG 1, NiceGirls 0.8 +
+    # Lenovo 1.0 (só selfie) + Realism Engine 0.8 (+ Emotions, slider 2.5 e a trava −1 em toda foto normal)
+    "n1": {"model": None, "steps": 8,
            "loras": {KREA2_NICEGIRLS: 0.8, KREA2_LENOVO: 1.0, KREA2_REALISM_ENGINE: 0.8}},
     "n2": {"model": KREA2_YOGI, "steps": 8, "loras": {KREA2_SNAPSHOT: 0.6}},
     "a": {"model": None, "steps": 8, "loras": {KREA2_SNOFS: 1.0, KREA2_NSFW_HELPER: 0.5}},

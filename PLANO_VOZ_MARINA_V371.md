@@ -1000,6 +1000,11 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
     - **O "Uncensored workflow":** é um workflow de ComfyUI, não um LoRA; pela API não dá pra usar.
   - **Custo e tempo:** ~27 Buzz por foto. Frio, o modelo leva ~3,5 min pra carregar; quente, ~2,5 min na fila de baixa prioridade. `TIMEOUT_S` subiu de 240 pra 420 s.
   - **Ainda aberto:** a foto de corpo inteiro continua saindo selfie mesmo com o prompt corrigido.
+  - **Revisão do Patrick (24/09, tarde):**
+    - A base **voltou pro Krea 2 Turbo oficial**, o da `corpo_n1`, que foi a foto preferida dele.
+    - O **Lenovo entra só em selfie**.
+    - O **slider fica em 2.5** (padrão no `config.py`).
+    - O Yogi v2.5 continua anotado (`KREA2_YOGI_25`), mas sai da pilha.
 - **Teste quando o LoRA chegar:** 2 cenas normais × (n1, n2), 2 cenas adultas × (a, b, c, d) e a grade do slider. Mesma semente, uns 16 retratos, ~400 Buzz. O Patrick escolhe pelo olho.
 
 ### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅
