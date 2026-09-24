@@ -202,14 +202,21 @@ class Krea2Test(unittest.TestCase):
 
     def test_body_follows_her_weight(self):
         self.assertEqual(ci.weight_slider(54.0), ci.WEIGHT_AT_BASE)
-        self.assertLess(ci.weight_slider(56.5), ci.weight_slider(54.0), "mais pesada = mais cheinha")
-        self.assertGreater(ci.weight_slider(52.0), ci.weight_slider(54.0))
-        self.assertEqual(ci.weight_slider(80), -3.0, "nunca passa do limite do LoRA")
-        self.assertNotIn(ci.KREA2_WEIGHT, ci.build_workflow_krea2("p", is_nsfw=False, stack="n3")["steps"][0]["input"]["loras"],
-                         "desligado: mexia na cabeça")
-        with patch.object(ci, "WEIGHT_SLIDER_ENABLED", True), patch.object(ci, "weight_slider", return_value=-0.7):
+        self.assertGreater(ci.weight_slider(56.5), ci.weight_slider(54.0), "mais pesada = mais cheinha (positivo)")
+        self.assertLess(ci.weight_slider(52.0), ci.weight_slider(54.0))
+        self.assertEqual(ci.weight_slider(80), 4.0, "nunca passa do limite sutil")
+        with patch.object(ci, "weight_slider", return_value=-0.7):
             loras = ci.build_workflow_krea2("p", is_nsfw=False, stack="n3")["steps"][0]["input"]["loras"]
         self.assertEqual(loras[ci.KREA2_WEIGHT], -0.7)
+
+    def test_canonical_body_sliders(self):
+        sfw = ci.build_workflow_krea2("p", is_nsfw=False, stack="n3")["steps"][0]["input"]["loras"]
+        nude = ci.build_workflow_krea2("p", is_nsfw=True, stack="e")["steps"][0]["input"]["loras"]
+        self.assertEqual((sfw[ci.KREA2_ASS], nude[ci.KREA2_ASS]), (2.5, 2.5), "bunda igual vestida e nua")
+        self.assertEqual(nude[ci.KREA2_GENITAL_COLOR], -3.0)
+        self.assertEqual((nude[ci.KREA2_AREOLA], nude[ci.KREA2_NIPPLE], nude[ci.KREA2_PUBES]), (-2.0, -1.0, -2.0))
+        self.assertFalse(set(ci.NUDE_SLIDERS) & set(sfw), "partes íntimas só na foto adulta")
+        self.assertNotIn(ci.KREA2_WEIGHT_OLD, nude)
 
     def test_spread_and_creamy_only_when_the_scene_asks(self):
         spread = ci.build_workflow_krea2("spreading her pussy with two fingers", is_nsfw=True, stack="e")["steps"][0]["input"]

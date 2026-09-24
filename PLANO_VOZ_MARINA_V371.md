@@ -1030,7 +1030,10 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - **Pussy Spread v2 (0.8)** e **Creamy Pussy (0.5, o mínimo, pra ser só o líquido saindo)** foram aprovados. São de ocasião e só entram na foto adulta: o Spread quando a cena fala em "abrir/spread", com o gatilho `vag_spread`; o Creamy quando ela goza ("came/orgasm/gozou"), com os gatilhos `creamythings, creamy vagina`. **Pretty Pussy foi reprovado.**
   - **Oiled Skin: reprovado.** Em 0.6, 0.4, 0.3 e 0.2, **e até só com texto**, o FinePorn desenhou escorridos esbranquiçados que parecem esperma: ele associa "algo espalhado no corpo" + NSFW a isso. Na cena "passando hidratante", a foto sai sem nada visível na pele. Outra lição: com CFG 1, negação vira pedido ("no white cream" pede creme branco); nunca escrever "sem X" no prompt.
   - **Better Pussy v4.2.1: reprovado.** Melhorava o aspecto, mas deixava a foto pálida e não mudava a cor, então não compensa.
-  - **Slider de peso: DESLIGADO** (`WEIGHT_SLIDER_ENABLED=False`), porque mudava o tamanho da cabeça dela. A ligação com o D1 descrita abaixo continua pronta no código.
+  - **Sliders do Loraholic (corpo canônico por slider, 24/09), aprovados pelo Patrick nas comparações lado a lado:**
+    - **Toda foto:** Ass and Thighs **2.5**, e Fat/Skinny ligado ao peso do D1 (54 kg = 0, +0.8 por kg, limite ±4). O positivo engorda. Ficou "perfeito, bem sutil" e não mexe na cabeça. O Body Weight antigo saiu.
+    - **Só na foto adulta:** Genital Color **−3** (o rosa aprovado), Areola **−2**, Protruding Nipples **−1** e Pubic Hair **−2**.
+    - **Labia Minora −2 reprovado:** deixou a vulva pequena demais. O tamanho aprovado é o da `genital_menos3`.
   - **Slider de peso (Body Weight v2) ligado ao D1:** base de 54 kg = 0.5 (magra e fit); cada kg a mais tira 0.75 (mais cheinha). Os limites do LoRA são −3 a 5. Entra em toda foto, normal e adulta. Testado com 54 × 56,5 kg: a cintura e o quadril mudam de leve, e o rosto e os seios ficam iguais.
   - **SNOFS 0.5 por cima do FinePorn:** testado com o prompt de close do Patrick. **Sem SNOFS ficou melhor.** Fica fora, assim como o TextFusion: o FinePorn não se recusa a nada.
 - **Referência de pose pra quando a Marina decidir as fotos (C.1b):** o prompt de close que o Patrick trouxe, adaptado a ela, deu a pose que ele mais gostou até agora. Os padrões que funcionaram:

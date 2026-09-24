@@ -108,7 +108,18 @@ KREA2_SPREAD = "urn:air:krea2:lora:civitai:2923413@3332400"    # Pussy Spread v2
 KREA2_CREAMY = "urn:air:krea2:lora:civitai:2931761@3318154"    # Creamy Pussy v0.1 (gatilhos "creamythings", "creamy vagina")
 KREA2_BETTER = "urn:air:krea2:lora:civitai:2729157@3288922"    # Better Pussy v4.2.1 — testado e REPROVADO (24/09)
 KREA2_OILED = "urn:air:krea2:lora:civitai:87685@3096878"      # Oiled Skin — REPROVADO (24/09): o FinePorn vira "esperma"
-KREA2_WEIGHT = "urn:air:krea2:lora:civitai:2858768@3229815"    # Body Weight Slider v2 (−3..5, maior = mais magra)
+KREA2_WEIGHT_OLD = "urn:air:krea2:lora:civitai:2858768@3229815"  # Body Weight v2 — mexia na cabeça (reprovado)
+# Sliders do Loraholic (Patrick, 24/09) — corpo canônico por slider, não por texto:
+KREA2_WEIGHT = "urn:air:krea2:lora:civitai:2554553@3073386"    # Fat/Skinny (−10..10, POSITIVO = mais cheinha)
+KREA2_GENITAL_COLOR = "urn:air:krea2:lora:civitai:2825933@3188207"   # −3 = o rosa aprovado
+KREA2_AREOLA = "urn:air:krea2:lora:civitai:2554618@3120387"
+KREA2_NIPPLE = "urn:air:krea2:lora:civitai:2554559@3191856"
+KREA2_PUBES = "urn:air:krea2:lora:civitai:2617090@3136749"
+KREA2_ASS = "urn:air:krea2:lora:civitai:2554616@3207249"
+# Corpo dela em toda foto (vestida ou nua: o corpo não muda entre as fotos).
+BODY_SLIDERS = {KREA2_ASS: 2.5}
+# Só na foto adulta (partes à mostra). Lábios menores −2 deixou a vulva pequena demais: fora.
+NUDE_SLIDERS = {KREA2_GENITAL_COLOR: -3.0, KREA2_AREOLA: -2.0, KREA2_NIPPLE: -1.0, KREA2_PUBES: -2.0}
 KREA2_TANLINES = "urn:air:krea2:lora:civitai:2840638@3206585"  # Bikini Tan Lines (AiMami) — gatilho "bikini tan-lines"
 KREA2_PHONE = "urn:air:krea2:lora:civitai:2796343@3151907"     # Elusarca Smartphone Photography Slider (1–2)
 # {perdedor: vencedor} quando dois LoRAs de ocasião brigam: óleo no pós-banho já brilha — a
@@ -206,6 +217,9 @@ def select_loras_krea2(*, is_nsfw: bool, stack: Optional[str] = None,
     loras[KREA2_EMOTIONS] = KREA2_EMOTIONS_WEIGHT
     if WEIGHT_SLIDER_ENABLED:
         loras[KREA2_WEIGHT] = weight_slider()   # D1: o corpo acompanha o peso dela
+    loras.update(BODY_SLIDERS)
+    if is_nsfw:
+        loras.update(NUDE_SLIDERS)
     slider = float(getattr(s, "CIVITAI_BREAST_SLIDER", 0) or 0) if breast_slider is None else breast_slider
     if slider:
         loras[KREA2_BREAST_SLIDER] = slider   # mesmo valor vestida e pelada: o corpo não muda entre as fotos
@@ -216,11 +230,11 @@ def select_loras_krea2(*, is_nsfw: bool, stack: Optional[str] = None,
 
 # Peso (D1) → slider de peso. Base 54 kg = WEIGHT_AT_BASE (magra, fit); cada kg a mais deixa
 # mais cheinha e cada kg a menos mais magra. A faixa do D1 (52–57 kg) cabe folgada no −3..5.
-# 24/09: DESLIGADO — o slider mudava o tamanho da cabeça dela (Patrick). A ligação com o D1
-# fica pronta pra um slider melhor.
-WEIGHT_SLIDER_ENABLED = False
-WEIGHT_AT_BASE = 0.5
-WEIGHT_PER_KG = 0.75
+# 24/09: o Body Weight mexia na cabeça; o Fat/Skinny do Loraholic ficou "perfeito, bem sutil"
+# (Patrick, testado em ±2). Positivo = mais cheinha. Base 54 kg = 0 (o corpo aprovado das fotos).
+WEIGHT_SLIDER_ENABLED = True
+WEIGHT_AT_BASE = 0.0
+WEIGHT_PER_KG = 0.8
 
 
 def weight_slider(kg: Optional[float] = None) -> float:
@@ -231,8 +245,8 @@ def weight_slider(kg: Optional[float] = None) -> float:
             kg = float(Meals(db_manager).weight()["kg"])
         except Exception:
             kg = 54.0
-    value = WEIGHT_AT_BASE + (54.0 - float(kg)) * WEIGHT_PER_KG
-    return round(max(-3.0, min(5.0, value)), 2)
+    value = WEIGHT_AT_BASE + (float(kg) - 54.0) * WEIGHT_PER_KG
+    return round(max(-4.0, min(4.0, value)), 2)
 
 
 def conditional_loras(prompt: str, *, is_nsfw: bool) -> tuple[dict, list[str]]:
