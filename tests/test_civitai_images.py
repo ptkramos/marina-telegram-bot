@@ -189,6 +189,9 @@ class Krea2Test(unittest.TestCase):
                       "gatilho do LoRA + mamilo pequeno entram no prompt")
         wet = ci.build_workflow_krea2("right after the shower, wet hair", is_nsfw=False, stack="n3")["steps"][0]["input"]
         self.assertIn(ci.KREA2_WETNESS, wet["loras"])
+        aroused = ci.build_workflow_krea2("her pussy visibly wet and glistening with arousal", is_nsfw=True,
+                                          stack="e")["steps"][0]["input"]
+        self.assertNotIn(ci.KREA2_WETNESS, aroused["loras"], "molhada de excitação: só o texto")
         self.assertNotIn(ci.KREA2_SQUEEZE, wet["loras"])
         plain = ci.build_workflow_krea2("sitting on the couch", is_nsfw=True, stack="e")["steps"][0]["input"]
         self.assertFalse({ci.KREA2_SQUEEZE, ci.KREA2_WETNESS} & set(plain["loras"]))

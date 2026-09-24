@@ -182,8 +182,11 @@ CONDITIONAL = (
     # Creamy só na intensidade mínima: o líquido saindo, sem virar "gozo" (Patrick, 24/09).
     (KREA2_CREAMY, 0.5, ("she came", "just came", "right after she came", "orgasm", "cumming", "climax",
                          "gozou", "gozando", "gozar", "creamy"), True, "creamythings, creamy vagina"),
-    (KREA2_WETNESS, 1.2, ("wet ", "wet,", "wet.", "soaked", "dripping", "rain", "shower", "bath", "pool", "sea water",
-                          "molhad", "chuva", "banho", "piscina"), False, ""),
+    # Molhada só de ÁGUA (banho, chuva, piscina, mar). Molhada de excitação ficou melhor SEM o slider
+    # (teste do Patrick, 24/09) — aí quem descreve é o texto do prompt.
+    (KREA2_WETNESS, 1.2, ("shower", "bath", "bathtub", "rain", "pool", "swimming", "in the sea", "ocean", "beach water",
+                          "soaked", "wet hair", "banho", "chuva", "piscina", "no mar", "de biquíni molhado"),
+     False, ""),
 )
 # De longe o rosto aparece pequeno: o LoRA dela um pouco mais fraco deixa a pose livre
 # (o Patrick viu isso na época 6 do treino).

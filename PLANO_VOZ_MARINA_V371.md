@@ -1023,7 +1023,7 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - **Foto normal:** a camiseta branca marca o mamilo (o NSFW embutido vaza).
 - **LoRAs de ocasião** (`civitai_images.CONDITIONAL`, entram quando a cena pede):
   - **Breast squeezing** (0.8, só na foto adulta): entra com "squeezing/grabbing/holding her breasts" ou "apertando/segurando os seios" e põe o gatilho "squeezing breasts" no prompt. ⚠️ A licença do autor proíbe uso em "produto, serviço ou API comercial"; o nosso uso é pessoal, pelo gerador do Civitai. O Patrick ficou sabendo.
-  - **Wetness slider** (1.2): entra com "wet", "rain", "shower", "molhada", "chuva", "banho"… Testado na foto do pós-banho, ficou ótimo.
+  - **Wetness slider** (1.2): **só com água**: banho, chuva, piscina, mar, cabelo molhado. Ficou ótimo no pós-banho. **Molhada de excitação ficou melhor sem ele** (teste do Patrick, 24/09); nesse caso quem descreve é o texto do prompt.
   - **Smartphone Photography slider:** em 1.5 encheu a foto de purpurina. **Em 0.8 ficou "perfeito"** (Patrick). Entra em **todas** as fotos (normal e adulta, selfie e de longe), com −17% de saturação no download.
   - **Breast squeezing aprovado em 0.6** (em 0.8 o mamilo crescia), sempre com "her nipples stay small and delicate".
   - **Marquinha de biquíni:** o texto passou a pedir "micro biquíni" (menor embaixo; em cima o FinePorn resiste). Não escrever "G-string", porque o modelo desenha a calcinha. O **LoRA Bikini Tan Lines (AiMami) em 0.6** entra só na foto adulta, com o gatilho "bikini tan-lines". Ele deixa a marca realista (tirinhas, borda suave), mas não muda o tamanho.
