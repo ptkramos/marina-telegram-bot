@@ -46,9 +46,29 @@ class CasaTest(unittest.TestCase):
             self.assertNotIn(0, days)
             self.assertNotIn(6, days)
 
-    def test_weekend_cleanup_most_weekends(self):
-        done = sum(1 for m in self.weeks if "geral" in self._week_keys(m))
+    def test_cleaner_every_thursday_and_her_own_mess_on_weekends(self):
+        for monday in self.weeks:
+            thursday = [p["key"] for p in self.casa.day_plan(monday + timedelta(days=3))]
+            self.assertIn(f"casa:{(monday + timedelta(days=3)).isoformat()}:faxina_chegou", thursday)
+        done = sum(1 for m in self.weeks if "bagunca" in self._week_keys(m))
         self.assertGreaterEqual(done, 7)
+        texts = " ".join(p["summary"] for m in self.weeks for i in range(7) for p in self.casa.day_plan(m + timedelta(days=i)))
+        self.assertNotIn("gás", texts.replace("gás)", ""), "sem perrengue de gás")
+        self.assertNotIn("água vai ser cortada", texts)
+
+    def test_cleaner_and_doorman_are_canon_once_the_world_exists(self):
+        import canon_extras
+        from seed_world_bible_v36 import seed_world_bible
+        self.assertEqual(canon_extras.ensure(self.db), 0, "mundo não semeado: não cria nada")
+        seed_world_bible(self.db)
+        self.assertEqual(canon_extras.ensure(self.db), 2)
+        self.assertEqual(canon_extras.ensure(self.db), 0, "idempotente")
+
+    def test_her_own_bills_vs_dads(self):
+        days = [date(2026, 9, 1) + timedelta(days=i) for i in range(60)]
+        keys = [p["key"].split(":")[2] for d in days for p in self.casa.day_plan(d)]
+        self.assertEqual(keys.count("contas"), 2)
+        self.assertEqual(keys.count("contas_dela"), 2)
 
     def test_bills_once_a_month_around_the_10th(self):
         days = [date(2026, 9, 1) + timedelta(days=i) for i in range(90)]
@@ -77,7 +97,7 @@ class CasaTest(unittest.TestCase):
     def test_she_feels_it(self):
         ev = lambda key, text: appraise_event({"event_key": key, "event_type": "routine", "summary": text})
         self.assertEqual(ev("casa:2026-09-08:roupa_esquecida", "Esqueceu a roupa")[0][1], "frustracao")
-        self.assertEqual(ev("casa:2026-09-12:geral", "Faxina")[0][1], "alivio")
+        self.assertEqual(ev("casa:2026-09-11:geral", "A Dona Neide terminou a faxina")[0][1], "alivio")
         self.assertEqual(ev("casa:2026-09-12:perrengue", "A lâmpada do banheiro queimou.")[0][1], "irritacao")
         self.assertEqual(ev("casa:2026-09-08:roupa", "Botou uma máquina"), [])
 

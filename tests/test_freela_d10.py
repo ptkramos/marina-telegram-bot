@@ -73,14 +73,17 @@ class FreelaTest(unittest.TestCase):
             self.assertIn("Casting", current["activity"])
             self._walk(plan)
         steps = [e["event_key"].rsplit(":", 1)[-1] for e in _events(self.db, plan["key"])]
-        self.assertEqual(steps, ["oferta", "casting", "resultado", "prova", "job", "cache"])
+        self.assertEqual(steps, ["oferta", "casting", "resultado", "sinal", "prova", "job", "cache"])
         result = _events(self.db, f"{plan['key']}:resultado")[0]["summary"]
         self.assertIn("PASSOU", result)
         cache = _events(self.db, f"{plan['key']}:cache")[0]
         job = _events(self.db, f"{plan['key']}:job")[0]
         gap = datetime.fromisoformat(cache["event_at"]) - datetime.fromisoformat(job["event_at"])
-        self.assertGreaterEqual(gap.days, 29)
-        self.assertIn(f"R$ {plan['pay']}", cache["summary"])
+        self.assertLessEqual(gap, timedelta(days=1), "o resto cai no máximo 1 dia depois do job")
+        sinal = _events(self.db, f"{plan['key']}:sinal")[0]
+        half = plan["pay"] // 2
+        self.assertIn(f"R$ {half}", sinal["summary"], "metade na aprovação")
+        self.assertIn(f"R$ {plan['pay'] - half}", cache["summary"])
 
     def test_rejected_path_stops_at_the_answer(self):
         plan = self._offer()

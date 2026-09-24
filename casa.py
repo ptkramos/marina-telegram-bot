@@ -8,14 +8,17 @@ o que já aconteceu vira acontecimento do dia (`life_events`, chave
 `casa:<dia>:<o quê>`), que o motor emocional lê (emotion.appraise_event).
 O mercado vira estado ("no mercado") por uns 45–70 min.
 
-Decisões PROVISÓRIAS (Patrick dormindo em 24/09 pediu pra eu decidir e
-catalogar — PLANO_VOZ, seção D9):
-1. Ela mesma cuida da casa (sem diarista): máquina 2×/semana, geral no fim de
-   semana. O cânone manda não inventar gente nova ("undefined details must
-   remain undefined").
-2. Mercado 1×/semana, depois que o pai manda o dinheiro da semana (segunda);
-   o pai banca comida e contas (D1/D12), então o fim do mês NÃO aperta.
-3. As contas do apê chegam por volta do dia 10 e ela manda pro pai.
+Decisões do Patrick (24/09, revisão da tarde):
+1. O Henrique paga uma faxineira, a **Dona Neide** (canônica, `canon_extras.py`):
+   ela vai TODA QUINTA, mesmo com a Marina fora de casa. O porteiro, **Seu
+   Jorge** (canônico), libera a entrada dela, recebe as encomendas e rende
+   história. A Marina cuida da bagunça DELA (quarto, closet, louça, roupa); a
+   faxineira cuida do geral.
+2. O Henrique paga o que é do apartamento (aluguel, condomínio, luz, internet,
+   gás) e a mesada da comida; o resto é a Marina quem paga (celular,
+   streamings, unha, roupa, rolês…), com o dinheiro dos jobs.
+3. Prédio de padrão médio/alto: nada de perrengue de gás (é encanado) nem de
+   água; problema do prédio é raro.
 """
 from __future__ import annotations
 
@@ -27,17 +30,25 @@ LAUNDRY_DAYS_PER_WEEK = 2
 LAUNDRY_FORGOT_CHANCE = 0.15
 CLEANUP_SKIP_CHANCE = 0.2            # às vezes o fim de semana passa e a geral fica pra depois
 GROCERY_FORGOT_CHANCE = 0.25
-MISHAP_CHANCE = 0.05                 # por dia → 1–2 perrengues por mês
+MISHAP_CHANCE = 0.05                 # por dia → 1–2 coisinhas do apê/prédio por mês
+# Sem gás nem água (gás encanado, prédio médio/alto — Patrick, 24/09).
 MISHAPS = (
     ("a lâmpada do banheiro queimou", "raiva"),
-    ("o chuveiro ficou frio do nada e ela teve que chamar o porteiro", "raiva"),
     ("a internet do apê caiu por umas duas horas", "raiva"),
-    ("o gás do fogão acabou bem na hora de cozinhar", "raiva"),
     ("achou a blusa que achava que tinha perdido, no fundo do armário", "alegria"),
-    ("o síndico colou aviso de que a água vai ser cortada amanhã de manhã", "raiva"),
+    ("o Seu Jorge, o porteiro, segurou uma encomenda dela que chegou enquanto ela tava fora", "alegria"),
+    ("o Seu Jorge contou uma fofoca do prédio quando ela passou pela portaria", "alegria"),
+    ("o elevador social ficou parado a tarde toda e ela teve que ir pelo de serviço", "raiva"),
 )
+FAXINEIRA = "neide_souza"
+PORTEIRO = "jorge_almeida"
+CLEANING_WEEKDAY = 3                 # quinta
+HER_OWN_CHORES = ("arrumou o quarto e o closet, que tava um caos",
+                  "lavou a louça que tava acumulada na pia",
+                  "trocou a roupa de cama",
+                  "deu um jeito na bagunça dela ouvindo música")
 GROCERY_FORGOT = ("o leite", "o papel higiênico", "o sabão de roupa", "a ração do Milo", "o café")
-BILLS = ("luz", "internet", "condomínio")
+BILLS = ("aluguel", "condomínio", "luz", "internet", "gás")   # tudo do apê é o Henrique
 
 
 def _rng(day: date, name: str) -> random.Random:
@@ -85,15 +96,20 @@ class Casa:
             else:
                 plan.append({"key": f"casa:{iso}:varal", "at": start + timedelta(minutes=rng.randint(70, 100)),
                              "summary": "Tirou a roupa da máquina e estendeu no varal."})
-        if day.weekday() == 5 + _rng(_week(day), "geral_dia").randint(0, 1):
-            rng = _rng(day, "geral")
+        if day.weekday() == CLEANING_WEEKDAY:
+            rng = _rng(day, "faxineira")
+            chega = datetime.combine(day, time(8, 0)) + timedelta(minutes=rng.randint(0, 50))
+            plan.append({"key": f"casa:{iso}:faxina_chegou", "at": chega, "people": [FAXINEIRA, PORTEIRO],
+                         "summary": "A Dona Neide chegou pra faxina de quinta (o Seu Jorge liberou a entrada)."})
+            plan.append({"key": f"casa:{iso}:geral", "at": chega + timedelta(minutes=rng.randint(300, 360)),
+                         "people": [FAXINEIRA],
+                         "summary": "A Dona Neide terminou a faxina: o apê ficou um brinco."})
+        if day.weekday() == 5 + _rng(_week(day), "bagunca_dia").randint(0, 1):
+            rng = _rng(day, "bagunca")
             if rng.random() >= CLEANUP_SKIP_CHANCE:
                 at = datetime.combine(day, time(10, 30)) + timedelta(minutes=rng.randint(0, 120))
-                what = rng.choice(("trocou a roupa de cama e passou aspirador",
-                                   "arrumou o quarto e o closet, que tava um caos",
-                                   "limpou o banheiro e a cozinha",
-                                   "deu uma geral no apê ouvindo música"))
-                plan.append({"key": f"casa:{iso}:geral", "at": at, "summary": f"Faxina de fim de semana: {what}."})
+                plan.append({"key": f"casa:{iso}:bagunca", "at": at,
+                             "summary": f"Cuidou da bagunça dela: {rng.choice(HER_OWN_CHORES)}."})
         if day.weekday() == self._grocery_day(day) and not self._sick(day):
             rng = _rng(day, "mercado")
             base = time(10, 0) if weekend else time(18, 30)
@@ -109,6 +125,10 @@ class Casa:
             at = datetime.combine(day, time(11, 0)) + timedelta(minutes=_rng(day, "contas_hora").randint(0, 300))
             plan.append({"key": f"casa:{iso}:contas", "at": at,
                          "summary": f"Chegaram as contas do apê ({', '.join(BILLS)}); mandou pro pai pagar."})
+        if day.day == 5 + _rng(day.replace(day=1), "contas_dela").randint(0, 3):
+            at = datetime.combine(day, time(12, 0)) + timedelta(minutes=_rng(day, "contas_dela_h").randint(0, 480))
+            plan.append({"key": f"casa:{iso}:contas_dela", "at": at,
+                         "summary": "Pagou as contas dela (celular e os streamings) com o dinheiro dos jobs."})
         rng = _rng(day, "perrengue")
         if rng.random() < MISHAP_CHANCE:
             text, _mood = rng.choice(MISHAPS)
@@ -142,7 +162,8 @@ class Casa:
                         """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,
                            source_type,autonomy_level,importance,participants_json,share_worthy,created_at)
                            VALUES (?,?,'routine','casa',?,'simulated',1,0.1,?,0.3,?)""",
-                        (item["key"], item["at"].isoformat(), item["summary"], json.dumps(["marina"]),
+                        (item["key"], item["at"].isoformat(), item["summary"],
+                         json.dumps(["marina", *item.get("people", [])]),
                          now.isoformat()))
                     conn.commit()
                     fresh = bool(cur.rowcount)

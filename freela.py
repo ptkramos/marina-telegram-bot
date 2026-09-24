@@ -1,5 +1,5 @@
 """Fase D10 — freela de modelo: a Lívia oferece, ela faz casting, espera, passa
-(ou não), prova de roupa, job e, um mês depois, o cachê.
+(ou não), prova de roupa, job e o cachê (metade na aprovação, o resto até 1 dia depois do job).
 
 Antes (24/09): a agência da Lívia existia no cânone (booker, Ipanema) e só
 aparecia pra cobrar o peso (D1). Nenhum casting, nenhum job, nenhum cachê.
@@ -17,7 +17,11 @@ Como funciona (mesmo desenho do D8 e do D7):
 
 Decisões PROVISÓRIAS (Patrick dormindo em 24/09 pediu pra eu decidir e
 catalogar — PLANO_VOZ, seção D10): ~2–3 castings por mês, ~1 em 3 vira job,
-tipos de job e cachê da tabela JOBS, cachê cai ~30 dias depois do job.
+tipos de job e cachê da tabela JOBS.
+
+Revisão do Patrick (24/09): D10 aprovado, com uma mudança: o cachê é pago 50%
+quando ela é aprovada e o resto no máximo 1 dia depois do job — a Lívia faz o
+pix pra ela.
 """
 from __future__ import annotations
 
@@ -30,7 +34,8 @@ OFFER_CHANCE = 0.12            # por dia útil → ~2,6 castings por mês
 APPROVE_CHANCE = 0.35
 APPROVE_OVERWEIGHT = 0.6       # acima do peso da agência, passa menos
 APPROVE_IN_SHAPE = 1.15        # no peso ideal (≤ 54 kg), um pouco mais
-PAY_AFTER_DAYS = 30
+PAY_REST_WITHIN_H = (2, 24)     # o resto do cachê: de 2 a 24 h depois do job (pix da Lívia)
+PAY_AFTER_DAYS = 2              # só pra guardar o estado das ofertas por mais uns dias
 LOOKBACK_DAYS = 60
 STATE_KEY = "freela_state_json"
 AGENCY = "boutique_agency"
@@ -273,7 +278,11 @@ class Freela:
             self._log(f"{key}:resultado", result_at,
                       f"A Lívia avisou: PASSOU no casting ({what})! Job marcado pra {start:%d/%m} às {start:%H:%M}, "
                       f"cachê de R$ {plan['pay']}.", livia=True, share=0.9)
-            st.update(step="job_marcado", job_id=job, job_at=start.isoformat(), pay=plan["pay"])
+            half = plan["pay"] // 2
+            self._log(f"{key}:sinal", result_at + timedelta(minutes=40),
+                      f"A Lívia fez o pix de metade do cachê ({what}): R$ {half}.", livia=True, share=0.6)
+            st.update(step="job_marcado", job_id=job, job_at=start.isoformat(), pay=plan["pay"],
+                      rest=plan["pay"] - half)
             fit_days = [start.date() - timedelta(days=plan["fitting_before_days"] - k)
                         for k in range(plan["fitting_before_days"])]
             fit = self._book_first_free(key, "prova", f"Prova de roupa pro job: {what}", fit_days,
@@ -301,13 +310,16 @@ class Freela:
                 return
             self._log(f"{key}:job", end, f"Fez o job: {what}. {plan['hours']} horas de set, cansada mas feliz.",
                       share=0.9)
-            st["pay_at"] = (end.date() + timedelta(days=PAY_AFTER_DAYS)).isoformat()
+            hours = _rng(f"pix:{key}").randint(*PAY_REST_WITHIN_H)
+            st["pay_at"] = (end + timedelta(hours=hours)).isoformat()
             st["step"] = "a_receber"
         if st["step"] == "a_receber":
-            pay_at = _at(date.fromisoformat(st["pay_at"]), time(11, 0))
+            pay_at = datetime.fromisoformat(st["pay_at"])
             if now < pay_at:
                 return
-            self._log(f"{key}:cache", pay_at, f"Caiu o cachê do job ({what}): R$ {st['pay']}.", share=0.7)
+            rest = st.get("rest", st["pay"])
+            self._log(f"{key}:cache", pay_at, f"A Lívia fez o pix do resto do cachê ({what}): R$ {rest}.",
+                      livia=True, share=0.7)
             st["step"] = "fim"
 
     # -------------------------------------------------------- perguntas --
@@ -346,6 +358,9 @@ class Freela:
         lines = ["[TRABALHO DE MODELO (agência da Lívia) — agenda real; não invente casting nem job fora daqui]"]
         lines += [f"- {names[i['kind']]}: {i['what']} — {quando(i['start'])}" for i in items[:4]]
         lines += [f"- Esperando a resposta do casting: {st['what']}" for st in waiting[:2]]
-        lines += [f"- Cachê a receber: R$ {st['pay']} ({st['what']}), cai por volta de "
-                  f"{date.fromisoformat(st['pay_at']):%d/%m}" for st in to_receive[:2]]
+        lines += [f"- Falta a Lívia mandar o resto do cachê: R$ {st.get('rest', st['pay'])} ({st['what']}), "
+                  f"até {datetime.fromisoformat(st['pay_at']):%d/%m %H:%M}" for st in to_receive[:2]]
+        pendentes = [st for st in data.values() if st["step"] == "job_marcado" and st.get("rest")]
+        lines += [f"- Já recebeu metade do cachê (R$ {st['pay'] - st['rest']}) do job {st['what']}; o resto "
+                  "cai depois do job." for st in pendentes[:2]]
         return lines

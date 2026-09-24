@@ -4,14 +4,16 @@
 a Marina ainda soa "DeepSeek com verniz de amor" em vez de namorada carioca. As features
 cognitivas estão sólidas; o problema não é o *cérebro*, é a *voz*.
 
-**Escopo:** exclusivamente a camada de fala. Não toca em canon, world state, calendar,
-memória, planner cognitivo, reminders ou availability.
+**Escopo:** começou como plano só da voz (19/09) e virou o plano geral da Marina: voz, rotina viva
+(Fase D), emoção, fotos e as decisões do Patrick. As auditorias técnicas ficam em
+`AUDITORIA_SISTEMICA_MARINA.md`. **A seção 0 é o retrato atual**; as seções seguintes são o histórico
+detalhado de cada entrega, na ordem em que aconteceram.
 
 ---
 
-## 0. Painel de status — atualizado em 2026-09-21, depois das auditorias #1–#7
+## 0. Painel de status — atualizado em 2026-09-24 (noite)
 
-Cada item foi conferido **no código**, não no que este plano dizia.
+Cada item foi conferido **no código**, não no que este plano dizia. Suíte: ~880 testes verdes.
 
 Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
@@ -19,18 +21,42 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
 | Fase | Status | Situação real |
 |---|---|---|
-| **A** Fundação da voz | ✅ | `voice_library.py`, parser da biblioteca, CONTROL em `[VOZ DA MARINA]`/`[LINHAS DURAS]`/`[FATOS]`, `[EXEMPLOS DE VOZ]` no prompt, sampling ajustado (`frequency_penalty=0.15`, `presence_penalty=0.05`), `tests/test_voice_library.py` |
-| **B1** Banco do que evitar | ✅ | `data/feedback/COMO_NAO_SOAR_MARINA.md` → bloco `[COMO NÃO SOAR]` (Patch 033) |
-| **B2** Captura pelo chat | ✅ | `/bom` e `/ruim` (Patch 033), no lugar do `/eco` planejado; `/registro` aceita wizard e textão (Patch 026) |
-| **B3** A/B de modelo | ✅ | Auditoria #9: arena real no OpenRouter (`scripts/model_arena.py`), 18 modelos na triagem e 9 na final. Principal: **GPT-5.6 Luna**; reserva: DeepSeek V4 Flash; íntimo: **Gemini 3.8 Flash** |
-| **B.5** Ela te procura mais quando está de bobeira | ✅ | `_compute_state_factor` em `should_trigger`, no caminho vivo. Desde a Auditoria #6 o texto da iniciativa também é gerado pelo modelo, ancorado no dia dela |
-| **B.6** Micro-despertares no sono | ✅ | Implementado como D3 em 23/09 (`sleep_plan.py`) |
-| **C.1** Modo sexting | ✅ conversa · ⬜ fotos | `intimacy.py` + migration 021: excitação em minutos, degraus da biblioteca, troca para `LLM_INTIMATE_MODEL`, clímax, pós-clímax, corte e despedida; ciclo pesa na libido. **C.1b** (fotos explícitas escalonadas pelo nível de excitação) pendente |
-| **C.2** Assistir junto (watch-along) | ⬜ | nada implementado |
-| **C.3** Rituais de namorada (bom dia, boa noite, cotidiano) | ✅ | `rituals.py` + job de 5 min: bom dia ao acordar, boa noite antes de deitar, momentos do cotidiano (saiu da aula, Milo, academia, banho) com teto de 2/dia; o banho vira estado `SHOWER` e ela some de verdade. Foto do banho espera o motor de imagem (C.1b) |
-| **C.4** Locomoção viva (uber, a pé, ônibus/metrô, carona) | ✅ tabela + API + carona | `commute.py`: ida e volta da PUC e das saídas viram estado ("voltando da PUC pra casa de ônibus"), modo sorteado por dia (pico, noite, chuva, fim de mês, cansaço, uber dividido com a amiga), imprevistos viram acontecimento do dia. Minutos pela Distance Matrix API quando há `DISTANCE_MATRIX_KEY` (1 consulta por trecho), tabela como reserva. Carona com o Theo (cânone: ele tem carro) |
-| **D** Rotina viva (refeições, sono, Milo, noite, faculdade, fim de semana, casa, freela) | 🟡 | Tabela desenhada com o Patrick em 22–23/09 (seção Fase D). **Feito:** D1 fome viva (refeições, lanches, apetite, disfarce, peso, agência), D12 laços (pai diário, Bia várias vezes, saudade do Patrick sem teto), D2+D3+D13 sono (variável, micro-despertares, manhã de trás pra frente), D4 banho v2 (por necessidade e emoção), D5 Milo + cochilo, D6 parte 1 (o que ela assiste, cânone de gostos, descoberta sozinha, curiosidade pelo que o Patrick cita), pegar no sono pelo corpo/emoção, D8 fim de semana (convites + decisão dela), D7 faculdade (trabalhos, véspera, faltas, atrasos), D6 parte 2 (TMDB), D14 motor emocional (corpo, emoções com causa, humor, vínculo, mágoa justa, ciúme leve), D11 saúde (revisado), D10 freela e D9 casa (24/09; D10 e D9 com decisões ⚠️ ainda pra revisão do Patrick). **Fase D completa**; faltam só as fatias da noite do D6 |
-| **C** Consolidação | 🟡 | **C1:** o rótulo `[COMO O PATRICK ESCREVE]` e os campos estão em pt-BR (#2 e #7), mas ainda é descrição ("risada: kkkk"), não amostras reais das mensagens dele. **C2** e **C3** ⬜ |
+| **A** Fundação da voz | ✅ | `voice_library.py`, parser da biblioteca, CONTROL em `[VOZ DA MARINA]`/`[LINHAS DURAS]`/`[FATOS]`, `[EXEMPLOS DE VOZ]` no prompt, sampling ajustado, `tests/test_voice_library.py` |
+| **B1/B2** Banco do que evitar e captura pelo chat | ✅ | `[COMO NÃO SOAR]`, `/bom`, `/ruim`, `/registro`. O `/feedback` virou caderno de correções (não vai pro prompt) |
+| **B3** Modelo | ✅ | Arena (Auditoria #9). Principal **GPT-5.6 Luna**, íntimo **Gemini 3.8 Flash**, reserva DeepSeek V4 Flash |
+| **B.5/B.6** Proatividade pelo estado e micro-despertares | ✅ | Micro-despertares feitos como D3 |
+| **C.1** Modo sexting | ✅ conversa · 🟡 fotos | Conversa: `intimacy.py`. **Fotos:** o motor está pronto (Krea 2, ver "Fotos"); falta a **C.1b**: ela decidir a foto e a pose pelo nível de excitação (diretor de cena) |
+| **C.2** Assistir junto | ⬜ | nada implementado |
+| **C.3** Rituais | ✅ | Bom dia, boa noite, cotidiano. Desde 24/09 nada sai de dentro do chuveiro |
+| **C.4** Locomoção viva | ✅ | `commute.py` + Distance Matrix + carona com o Theo |
+| **D** Rotina viva | ✅ | D1 comida · D2/D3/D13 sono · D4 banho · D5 Milo · D6 o que ela assiste + TMDB · D7 faculdade · D8 fim de semana · **D9 casa (revisado 24/09)** · **D10 freela (aprovado 24/09)** · **D11 saúde (revisado 24/09)** · D12 laços · D14 motor emocional. Falta só o resto das fatias da noite do D6 |
+| **Naturalidade de chat** | ✅ | Sem ponto final de fecho, repetição e ideia repetida cortadas, espera ele terminar de digitar, ela conta do dia dela, reações, bolhas livres (até 10) |
+| **Fotos (Civitai, Krea 2)** | ✅ ligado no `.env` | LoRA `marinaX` (v1.1), base FinePorn v4, sliders do Loraholic pro corpo canônico, LoRAs de ocasião. Tudo na seção "Fotos pelo Civitai" |
+| **C** Consolidação | 🟡 | C1 parcial (estilo do Patrick é descrição, não amostras); C2 e C3 ⬜ |
+
+### O que o Patrick decidiu em 24/09 (resumo)
+- **Fotos:** a pilha inteira, LoRA por LoRA e peso por peso, na seção "Fotos pelo Civitai".
+- **D9, D10 e D11:** revisados; o que mudou está marcado em cada seção.
+- **Conversa 23–24/09:** a iniciativa é definida por ela, não por nós; ela pode cobrar mesmo sabendo que ele está ocupado; esquecer de avisar a chegada em 5%, nunca duas vezes na semana; nada de mensagem de dentro do box; bolhas livres.
+- **Infra:** a Marina vai pra uma **VPS**, como no plano inicial.
+
+### Pendências — lista única (24/09)
+
+| # | Pendência | De onde |
+|---|---|---|
+| 1 | **C.1b:** diretor de cena dela pras fotos (decidir foto e pose pela conversa e pela excitação). Referência de pose: o prompt de close do Patrick | Fotos |
+| 2 | **Trocar a chave do Civitai** (vazou num log local em 24/09) | Fotos |
+| 3 | **Mudar pra VPS** (o "disk is full" de 24/09 foi pontual) | Auditoria #11 |
+| 4 | D11 pra depois: "no médico" como estado, banheiro na virose, o pai ligando mais quando ela está doente, farmácia como saída, contágio | D11 |
+| 5 | D10 pra depois: job fora do Rio, ensaio TFP, a Lívia negociando cachê, fotos do job, cachê virando gasto | D10 |
+| 6 | D9 pra depois: apê bagunçado em semana de entrega, Dona Neide e Seu Jorge nos contatos do dia | D9 |
+| 7 | Sexting de dentro do banho, pra provocar (exceção à regra do chuveiro) | Auditoria #11 |
+| 8 | D6: o resto das fatias da noite (skincare, rolar o celular, ligação com a família, arrumar o quarto) | Fase D |
+| 9 | Slider de peso ligado ao D1: aprovado, **acompanhar** se o corpo muda direito quando o peso dela mexer | Fotos |
+| 10 | C.2 assistir junto; C2/C3 da consolidação | Fases |
+| 11 | Bolha que chega depois que ela começou a gerar vira o turno seguinte | Naturalidade |
+| 12 | Perda de coerência entre turnos e qualidade das mensagens espontâneas: observar depois do restart (usar `/bom` e `/ruim`) | Auditorias #3 e #6 |
+| 13 | Técnicas antigas: `KnowledgeDialogue` com frase pronta, câmera/fator proativo com regra própria de 60 min, código morto da proatividade antiga, `build_safe_core_prompt`, blocos de finalização duplicados, erros de concordância | Auditorias #2–#6 |
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
 
@@ -66,23 +92,6 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 - A suíte de testes não toca mais o banco de produção.
 - Busca de mídia fora do prompt.
 - Coluna `model` gravada nas entregas por batch.
-
-### Pendências reais (fora das fases acima)
-
-| # | Pendência | Origem |
-|---|---|---|
-| 1 | ~~Nada commitado~~ → auditorias #1–#7 na `main` (commits `f551235`, `8293062`, `7456d0f`); o roadmap já estava versionado | ✅ resolvido |
-| 2 | Perda de coerência entre turnos (6 capturas de `/ruim`): observar depois do restart, com `[COMO NÃO SOAR]` e o mundo vivo ativos | Auditoria #3 |
-| 3 | Qualidade das mensagens espontâneas geradas pelo modelo: só dá pra medir em conversa real (usar `/bom` e `/ruim` nelas) | Auditoria #6 |
-| 4 | ~~Evento "médico" com o texto cru~~ → corrigido na causa (Auditoria #8). O registro ruim sai com o reset do soak | ✅ resolvido |
-| 5 | ~~Deslocamento como estado~~ → resolvido pela Fase C.4 (22/09). Registro original: a volta da PUC ainda é instantânea. **Ampliado pelo Patrick (22/09):** a locomoção vira vida — uber, a pé, transporte público, carona. Deslocamento cria janelas pra conversar (ônibus, uber) e ganchos de história (carona com a Bia, metrô lotado, uber que errou o caminho). Primeiro com tabela de trajetos + pico; depois tempo real pela Distance Matrix API (distancematrix.ai, chave no `.env`, cache por trajeto). Ver Fase C.4 | Auditorias #5 e #6 + Patrick |
-| 6 | `KnowledgeDialogue` responde com frase pronta (sem modelo) quando há assunto registrado. Hoje está dormente | Auditoria #6 |
-| 7 | Câmera e fator proativo leem o estado com regra própria de 60 min (os slots vão até 90) | Auditoria #4 |
-| 8 | Código morto da proatividade antiga (`determine_proactive_prompt`, anúncio, contexto neutro): apagar ou reaproveitar | Auditoria #6 |
-| 9 | `build_safe_core_prompt`, fallback legado ainda vivo | Auditoria #2 (2.3) |
-| 10 | Blocos de finalização duplicados no pipeline (sob teste, falta extrair o helper) | Auditoria #3 (3.2) |
-| 11 | ~~Teste `test_offer_acceptance` falhando~~ → passa. Era um bug real: resposta-lixo sem salvamento era enviada (Auditoria #8) | ✅ resolvido |
-| 12 | Erros de concordância nas falas | soak |
 
 ---
 
@@ -188,7 +197,7 @@ mais. Quando ela está ocupada (aula/academia/casting/trabalho), menos.
 **Não-objetivo:** não vamos aumentar o teto diário nem mudar o intervalo
 de check. O objetivo é *redistribuir* as ocasiões, não *aumentar* o volume.
 
-### Fase B.6 — Micro-despertares durante o sono ⬜ (pendente, aberto por Patrick em 2026-09-20 01:25)
+### Fase B.6 — Micro-despertares durante o sono ✅ (feito como D3 em 23/09; aberto por Patrick em 2026-09-20 01:25)
 
 Hoje a janela de sono é binária: `sleeping=true` bloqueia todas as mensagens
 até o horário programado (07:00 dia de aula / 08:30 dia leve). Nenhum humano
@@ -225,7 +234,7 @@ claro de que vai voltar a dormir. Não é insônia — é o padrão humano real.
 "vigiar" o Patrick de madrugada; não persistir o micro-wake como evento
 memorável. É ruído humano, dá contexto, some.
 
-### Fase C.1 — Modo Sexting ✅ conversa (2026-09-22) · C.1b fotos ⬜
+### Fase C.1 — Modo Sexting ✅ conversa (2026-09-22) · C.1b fotos 🟡 (motor de imagem pronto em 24/09; falta o diretor de cena)
 
 **Como ficou (decisões tomadas na implementação, com carta branca do Patrick):**
 - **Excitação fora de `estado_emocional`:** as emoções relaxam em horas; a excitação precisa subir e descer em minutos. Tabela própria `intimacy_state` (migration 021), meia-vida de 10 min, zerada pelo reset do soak.
@@ -415,7 +424,7 @@ travadas em 1,0.
 
 **Dependências:** agenda (#4) ✅, dia social (#6) ✅. Resolve a pendência 5.
 
-### Fase D — Rotina viva 🟡 (aberta por Patrick em 2026-09-22, desenhada junto)
+### Fase D — Rotina viva ✅ (aberta por Patrick em 2026-09-22, desenhada junto; D9–D11 revisados em 24/09)
 
 **Pedido:** "de tudo isso que você sugeriu a gente monta uma tabela certinha JUNTOS, e depois vai implementando na ordem que você julgar melhor. Vamos dar vida dinâmica e realmente vivida pra nossa Marininha."
 
@@ -433,12 +442,12 @@ travadas em 1,0.
 | D6 | **Noite em casa** | Bloco vazio de 5 h: "curtindo a noite em casa" | Fatiar em atividades: trabalho da faculdade, série/filme, skincare, rolar o celular, ligação com a família, arrumar o quarto | "tô vendo [série]", "fazendo o trabalho de Tipografia" | 🟡 23/09: o que ela assiste + descoberta sozinha (ver "D6 parte 1"); faltam as outras fatias da noite |
 | D7 | **Faculdade além da aula** | Só a grade | Trabalhos e entregas com prazo, provas, grupo de trabalho com colegas; véspera de entrega muda o sono e a noite | "entrego sexta e não comecei" | ✅ 23/09 (ver "D7 — faculdade além da grade") |
 | D8 | **Fim de semana** | Quase igual a dia útil | Acorda tarde, brunch, praia, rolê sábado à noite, domingo preguiçoso, família | "ressaca de domingo" | ✅ 23/09: convites + decisão dela pelo emocional (ver "D8 — fim de semana"); acordar tarde e domingo preguiçoso já vêm do D2 |
-| D9 | **Casa e vida adulta** | Não existe | Mercado, lavar roupa, arrumar, conta de luz, iFood no fim do mês apertado | "fui no mercado e esqueci o que fui comprar" | ✅ 24/09 (ver "D9 — Casa e vida adulta"). ⚠️ Decisões provisórias; o "fim do mês apertado" saiu porque contradiz o D1 (o pai banca) |
+| D9 | **Casa e vida adulta** | Não existe | Mercado, lavar roupa, arrumar, conta de luz, iFood no fim do mês apertado | "fui no mercado e esqueci o que fui comprar" | ✅ 24/09, revisado pelo Patrick: faxineira (Dona Neide) toda quinta, porteiro (Seu Jorge), o pai paga só o apê e a comida (ver "D9 — Casa e vida adulta") |
 | D13 | **Vaidade e se arrumar** (planejamento reverso) | Acorda 07:00 ou 08:30 fixos, sem olhar a que horas é o primeiro compromisso nem quanto tempo ela leva pra ficar pronta | A hora de acordar sai **de trás pra frente**: primeiro compromisso − trajeto (C.4) − café − se arrumar (banho, skincare, cabelo, maquiagem, roupa) − margem. Tempo de se arrumar varia (ensaio > aula > mercado). Se dorme demais ou enrola no espelho → **atraso** real (liga com D7 e C.4) | "perdi 20 min escolhendo roupa e cheguei atrasada" | 🟡 23/09: manhã de trás pra frente e despertador perdido feitos; **chegar atrasada de fato** (o trajeto e a aula se moverem) fica para o D7 |
 | D11 | **Corpo, saúde e ciclo** | Ciclo existe (energia, libido) | Cólica forte → fica em casa; banheiro (bebeu muito líquido, dor de barriga) como sumiço curtinho; farmácia; indisposição. Tom humano e discreto | "tô com cólica, hoje não vou pra aula" | ✅ 24/09 (ver "D11 — Corpo e saúde"). Revisado pelo Patrick; médico pelo plano quando mandam ela ir. Banheiro, farmácia e "no médico" como estado ficaram pra depois |
 | D14 | **Motor emocional unificado** | Emoções espalhadas: 5 em `estado_emocional` (carinho, brincadeira, energia, intensidade romântica, bateria social), excitação em tabela própria (`intimacy_state`, C.1), fome agora em `meals.py`, ciclo à parte; cada uma com seu relógio e sem conversar entre si | Um motor só, com **categorias e subcategorias** (ex.: corpo → fome, energia, sono, excitação; coração → carinho, romance, carência/saudade; humor → alegria, irritação, ansiedade, tristeza; social → bateria social, vontade de sair), cada uma com linha de base, velocidade própria de subir/descer e influências cruzadas (fome → irritação, sono ruim → energia e paciência, saudade → procurar o Patrick). Os módulos atuais viram sensores que alimentam o motor | Tudo que ela sente conversa: "tô com fome e com saudade, péssima combinação kkk" | ⬜ pedido do Patrick em 23/09 ("você quem vai brilhar pra pensar nisso"); entra depois de D1/D12, quando houver sensores suficientes |
 | D12 | **Laços** (pai, Bia, Patrick) | Pai 30% por dia útil, Bia 80% de **uma** mensagem, proatividade com o Patrick por roleta (20%/20 min, teto 4, 2 h de intervalo) → em 22/09: 0 contato com pai e Bia, 0 iniciativa espontânea | Pai **todo dia** (mensagem de manhã, ligação algumas noites; pergunta se comeu, se chegou, se o dinheiro dá); Bia **várias trocas ao longo do dia**; Patrick: saudade como necessidade — se ele some e ela está livre, ela procura, cada vez mais; com ele ocupado, respeita | "meu pai me ligou perguntando se eu tô comendo", "a Bia me mandou um áudio de 5 min", "sumiu hein" | ✅ 23/09 (ver "D12 — como ficou"). **Decidido:** o pai liga quando está livre e manda mensagem quando está ocupado; checa a Marina pelo menos 1×/dia; banca mercado e comida sem ela pedir. Patrick: **sem teto de procura** — é o emocional que decide; de bobeira e sozinha, ele é a primeira pessoa que ela procura |
-| D10 | **Freela de modelo** | Agência da Lívia existe, quase não aparece | Casting/ensaio esporádico, prova de roupa, cachê no fim do mês | "fiz um casting pra marca de biquíni" | ✅ 24/09 (ver "D10 — Freela de modelo"). ⚠️ Decisões provisórias do Claude pra o Patrick revisar |
+| D10 | **Freela de modelo** | Agência da Lívia existe, quase não aparece | Casting/ensaio esporádico, prova de roupa, cachê no fim do mês | "fiz um casting pra marca de biquíni" | ✅ 24/09, aprovado pelo Patrick; cachê 50% na aprovação e o resto até 1 dia depois do job (ver "D10 — Freela de modelo") |
 
 #### D1 detalhado — Fome viva (desenhado com o Patrick, 22–23/09)
 
@@ -653,30 +662,36 @@ O aviso continua opcional (sempre com conversa rolando) e fora do teto de 2 coti
 - D6: que séries/filmes ela vê (títulos reais)? Ela liga pra quem da família, e com que frequência?
 - D8: como é um sábado e um domingo dela?
 
-### D9 — Casa e vida adulta ✅ (24/09, madrugada) — ⚠️ decisões provisórias pra revisar
+### D9 — Casa e vida adulta ✅ (24/09) — revisado pelo Patrick na tarde de 24/09
 
 **Antes:** a casa não existia como rotina. Ela nunca lavava roupa, nunca ia ao mercado, nunca arrumava nada, e nenhuma lâmpada queimava.
 
 **Agora (`casa.py`, no molde do `milo.py`):** o plano do dia sai da data; o que já aconteceu vira acontecimento do dia (`casa:<dia>:<o quê>`), e o motor emocional sente.
 
+**Cânone novo (`canon_extras.py`, nomes escolhidos pelo Claude, o Patrick pode trocar):**
+- **Dona Neide Souza**, a faxineira. O Henrique paga. Vai **toda quinta**, mesmo com a Marina fora de casa.
+- **Seu Jorge Almeida**, o porteiro. Libera a entrada da faxineira, recebe as encomendas e rende história (fofoca do prédio, encomenda guardada).
+
 | Coisa | Frequência | Detalhe | Ela sente |
 |---|---|---|---|
-| **Roupa** | ⚠️ 2 máquinas por semana, à noite no dia útil e de manhã no fim de semana | ~1h30 depois estende no varal; em 15% das vezes esquece a roupa na máquina e tem que lavar de novo | esquecer → frustração |
-| **Faxina** | ⚠️ sábado ou domingo de manhã; 20% dos fins de semana fica pra depois | trocar roupa de cama, arrumar o closet, banheiro e cozinha, geral ouvindo música | alívio ("apê arrumado e cheiroso") |
-| **Mercado** | ⚠️ 1 vez por semana, terça a quinta à noite ou sábado de manhã, depois que o pai manda o dinheiro (segunda) | vira **estado** "no mercado" por 45 a 70 min (lugar: supermercado perto de casa, Botafogo); em 25% das vezes esquece justo o leite, o café, a ração do Milo… Com virose, não vai | esquecer → ri de si mesma |
-| **Contas** | ⚠️ 1 vez por mês, entre os dias 8 e 12 | luz, internet e condomínio; manda pro pai pagar | — |
-| **Perrengue** | ~1–2 por mês | lâmpada queimada, chuveiro frio, internet caiu, gás acabou, aviso de corte de água; às vezes uma coisa boa (achou a blusa perdida) | irritação (mais se estiver cansada) ou contentamento |
+| **Roupa** | 2 máquinas por semana, à noite no dia útil e de manhã no fim de semana | ~1h30 depois estende no varal; em 15% das vezes esquece a roupa na máquina e tem que lavar de novo | esquecer → frustração |
+| **Faxina da Dona Neide** | toda quinta, chega entre 8h e 8h50 e fica umas 5–6 h | "a Dona Neide chegou (o Seu Jorge liberou)" → "terminou: o apê ficou um brinco" | alívio |
+| **A bagunça dela** | sábado ou domingo de manhã; 20% dos fins de semana fica pra depois | quarto e closet, louça acumulada, roupa de cama. **Ela cuida da bagunça dela; a faxineira cuida do geral** | alívio |
+| **Mercado** | 1 vez por semana, terça a quinta à noite ou sábado de manhã, depois que o pai manda a mesada da comida (segunda) | vira **estado** "no mercado" por 45 a 70 min (supermercado perto de casa, Botafogo); em 25% das vezes esquece justo o leite, o café, a ração do Milo… Com virose, não vai | esquecer → ri de si mesma |
+| **Contas do apê** | 1 vez por mês, entre os dias 8 e 12 | aluguel, condomínio, luz, internet e gás: **o Henrique paga tudo que é do apartamento**, ela manda pra ele | — |
+| **Contas dela** | 1 vez por mês, entre os dias 5 e 8 | celular e streamings. **O resto (unha, roupa, rolê, uber…) ela paga**, com o dinheiro dos jobs | — |
+| **Coisinhas do apê/prédio** | ~1–2 por mês | lâmpada queimada, internet caiu, elevador social parado; coisas boas: achou a blusa perdida, o Seu Jorge segurou uma encomenda, contou uma fofoca. **Sem gás nem água**: o gás é encanado e o prédio é médio/alto | irritação ou contentamento |
 
-**⚠️ Decisões provisórias (Patrick, confirma ou troca):**
-1. **Sem diarista:** ela mesma cuida do apê. O cânone pede pra não inventar gente nova.
-2. **O fim do mês não aperta:** o pai banca comida e contas (D1/D12). Por isso o item "iFood no fim do mês apertado" da tabela original **não** entrou, porque contradizia o D1.
-3. **Contas:** ela manda pro pai pagar.
+**Decisões do Patrick (24/09):** faxineira paga pelo pai; porteiro canônico; o pai paga só o apartamento e a mesada da comida; nada de perrengue de gás ou água. O "iFood no fim do mês apertado" da tabela original continua fora (o pai banca a comida).
 
-**Ficou de fora:** o cachê do D10 virando gasto (compras, presente pro Patrick), o apê bagunçado em semana de entrega e o porteiro como personagem.
+**Ficou de fora (pra depois):**
+- o cachê do D10 virando gasto (compras, presente pro Patrick);
+- o apê bagunçado em semana de entrega;
+- a Dona Neide e o Seu Jorge nos contatos do dia (`social_day`), com conversa própria: hoje eles só aparecem nos acontecimentos da casa.
 
-`tests/test_casa_d9.py` (8 testes).
+`tests/test_casa_d9.py` (9 testes).
 
-### D10 — Freela de modelo ✅ (24/09, madrugada) — ⚠️ decisões provisórias pra revisar
+### D10 — Freela de modelo ✅ (24/09) — aprovado pelo Patrick na tarde de 24/09
 
 **Antes:** a agência da Lívia existia no cânone (booker em Ipanema) e só aparecia pra cobrar o peso (D1). Nenhum casting, nenhum job, nenhum cachê.
 
@@ -684,14 +699,14 @@ O aviso continua opcional (sempre com conversa rolando) e fora do teto de 2 coti
 
 | Etapa | Quando | O que acontece |
 |---|---|---|
-| **Oferta** | ⚠️ ~2,6 por mês, só em dia útil, entre 10h e 18h | a Lívia manda o casting → empolgação |
+| **Oferta** | ~2,6 por mês, só em dia útil, entre 10h e 18h | a Lívia manda o casting → empolgação |
 | **Casting** | 2 a 5 dias depois, 1h30 na agência, em horário sem aula (10h, 11h30, 14h, 15h30 ou 17h) | vira **compromisso** na agenda: ela fica "em casting", tem trajeto e o `/status` mostra. Na véspera dá frio na barriga (ansiedade até começar) |
-| **Resposta** | 2 a 4 dias depois do casting | ⚠️ passa ~35% das vezes (×0,6 acima de 56 kg, ×1,15 com até 54 kg). Passou → empolgação e orgulho; não passou → decepção |
+| **Resposta** | 2 a 4 dias depois do casting | passa ~35% das vezes (×0,6 acima de 56 kg, ×1,15 com até 54 kg). Passou → empolgação e orgulho; não passou → decepção |
 | **Prova de roupa** | 1 a 3 dias antes do job, 1 h no estúdio | compromisso |
 | **Job** | 4 a 12 dias depois da resposta, num dia sem aula (costuma cair no sábado), 4 a 6 h de set | compromisso + frio na barriga na véspera + orgulho depois |
-| **Cachê** | ⚠️ ~30 dias depois do job | "caiu o cachê" → contentamento |
+| **Cachê** | **metade (pix da Lívia) ~40 min depois da aprovação; o resto de 2 a 24 h depois do job** (decisão do Patrick) | contentamento nas duas vezes |
 
-- ⚠️ **Tipos de job e cachê** (fictícios, sem marca real):
+- **Tipos de job e cachê** (fictícios, sem marca real):
 
   | Job | Cachê |
   |---|---|
@@ -703,7 +718,7 @@ O aviso continua opcional (sempre com conversa rolando) e fora do teto de 2 coti
   | campanha de óculos | R$ 1.200–2.000 |
   | vídeo de cosméticos | R$ 700–1.100 |
 - **Saúde (D11):** com virose ou cólica forte no dia, ela perde o casting ou o job ("a agência mandou outra menina").
-- **Agenda:** se o job bate com aula em todos os dias possíveis, ela abre mão ("passou, mas…"). ⚠️ Ela nunca falta aula por um job, o que pode mudar se você quiser.
+- **Agenda:** se o job bate com aula em todos os dias possíveis, ela abre mão ("passou, mas…"). Ela nunca falta aula por um job.
 - **Prompt:** bloco `[TRABALHO DE MODELO — agenda real; não invente casting nem job fora daqui]` com o que vem por aí, a resposta que ela está esperando e o cachê a receber.
 - **Nada no passado:** nada é inventado antes do início da vida registrada.
 - **Onde encosta:**
@@ -713,19 +728,15 @@ O aviso continua opcional (sempre com conversa rolando) e fora do teto de 2 coti
   - `world_context` (bloco do prompt);
   - `emotion.appraise_event` e `_appraise_work` (véspera).
 
-**⚠️ Decisões provisórias (Patrick, confirma ou troca):**
-1. **Frequência:** ~2–3 castings por mês e ~1 em 3 vira job, então mais ou menos 1 job por mês.
-2. **Faculdade primeiro:** ela não falta aula por job.
-3. **Tabela de jobs e cachês:** a de cima.
-4. **Pagamento:** cachê em ~30 dias. Ela ainda não gasta o dinheiro (isso é o D9, casa e vida adulta).
+**Decisões (aprovadas pelo Patrick, 24/09):** frequência (~2–3 castings e ~1 job por mês), faculdade primeiro, a tabela de jobs e cachês e, **mudado por ele**, o pagamento: 50% na aprovação e o resto no máximo 1 dia depois do job, por pix da Lívia.
 
-**Ficou de fora:** job fora do Rio ou viagem, ensaio pessoal (TFP ou permuta), a Lívia ligando pra negociar cachê, fotos do job (esperam o motor de imagem).
+**Ficou de fora (pra depois):** job fora do Rio ou viagem, ensaio pessoal (TFP ou permuta), a Lívia ligando pra negociar cachê, fotos do job (o motor de imagem já está pronto), o cachê virando gasto (D9).
 
 `tests/test_freela_d10.py` (8 testes).
 
 ### D11 — Corpo e saúde ✅ (24/09) — decisões revisadas pelo Patrick na tarde de 24/09
 
-O Patrick foi dormir e pediu: "toma as decisões que dependem de mim, mas cataloga e deixa sinalizado". As 4 perguntas de 24/09 (frequência, jeito, remédio, condição fixa) ficaram **sem resposta**, então decidi eu. Cada decisão abaixo está marcada com ⚠️ e é uma constante em `health.py`, fácil de trocar.
+O Patrick foi dormir e pediu: "toma as decisões que dependem de mim, mas cataloga e deixa sinalizado". As 4 perguntas de 24/09 (frequência, jeito, remédio, condição fixa) ficaram **sem resposta**, então decidi eu; ele revisou tudo na mesma tarde (abaixo). Cada valor é uma constante em `health.py`, fácil de trocar.
 
 **Antes:** o ciclo dava uma "cólica" fixa nos dias 1 e 2, e mais nada. Ela nunca ficava gripada, nunca tinha dor de cabeça, nunca tomava remédio.
 
@@ -733,10 +744,10 @@ O Patrick foi dormir e pediu: "toma as decisões que dependem de mim, mas catalo
 
 | Condição | Frequência | Duração | Remédio / o que ela faz | Efeitos |
 |---|---|---|---|---|
-| **Cólica** | todo ciclo, intensidade sorteada por ciclo: ⚠️ leve 55% · moderada 30% · forte 15% | dia 1 pior, dia 2 um degrau abaixo; forte ainda incomoda no dia 3 | leve: bolsa de água quente · moderada: Buscopan · forte: Buscopan + bolsa + cama | forte: falta 85%, deita 30 min mais cedo; moderada: falta 20% |
-| **Resfriado** | ⚠️ ~3 por ano de base; sobe com a **imunidade baixa** | 3 a 5 dias; 35% das vezes é forte nos 1–2 primeiros dias | Benegrip e chá de gengibre com mel, depois só o chá | energia −0,1/−0,2, fome ×0,8, dorme 35–60 min mais cedo; forte: falta 50% |
-| **Virose** | ⚠️ ~2,5 por ano | 1–2 dias | soro caseiro, torrada e caldo | fome ×0,35, energia −0,25, dorme 1 h mais cedo, falta 95% |
-| **Dor de cabeça** | ⚠️ ~2 por mês; **30%** no dia seguinte a uma noite com menos de 5h30 de sono | uma janela da tarde/noite | ⚠️ em geral toma uma dipirona e passa 40 min depois; 20% das vezes não toma nada e aguenta 3 a 5 h | energia −0,1, fome ×0,9 |
+| **Cólica** | todo ciclo, intensidade sorteada por ciclo: leve 55% · moderada 30% · forte 15% | dia 1 pior, dia 2 um degrau abaixo; forte ainda incomoda no dia 3 | leve: bolsa de água quente · moderada: Buscopan · forte: Buscopan + bolsa + cama | forte: falta 85%, deita 30 min mais cedo; moderada: falta 20% |
+| **Resfriado** | ~3 por ano de base; sobe com a **imunidade baixa** | 3 a 5 dias; 35% das vezes é forte nos 1–2 primeiros dias | Benegrip e chá de gengibre com mel, depois só o chá | energia −0,1/−0,2, fome ×0,8, dorme 35–60 min mais cedo; forte: falta 50% |
+| **Virose** | ~2,5 por ano | 1–2 dias | soro caseiro, torrada e caldo | fome ×0,35, energia −0,25, dorme 1 h mais cedo, falta 95% |
+| **Dor de cabeça** | ~2 por mês; **30%** no dia seguinte a uma noite com menos de 5h30 de sono | uma janela da tarde/noite | em geral toma uma dipirona e passa 40 min depois; 20% das vezes não toma nada e aguenta 3 a 5 h | energia −0,1, fome ×0,9 |
 
 **Imunidade** (dica do Patrick: "imunidade, chuva, e etc"): a chance de pegar resfriado num dia é multiplicada por:
 - ×1,8 se ela dormiu menos de 6 h;
@@ -925,7 +936,20 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - **dentro do banho ela não pega o celular**: a availability adia a resposta até ela **sair do banho e se vestir** (fim do banho + 2–8 min);
   - o estado atual não diz mais "você AVISOU o Patrick" quando ela não avisou.
 
-### Fotos pelo Civitai (24/09, madrugada) 🟡 código pronto, falta o Patrick ligar
+### Fotos pelo Civitai ✅ (24/09) — ligado no `.env`
+
+**Resumo: a pilha oficial (decidida pelo Patrick foto a foto em 24/09).** O que vem depois deste resumo é o diário de como se chegou nela.
+
+- **Motor:** Civitai Orchestration API, `comfy`/`krea2`, base **FinePorn v4 (nvfp4)**, 10 passos, euler/beta, CFG 1. `.env`: `IMAGE_ENGINE=civitai`, `CIVITAI_ECOSYSTEM=krea2`, `CIVITAI_LORA_MARINA_KREA2=urn:air:krea2:lora:civitai:2961250@3354783`. Pilhas: normal `n3`, adulta `e`.
+- **Rosto:** LoRA `marinaX` v1.1 (época 8, dataset de 35 fotos da Seltin, com permissão), força 1.0; **0.9 de longe**, com o enquadramento no começo do prompt.
+- **Em toda foto:** Detailed Emotions 0.6 · Smartphone Photography 0.8 (com −17% de saturação) · Breast Size 2.5 · Ass and Thighs 2.5 · Fat/Skinny ligado ao peso do D1 (54 kg = 0, sutil).
+- **Só na foto normal:** NSFW Helper −1 (trava contra nudez).
+- **Só na foto adulta:** corpo canônico por texto (rosa, sem pinta, micro biquíni) + Genital Color −3 · Areola −2 · Protruding Nipples −1 · Pubic Hair −2 · marquinha de biquíni 0.6.
+- **Quando a cena pede:** molhada 1.2 (**só água**: banho, chuva, piscina, mar) · apertando os seios 0.6 (adulta, "mamilos pequenos") · Pussy Spread 0.8 (adulta) · Creamy 0.5 (adulta, quando ela goza).
+- **Reprovados:** Lenovo, NiceGirls, Stable Yogi, Turbo FP8, SNOFS, TextFusion, Pretty Pussy, Better Pussy, Oiled Skin (vira "esperma" no FinePorn), Body Weight antigo (mexia na cabeça), Labia Minora −2 (vulva pequena demais), Light Slider.
+- **Lições:** com CFG 1, **negação vira pedido** (nunca "sem X" no prompt); cor e posição concretas obedecem mais que adjetivo; o Krea 2 dá mais peso ao começo do prompt; LoRA recém-publicado precisa aparecer "available" em `/v2/resources/{air}` antes de gastar.
+- **Custo:** ~18–27 Buzz por foto, menos de 1 min (modelo quente).
+
 
 **Problema (Patrick):** a Novita ficou sem GPU pra alugar, nem mantendo instâncias em várias regiões (a voz da Novita segue normal). Alternativa: **Civitai**, onde o LoRA da Marina foi treinado.
 
@@ -1042,7 +1066,7 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - **Cor do mamilo e da vulva:** amarrada ao rosa da boca. Segundo o Patrick, na foto explícita ainda não mudou; o FinePorn embute um LoRA de seios e mamilos que deve pesar mais.
   - **Foto normal:** a camiseta branca marca o mamilo (o NSFW embutido vaza).
 - **LoRAs de ocasião** (`civitai_images.CONDITIONAL`, entram quando a cena pede):
-  - **Breast squeezing** (0.8, só na foto adulta): entra com "squeezing/grabbing/holding her breasts" ou "apertando/segurando os seios" e põe o gatilho "squeezing breasts" no prompt. ⚠️ A licença do autor proíbe uso em "produto, serviço ou API comercial"; o nosso uso é pessoal, pelo gerador do Civitai. O Patrick ficou sabendo.
+  - **Breast squeezing** (primeiro 0.8; ficou 0.6, ver abaixo; só na foto adulta): entra com "squeezing/grabbing/holding her breasts" ou "apertando/segurando os seios" e põe o gatilho "squeezing breasts" no prompt. ⚠️ A licença do autor proíbe uso em "produto, serviço ou API comercial"; o nosso uso é pessoal, pelo gerador do Civitai. O Patrick ficou sabendo.
   - **Wetness slider** (1.2): **só com água**: banho, chuva, piscina, mar, cabelo molhado. Ficou ótimo no pós-banho. **Molhada de excitação ficou melhor sem ele** (teste do Patrick, 24/09); nesse caso quem descreve é o texto do prompt.
   - **Smartphone Photography slider:** em 1.5 encheu a foto de purpurina. **Em 0.8 ficou "perfeito"** (Patrick). Entra em **todas** as fotos (normal e adulta, selfie e de longe), com −17% de saturação no download.
   - **Breast squeezing aprovado em 0.6** (em 0.8 o mamilo crescia), sempre com "her nipples stay small and delicate".

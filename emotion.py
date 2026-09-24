@@ -739,7 +739,7 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
         step = key.rsplit(":", 1)[-1]
         if step == "roupa_esquecida":
             out.append(("raiva", "frustracao", 0.3 + (0.1 if tired else 0.0), "esqueceu a roupa na máquina", None))
-        elif step == "geral":
+        elif step in ("geral", "bagunca"):
             out.append(("alegria", "alivio", 0.3, "o apê ficou arrumado e cheiroso", None))
         elif step == "mercado_esqueceu":
             out.append(("alegria", "diversao", 0.2, text, None))
@@ -764,8 +764,8 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
             out.append(("alegria", "orgulho", 0.45, text.split(". ")[0], None))
         elif step in ("job_perdido", "casting_perdido"):
             out.append(("tristeza", "decepcao", 0.5 if step == "job_perdido" else 0.3, text, None))
-        elif step == "cache":
-            out.append(("alegria", "contentamento", 0.45, text, None))
+        elif step in ("cache", "sinal"):
+            out.append(("alegria", "contentamento", 0.45 if step == "cache" else 0.35, text, None))
     elif key.startswith("falta:"):
         out.append(("vergonha", "culpa", 0.35, text, None))
     elif key.startswith("atraso:"):

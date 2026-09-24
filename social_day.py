@@ -43,6 +43,7 @@ SHORT_NAME = {
     "bia_andrade": "a Bia", "theo_martins": "o Theo", "julia_azevedo": "a Júlia",
     "carol_menezes": "a Carol", "helena_prado": "a professora Helena",
     "celia_ribeiro": "a Dona Célia", "henrique_salles": "o pai",
+    "neide_souza": "a Dona Neide", "jorge_almeida": "o Seu Jorge",
     "livia_vasconcelos": "a Lívia",
 }
 

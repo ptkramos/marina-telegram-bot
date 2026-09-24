@@ -1388,6 +1388,13 @@ O disco tem 256 GB livres; foi pontual. Fica a mudança pra VPS, que já estava 
 
 `marina_memory.db` (vazio, com o esquema) e `memory_manager.db` (0 bytes) na raiz, criados por scripts com o nome errado. Apagados com o OK do Patrick. **Lição:** o banco é `marin_memory.db`.
 
+## Revisão das decisões na mesma tarde
+
+- **D11:** o Patrick aprovou a tabela, o jeito e a condição fixa. **Mudou o médico:** quando ela está mal de verdade e o pai ou ele mandam, ela vai pelo plano de saúde e melhora mais rápido (`Health.observe_patrick`, `DAD_SENDS_CHANCE`).
+- **D10:** aprovado; cachê 50% na aprovação e o resto no máximo 1 dia depois do job (pix da Lívia).
+- **D9:** faxineira paga pelo pai, **Dona Neide**, toda quinta; porteiro **Seu Jorge** (`canon_extras.py`: o seed é travado e as migrations são só de esquema); o pai paga só o apê e a mesada da comida; sem perrengue de gás e água.
+- **PLANO_VOZ:** o painel de status (seção 0) estava parado em 21/09. Foi refeito com o estado real, uma lista única de pendências e o resumo da pilha oficial de fotos.
+
 ## O que estava certo
 
 "Tô na rua, saí pra encontrar a Júlia" às 14:53 e "cheguei sim" às 15:52 batiam com o mundo (a caminho 14:49–15:30).

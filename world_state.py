@@ -669,6 +669,8 @@ class WorldStateManager:
             logger.exception("health.materialize.error")
         try:
             # Fase D9: roupa, faxina, mercado, contas e perrengues do apê.
+            from canon_extras import ensure as ensure_canon_extras
+            ensure_canon_extras(self.db)   # Dona Neide e Seu Jorge (24/09)
             from casa import Casa
             Casa(self.db).materialize(now)
         except Exception:
