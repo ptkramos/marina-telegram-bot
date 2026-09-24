@@ -129,6 +129,13 @@ class Krea2Test(unittest.TestCase):
         self.assertFalse(body["allowMatureContent"])
         self.assertNotIn("currencies", body)
 
+    def test_lenovo_only_on_selfies(self):
+        selfie = ci.build_workflow_krea2("a close-up selfie", is_nsfw=False)["steps"][0]["input"]["loras"]
+        far = ci.build_workflow_krea2("her whole body in the frame, not a selfie", is_nsfw=False)["steps"][0]["input"]["loras"]
+        self.assertIn(ci.KREA2_LENOVO, selfie)
+        self.assertNotIn(ci.KREA2_LENOVO, far)
+        self.assertIn(ci.KREA2_NICEGIRLS, far)
+
     def test_normal_photo_n2_uses_stable_yogi_and_snapshot(self):
         self.fake.CIVITAI_KREA2_SFW_STACK = "n2"
         step = ci.build_workflow_krea2("p", is_nsfw=False)["steps"][0]["input"]

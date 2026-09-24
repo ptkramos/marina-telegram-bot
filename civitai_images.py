@@ -144,11 +144,19 @@ def krea2_stack_name(*, is_nsfw: bool, stack: Optional[str] = None) -> str:
     return name if name in SFW_STACKS else "n1"
 
 
+# 24/09 (Patrick): o Lenovo ("cara de foto de celular") só na selfie — em foto de
+# corpo inteiro, junto com o LoRA dela (dataset quase todo de perto), ele virava
+# tudo selfie, mesmo com o prompt dizendo "não é selfie".
+SELFIE_ONLY = {KREA2_LENOVO}
+NOT_SELFIE_MARK = "not a selfie"   # visual_profile.KREA2_PHOTO_DISTANT
+
+
 def select_loras_krea2(*, is_nsfw: bool, stack: Optional[str] = None,
-                       breast_slider: Optional[float] = None) -> dict:
+                       breast_slider: Optional[float] = None, selfie: bool = True) -> dict:
     s = _settings()
     loras = {getattr(s, "CIVITAI_LORA_MARINA_KREA2").strip(): 1.0}   # o rosto dela manda (BeMyHero: sempre 1.0)
-    loras.update(KREA2_STACKS[krea2_stack_name(is_nsfw=is_nsfw, stack=stack)]["loras"])
+    loras.update({k: v for k, v in KREA2_STACKS[krea2_stack_name(is_nsfw=is_nsfw, stack=stack)]["loras"].items()
+                  if selfie or k not in SELFIE_ONLY})
     loras[KREA2_EMOTIONS] = KREA2_EMOTIONS_WEIGHT
     slider = float(getattr(s, "CIVITAI_BREAST_SLIDER", 0) or 0) if breast_slider is None else breast_slider
     if slider:
@@ -167,7 +175,8 @@ def build_workflow_krea2(prompt: str, *, is_nsfw: bool, width: int = 1024, heigh
             "prompt": prompt, "width": width, "height": height, "steps": spec["steps"], "cfgScale": 1,
             "sampler": "euler", "scheduler": "simple",
             "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
-            "quantity": 1, "loras": select_loras_krea2(is_nsfw=is_nsfw, stack=name, breast_slider=breast_slider)}
+            "quantity": 1, "loras": select_loras_krea2(is_nsfw=is_nsfw, stack=name, breast_slider=breast_slider,
+                                                       selfie=NOT_SELFIE_MARK not in prompt)}
     if spec["model"]:
         step["diffusionModel"] = spec["model"]
     body = {"steps": [{"$type": "imageGen", "input": step}], "allowMatureContent": bool(is_nsfw)}
