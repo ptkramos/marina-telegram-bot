@@ -98,6 +98,9 @@ KREA2_YOGI = "urn:air:krea2:checkpoint:civitai:2786499@3329215"        # Realism
 # 24/09: a v3.0 nunca ficou disponível nos servidores (nem com prepareResource);
 # a v2.5 INT8 Turbo funciona (~3,5 min de aquecimento a frio). Escolha do Patrick.
 KREA2_YOGI_25 = "urn:air:krea2:checkpoint:civitai:2786499@3231611"
+# FinePorn v4 (Patrick, 24/09): Turbo com Realism Engine, NSFW V4.3, Breasts&Nipples etc. já
+# embutidos → sem SNOFS/NSFW Helper por cima. Só a v4 nvfp4 fica no ar (a bf16 não carrega).
+KREA2_FINEPORN = "urn:air:krea2:checkpoint:civitai:2762538@3215452"
 KREA2_NICEGIRLS = "urn:air:krea2:lora:civitai:1862761@3075498"         # NiceGirls UltraReal (0.6-0.8)
 KREA2_LENOVO = "urn:air:krea2:lora:civitai:1662740@3075606"            # Lenovo UltraReal (1.2-2 no Turbo)
 KREA2_REALISM_V2 = "urn:air:krea2:lora:civitai:2728365@3090634"        # Krea2-realism V2 (1.0)
@@ -122,8 +125,9 @@ KREA2_STACKS = {
     "b": {"model": KREA2_AIO, "steps": 12, "loras": {}},
     "c": {"model": KREA2_YOGI, "steps": 8, "loras": {KREA2_REALISM_ENGINE: 0.7, KREA2_NSFW_HELPER: 0.5}},
     "d": {"model": None, "steps": 8, "loras": {KREA2_NSFW_V4: 1.0, KREA2_NSFW_HELPER: 0.5}},
+    "e": {"model": KREA2_FINEPORN, "steps": 10, "scheduler": "beta", "loras": {}},
 }
-SFW_STACKS, NSFW_STACKS = ("n1", "n2"), ("a", "b", "c", "d")
+SFW_STACKS, NSFW_STACKS = ("n1", "n2"), ("a", "b", "c", "d", "e")
 
 
 def ecosystem() -> str:
@@ -177,7 +181,7 @@ def build_workflow_krea2(prompt: str, *, is_nsfw: bool, width: int = 1024, heigh
     spec = KREA2_STACKS[name]
     step = {"engine": "comfy", "ecosystem": "krea2", "model": "turbo", "operation": "createImage",
             "prompt": prompt, "width": width, "height": height, "steps": spec["steps"], "cfgScale": 1,
-            "sampler": "euler", "scheduler": "simple",
+            "sampler": "euler", "scheduler": spec.get("scheduler", "simple"),
             "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
             "quantity": 1, "loras": select_loras_krea2(is_nsfw=is_nsfw, stack=name, breast_slider=breast_slider,
                                                        selfie=NOT_SELFIE_MARK not in prompt)}

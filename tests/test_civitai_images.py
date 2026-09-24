@@ -165,6 +165,12 @@ class Krea2Test(unittest.TestCase):
         self.assertNotIn("diffusionModel", d)
         self.assertEqual(d["loras"][ci.KREA2_NSFW_V4], 1.0)
 
+    def test_fineporn_stack_has_nothing_nsfw_on_top(self):
+        e = ci.build_workflow_krea2("p", is_nsfw=True, stack="e")["steps"][0]["input"]
+        self.assertEqual((e["diffusionModel"], e["steps"], e["scheduler"]), (ci.KREA2_FINEPORN, 10, "beta"))
+        self.assertFalse({ci.KREA2_SNOFS, ci.KREA2_NSFW_HELPER} & set(e["loras"]))
+        self.assertEqual(e["loras"][ci.KREA2_BREAST_SLIDER], 1.5)
+
     def test_a_normal_stack_name_never_serves_an_adult_photo(self):
         self.fake.CIVITAI_KREA2_NSFW_STACK = "n1"
         self.assertEqual(ci.krea2_stack_name(is_nsfw=True), "a")
@@ -199,9 +205,9 @@ class Krea2PromptTest(unittest.TestCase):
         import visual_profile as vp
         p = vp.krea2_prompt("bathroom", is_nsfw=True, focus_angle="behind", is_mirror=True)
         self.assertIn("Seen from behind", p)
-        self.assertIn("beauty mark sits on the upper inner curve of her left breast", p, "corpo canônico")
+        self.assertIn("Exactly one tiny dark mole, just above her left nipple", p, "corpo canônico")
         self.assertIn(vp.KREA2_BODY_CANON, vp.krea2_prompt("bed", is_nsfw=True))
-        self.assertNotIn("beauty mark", vp.krea2_prompt("bed", is_nsfw=False))
+        self.assertNotIn("mole", vp.krea2_prompt("bed", is_nsfw=False))
         self.assertIn("mirror selfie", p)
         self.assertIn("unblemished skin", p)
 
