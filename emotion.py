@@ -350,8 +350,8 @@ class EmotionEngine:
         except Exception:
             return default
 
-    def bond(self) -> dict:
-        state = self.db.get_estado_emocional()
+    def bond(self, now: Optional[datetime] = None) -> dict:
+        state = self.db.get_estado_emocional(now)
         return {k: float(state.get(k, {}).get("valor", BOND_BASELINES[k])) for k in BOND_KEYS}
 
     def _missing(self, now: datetime) -> float:
@@ -383,7 +383,7 @@ class EmotionEngine:
         discomfort, why = self._discomfort(now)
         phase, _ = self._cycle(now)
         eps = self.episodes(now)
-        bond = self.bond()
+        bond = self.bond(now)
         valence = PERSONALITY_VALENCE + 0.25 * (energy - 0.6) - 0.35 * max(0.0, hunger - 0.6) - 0.3 * discomfort
         arousal = PERSONALITY_AROUSAL + 0.35 * (energy - 0.6) + 0.2 * max(0.0, hunger - 0.6)
         for ep in eps:

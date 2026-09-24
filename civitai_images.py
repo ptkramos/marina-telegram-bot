@@ -84,21 +84,39 @@ def select_loras(*, is_nsfw: bool, focus_angle: str = "frontal", is_mirror_selfi
 # 24/09: o Patrick vai retreinar a Marina em Krea 2 ("outro nível"). A receita
 # pública do Krea 2 (FAL) não aceita LoRA, mas o motor Comfy aceita:
 # engine=comfy, ecosystem=krea2, model=turbo|raw, loras, diffusionModel.
-# Pilhas montadas a partir de dois prints da galeria que o Patrick trouxe e
-# aceitas no whatif: normal 25 Buzz, adulta 28 Buzz (1024×1536, 8 passos).
-KREA2_AIO = "urn:air:krea2:checkpoint:civitai:2732185@3071970"        # Krea2 turbo NSFW AIO v1.0
-KREA2_REALISM = {
-    "urn:air:krea2:lora:civitai:1862761@3075498": 0.8,   # NiceGirls UltraReal
-    "urn:air:krea2:lora:civitai:1662740@3075606": 1.0,   # Lenovo UltraReal
-    "urn:air:krea2:lora:civitai:2728365@3090634": 0.8,   # Krea2-realism V2
-    "urn:air:krea2:lora:civitai:2829908@3193133": 0.6,   # Detailed Emotions and Expressions
+# Pilhas revisadas em 24/09 depois de ler a descrição de cada LoRA (autores):
+# SNOFS pede pra não empilhar outros LoRAs/modelos de NSFW; TextFusion saiu
+# (treinado no Krea 2 não-destilado, dá textura estranha no Turbo); o slider
+# de seios vai de -5 a 5/8; o NSFW Helper negativo deixa a foto mais comportada;
+# o Emotions tem gatilho próprio (vai no prompt, visual_profile.krea2_prompt).
+# Candidatas pro A/B com o LoRA novo — escolhidas no .env:
+#   foto normal  CIVITAI_KREA2_SFW_STACK  = n1 (Turbo + 3 LoRAs de realismo) | n2 (Stable Yogi + Snapshot)
+#   foto adulta  CIVITAI_KREA2_NSFW_STACK = a (Turbo + SNOFS) | b (AIO sozinho) | c (Stable Yogi + Realism Engine)
+#                                           | d (Turbo + Krea 2 NSFW V4, experimental)
+KREA2_AIO = "urn:air:krea2:checkpoint:civitai:2732185@3071970"         # Krea2 turbo NSFW AIO v1.0 (12-14 passos)
+KREA2_YOGI = "urn:air:krea2:checkpoint:civitai:2786499@3329215"        # Realism by Stable Yogi v3.0 (8 passos cfg 1)
+KREA2_NICEGIRLS = "urn:air:krea2:lora:civitai:1862761@3075498"         # NiceGirls UltraReal (0.6-0.8)
+KREA2_LENOVO = "urn:air:krea2:lora:civitai:1662740@3075606"            # Lenovo UltraReal (1.2-2 no Turbo)
+KREA2_REALISM_V2 = "urn:air:krea2:lora:civitai:2728365@3090634"        # Krea2-realism V2 (1.0)
+KREA2_SNAPSHOT = "urn:air:krea2:lora:civitai:2268008@3084537"          # Realistic Snapshot v0.5 (foto de iPhone)
+KREA2_REALISM_ENGINE = "urn:air:krea2:lora:civitai:2688234@3109006"    # Realism Engine v3 (0.7, nunca >0.9)
+KREA2_SNOFS = "urn:air:krea2:lora:civitai:1972981@3290120"             # SNOFS Krea 2 v1.4
+KREA2_NSFW_V4 = "urn:air:krea2:lora:civitai:2725430@3147117"           # Krea 2 NSFW v4.3_EXP (0.8-1.2)
+KREA2_NSFW_HELPER = "urn:air:krea2:lora:civitai:2779347@3130045"       # NSFW Helper Slider (-1 a 5)
+KREA2_EMOTIONS = "urn:air:krea2:lora:civitai:2829908@3193133"          # Detailed Emotions and Expressions
+KREA2_BREAST_SLIDER = "urn:air:krea2:lora:civitai:2540187@3131773"     # valor da Marina: CIVITAI_BREAST_SLIDER
+KREA2_EMOTIONS_WEIGHT = 0.6
+KREA2_SFW_GUARD = -1.0   # NSFW Helper negativo na foto normal: trava extra contra nudez acidental
+
+KREA2_STACKS = {
+    "n1": {"model": None, "steps": 8, "loras": {KREA2_NICEGIRLS: 0.7, KREA2_LENOVO: 1.2, KREA2_REALISM_V2: 1.0}},
+    "n2": {"model": KREA2_YOGI, "steps": 8, "loras": {KREA2_SNAPSHOT: 0.6}},
+    "a": {"model": None, "steps": 8, "loras": {KREA2_SNOFS: 1.0, KREA2_NSFW_HELPER: 0.5}},
+    "b": {"model": KREA2_AIO, "steps": 12, "loras": {}},
+    "c": {"model": KREA2_YOGI, "steps": 8, "loras": {KREA2_REALISM_ENGINE: 0.7, KREA2_NSFW_HELPER: 0.5}},
+    "d": {"model": None, "steps": 8, "loras": {KREA2_NSFW_V4: 1.0, KREA2_NSFW_HELPER: 0.5}},
 }
-KREA2_BREAST_SLIDER = "urn:air:krea2:lora:civitai:2540187@3131773"   # valor padrão da Marina: CIVITAI_BREAST_SLIDER
-KREA2_ADULT = {
-    "urn:air:krea2:lora:civitai:2775340@3125118": 1.0,   # TextFusion Refusal-Reduction
-    "urn:air:krea2:lora:civitai:2779347@3130045": 0.5,   # NSFW Helper Slider
-    "urn:air:krea2:lora:civitai:1972981@3290120": 0.7,   # SNOFS Krea 2 v1.4
-}
+SFW_STACKS, NSFW_STACKS = ("n1", "n2"), ("a", "b", "c", "d")
 
 
 def ecosystem() -> str:
@@ -111,27 +129,41 @@ def ecosystem() -> str:
     return wanted if wanted in ("flux1", "krea2") else "flux1"
 
 
-def select_loras_krea2(*, is_nsfw: bool) -> dict:
+def krea2_stack_name(*, is_nsfw: bool, stack: Optional[str] = None) -> str:
+    s = _settings()
+    if is_nsfw:
+        name = (stack or getattr(s, "CIVITAI_KREA2_NSFW_STACK", "") or "a").strip().lower()
+        return name if name in NSFW_STACKS else "a"
+    name = (stack or getattr(s, "CIVITAI_KREA2_SFW_STACK", "") or "n1").strip().lower()
+    return name if name in SFW_STACKS else "n1"
+
+
+def select_loras_krea2(*, is_nsfw: bool, stack: Optional[str] = None,
+                       breast_slider: Optional[float] = None) -> dict:
     s = _settings()
     loras = {getattr(s, "CIVITAI_LORA_MARINA_KREA2").strip(): 1.0}   # o rosto dela manda (BeMyHero: sempre 1.0)
-    loras.update(KREA2_REALISM)
-    slider = float(getattr(s, "CIVITAI_BREAST_SLIDER", 1.0) or 0)
+    loras.update(KREA2_STACKS[krea2_stack_name(is_nsfw=is_nsfw, stack=stack)]["loras"])
+    loras[KREA2_EMOTIONS] = KREA2_EMOTIONS_WEIGHT
+    slider = float(getattr(s, "CIVITAI_BREAST_SLIDER", 0) or 0) if breast_slider is None else breast_slider
     if slider:
-        loras[KREA2_BREAST_SLIDER] = slider
-    if is_nsfw:
-        loras.update(KREA2_ADULT)
+        loras[KREA2_BREAST_SLIDER] = slider   # mesmo valor vestida e pelada: o corpo não muda entre as fotos
+    if not is_nsfw:
+        loras[KREA2_NSFW_HELPER] = KREA2_SFW_GUARD
     return loras
 
 
 def build_workflow_krea2(prompt: str, *, is_nsfw: bool, width: int = 1024, height: int = 1536,
-                         seed: Optional[int] = None) -> dict:
+                         seed: Optional[int] = None, stack: Optional[str] = None,
+                         breast_slider: Optional[float] = None) -> dict:
+    name = krea2_stack_name(is_nsfw=is_nsfw, stack=stack)
+    spec = KREA2_STACKS[name]
     step = {"engine": "comfy", "ecosystem": "krea2", "model": "turbo", "operation": "createImage",
-            "prompt": prompt, "width": width, "height": height, "steps": 8, "cfgScale": 1,
+            "prompt": prompt, "width": width, "height": height, "steps": spec["steps"], "cfgScale": 1,
             "sampler": "euler", "scheduler": "simple",
             "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
-            "quantity": 1, "loras": select_loras_krea2(is_nsfw=is_nsfw)}
-    if is_nsfw:
-        step["diffusionModel"] = KREA2_AIO   # checkpoint sem censura só na adulta
+            "quantity": 1, "loras": select_loras_krea2(is_nsfw=is_nsfw, stack=name, breast_slider=breast_slider)}
+    if spec["model"]:
+        step["diffusionModel"] = spec["model"]
     body = {"steps": [{"$type": "imageGen", "input": step}], "allowMatureContent": bool(is_nsfw)}
     if is_nsfw:
         body["currencies"] = ["yellow"]

@@ -104,7 +104,8 @@ class Krea2Test(unittest.TestCase):
 
     def setUp(self):
         self.fake = SimpleNamespace(CIVITAI_API_KEY="tok", CIVITAI_ECOSYSTEM="krea2",
-                                    CIVITAI_LORA_MARINA_KREA2="urn:air:krea2:lora:civitai:1@2", CIVITAI_BREAST_SLIDER=1.5)
+                                    CIVITAI_LORA_MARINA_KREA2="urn:air:krea2:lora:civitai:1@2", CIVITAI_BREAST_SLIDER=1.5,
+                                    CIVITAI_KREA2_SFW_STACK="n1", CIVITAI_KREA2_NSFW_STACK="a")
         p = patch.object(ci, "_settings", return_value=self.fake)
         p.start()
         self.addCleanup(p.stop)
@@ -113,22 +114,70 @@ class Krea2Test(unittest.TestCase):
         self.fake.CIVITAI_LORA_MARINA_KREA2 = ""
         self.assertEqual(ci.ecosystem(), "flux1")
 
-    def test_normal_photo_uses_official_turbo_and_no_adult_loras(self):
+    def test_normal_photo_n1_uses_official_turbo_and_guards_against_nudity(self):
         body = ci.build_workflow_krea2("p", is_nsfw=False)
         step = body["steps"][0]["input"]
         self.assertEqual((step["ecosystem"], step["model"], step["steps"], step["cfgScale"]), ("krea2", "turbo", 8, 1))
         self.assertNotIn("diffusionModel", step)
         self.assertEqual(step["loras"]["urn:air:krea2:lora:civitai:1@2"], 1.0)
         self.assertEqual(step["loras"][ci.KREA2_BREAST_SLIDER], 1.5)
-        self.assertFalse(set(ci.KREA2_ADULT) & set(step["loras"]))
+        self.assertEqual(step["loras"][ci.KREA2_NSFW_HELPER], ci.KREA2_SFW_GUARD)
+        self.assertIn(ci.KREA2_EMOTIONS, step["loras"])
+        self.assertNotIn(ci.KREA2_SNOFS, step["loras"])
         self.assertFalse(body["allowMatureContent"])
+        self.assertNotIn("currencies", body)
 
-    def test_adult_photo_uses_the_uncensored_checkpoint_and_yellow_buzz(self):
-        body = ci.build_workflow_krea2("p", is_nsfw=True)
-        step = body["steps"][0]["input"]
-        self.assertEqual(step["diffusionModel"], ci.KREA2_AIO)
-        self.assertTrue(set(ci.KREA2_ADULT) <= set(step["loras"]))
-        self.assertEqual(body["currencies"], ["yellow"])
+    def test_normal_photo_n2_uses_stable_yogi_and_snapshot(self):
+        self.fake.CIVITAI_KREA2_SFW_STACK = "n2"
+        step = ci.build_workflow_krea2("p", is_nsfw=False)["steps"][0]["input"]
+        self.assertEqual(step["diffusionModel"], ci.KREA2_YOGI)
+        self.assertIn(ci.KREA2_SNAPSHOT, step["loras"])
+        self.assertNotIn(ci.KREA2_LENOVO, step["loras"])
+
+    def test_adult_stacks(self):
+        a = ci.build_workflow_krea2("p", is_nsfw=True)
+        step = a["steps"][0]["input"]
+        self.assertNotIn("diffusionModel", step)   # A: Turbo oficial + SNOFS, sem outros modelos NSFW
+        self.assertEqual(step["loras"][ci.KREA2_SNOFS], 1.0)
+        self.assertEqual(step["loras"][ci.KREA2_NSFW_HELPER], 0.5)
+        self.assertEqual(step["loras"][ci.KREA2_BREAST_SLIDER], 1.5, "mesmo corpo da foto vestida")
+        self.assertEqual(a["currencies"], ["yellow"])
+        self.assertTrue(a["allowMatureContent"])
+        b = ci.build_workflow_krea2("p", is_nsfw=True, stack="b")["steps"][0]["input"]
+        self.assertEqual((b["diffusionModel"], b["steps"]), (ci.KREA2_AIO, 12))
+        self.assertNotIn(ci.KREA2_SNOFS, b["loras"])
+        c = ci.build_workflow_krea2("p", is_nsfw=True, stack="c")["steps"][0]["input"]
+        self.assertEqual(c["diffusionModel"], ci.KREA2_YOGI)
+        self.assertEqual(c["loras"][ci.KREA2_REALISM_ENGINE], 0.7)
+        d = ci.build_workflow_krea2("p", is_nsfw=True, stack="d")["steps"][0]["input"]
+        self.assertNotIn("diffusionModel", d)
+        self.assertEqual(d["loras"][ci.KREA2_NSFW_V4], 1.0)
+
+    def test_a_normal_stack_name_never_serves_an_adult_photo(self):
+        self.fake.CIVITAI_KREA2_NSFW_STACK = "n1"
+        self.assertEqual(ci.krea2_stack_name(is_nsfw=True), "a")
+        self.fake.CIVITAI_KREA2_SFW_STACK = "c"
+        self.assertEqual(ci.krea2_stack_name(is_nsfw=False), "n1")
+
+
+class Krea2PromptTest(unittest.TestCase):
+    def test_natural_language_with_her_trigger_and_traits(self):
+        import visual_profile as vp
+        p = vp.krea2_prompt("sitting on the couch, wearing pajamas, photorealistic, 8k", is_nsfw=False)
+        self.assertTrue(p.startswith("marinaX, Detailed Emotions and Expressions."))
+        self.assertIn("amber eyes", p)
+        self.assertIn("golden blonde tips", p)
+        self.assertIn("fully clothed", p)
+        self.assertNotIn("photorealistic", p.lower())
+        self.assertNotIn("8k", p)
+        self.assertNotIn("naked", p)
+
+    def test_adult_prompt_follows_the_angle(self):
+        import visual_profile as vp
+        p = vp.krea2_prompt("bathroom", is_nsfw=True, focus_angle="behind", is_mirror=True)
+        self.assertIn("Seen from behind", p)
+        self.assertIn("mirror selfie", p)
+        self.assertIn("unblemished skin", p)
 
 
 if __name__ == "__main__":

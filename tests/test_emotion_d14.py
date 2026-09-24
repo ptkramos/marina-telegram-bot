@@ -100,7 +100,7 @@ class EmotionCoreTest(unittest.TestCase):
     def test_hurt_starts_at_zero(self):
         self.assertEqual(self.engine.bond()["hurt"], 0.0)
         self.db.ajustar_emocao("hurt", 0.3, now=NOW)
-        self.assertAlmostEqual(self.engine.bond()["hurt"], 0.3, places=1)
+        self.assertAlmostEqual(self.engine.bond(NOW)["hurt"], 0.3, places=1)
 
     # --------------------------------------------------------------- prompt --
     def test_prompt_shows_cause_in_words_never_numbers(self):
@@ -204,7 +204,7 @@ class PatrickFeelsTest(unittest.TestCase):
 
     def test_rudeness_hurts_until_he_repairs(self):
         emotion.apply_patrick_event(self.db, {"kind": "grosseria", "cause": "ele respondeu seco e desdenhou do trabalho dela"}, NOW)
-        self.assertGreater(self.engine.bond()["hurt"], 0.2)
+        self.assertGreater(self.engine.bond(NOW)["hurt"], 0.2)
         hours_later = NOW + timedelta(hours=6)
         grievance = [e for e in self.engine.episodes(hours_later) if e.target == "o Patrick"][0]
         self.assertAlmostEqual(grievance.intensity, 0.4, places=2, msg="sem reparo, a mágoa não passa sozinha em horas")

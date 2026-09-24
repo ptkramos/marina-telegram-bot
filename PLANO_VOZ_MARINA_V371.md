@@ -838,6 +838,37 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - `CIVITAI_BREAST_SLIDER=<valor>`, calibrado numa grade de teste.
   - Sem o LoRA dela, o bot fica no Flux: foto sem o rosto dela não serve.
 
+**Dataset e treino da Marina Krea 2 (24/09):**
+- Rosto de base: modelo Seltin, fotos compradas e com permissão de uso (confirmada pelo Patrick). O teste de rosto sintético (mistura de duas modelos, depois edição pelo `editImage` do Krea 2 a partir de uma foto) foi descartado: a identidade escorregava entre as fotos. Custo do teste: ~285 Buzz.
+- `references/marina_krea/dataset/`: 35 fotos com legenda (`marina_NN_rosto|corpo.jpg` + `.txt`). São 26 de rosto e 9 de corpo, todas vestidas. Marca d'água cortada; nudez, lingerie e aparelho nos dentes ficaram de fora. As descartadas estão em `references/marina_krea/descartadas/` (fora do git).
+- **Legendas:** começam com `marinaX, ` e descrevem olho ("brown eyes"), cabelo e maquiagem de cada foto. Isso deixa esses traços **soltos**, e o prompt do bot define a Marina: olhos âmbar, sardinhas leves, cabelo castanho com pontas loiras.
+- **Treino no site:** Krea 2 Base, motor AI Toolkit, 3000 passos, 10 checkpoints, 1024. Os parâmetros avançados ficaram no padrão, porque mexer neles tira o direito a reembolso.
+
+**Pilhas revisadas depois de ler a descrição de cada LoRA (24/09):**
+
+| Pilha | Conteúdo (fora o marinaX 1.0 + Emotions 0.6 + slider) | whatif |
+|---|---|---|
+| **n1** normal | Turbo oficial + NiceGirls 0.7 + Lenovo 1.2 + Krea2-realism V2 1.0 + NSFW Helper −1 (trava) | 26 |
+| **n2** normal | **Stable Yogi v3** (checkpoint) + Realistic Snapshot 0.6 + NSFW Helper −1 | 25 |
+| **a** adulta | Turbo oficial + SNOFS 1.0 + NSFW Helper 0.5 | 25 |
+| **b** adulta | Krea2 turbo NSFW AIO sozinho, 12 passos | 35 |
+| **c** adulta | Stable Yogi + Realism Engine v3 0.7 + NSFW Helper 0.5 | 25 |
+| **d** adulta | Turbo oficial + **Krea 2 NSFW V4** (v4.3_EXP, experimental) 1.0 + NSFW Helper 0.5 | 24 |
+
+- **O que saiu da pilha:**
+  - **TextFusion:** foi treinado no Krea 2 não-destilado e dá textura estranha no Turbo.
+  - **AIO + SNOFS juntos:** o autor do SNOFS pede pra não empilhar outros modelos ou LoRAs de NSFW.
+  - **Light Slider:** o autor diz que degrada a imagem.
+- **Escolha no `.env`:** `CIVITAI_KREA2_SFW_STACK=n1|n2` e `CIVITAI_KREA2_NSFW_STACK=a|b|c|d`. Um nome inválido cai no padrão do tipo certo, então uma pilha de foto normal nunca serve foto adulta.
+- **Slider de seios:** a escala vai de −5 a 5 (nua). O padrão agora é 2.0, e a calibração sai da grade.
+- **Prompt do Krea 2** (`visual_profile.krea2_prompt`):
+  - texto corrido;
+  - gatilhos `marinaX` e "Detailed Emotions and Expressions";
+  - traços dela e "unblemished skin";
+  - "photo", nunca "photorealistic" (pedido do autor do SNOFS);
+  - só vale quando `IMAGE_ENGINE=civitai` e o ecossistema é krea2.
+- **Teste quando o LoRA chegar:** 2 cenas normais × (n1, n2), 2 cenas adultas × (a, b, c, d) e a grade do slider. Mesma semente, uns 16 retratos, ~400 Buzz. O Patrick escolhe pelo olho.
+
 ### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅
 
 | Item | Como ficou |

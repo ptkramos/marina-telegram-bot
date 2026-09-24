@@ -138,7 +138,9 @@ class Settings:
     CIVITAI_BASE_MODEL: str = os.getenv("CIVITAI_BASE_MODEL", "").strip()   # vazio = Flux.1 Dev
     CIVITAI_ECOSYSTEM: str = os.getenv("CIVITAI_ECOSYSTEM", "flux1").strip().lower()   # flux1 | krea2
     CIVITAI_LORA_MARINA_KREA2: str = os.getenv("CIVITAI_LORA_MARINA_KREA2", "").strip()   # AIR do LoRA Krea 2 dela
-    CIVITAI_BREAST_SLIDER: float = float(os.getenv("CIVITAI_BREAST_SLIDER", "1.0") or 0)   # padrão da Marina (a calibrar)
+    CIVITAI_BREAST_SLIDER: float = float(os.getenv("CIVITAI_BREAST_SLIDER", "2.0") or 0)   # -5..5 nua; a calibrar na grade
+    CIVITAI_KREA2_SFW_STACK: str = os.getenv("CIVITAI_KREA2_SFW_STACK", "n1").strip().lower()     # n1 | n2
+    CIVITAI_KREA2_NSFW_STACK: str = os.getenv("CIVITAI_KREA2_NSFW_STACK", "a").strip().lower()    # a | b | c | d
 
     # Ciclo de vontade própria e iniciativa autônoma
     AUTONOMOUS_CHECK_INTERVAL_MINUTES: int = int(os.getenv("AUTONOMOUS_CHECK_INTERVAL_MINUTES", "30"))

@@ -72,6 +72,71 @@ ANATOMY_NSFW_SIDE = (
 )
 
 
+
+# --- Krea 2 (24/09) ---------------------------------------------------------
+# Os autores de todos os LoRAs Krea 2 que usamos pedem TEXTO CORRIDO (4-5
+# frases), não lista de tags. O SNOFS avisa: escrever "photo"/"photograph" e
+# nunca "photorealistic" (o Krea 2 viu muita arte; o termo puxa textura de
+# pintura). O LoRA novo da Marina foi treinado com o gatilho "marinaX" e com
+# olho/cabelo/maquiagem descritos nas legendas — então são os traços daqui que
+# definem a Marina: olhos âmbar, sardinhas leves, cabelo castanho com pontas
+# loiras. "unblemished skin" segura as pintas que o Emotions adora inventar.
+KREA2_TRIGGER = "marinaX"
+KREA2_EMOTIONS_TRIGGER = "Detailed Emotions and Expressions"
+KREA2_IDENTITY = (
+    "a candid smartphone photo of a young Brazilian woman with warm light amber eyes, a few faint light "
+    "freckles across her nose and cheeks, and long chestnut brown hair with golden blonde tips, "
+    "semi-straight with soft waves at the ends"
+)
+KREA2_BODY_SFW = "She has a fit, slim body with a natural sun-kissed tan."
+KREA2_BODY_NSFW = "She has a fit, slim body with a natural sun-kissed tan and visible bikini tan lines."
+KREA2_CLOTHED = "She is fully clothed, her outfit covers her chest and body."
+KREA2_NUDE = {
+    "frontal": ("She is completely naked, showing her natural perky breasts with pink nipples, her slim "
+                "waist and her shaved pussy."),
+    "behind": ("Seen from behind, she is completely naked, showing her round firm butt with cheeky bikini "
+               "tan lines, looking back over her shoulder."),
+    "side": ("Seen from the side, she is completely naked, her natural breast with a pink nipple in profile, "
+             "her slim waist and arched lower back."),
+}
+KREA2_MIRROR = ("She is taking a mirror selfie, holding a black iPhone 16 Pro, her hand and the phone "
+                "visible in the reflection.")
+KREA2_PHOTO = ("It looks like a real iPhone photo: natural light, real skin texture with visible pores, "
+               "unblemished skin.")
+_NOT_A_PHOTO = re.compile(r"\b(photo[- ]?realistic|hyper[- ]?realistic|ultra[- ]?realistic|high realism|realism|8k|masterpiece)\b",
+                          re.IGNORECASE)
+
+
+def krea2_prompt(scene: str, *, is_nsfw: bool, focus_angle: str = "frontal", is_mirror: bool = False) -> str:
+    """Prompt em texto corrido pro Krea 2, com o gatilho do LoRA dela e os traços da Marina."""
+    scene = _NOT_A_PHOTO.sub("", scene or "")
+    scene = re.sub(r"\s*,(\s*,)+\s*", ", ", scene)
+    scene = re.sub(r"\s{2,}", " ", scene).strip(" ,.")
+    parts = [f"{KREA2_TRIGGER}, {KREA2_EMOTIONS_TRIGGER}. {KREA2_IDENTITY[0].upper()}{KREA2_IDENTITY[1:]}."]
+    if scene:
+        parts.append(f"Scene: {scene}.")
+    if is_nsfw:
+        parts.append(KREA2_NUDE.get(focus_angle, KREA2_NUDE["frontal"]))
+        parts.append(KREA2_BODY_NSFW)
+    else:
+        parts.append(KREA2_CLOTHED)
+        parts.append(KREA2_BODY_SFW)
+    if is_mirror:
+        parts.append(KREA2_MIRROR)
+    parts.append(KREA2_PHOTO)
+    return " ".join(parts)
+
+
+def _krea2_active() -> bool:
+    try:
+        from config import settings
+        if getattr(settings, "IMAGE_ENGINE", "") != "civitai":
+            return False
+        import civitai_images
+        return civitai_images.ecosystem() == "krea2"
+    except Exception:
+        return False
+
 # Palavras-chave para detecção
 CONTINUITY_PATTERNS = [
     r"\b(manda|tira|envia|faz|quero)\s+(outra|mais\s+uma|outra\s+foto|mais\s+foto)\b",
@@ -298,6 +363,13 @@ class VisualProfileManager:
         is_mirror = any(kw in combined_text.lower() for kw in ["espelho", "mirror", "selfie no espelho", "mirror selfie", "segurando celular"])
         if is_mirror and not any(kw in scene_part.lower() for kw in ["mirror selfie", "holding space black"]):
             scene_part = f"{scene_part}, {MIRROR_SELFIE_TRIGGER}".strip(", ")
+
+        if _krea2_active():
+            scene_krea2 = scene_part
+            if is_mirror:
+                scene_krea2 = scene_krea2.replace(MIRROR_SELFIE_TRIGGER, "").strip(" ,")
+            return (krea2_prompt(scene_krea2, is_nsfw=final_nsfw, focus_angle=final_angle, is_mirror=is_mirror),
+                    final_nsfw, final_angle)
 
         physique = MARINA_PHYSIQUE_DNA if final_nsfw else MARINA_PHYSIQUE_SFW
         full_prompt = (
