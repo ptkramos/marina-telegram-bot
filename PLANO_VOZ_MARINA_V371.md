@@ -807,6 +807,17 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
 2. No `.env`: `IMAGE_ENGINE=civitai` e `PHOTO_PROVIDER_MAINTENANCE=false`.
 3. `/restart` e pedir uma foto. No log aparecem `civitai.submitted … cost=10` e `civitai.image_ok`.
 
+**Primeiras fotos reais (24/09, madrugada, ~50 Buzz no total):**
+- **Foto normal com defeito grave:** uma selfie de pijama saiu sem roupa. O prompt normal levava a descrição do corpo da adulta, e o "reenviar como adulta" que eu tinha criado liberou a nudez. Corrigido em c5b0a4f: a foto normal agora usa `MARINA_PHYSIQUE_SFW` e **nunca vira adulta**; se o moderador marcar, ela falha. A foto seguinte saiu certa, de pijama.
+- **Adulta:** OK, 832×1216, baixada pelo blob autenticado. ~40 s, 10 Buzz.
+- **A/B com a mesma semente e o mesmo LoRA:** Flux.1 Dev (pose de modelo, ignorou o café gelado) × **Flux.1 Krea Dev** (mais natural, seguiu a cena, sorriso espontâneo). O Krea Dev é um checkpoint da comunidade e demorou ~4 min carregando na primeira vez. Opção: `CIVITAI_BASE_MODEL=urn:air:flux1:checkpoint:civitai:1827475@2068069`.
+
+**Krea 2 com LoRA (pedido do Patrick: vale retreinar a Marina pra Krea 2?):**
+- A receita pública "Krea v2" (via FAL) **não** aceita LoRA. Mas a especificação completa da API (`/openapi/v2-consumers.json`) tem **Krea 2 pelo motor Comfy**: `engine=comfy, ecosystem=krea2, model=turbo|raw`, com `loras`, `diffusionModel` (checkpoint próprio), `negativePrompt` e tamanho livre. É o mesmo caminho do gerador do site.
+- **`whatif` com o combo do print do Patrick** (Krea2 turbo NSFW AIO 2732185@3071970 + Realism Engine 2688234@3109006 + TextFusion 2775340@3125118 + NSFW Helper 2779347@3130045 + Emotions 2829908@3193133 + SNOFS 1972981@3290120): **aceito**. **Turbo = 17 Buzz/foto** (8 passos); Raw = 43.
+- **Treinar o LoRA Krea 2** também é possível pela API (`Krea2AIToolkitTrainingInput`), mas pelo site é mais simples.
+- **Plano:** o Patrick treina a Marina em Krea 2 no Civitai → eu troco o pipeline para Krea 2 Turbo + AIO + LoRA da Marina + LoRAs de realismo (e os adultos só em foto adulta), por configuração, e comparamos com o Flux. Obs.: o "BeMyHero - ScarlettX" do print é LoRA de personagem/rosto; no nosso pipeline, o rosto é o da Marina.
+
 ### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅
 
 | Item | Como ficou |
