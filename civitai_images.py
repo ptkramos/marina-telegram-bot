@@ -106,11 +106,11 @@ KREA2_SQUEEZE = "urn:air:krea2:lora:civitai:2761661@3161094"   # Breast squeezin
 KREA2_WETNESS = "urn:air:krea2:lora:civitai:2738333@3079282"   # Wetness Slider (−1..1; o FinePorn embute negativo)
 KREA2_SPREAD = "urn:air:krea2:lora:civitai:2923413@3332400"    # Pussy Spread v2 (gatilho "vag_spread")
 KREA2_CREAMY = "urn:air:krea2:lora:civitai:2931761@3318154"    # Creamy Pussy v0.1 (gatilhos "creamythings", "creamy vagina")
-KREA2_BETTER = "urn:air:krea2:lora:civitai:2729157@3288922"    # Better Pussy v4.2.1 (gatilho "hairless_pussy")
+KREA2_BETTER = "urn:air:krea2:lora:civitai:2729157@3288922"    # Better Pussy v4.2.1 — testado e REPROVADO (24/09)
 KREA2_WEIGHT = "urn:air:krea2:lora:civitai:2858768@3229815"    # Body Weight Slider v2 (−3..5, maior = mais magra)
 KREA2_TANLINES = "urn:air:krea2:lora:civitai:2840638@3206585"  # Bikini Tan Lines (AiMami) — gatilho "bikini tan-lines"
 KREA2_PHONE = "urn:air:krea2:lora:civitai:2796343@3151907"     # Elusarca Smartphone Photography Slider (1–2)
-EXCLUSIVE = {KREA2_BETTER: KREA2_SPREAD}   # se os dois ligarem, fica só o valor (o Spread)
+EXCLUSIVE: dict = {}   # {perdedor: vencedor} quando dois LoRAs de ocasião brigam (Better Pussy saiu em 24/09)
 PHONE_SELFIE_WEIGHT = 0.8   # 1.5 enchia de purpurina; 0.8 = "realismo perfeito" (Patrick, 24/09) — em TODA foto
 PHONE_DESATURATE = 0.83   # o autor corrige −15 a −20 de saturação depois de gerar; fazemos no download
 KREA2_NICEGIRLS = "urn:air:krea2:lora:civitai:1862761@3075498"         # NiceGirls UltraReal (0.6-0.8)
@@ -179,10 +179,6 @@ CONDITIONAL = (
     (KREA2_SPREAD, 0.8, ("spreading her pussy", "spread her pussy", "spreads her pussy", "pussy lips open",
                          "pussy spread", "spread open", "abrindo a buceta", "abrindo a vagina", "abre a buceta"),
      True, "vag_spread"),
-    # Better Pussy (Patrick, 24/09): melhora o aspecto nas fotos de vulva à mostra; nunca junto com
-    # o Spread (medo de conflito) — ver EXCLUSIVE.
-    (KREA2_BETTER, 0.8, ("showing her pussy", "legs spread", "legs open", "close-up of her pussy",
-                         "pussy close-up", "mostrando a buceta", "pernas abertas"), True, "hairless_pussy"),
     # Creamy só na intensidade mínima: o líquido saindo, sem virar "gozo" (Patrick, 24/09).
     (KREA2_CREAMY, 0.5, ("she came", "just came", "right after she came", "orgasm", "cumming", "climax",
                          "gozou", "gozando", "gozar", "creamy"), True, "creamythings, creamy vagina"),
