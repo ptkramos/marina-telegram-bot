@@ -662,6 +662,12 @@ class WorldStateManager:
         except Exception:
             logger.exception("milo.materialize.error")
         try:
+            # D11: a consulta médica que já aconteceu vira acontecimento do dia.
+            from health import Health
+            Health(self.db).materialize(now)
+        except Exception:
+            logger.exception("health.materialize.error")
+        try:
             # Fase D9: roupa, faxina, mercado, contas e perrengues do apê.
             from casa import Casa
             Casa(self.db).materialize(now)

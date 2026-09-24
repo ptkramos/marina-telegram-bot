@@ -137,6 +137,36 @@ class HealthTest(unittest.TestCase):
                 Health(self.db).illness(date(2026, 3, 3))
         self.assertEqual(calc.call_count, 1)
 
+    # ------------------------------------------------------------ médico --
+    def _strong_cold_start(self):
+        return _first(lambda d: (x := self.h.illness(d)) is not None and x[0] == "resfriado" and x[1] == 1
+                      and x[3] == 2 and x[2] >= 3, days=4000)
+
+    def test_patrick_sends_her_to_the_doctor_and_she_gets_better_faster(self):
+        with patch.object(health, "DAD_SENDS_CHANCE", 0.0):
+            start = self._strong_cold_start()
+            before = self.h.illness(start)[2]
+            now = datetime.combine(start, time(10, 0))
+            self.assertFalse(self.h.observe_patrick("te amo, se cuida", now))
+            self.assertTrue(self.h.observe_patrick("amor vai no médico, não fica assim não", now))
+            after = self.h.illness(start)[2]
+            self.assertLess(after, before, "remédio de médico: melhora mais rápido")
+            lines = " | ".join(self.h.prompt_lines(now))
+            self.assertIn("O Patrick mandou você ir ao médico", lines)
+            later = now + timedelta(hours=3)
+            self.assertIn("foi ao médico", " | ".join(self.h.prompt_lines(later)))
+            self.assertEqual(self.h.materialize(later), 1)
+
+    def test_no_doctor_for_cramps_or_small_things(self):
+        day = _first(lambda d: self.h.cramps(d) == 3 and not self.h.illness(d), CYCLE_START)
+        self.assertFalse(self.h.observe_patrick("vai no médico amor", datetime.combine(day, time(10, 0))))
+
+    def test_dad_sometimes_sends_her(self):
+        with patch.object(health, "DAD_SENDS_CHANCE", 1.0):
+            start = self._strong_cold_start()
+            visit = self.h.doctor(datetime.combine(start, time(9, 0)))
+        self.assertEqual(visit[1], "o pai")
+
     def test_healthy_day_is_silent(self):
         day = _first(lambda d: not self.h.conditions(datetime.combine(d, time(10, 0))), date(2026, 1, 20))
         self.assertEqual(self.h.prompt_lines(datetime.combine(day, time(10, 0))), [])

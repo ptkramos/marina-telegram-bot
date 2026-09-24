@@ -205,6 +205,11 @@ class Rituals:
         """Chamado a cada poucos minutos. Devolve o ritual a enviar agora, se houver."""
         now = now or datetime.now()
         day = now.date()
+        if self.in_shower(now):
+            # 24/09: o bom dia saiu às 05:19 com ela DENTRO do box (banho 05:10–05:29).
+            # Antes ou depois do banho pode (e ela decide se junta: "bom dia… vou pro banho");
+            # de dentro do chuveiro não. O ritual espera — a janela do bom dia é de 3 h.
+            return None
         kind, activity = self._state(now)
         previous = self._get("ritual_last_kind")
         self._set("ritual_last_kind", kind, now)
@@ -243,6 +248,8 @@ class Rituals:
             return None
         agenda = "hoje tem aula" if self._has_class(day) else "hoje é dia livre, sem aula"
         agora = f" Agora você está: {activity}." if activity else ""
+        if "se arrumando" in activity and not self._get(f"{PREFIX}{day.isoformat()}:cotidiano:banho_manha"):
+            agora += " Já já você entra no banho pra se arrumar (se quiser, pode comentar)."
         return Ritual("bom_dia", key, "ritual_bom_dia", f"Você acordou às {wake:%H:%M}; {agenda}.{agora}",
                       "Bom dia, amor 🖤")
 
@@ -361,6 +368,17 @@ class Rituals:
     def _last_shower_at(self, day) -> Optional[datetime]:
         raw = self._get(f"{PREFIX}{day.isoformat()}:banho_last")
         return datetime.fromisoformat(raw) if raw else None
+
+    def in_shower(self, now: datetime) -> bool:
+        """Ela está dentro do chuveiro agora (entre o começo e o fim do banho)."""
+        raw = self.db.get_estado_relacional().get("pending_transition_json")
+        try:
+            data = json.loads(raw) if raw else {}
+            if data.get("routine_type") != "shower":
+                return False
+            return datetime.fromisoformat(data["transition_at"]) <= now < datetime.fromisoformat(data["end_at"])
+        except (TypeError, ValueError, KeyError):
+            return False
 
     def _transition_busy(self, now: datetime) -> bool:
         raw = self.db.get_estado_relacional().get("pending_transition_json")

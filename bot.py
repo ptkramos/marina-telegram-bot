@@ -195,18 +195,37 @@ def is_authorized(update: Update) -> bool:
     user_id = update.effective_user.id if update.effective_user else None
     return chat_id == settings.TARGET_CHAT_ID or user_id == settings.TARGET_CHAT_ID
 
-def generate_dynamic_speech(instruction: str, max_tokens: int = 120, temperature: float = 0.72) -> str:
-    """Gera uma fala espontânea e orgânica da Marina usando a LLM com temperatura equilibrada anti-glitch."""
+def generate_dynamic_speech(instruction: str, max_tokens: int = 120, temperature: float = 0.72,
+                            *, with_history: bool = False) -> str:
+    """Gera uma fala espontânea e orgânica da Marina usando a LLM com temperatura equilibrada anti-glitch.
+
+    24/09: `with_history` — a iniciativa dela era gerada SEM a conversa; às 20:53 ela
+    cobrou "sumiu hein?" sem saber que o Patrick tinha dito às 18:24 que ia num
+    aniversário. Agora a iniciativa enxerga a conversa recente."""
     system_prompt = context_builder.build_system_prompt(user_message=instruction)
     from response_rhythm import apply_policy, select_policy
     policy = select_policy(instruction)
     system_prompt = apply_policy(system_prompt, policy)
     max_tokens = min(max_tokens, policy.token_budget)
+    history = []
+    if with_history:
+        try:
+            recent = memory_manager.get_historico_recente(limit=40)
+            budget, used = 6000, 0
+            for item in reversed(recent):
+                n = len(item.get("content", ""))
+                if used + n > budget:
+                    break
+                history.insert(0, {"role": item["role"], "content": item["content"]})
+                used += n
+        except Exception:
+            logger.exception('proactive.history.error')
     messages = [
         {
             "role": "system",
             "content": system_prompt
         },
+        *history,
         {"role": "user", "content": instruction}
     ]
     try:
@@ -3729,6 +3748,13 @@ async def process_incoming_batch(
                 logger.info("arrival_promise.made")
         except Exception:
             logger.exception("arrival_promise.observe.error")
+        try:
+            # D11 (Patrick, 24/09): mal de verdade + "vai no médico" dele → ela vai.
+            from health import Health
+            if Health(memory_manager.db).observe_patrick(texto_usuario, datetime.now()):
+                logger.info("health.doctor_booked by=patrick")
+        except Exception:
+            logger.exception("health.observe.error")
     if sent_mid and avail_decision and getattr(avail_decision, 'telemetry_event_id', None):
         actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
         availability_service.repo.record_actual_latency(
@@ -4101,6 +4127,12 @@ def _maybe_announce_transition(now: Optional[datetime] = None) -> Optional[str]:
         return None
 
 
+# 24/09 (Patrick): "a mensagem de iniciativa deve ser definida pela Marina e não pela gente".
+# As instruções dão a SITUAÇÃO; o que dizer, o tom e quantas mensagens são decisão dela.
+_PROACTIVE_STYLE = (" Escreva como no WhatsApp com o namorado, não como relatório do seu dia: nada de "
+                    "narrar a agenda ('Saindo pra X com Y'). Quantas mensagens e de que tamanho é você quem "
+                    "decide — pode ser uma só, ou várias curtinhas, cada uma numa linha. Não invente "
+                    "acontecimento que não está no seu dia.")
 _PROACTIVE_INSTRUCTIONS = {
     'pending_event_followup': ("Você lembrou que o Patrick tinha este compromisso: '{detail}'. "
                                "Mande uma mensagem curta perguntando como foi, com carinho, do seu jeito."),
@@ -4108,10 +4140,9 @@ _PROACTIVE_INSTRUCTIONS = {
                           "Pergunte de leve se tem novidade, sem pressão."),
     'shared_topic_callback': ("Você ficou pensando no assunto '{detail}' que vocês já conversaram. "
                               "Retome com naturalidade, em uma ou duas frases."),
-    'social_day_share': ("Aconteceu agora no seu dia: {detail} Mande uma mensagem espontânea pro "
-                         "Patrick puxando esse assunto, do jeito que namorada conta as coisas. "
-                         "Fique no que está no fato: não invente acontecimento grave nem exponha "
-                         "intimidade da outra pessoa."),
+    'social_day_share': ("Aconteceu no seu dia: {detail} Se isso te der vontade de falar com o Patrick, "
+                         "conte do seu jeito, como namorada conta as coisas — ou puxe outro assunto, você "
+                         "decide. Não exponha intimidade da outra pessoa."),
     # Fase C.3 — rituais de namorada (rituals.py). Gatilhos da agenda dela.
     'ritual_bom_dia': ("{detail} Mande o bom dia pro Patrick do seu jeito: curto, com o humor de quem "
                        "acabou de acordar, e se fizer sentido o que te espera hoje. Varie — nem sempre "
@@ -4119,14 +4150,13 @@ _PROACTIVE_INSTRUCTIONS = {
     'ritual_boa_noite': ("{detail} Mande boa noite pro Patrick com carinho de namorada, curto. Nada de "
                          "despedida formal nem lista de desejos. Varie: não caia sempre em 'dorme bem e "
                          "sonha comigo' — pode ser um detalhe do seu dia, um dengo, uma brincadeira."),
-    'ritual_cotidiano': ("Momento do seu dia agora: {detail} Mande uma mensagem espontânea curta sobre isso, "
-                         "do jeito que namorada avisa ou comenta pra chamar atenção e puxar conversa. Fique "
-                         "no que está acontecendo: não invente fato novo."),
+    'ritual_cotidiano': ("Momento do seu dia agora: {detail} Se der vontade, comente com o Patrick do seu "
+                         "jeito — um aviso, uma reclamação, uma graça, uma pergunta pra ele."),
     # Fase D12 — saudade (proactivity_service.saudade).
-    'saudade': ("{detail} Você está com saudade dele e foi procurar. Mande uma mensagem curta do seu "
-                "jeito — dengo, provocação, 'sumiu hein', ou puxando uma coisa real do seu dia. Se ele "
-                "não respondeu suas últimas mensagens, nada de drama pesado nem cobrança: no máximo um "
-                "'tá vivo?' carinhoso. Não invente acontecimento novo."),
+    'saudade': ("{detail} Você está com saudade e com vontade de falar com ele. O que dizer é com você: "
+                "olhe a conversa — se ele contou que ia sair ou estava ocupado, você sabe onde ele está (e "
+                "pode falar mesmo assim, cobrar de brincadeira, perguntar como está sendo, mandar um "
+                "carinho, contar uma coisa sua…). Nada de drama pesado."),
     # Promessa cumprida (arrival_promise): "te aviso quando chegar".
     'aviso_chegada': ("{detail} e tinha prometido avisar o Patrick. Mande o aviso curtinho, do seu jeito "
                       "('cheguei, amor', 'chegueeei'); se aconteceu algo no caminho, pode comentar. Não "
@@ -4147,6 +4177,29 @@ def _proactive_text(reason: str, detail, fallback: str) -> str:
     return strip_closing_periods(_proactive_text_raw(reason, detail, fallback))
 
 
+def _initiative_context(now: Optional[datetime] = None) -> str:
+    """Quando foi a última coisa que ele disse, e as últimas iniciativas dela (pra não repetir o jeito)."""
+    now = now or datetime.now()
+    parts = []
+    try:
+        with memory_manager.db.get_connection() as conn:
+            last = conn.execute("SELECT timestamp FROM conversas WHERE role='user' "
+                                "ORDER BY id DESC LIMIT 1").fetchone()
+            mine = conn.execute("SELECT content FROM conversas WHERE role='assistant' AND is_initiative=1 "
+                                "ORDER BY id DESC LIMIT 3").fetchall()
+        if last:
+            at = datetime.fromisoformat(last["timestamp"])
+            mins = int((now - at).total_seconds() // 60)
+            quando = f"há {mins} min" if mins < 90 else f"há {mins // 60}h{mins % 60:02d}"
+            parts.append(f" A última mensagem dele foi {quando} (às {at:%H:%M}).")
+        if mine:
+            anteriores = " | ".join('"' + (r["content"] or "").strip()[:120] + '"' for r in mine)
+            parts.append(f" Suas últimas iniciativas foram: {anteriores}. Não repita o jeito nem o assunto delas.")
+    except Exception:
+        logger.exception('proactive.context.error')
+    return "".join(parts)
+
+
 def _proactive_text_raw(reason: str, detail, fallback: str) -> str:
     """Auditoria #6: a proatividade viva mandava só frases prontas (4 variações
     de "oi amor"). O caminho que usava o LLM (`determine_proactive_prompt`) foi
@@ -4156,10 +4209,11 @@ def _proactive_text_raw(reason: str, detail, fallback: str) -> str:
     se falhar, cai na frase pronta de antes."""
     template = _PROACTIVE_INSTRUCTIONS.get(reason, _PROACTIVE_INSTRUCTIONS['light_affection'])
     instruction = ("[INICIATIVA SUA — o Patrick NÃO mandou mensagem; é você puxando conversa] "
-                   + template.format(detail=detail or ''))
+                   + template.format(detail=detail or '') + _PROACTIVE_STYLE + _initiative_context())
     for _ in range(2):
         try:
-            text = limpar_fala_marina(generate_dynamic_speech(instruction, max_tokens=120) or '')
+            text = limpar_fala_marina(generate_dynamic_speech(instruction, max_tokens=220,
+                                                              with_history=True) or '')
         except Exception:
             logger.exception('proactive.generate.error')
             return fallback
@@ -4235,10 +4289,9 @@ async def autonomous_routine_v36(application: Application):
                     reason = 'social_day_share'
                     detail = news['summary']
             elif reason == 'saudade':
-                from social_day import SocialDay
-                news = SocialDay(memory_manager.db).fresh_news(now)
-                if news:
-                    detail = f"{detail} Uma coisa real do seu dia que você pode puxar: {news['summary']}"
+                # 24/09: antes empurrava "trocou mensagem com a Bia" em toda saudade; o que
+                # aconteceu no dia já está no prompt ([DESDE A SUA ÚLTIMA MENSAGEM]).
+                pass
             if reason == 'pending_event_followup':
                 fallback = f"Amor, lembrei do seu compromisso: {detail}. Como foi?"
             elif reason == 'open_loop_checkin':

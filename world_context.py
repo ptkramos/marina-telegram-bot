@@ -231,6 +231,14 @@ class WorldContextBuilder:
         if social:
             blocks += ["[RELAÇÕES CANÔNICAS RELEVANTES — não implica compartilhar intimidades]", *social]
         blocks += self._social_day_block(now)
+        try:
+            # 24/09: o mundo anda enquanto eles não falam — sem isso ela continuava a
+            # história de onde a conversa parou ("ainda tô com a Júlia" já em casa).
+            from since_last import prompt_lines as since_last_lines
+            blocks += since_last_lines(self.db, now or datetime.now())
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("since_last.error")
         if True:
             from relationship_world import RelationshipWorld
 
@@ -269,6 +277,9 @@ class WorldContextBuilder:
             rotulo_estilo = ("[COMO O PATRICK ESCREVE]" if control_language == "pt-BR"
                              else "[LEARNED STYLE]")
             blocks.append(f"{rotulo_estilo} {learned_summary}")
+        # 24/09 ("já papou?" → "ainda não", tendo almoçado às 13:16; e o "o que eu papou"
+        # do achado 10.5): as gírias dele que o modelo lia errado.
+        blocks.append("[GÍRIAS DO PATRICK] papar = comer ('já papou?' = 'já comeu?').")
 
         if planner_tone or planner_goal:
             if control_language == "pt-BR":

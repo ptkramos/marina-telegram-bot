@@ -18,7 +18,11 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 KEY = "arrival_promise_json"
-FORGET_CHANCE = 0.12
+# 24/09 (Patrick): 12% era muito — ela é carinhosa, ama o namorado e é nova demais pra esquecer
+# assim. 5%, e nunca duas vezes na mesma semana (levou bronca, fica esperta).
+FORGET_CHANCE = 0.05
+FORGOT_KEY = "arrival_promise_forgot_at"
+NO_FORGET_AFTER = timedelta(days=7)
 LATE_MIN = (2, 6)                 # tira o sapato, larga a bolsa, aí avisa
 LOOKAHEAD = timedelta(minutes=90)  # perna que ainda vai começar
 
@@ -61,6 +65,14 @@ def _target_leg(db, now: datetime, *, home: bool):
     return min(live, key=lambda leg: leg.end) if live else None
 
 
+def _forgot_recently(db, now: datetime) -> bool:
+    raw = db.get_estado_relacional(FORGOT_KEY)
+    try:
+        return bool(raw) and now - datetime.fromisoformat(raw) < NO_FORGET_AFTER
+    except (TypeError, ValueError):
+        return False
+
+
 def due(db, now: Optional[datetime] = None) -> Optional[dict]:
     """A promessa venceu e ela ainda não avisou? Devolve e limpa (uma vez só)."""
     now = now or datetime.now()
@@ -76,8 +88,11 @@ def due(db, now: Optional[datetime] = None) -> Optional[dict]:
     if now < due_at:
         return None
     db.set_estado_relacional(KEY, "")
-    if promise.get("forget") or now - due_at > timedelta(hours=2):
-        return None   # esqueceu (às vezes acontece) ou já passou muito
+    if now - due_at > timedelta(hours=2):
+        return None   # já passou muito
+    if promise.get("forget") and not _forgot_recently(db, now):
+        db.set_estado_relacional(FORGOT_KEY, now.isoformat())
+        return None   # esqueceu (às vezes acontece)
     with db.get_connection() as conn:
         rows = conn.execute("SELECT content FROM conversas WHERE role='assistant' AND timestamp>?",
                             (promise["made_at"],)).fetchall()

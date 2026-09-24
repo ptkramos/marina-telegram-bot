@@ -22,7 +22,7 @@ logger = logging.getLogger('ResponseRhythm')
 # Anti-runaway ceiling. A healthy WhatsApp turn is rarely more than a handful of
 # bubbles; beyond this we fold the tail so a hallucinated burst can't spam the
 # user. Not a stylistic rule.
-_SANITY_CEILING = 6
+_SANITY_CEILING = 10   # 24/09 (Patrick): se ela quiser mandar 10 mensagens curtas, pode
 
 # Opening interjections / short laughs that deserve to stand alone as bubble #1
 # when Marina emits them followed by more substance. Case-insensitive.

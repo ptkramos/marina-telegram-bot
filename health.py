@@ -21,13 +21,20 @@ catalogar pra ele revisar — PLANO_VOZ, seção D11):
    cólica todo ciclo, com intensidade sorteada por ciclo (leve/moderada/forte).
 2. Jeito: independente — coisa pequena ela minimiza ("é só uma dorzinha");
    quando é forte de verdade fica manhosa com o Patrick e aceita dengo.
-3. Remédio: se automedica no leve (dipirona, Buscopan, Benegrip, chá);
-   não vai ao médico por nada disso. O pai se preocupa e manda ir.
+3. Remédio: se automedica no leve (dipirona, Buscopan, Benegrip, chá).
 4. Condição fixa: nenhuma além da cólica (que já é "dela").
+
+Revisão do Patrick (24/09): 1, 2 e 4 aprovados. No 3: quando está mal de
+verdade (virose ou resfriado forte — cólica NÃO), se o pai ou o Patrick mandar
+ir ao médico, ela vai (tem plano de saúde bom) e melhora mais rápido do que
+se automedicando. O pai manda sozinho em DAD_SENDS_CHANCE das vezes; o
+Patrick manda pela conversa (observe_patrick).
 """
 from __future__ import annotations
 
+import json
 import random
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from typing import Optional
@@ -51,6 +58,10 @@ CRAMP_WORD = {1: "leve", 2: "moderada", 3: "forte"}
 CRAMP_DISCOMFORT = {1: 0.3, 2: 0.5, 3: 0.8}
 SKIP_CHANCE = {"colica3": 0.85, "colica2": 0.2, "virose": 0.95, "resfriado_forte": 0.5}
 LOOKBACK_DAYS = 6
+DAD_SENDS_CHANCE = 0.6            # o pai fica sabendo e manda ir ao médico
+DOCTOR_KEY = "health_doctor_visits_json"
+_DOCTOR_RE = re.compile(r"\b(?:vai|v[aá]|ir|passa|procura|marca|marcar)\b[^.!?\n]{0,25}\b(?:m[eé]dic[oa]|"
+                        r"emerg[eê]ncia|pronto[- ]?socorro|upa|hospital|consulta)\b", re.IGNORECASE)
 
 
 def _rng(key: str) -> random.Random:
@@ -150,9 +161,88 @@ class Health:
                 kind, length = "resfriado", rng.randint(*COLD_DAYS)
             else:
                 continue
+            grav = 2 if rng.random() < 0.35 else 1
+            visit = self._doctor_visit(start, kind, grav, length)
+            if visit:
+                k = (visit[0].date() - start).days + 1
+                # Com remédio de médico melhora mais rápido: a virose acaba no dia da
+                # consulta; o resfriado, no dia seguinte.
+                length = min(length, k if kind == "virose" else k + 1)
             if back < length:
-                return kind, back + 1, length, 2 if rng.random() < 0.35 else 1
+                return kind, back + 1, length, grav
         return None
+
+    # ------------------------------------------------------------ médico --
+    @staticmethod
+    def _strong(kind: str, grav: int) -> bool:
+        return kind == "virose" or (kind == "resfriado" and grav == 2)
+
+    def _stored_visits(self) -> dict:
+        try:
+            raw = self.db.get_estado_relacional(DOCTOR_KEY)
+            return json.loads(raw) if raw else {}
+        except (TypeError, ValueError):
+            return {}
+
+    def _doctor_visit(self, start: date, kind: str, grav: int, length: int) -> Optional[tuple[datetime, str]]:
+        """(quando, quem mandou) da consulta dessa doença, ou None. A mais cedo vale."""
+        if not self._strong(kind, grav):
+            return None
+        options = []
+        stored = self._stored_visits().get(start.isoformat())
+        if stored:
+            try:
+                options.append((datetime.fromisoformat(stored["at"]), stored.get("who", "o Patrick")))
+            except (TypeError, ValueError, KeyError):
+                pass
+        rng = _rng(f"medico:{start.isoformat()}")
+        if rng.random() < DAD_SENDS_CHANCE:
+            day = start if kind == "virose" or length <= 2 else start + timedelta(days=rng.randint(0, 1))
+            options.append((datetime.combine(day, time(11, 0)) + timedelta(minutes=rng.randint(0, 6 * 60)), "o pai"))
+        return min(options) if options else None
+
+    def doctor(self, now: datetime) -> Optional[tuple[datetime, str]]:
+        """A consulta da doença de agora (passada ou marcada), se houver."""
+        sick = self.illness(now.date())
+        if not sick:
+            return None
+        kind, n, length, grav = sick
+        start = now.date() - timedelta(days=n - 1)
+        return self._doctor_visit(start, kind, grav, 10)
+
+    def observe_patrick(self, text: str, now: datetime) -> bool:
+        """O Patrick mandou ela ir ao médico enquanto ela está mal de verdade → ela vai."""
+        if not text or not _DOCTOR_RE.search(text):
+            return False
+        sick = self.illness(now.date())
+        if not sick or not self._strong(sick[0], sick[3]):
+            return False
+        start = (now.date() - timedelta(days=sick[1] - 1)).isoformat()
+        visits = self._stored_visits()
+        if start in visits:
+            return False
+        at = now + timedelta(minutes=_rng(f"medico:patrick:{start}").randint(60, 120))
+        visits[start] = {"at": at.isoformat(), "who": "o Patrick"}
+        self.db.set_estado_relacional(DOCTOR_KEY, json.dumps(visits, ensure_ascii=False))
+        clear_cache()
+        return True
+
+    def materialize(self, now: datetime) -> int:
+        """A consulta que já aconteceu vira acontecimento do dia (idempotente)."""
+        visit = self.doctor(now)
+        if not visit or visit[0] > now:
+            return 0
+        at, who = visit
+        with self.db.get_connection() as conn:
+            cur = conn.execute(
+                """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
+                   autonomy_level,importance,participants_json,share_worthy,created_at)
+                   VALUES (?,?,'routine','médico',?,'simulated',1,0.4,?,0.6,?)""",
+                (f"medico:{at.date().isoformat()}", at.isoformat(),
+                 f"Foi ao médico pelo plano de saúde ({who} mandou); saiu com receita e já tomou o remédio.",
+                 json.dumps(["marina"]), now.isoformat()))
+            conn.commit()
+            return cur.rowcount or 0
 
     def cold_risk(self, day: date) -> tuple[float, list[str]]:
         """Quanto a imunidade daquele dia multiplica a chance de resfriado, e por quê.
@@ -233,6 +323,11 @@ class Health:
                           else "chá de gengibre com mel, já melhorando")
                 out.append(Condition("resfriado", label, 0.45 if strong else 0.25 if n < length else 0.1,
                                      0.2 if strong else 0.1, 0.8, remedy, strong, started))
+        visit = self.doctor(now) if sick else None
+        if visit and visit[0] <= now:
+            for c in out:
+                if c.kind in ("virose", "resfriado"):
+                    c.remedy = f"foi ao médico às {visit[0]:%H:%M} pelo plano ({visit[1]} mandou), tomando o que ele receitou"
         ache = self.headache(day)
         if ache and ache[0] <= now < ache[1]:
             out.append(Condition("dor_de_cabeca", "dor de cabeça", 0.4, 0.1, 0.9, ache[2], False, ache[0]))
@@ -294,8 +389,13 @@ class Health:
         facts = "; ".join(f"{c.label} — {c.remedy}" for c in conds)
         lines = [f"- Saúde: {facts}."]
         if any(c.strong for c in conds):
-            lines.append("  Tá mal de verdade: com o Patrick fica manhosa, curtinha, aceita dengo e cuidado. "
-                         "Nada de médico por isso; se o pai souber, ele se preocupa e manda ir.")
+            lines.append("  Tá mal de verdade: com o Patrick fica manhosa, curtinha, aceita dengo e cuidado.")
+            visit = self.doctor(now) if any(c.kind in ("virose", "resfriado") for c in conds) else None
+            if visit and visit[0] > now:
+                lines.append(f"  {visit[1][0].upper()}{visit[1][1:]} mandou você ir ao médico: você vai hoje às "
+                             f"{visit[0]:%H:%M}, pelo plano de saúde.")
+            elif not visit:
+                lines.append("  Se o pai ou o Patrick mandar ir ao médico, você vai (tem plano de saúde bom).")
         else:
             lines.append("  Coisa pequena: você minimiza e segue a vida (\"é só uma dorzinha\"). "
                          "Só fala disso se vier ao caso ou se ele perguntar.")

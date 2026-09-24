@@ -4,6 +4,7 @@ Valida o DNA visual calibrado, detecção de continuidade, seleção de poses/â
 """
 import time
 import unittest
+from unittest.mock import patch
 from visual_profile import (
     VisualProfileManager,
     MARINA_VISUAL_DNA_BASE,
@@ -19,6 +20,10 @@ from visual_profile import (
 class TestVisualProfile(unittest.TestCase):
 
     def setUp(self):
+        # Estes testes cobrem o prompt do Flux; o .env pode estar no Krea 2 (24/09).
+        p = patch("visual_profile._krea2_active", return_value=False)
+        p.start()
+        self.addCleanup(p.stop)
         self.profile = VisualProfileManager()
         self.profile.clear_state()
 

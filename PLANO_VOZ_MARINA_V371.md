@@ -29,7 +29,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **C.2** Assistir junto (watch-along) | ⬜ | nada implementado |
 | **C.3** Rituais de namorada (bom dia, boa noite, cotidiano) | ✅ | `rituals.py` + job de 5 min: bom dia ao acordar, boa noite antes de deitar, momentos do cotidiano (saiu da aula, Milo, academia, banho) com teto de 2/dia; o banho vira estado `SHOWER` e ela some de verdade. Foto do banho espera o motor de imagem (C.1b) |
 | **C.4** Locomoção viva (uber, a pé, ônibus/metrô, carona) | ✅ tabela + API + carona | `commute.py`: ida e volta da PUC e das saídas viram estado ("voltando da PUC pra casa de ônibus"), modo sorteado por dia (pico, noite, chuva, fim de mês, cansaço, uber dividido com a amiga), imprevistos viram acontecimento do dia. Minutos pela Distance Matrix API quando há `DISTANCE_MATRIX_KEY` (1 consulta por trecho), tabela como reserva. Carona com o Theo (cânone: ele tem carro) |
-| **D** Rotina viva (refeições, sono, Milo, noite, faculdade, fim de semana, casa, freela) | 🟡 | Tabela desenhada com o Patrick em 22–23/09 (seção Fase D). **Feito:** D1 fome viva (refeições, lanches, apetite, disfarce, peso, agência), D12 laços (pai diário, Bia várias vezes, saudade do Patrick sem teto), D2+D3+D13 sono (variável, micro-despertares, manhã de trás pra frente), D4 banho v2 (por necessidade e emoção), D5 Milo + cochilo, D6 parte 1 (o que ela assiste, cânone de gostos, descoberta sozinha, curiosidade pelo que o Patrick cita), pegar no sono pelo corpo/emoção, D8 fim de semana (convites + decisão dela), D7 faculdade (trabalhos, véspera, faltas, atrasos), D6 parte 2 (TMDB), D14 motor emocional (corpo, emoções com causa, humor, vínculo, mágoa justa, ciúme leve), D11 saúde, D10 freela e D9 casa (24/09, decisões provisórias ⚠️ pra revisão do Patrick). **Fase D completa**; faltam só as fatias da noite do D6 |
+| **D** Rotina viva (refeições, sono, Milo, noite, faculdade, fim de semana, casa, freela) | 🟡 | Tabela desenhada com o Patrick em 22–23/09 (seção Fase D). **Feito:** D1 fome viva (refeições, lanches, apetite, disfarce, peso, agência), D12 laços (pai diário, Bia várias vezes, saudade do Patrick sem teto), D2+D3+D13 sono (variável, micro-despertares, manhã de trás pra frente), D4 banho v2 (por necessidade e emoção), D5 Milo + cochilo, D6 parte 1 (o que ela assiste, cânone de gostos, descoberta sozinha, curiosidade pelo que o Patrick cita), pegar no sono pelo corpo/emoção, D8 fim de semana (convites + decisão dela), D7 faculdade (trabalhos, véspera, faltas, atrasos), D6 parte 2 (TMDB), D14 motor emocional (corpo, emoções com causa, humor, vínculo, mágoa justa, ciúme leve), D11 saúde (revisado), D10 freela e D9 casa (24/09; D10 e D9 com decisões ⚠️ ainda pra revisão do Patrick). **Fase D completa**; faltam só as fatias da noite do D6 |
 | **C** Consolidação | 🟡 | **C1:** o rótulo `[COMO O PATRICK ESCREVE]` e os campos estão em pt-BR (#2 e #7), mas ainda é descrição ("risada: kkkk"), não amostras reais das mensagens dele. **C2** e **C3** ⬜ |
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
@@ -435,7 +435,7 @@ travadas em 1,0.
 | D8 | **Fim de semana** | Quase igual a dia útil | Acorda tarde, brunch, praia, rolê sábado à noite, domingo preguiçoso, família | "ressaca de domingo" | ✅ 23/09: convites + decisão dela pelo emocional (ver "D8 — fim de semana"); acordar tarde e domingo preguiçoso já vêm do D2 |
 | D9 | **Casa e vida adulta** | Não existe | Mercado, lavar roupa, arrumar, conta de luz, iFood no fim do mês apertado | "fui no mercado e esqueci o que fui comprar" | ✅ 24/09 (ver "D9 — Casa e vida adulta"). ⚠️ Decisões provisórias; o "fim do mês apertado" saiu porque contradiz o D1 (o pai banca) |
 | D13 | **Vaidade e se arrumar** (planejamento reverso) | Acorda 07:00 ou 08:30 fixos, sem olhar a que horas é o primeiro compromisso nem quanto tempo ela leva pra ficar pronta | A hora de acordar sai **de trás pra frente**: primeiro compromisso − trajeto (C.4) − café − se arrumar (banho, skincare, cabelo, maquiagem, roupa) − margem. Tempo de se arrumar varia (ensaio > aula > mercado). Se dorme demais ou enrola no espelho → **atraso** real (liga com D7 e C.4) | "perdi 20 min escolhendo roupa e cheguei atrasada" | 🟡 23/09: manhã de trás pra frente e despertador perdido feitos; **chegar atrasada de fato** (o trajeto e a aula se moverem) fica para o D7 |
-| D11 | **Corpo, saúde e ciclo** | Ciclo existe (energia, libido) | Cólica forte → fica em casa; banheiro (bebeu muito líquido, dor de barriga) como sumiço curtinho; farmácia; indisposição. Tom humano e discreto | "tô com cólica, hoje não vou pra aula" | ✅ 24/09 (ver "D11 — Corpo e saúde"). ⚠️ Decisões provisórias do Claude pra o Patrick revisar; banheiro e farmácia ficaram de fora |
+| D11 | **Corpo, saúde e ciclo** | Ciclo existe (energia, libido) | Cólica forte → fica em casa; banheiro (bebeu muito líquido, dor de barriga) como sumiço curtinho; farmácia; indisposição. Tom humano e discreto | "tô com cólica, hoje não vou pra aula" | ✅ 24/09 (ver "D11 — Corpo e saúde"). Revisado pelo Patrick; médico pelo plano quando mandam ela ir. Banheiro, farmácia e "no médico" como estado ficaram pra depois |
 | D14 | **Motor emocional unificado** | Emoções espalhadas: 5 em `estado_emocional` (carinho, brincadeira, energia, intensidade romântica, bateria social), excitação em tabela própria (`intimacy_state`, C.1), fome agora em `meals.py`, ciclo à parte; cada uma com seu relógio e sem conversar entre si | Um motor só, com **categorias e subcategorias** (ex.: corpo → fome, energia, sono, excitação; coração → carinho, romance, carência/saudade; humor → alegria, irritação, ansiedade, tristeza; social → bateria social, vontade de sair), cada uma com linha de base, velocidade própria de subir/descer e influências cruzadas (fome → irritação, sono ruim → energia e paciência, saudade → procurar o Patrick). Os módulos atuais viram sensores que alimentam o motor | Tudo que ela sente conversa: "tô com fome e com saudade, péssima combinação kkk" | ⬜ pedido do Patrick em 23/09 ("você quem vai brilhar pra pensar nisso"); entra depois de D1/D12, quando houver sensores suficientes |
 | D12 | **Laços** (pai, Bia, Patrick) | Pai 30% por dia útil, Bia 80% de **uma** mensagem, proatividade com o Patrick por roleta (20%/20 min, teto 4, 2 h de intervalo) → em 22/09: 0 contato com pai e Bia, 0 iniciativa espontânea | Pai **todo dia** (mensagem de manhã, ligação algumas noites; pergunta se comeu, se chegou, se o dinheiro dá); Bia **várias trocas ao longo do dia**; Patrick: saudade como necessidade — se ele some e ela está livre, ela procura, cada vez mais; com ele ocupado, respeita | "meu pai me ligou perguntando se eu tô comendo", "a Bia me mandou um áudio de 5 min", "sumiu hein" | ✅ 23/09 (ver "D12 — como ficou"). **Decidido:** o pai liga quando está livre e manda mensagem quando está ocupado; checa a Marina pelo menos 1×/dia; banca mercado e comida sem ela pedir. Patrick: **sem teto de procura** — é o emocional que decide; de bobeira e sozinha, ele é a primeira pessoa que ela procura |
 | D10 | **Freela de modelo** | Agência da Lívia existe, quase não aparece | Casting/ensaio esporádico, prova de roupa, cachê no fim do mês | "fiz um casting pra marca de biquíni" | ✅ 24/09 (ver "D10 — Freela de modelo"). ⚠️ Decisões provisórias do Claude pra o Patrick revisar |
@@ -723,7 +723,7 @@ O aviso continua opcional (sempre com conversa rolando) e fora do teto de 2 coti
 
 `tests/test_freela_d10.py` (8 testes).
 
-### D11 — Corpo e saúde ✅ (24/09, madrugada) — ⚠️ decisões provisórias pra revisar
+### D11 — Corpo e saúde ✅ (24/09) — decisões revisadas pelo Patrick na tarde de 24/09
 
 O Patrick foi dormir e pediu: "toma as decisões que dependem de mim, mas cataloga e deixa sinalizado". As 4 perguntas de 24/09 (frequência, jeito, remédio, condição fixa) ficaram **sem resposta**, então decidi eu. Cada decisão abaixo está marcada com ⚠️ e é uma constante em `health.py`, fácil de trocar.
 
@@ -753,13 +753,17 @@ Tudo junto chega a ×4,7. Numa simulação de 3 anos deram 5, 0 e 2 resfriados, 
 - **Fome** (`meals.hunger`), **hora de dormir** (`sleep_plan._onset`, no gancho que já existia) e **faltas** (`college.skip_reason`). A regra antiga de "25% de faltar na menstruação" saiu; agora depende da intensidade da cólica.
 - **`/status`:** uma linha 🤒 com a condição e o que ela tomou. O `/emocao` já mostrava o desconforto.
 
-**⚠️ Decisões provisórias (Patrick, confirma ou troca):**
-1. **Frequência:** a da tabela acima.
-2. **Jeito, manhosa ou durona:** as duas, dependendo da intensidade. Coisa pequena ela minimiza e segue a vida ("é só uma dorzinha"), porque o cânone diz independente. Quando está mal de verdade (cólica forte, virose, resfriado forte), fica manhosa com o Patrick e aceita dengo, como o cânone do ciclo já dizia ("reclama manhosa que está com cólica").
-3. **Médico ou remédio:** ela se automedica em tudo isso e não vai ao médico. O pai, se souber, se preocupa e manda ela ir.
-4. **Condição fixa:** nenhuma além da cólica. Enxaqueca, rinite ou estômago sensível são fáceis de acrescentar se você quiser.
+**Decisões (revisadas pelo Patrick, 24/09 à tarde):**
+1. ✅ **Frequência:** a da tabela acima.
+2. ✅ **Jeito, manhosa ou durona:** as duas, dependendo da intensidade. Coisa pequena ela minimiza e segue a vida ("é só uma dorzinha"), porque o cânone diz independente. Quando está mal de verdade (cólica forte, virose, resfriado forte), fica manhosa com o Patrick e aceita dengo, como o cânone do ciclo já dizia ("reclama manhosa que está com cólica").
+3. ✏️ **Médico (mudou):** no leve ela se automedica. **Quando está mal de verdade (virose ou resfriado forte; cólica não), se o pai ou o Patrick mandar ela ir ao médico, ela vai: tem plano de saúde bom.** Com o remédio do médico ela **melhora mais rápido**: a virose acaba no dia da consulta, o resfriado no dia seguinte.
+   - **O pai manda sozinho** em 60% das doenças fortes (`DAD_SENDS_CHANCE`), com a consulta entre 11h e 17h.
+   - **O Patrick manda pela conversa:** "vai no médico", "procura um médico", "vai na UPA/emergência"… Só vale se ela estiver mal de verdade (`Health.observe_patrick`); a consulta fica marcada pra 1 a 2 h depois.
+   - O prompt diz que ela vai ("o pai mandou você ir ao médico: você vai hoje às 15:20"). Depois da consulta, o remédio vira "foi ao médico às 15:20 pelo plano, tomando o que ele receitou", e a consulta entra como acontecimento do dia (`medico:<dia>`).
+4. ✅ **Condição fixa:** nenhuma além da cólica ("a faculdade já pega uma boa parte da vida dela, coitada").
 
-**Ficou de fora (anotado):**
+**Ficou de fora (anotado pra depois, a pedido do Patrick):**
+- **O "no médico" como estado:** hoje a consulta é fato do dia, mas ela não aparece "no consultório" no `/status` nem tem trajeto.
 - **Banheiro como sumiço curtinho na virose:** precisa mexer na disponibilidade.
 - **O pai ligar mais quando ela está doente:** hoje isso é só uma linha no prompt, não um evento.
 - **Farmácia como saída:** o remédio "já está em casa".
@@ -767,7 +771,23 @@ Tudo junto chega a ×4,7. Numa simulação de 3 anos deram 5, 0 e 2 resfriados, 
 
 Custo por turno medido numa cópia do banco real: ~0 com um cache de 30 s dos fatos do dia. Sem o cache eram +0,5 s. Na suíte o cache fica desligado.
 
-`tests/test_health_d11.py` (12 testes).
+`tests/test_health_d11.py` (15 testes).
+
+### Revisão da conversa de 23–24/09 (Patrick, 24/09 à tarde)
+
+Detalhes e causas em `AUDITORIA_SISTEMICA_MARINA.md` (Auditoria #11). Decisões do Patrick:
+
+| # | Problema | Decisão / correção |
+|---|---|---|
+| 1 | "Ainda tô com a Júlia" às 18:11, já em casa desde 17:25 | Bloco **[DESDE A SUA ÚLTIMA MENSAGEM]** (`since_last.py`): trajetos concluídos, acontecimentos e onde ela está AGORA, quando faz 20 min ou mais desde a última fala dela |
+| 2 | "Já papou?" → "ainda não", tendo almoçado | **[GÍRIAS DO PATRICK]** papar = comer, e o bloco da comida traz a resposta pronta ("SIM — a última foi às 13:16") |
+| 3 | Esqueceu de avisar que chegou (duas vezes) | Esquecimento **5%** (era 12%); **nunca duas vezes na mesma semana** ("ela é carinhosa e nova demais pra esquecer assim") |
+| 4 | "Sumiu hein?" sem saber do aniversário | A iniciativa agora **vê a conversa** e a hora da última mensagem dele. **Ela pode cobrar mesmo sabendo que ele está ocupado:** o Patrick gosta |
+| 5 | Iniciativas iguais ("sumiu hein… trocando mensagem com a Bia") | **A fala da iniciativa é dela, não nossa:** as instruções dão a situação e não ditam frase; ela vê as últimas 3 iniciativas pra não repetir o jeito; a "coisa do dia" não é mais empurrada na saudade |
+| 6 | Bom dia mandado de dentro do chuveiro | **Nada de dentro do box.** Antes ou depois do banho pode, e junto também ("bom dia… vou pro banho"): ela decide. O ritual espera o banho acabar. **Exceção futura:** provocação no sexting de dentro do banho (cuidado com o celular) |
+| — | Mensagens dos "passos dela" com cara de relatório | Instrução de WhatsApp, não relatório; **bolhas livres**: o teto anti-disparo subiu de 6 pra **10** ("se ela quiser mandar 10 mensagens curtas, pode") |
+| 7 | "Database or disk is full" (2×) | Pontual. **Plano: a Marina vai pra VPS**, como estava no plano inicial |
+| 8 | Bancos vazios com nome errado (`marina_memory.db`, `memory_manager.db`) | Apagados. O banco real é `marin_memory.db` |
 
 ### D14 — Motor emocional ✅ (23/09, tarde) — a, b, c e d entregues
 

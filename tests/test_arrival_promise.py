@@ -50,6 +50,15 @@ class ArrivalPromiseTest(unittest.TestCase):
         self._kept(forget=True)
         self.assertIsNone(arrival_promise.due(self.db, IDA.end + timedelta(minutes=7)))
 
+    def test_forgets_rarely_and_never_twice_in_a_week(self):
+        self.assertLessEqual(arrival_promise.FORGET_CHANCE, 0.06)
+        self._kept(forget=True)
+        self.assertIsNone(arrival_promise.due(self.db, IDA.end + timedelta(minutes=7)), "esqueceu uma vez")
+        self.assertTrue(self.db.get_estado_relacional(arrival_promise.FORGOT_KEY))
+        self._kept(forget=True)
+        self.assertIsNotNone(arrival_promise.due(self.db, IDA.end + timedelta(minutes=7)),
+                             "levou bronca: não esquece de novo na mesma semana")
+
     def test_no_double_notice_if_she_already_said_she_arrived(self):
         self._kept()
         self.db.adicionar_mensagem(role="assistant", content="Cheguei sim, amor, tô aqui no Starbucks",

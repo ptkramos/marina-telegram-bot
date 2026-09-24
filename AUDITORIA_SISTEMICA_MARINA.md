@@ -1352,6 +1352,48 @@ Suíte: **676/676** após o ajuste de tamanho do prompt.
 
 ---
 
+# Auditoria #11 — Conversa de 23/09 (tarde) a 24/09 (manhã)
+
+Pedido do Patrick antes do restart: "dá uma olhada no histórico… temos vários problemas". Método: conversa inteira (`conversas`) cruzada com o mundo dela no mesmo horário (`world_state`, `life_events`, `eventos_pendentes`) e com o log. Tudo numa **cópia** do banco real (`marin_memory.db`).
+
+## Achado 11.1 🔴 — A história continuou de onde a conversa parou, não de onde o mundo estava
+
+16:10 no Starbucks com a Júlia → o café acaba às 16:45 → volta de metrô, em casa às 17:25 → passeio com o Milo. Às 18:11: "ainda tô aqui com a Júlia"; às 18:19: "tô voltando de metrô". O estado atual dizia "tempo livre em casa", mas o histórico (a última fala dela era do Starbucks) pesou mais. **Correção:** `since_last.py`, com o bloco "desde a sua última mensagem" (trajetos concluídos, acontecimentos, AGORA). Replay no banco: às 18:11 o bloco traz "17:25 — chegou em casa (de metrô e ônibus, saiu às 16:45)".
+
+## Achado 11.2 🟡 — "Já papou?" → "ainda não"
+
+Almoço japonês às 13:16 estava no bloco da comida; o modelo não entende "papar" (mesmo tropeço do 10.5). **Correção:** glossário de gírias do Patrick e resposta pronta no bloco da comida.
+
+## Achado 11.3 🟡 — Promessa de avisar a chegada
+
+Ontem a promessa ainda não existia no código (foi criada depois da bronca). Hoje funcionou (`arrival_promise.made` às 05:36), mas caiu no sorteio de esquecer (12%). **Correção:** 5%, e nunca duas vezes em 7 dias.
+
+## Achado 11.4 🔴 — A iniciativa era gerada sem a conversa
+
+`generate_dynamic_speech` montava só o system prompt + a instrução, sem histórico. Às 20:53 ela cobrou "sumiu hein? tá vivo?" sem saber que ele tinha avisado às 18:24 que ia a um aniversário, e de manhã não perguntou como foi. **Correção:** `with_history=True` na iniciativa (~6 mil caracteres da conversa) + a hora da última mensagem dele. Ela continua livre pra cobrar (decisão do Patrick).
+
+## Achado 11.5 🟡 — Iniciativas com fala ditada
+
+As instruções traziam a fala pronta ("'sumiu hein'", "'tá vivo?' carinhoso") e a saudade empurrava sempre "uma coisa real do seu dia" (a Bia, duas vezes). **Correção:** instruções com a situação, e a fala fica com ela; as últimas 3 iniciativas entram como "não repita o jeito".
+
+## Achado 11.6 🔴 — Bom dia de dentro do chuveiro
+
+Banho 05:10–05:29 (criado pelo próprio ritual), bom dia às 05:19 com "Agora você está: tomando banho". **Correção:** `Rituals.in_shower`, que segura o ritual até o banho acabar; no "se arrumando", o bom dia sabe que o banho vem aí (ela decide se junta).
+
+## Achado 11.7 ⚪ — "Database or disk is full" (2× às 09:13)
+
+O disco tem 256 GB livres; foi pontual. Fica a mudança pra VPS, que já estava no plano.
+
+## Achado 11.8 ⚪ — Bancos fantasmas
+
+`marina_memory.db` (vazio, com o esquema) e `memory_manager.db` (0 bytes) na raiz, criados por scripts com o nome errado. Apagados com o OK do Patrick. **Lição:** o banco é `marin_memory.db`.
+
+## O que estava certo
+
+"Tô na rua, saí pra encontrar a Júlia" às 14:53 e "cheguei sim" às 15:52 batiam com o mundo (a caminho 14:49–15:30).
+
+`tests/test_conversa_24_09.py` (6 testes) + regras novas em `test_arrival_promise.py` e `test_health_d11.py`.
+
 # Auditoria #2b — Memória revisitada antes da rotina viva
 
 **Data:** 2026-09-23

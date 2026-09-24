@@ -518,6 +518,14 @@ class Meals:
             faltam.append("ainda não jantou")
         if faltam:
             lines.append(f"- Hoje você {', '.join(faltam)}.")
+        # 24/09: a resposta pronta pro "já comeu?/já papou?" — pelos fatos, não pelo chute do modelo.
+        refeicoes = [e for e in eaten if "Pulou" not in (e["summary"] or "")]
+        if refeicoes:
+            ultima = refeicoes[-1]
+            lines.append(f"- Se o Patrick perguntar se você comeu/almoçou/jantou/papou: SIM — a última foi às "
+                         f"{datetime.fromisoformat(ultima['event_at']):%H:%M} ({ultima['summary'].rstrip('.')}).")
+        else:
+            lines.append("- Se o Patrick perguntar se você comeu/papou: hoje ainda não comeu nada.")
         h = self.hunger(now)
         if h >= 0.8:
             fome = ("morrendo de fome — com fome assim você fica mais curtinha e impaciente, "
