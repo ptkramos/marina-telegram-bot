@@ -115,29 +115,39 @@ KREA2_ZOOM_OPEN = {
 }
 
 
+def _body_parts(is_nsfw: bool, focus_angle: str, outfit: Optional[str]) -> list[str]:
+    """Roupa dita pelo diretor (lingerie, toalha…) ou os blocos de sempre (vestida/nua)."""
+    if outfit:
+        return [f"She is wearing {outfit}.", KREA2_BODY_SFW]
+    if is_nsfw:
+        return [KREA2_NUDE.get(focus_angle, KREA2_NUDE["frontal"]), KREA2_BODY_NSFW, KREA2_BODY_CANON]
+    return [KREA2_CLOTHED, KREA2_BODY_SFW]
+
+
 def krea2_zoom_prompt(action: str, *, zoom: str, setting: str, backdrop: str, is_nsfw: bool,
-                      focus_angle: str = "frontal", framing: str = "selfie") -> str:
-    """Prompt com o zoom decidido. framing: selfie | mirror | timer | friend."""
+                      focus_angle: str = "frontal", framing: str = "selfie", outfit: Optional[str] = None,
+                      expression: str = "") -> str:
+    """Prompt com o zoom decidido. framing: selfie | mirror | timer | friend.
+
+    outfit: roupa dita pelo diretor (substitui a frase "vestida"); None = vestida/nua de sempre.
+    expression: a cara do momento (humor/tesão dela), logo depois da ação.
+    """
     zoom = zoom if zoom in ZOOMS else "close"
     action = _NOT_A_PHOTO.sub("", action or "").strip(" ,.")
+    if expression:
+        action = f"{action}, {expression.strip(' ,.')}"
     head = f"{KREA2_TRIGGER}, {KREA2_EMOTIONS_TRIGGER}."
     if zoom in ("close", "three_quarter"):
         identity = KREA2_IDENTITY.split(" of ", 1)[1]
         parts = [head, f"{KREA2_ZOOM_OPEN[zoom]} {identity}, {action}."]
-        if is_nsfw:
-            parts += [KREA2_NUDE.get(focus_angle, KREA2_NUDE["frontal"]), KREA2_BODY_NSFW, KREA2_BODY_CANON]
-        else:
-            parts += [KREA2_CLOTHED, KREA2_BODY_SFW]
+        parts += _body_parts(is_nsfw, focus_angle, outfit)
         parts.append(f"Behind her, {backdrop}.")
     else:
         opener = "A wide view photo of" if zoom == "room" else "A photo of"
         who = (f"In the distance, {KREA2_IDENTITY_SHORT}" if zoom == "room"
                else f"Full body shot of {KREA2_IDENTITY_SHORT}")
         parts = [head, f"{opener} {setting}.", f"{who}, {action}."]
-        if is_nsfw:
-            parts += [KREA2_NUDE.get(focus_angle, KREA2_NUDE["frontal"]), KREA2_BODY_NSFW, KREA2_BODY_CANON]
-        else:
-            parts += [KREA2_CLOTHED, KREA2_BODY_SFW]
+        parts += _body_parts(is_nsfw, focus_angle, outfit)
     if framing == "mirror":
         parts.append(KREA2_MIRROR)
         parts.append(KREA2_PHOTO)

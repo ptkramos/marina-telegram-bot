@@ -97,6 +97,18 @@ class ImageGeneratorClient:
                 world_snapshot_id=world_snapshot_id,
             )
 
+    async def generate_directed(self, shot, *, world_snapshot_id: Optional[int] = None) -> PhotoGenerationResult:
+        """Foto decidida pelo diretor de cena (photo_director): o prompt já vem pronto."""
+        if getattr(settings, 'PHOTO_PROVIDER_MAINTENANCE', False):
+            return PhotoGenerationResult(image=None)
+        async with self._lock:
+            import civitai_images
+            img = await civitai_images.generate(shot.prompt, is_nsfw=shot.is_nsfw, focus_angle=shot.focus_angle,
+                                                seed=shot.seed)
+        return PhotoGenerationResult(image=img, full_prompt=shot.prompt, scene_tags=shot.pose_id,
+                                     is_nsfw=shot.is_nsfw, focus_angle=shot.focus_angle,
+                                     place_key=shot.place_key, world_snapshot_id=world_snapshot_id)
+
     async def generate_avatar(self, look_style: str = "fofa") -> tuple[io.BytesIO | None, io.BytesIO | None]:
         """
         Gera uma foto de perfil 100% VESTIDA (SFW), com enquadramento perfeito de modelo.

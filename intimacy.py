@@ -294,7 +294,7 @@ def _examples_for(band: str, limit: int = 3) -> str:
             "acabou de dizer.") if block else ""
 
 
-def system_block(turn: IntimacyTurn, cycle_info: Optional[dict] = None) -> Optional[str]:
+def system_block(turn: IntimacyTurn, cycle_info: Optional[dict] = None, *, photo_ok: bool = False) -> Optional[str]:
     libido = (cycle_info or {}).get("libido")
     lib_line = f"\n- Libido pela fase do ciclo hoje: {libido}" if libido else ""
     if turn.state == "active":
@@ -320,6 +320,9 @@ def system_block(turn: IntimacyTurn, cycle_info: Optional[dict] = None) -> Optio
                 "segunda intenção, sem pular direto pro explícito.")
     else:
         return None
+    if photo_ok and turn.state in ("active", "climax"):
+        from photo_director import SELF_PHOTO_HINT   # C.1b: ela manda foto quando quer provocar
+        body = f"{body}\n{SELF_PHOTO_HINT}"
     band = "warming" if turn.state == "warming" else turn.band
     examples = _examples_for(band)
     return f"{body}\n\n{examples}" if examples else body
