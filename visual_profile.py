@@ -30,6 +30,14 @@ MARINA_PHYSIQUE_DNA = (
     "subtle beach golden tan glow, natural sun-kissed skin tone with visible crisp bikini tan lines"
 )
 
+# 24/09: foto normal com o corpo descrito como na adulta ("perky upright busts,
+# round bubble butt, bikini tan lines") saiu SEM ROUPA pelo Civitai — o
+# pedido era selfie de pijama. Na foto vestida o corpo fica sem esses termos.
+MARINA_PHYSIQUE_SFW = (
+    "fit athletic model physique, slim waist, natural standing posture, "
+    "subtle beach golden tan glow, natural sun-kissed skin tone"
+)
+
 MARINA_REALISM_TAGS = (
     "authentic natural lighting, high realism, highly detailed natural skin texture with visible fine pores, "
     "natural skin folds and subtle imperfections, authentic flash photography reflection, realistic non-plastic non-rubber skin, "
@@ -43,7 +51,8 @@ MIRROR_SELFIE_TRIGGER = (
 
 
 # Presets de Anatomia
-ANATOMY_SFW = "fully clothed, modest elegant casual outfit, zero nudity, natural model posture"
+ANATOMY_SFW = ("fully clothed, wearing clothes that cover chest and body, modest casual outfit, "
+               "no nudity, no cleavage, natural model posture")
 
 ANATOMY_NSFW_FRONTAL = (
     "completely naked, uncensored, perky natural breasts, firm upright high-set bust, "
@@ -290,9 +299,10 @@ class VisualProfileManager:
         if is_mirror and not any(kw in scene_part.lower() for kw in ["mirror selfie", "holding space black"]):
             scene_part = f"{scene_part}, {MIRROR_SELFIE_TRIGGER}".strip(", ")
 
+        physique = MARINA_PHYSIQUE_DNA if final_nsfw else MARINA_PHYSIQUE_SFW
         full_prompt = (
             f"{MARINA_VISUAL_DNA_BASE}, {scene_part}, {anatomy_tag}, "
-            f"{MARINA_PHYSIQUE_DNA}, {MARINA_REALISM_TAGS}"
+            f"{physique}, {MARINA_REALISM_TAGS}"
         ).strip(", ")
 
         return full_prompt, final_nsfw, final_angle

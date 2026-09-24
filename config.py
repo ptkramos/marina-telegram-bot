@@ -135,6 +135,7 @@ class Settings:
     NOVITA_API_KEY: str = os.getenv("NOVITA_API_KEY", "").strip()
     # 24/09: fotos pelo Civitai (Orchestration API) — IMAGE_ENGINE=civitai.
     CIVITAI_API_KEY: str = os.getenv("CIVITAI_API_KEY", "").strip().strip('"')
+    CIVITAI_BASE_MODEL: str = os.getenv("CIVITAI_BASE_MODEL", "").strip()   # vazio = Flux.1 Dev
 
     # Ciclo de vontade própria e iniciativa autônoma
     AUTONOMOUS_CHECK_INTERVAL_MINUTES: int = int(os.getenv("AUTONOMOUS_CHECK_INTERVAL_MINUTES", "30"))

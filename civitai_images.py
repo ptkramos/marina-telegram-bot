@@ -30,6 +30,7 @@ logger = logging.getLogger("CivitaiImages")
 
 BASE_URL = "https://orchestration.civitai.com"
 FLUX_DEV = "urn:air:flux1:checkpoint:civitai:618692@691639"
+FLUX_KREA_DEV = "urn:air:flux1:checkpoint:civitai:1827475@2068069"   # Flux 1 Krea Dev FP8 (aceita os LoRAs Flux1)
 USER_AGENT = "marin-telegram-bot"
 TERMINAL = {"succeeded", "failed", "expired", "canceled", "cancelled"}
 POLL_S = 3.0
@@ -79,14 +80,19 @@ def select_loras(*, is_nsfw: bool, focus_angle: str = "frontal", is_mirror_selfi
     return loras
 
 
+def base_model() -> str:
+    """Modelo base (Flux.1 família, onde o LoRA da Marina funciona). CIVITAI_BASE_MODEL no .env troca."""
+    return (getattr(_settings(), "CIVITAI_BASE_MODEL", "") or "").strip() or FLUX_DEV
+
+
 def build_workflow(prompt: str, loras: dict, *, is_nsfw: bool, width: int = 832, height: int = 1216,
-                   steps: int = 24, seed: Optional[int] = None) -> dict:
+                   steps: int = 24, seed: Optional[int] = None, model: Optional[str] = None) -> dict:
     body = {
         "steps": [{
             "$type": "imageGen",
             "input": {
                 "engine": "comfy", "ecosystem": "flux1", "operation": "createImage",
-                "model": FLUX_DEV, "prompt": prompt, "width": width, "height": height,
+                "model": model or base_model(), "prompt": prompt, "width": width, "height": height,
                 "steps": steps, "cfgScale": 3.5, "sampler": "euler", "scheduler": "simple",
                 "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
                 "quantity": 1, "loras": loras,
@@ -119,23 +125,36 @@ def _images(workflow: dict) -> list[dict]:
 
 
 async def generate(prompt: str, *, is_nsfw: bool, focus_angle: str = "frontal",
-                   is_mirror_selfie: bool = False, session: Optional[aiohttp.ClientSession] = None
-                   ) -> Optional[io.BytesIO]:
+                   is_mirror_selfie: bool = False, session: Optional[aiohttp.ClientSession] = None,
+                   model: Optional[str] = None, seed: Optional[int] = None) -> Optional[io.BytesIO]:
     """Gera uma foto e devolve os bytes, ou None (sem token, erro, bloqueio, timeout)."""
     if not available():
         return None
     headers = {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json",
                "User-Agent": USER_AGENT}
     body = build_workflow(prompt, select_loras(is_nsfw=is_nsfw, focus_angle=focus_angle,
-                                               is_mirror_selfie=is_mirror_selfie), is_nsfw=is_nsfw)
+                                               is_mirror_selfie=is_mirror_selfie), is_nsfw=is_nsfw,
+                          model=model, seed=seed)
     own = session is None
     session = session or aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT_S + 30))
     try:
-        async with session.post(f"{BASE_URL}/v2/consumer/workflows?wait=30", headers=headers, json=body) as resp:
-            if resp.status >= 400:
-                logger.error("civitai.submit_failed status=%s body=%s", resp.status, (await resp.text())[:300])
+        wf = None
+        for _attempt in range(1):
+            async with session.post(f"{BASE_URL}/v2/consumer/workflows?wait=30", headers=headers, json=body) as resp:
+                if resp.status < 400:
+                    wf = await resp.json()
+                    break
+                err = (await resp.text())[:300]
+            # 24/09: foto normal NUNCA vira adulta. Reenviar como adulta quando o
+            # moderador reclamava liberou nudez numa selfie de pijama. Se o
+            # moderador marca uma foto normal, ela falha (e o log diz por quê).
+            if not is_nsfw and "mature content" in err.lower():
+                logger.error("civitai.sfw_flagged_by_moderator — prompt normal com termo adulto")
                 return None
-            wf = await resp.json()
+            logger.error("civitai.submit_failed status=%s body=%s", resp.status, err)
+            return None
+        if wf is None:
+            return None
         wf_id = wf.get("id")
         logger.info("civitai.submitted id=%s status=%s cost=%s nsfw=%s", wf_id, wf.get("status"),
                     (wf.get("cost") or {}).get("total"), is_nsfw)
