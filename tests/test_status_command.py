@@ -43,16 +43,13 @@ class TestStatusCommand(unittest.IsolatedAsyncioTestCase):
         _, kwargs = context.bot.send_message.call_args
 
         self.assertEqual(kwargs["chat_id"], settings.TARGET_CHAT_ID)
-        self.assertEqual(kwargs["parse_mode"], "Markdown")
         text = kwargs["text"]
 
-        # Valida seções do layout v3.7
-        self.assertIn("Status de Marina Salles", text)
-        self.assertIn("Vida & Rotina", text)
-        self.assertIn("Cérebro & Memória", text)
-        self.assertIn("Mídia & Conexão", text)
-        self.assertIn("Disponibilidade", text)
-        self.assertIn("Ciclo biológico", text)
+        # Layout de 23/09 (opção B do Patrick): só a vida dela; técnico no /sistema
+        self.assertIn("Marina agora", text)
+        for part in ("🏠", "📱", "🌸 Dia", "/emocao", "/sistema"):
+            self.assertIn(part, text)
+        self.assertNotIn("Modelo", text)
 
         # Valida o botão inline de apagar
         reply_markup = kwargs.get("reply_markup")

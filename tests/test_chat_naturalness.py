@@ -43,6 +43,26 @@ class SelfRepetitionTest(unittest.TestCase):
         self.assertIsNone(drop_repeated("Agora você consegue beijar sem esse aparelho te sabotando.", self.PREV))
 
 
+class RepeatedIdeaTest(unittest.TestCase):
+    """Feedbacks do Patrick de 22/09: mesma ideia com outras palavras no mesmo ciclo."""
+    PREV = ["Tá bom, amor. Me avisa assim que chegar, tá? Se cuida no caminho"]
+
+    def test_take_care_twice_in_other_words_is_cut(self):
+        from chat_naturalness import drop_repeated_ideas
+        self.assertEqual(drop_repeated_ideas("Tá bom, amor, vou ficar esperando seu aviso. Vai com calma no caminho.",
+                                             self.PREV), "Tá bom, amor, vou ficar esperando seu aviso.")
+
+    def test_asking_to_be_told_again_is_cut_without_dangling_tag(self):
+        from chat_naturalness import drop_repeated_ideas
+        self.assertEqual(drop_repeated_ideas("Boa, amor, falta só essa última van. Me avisa quando chegar em casa, tá?",
+                                             self.PREV), "Boa, amor, falta só essa última van.")
+
+    def test_first_time_or_nothing_left_stays(self):
+        from chat_naturalness import drop_repeated_ideas
+        self.assertEqual(drop_repeated_ideas("Se cuida no caminho", ["Kkkk boa"]), "Se cuida no caminho")
+        self.assertEqual(drop_repeated_ideas("Vai com calma", self.PREV), "Vai com calma")
+
+
 class VocativeTest(unittest.TestCase):
     def test_amor_every_turn_gets_thinned(self):
         prev = ["Boa, amor, agora falta só essa última van.", "Kkkkk boa, amor. Agora é só a última etapa."]

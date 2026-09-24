@@ -1539,76 +1539,25 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ciclo_info = memory_manager.cycle_mgr.get_cycle_info()
     ciclo_str = f"Dia {ciclo_info['day']} de {ciclo_info.get('cycle_length', 28)} ({ciclo_info['name']}) 🌸"
 
-    disp_str = "Disponível para conversar 💕"
+    disp_str = "Disponível pra conversar"
     try:
         act_code, _source, _weight, _fresh, _ = availability_service.policy._resolve_activity(now_local)
         profile = availability_service.policy.profiles.get(act_code, {})
         phone_access = profile.get("phone_access", "HIGH")
         if act_code == "SLEEPING":
-            disp_str = "Dormindo / Modo Noturno 🌙 (pode responder com calma)"
+            disp_str = "Dormindo 🌙 (responde quando acordar)"
         elif phone_access == "LOW":
-            disp_str = "Ocupada no momento ⏳ (latência humana realista)"
+            disp_str = "Ocupada, responde com calma"
         elif profile.get("prefer") == "DEFER":
-            disp_str = "Em compromisso / Concentrada 🎯 (respostas mais espaçadas)"
+            disp_str = "Concentrada, respostas mais espaçadas"
         else:
-            disp_str = "Online e atenta ao celular 📱 (resposta imediata)"
+            disp_str = "Online, respondendo rápido"
     except Exception as e:
         logger.warning(f"Erro ao calcular disponibilidade no status: {e}")
 
-    # 2. Cérebro & Memória
-    total_msg = memory_manager.db.get_total_conversas()
-    total_fatos = len(memory_manager.db.get_fatos_patrick())
-    amostras = style_engine.patrick_sample_count()
-    estilo = memory_manager.db.get_estilo()
-    risada = estilo.get("risada", {}).get("valor", "").strip()
-    girias = estilo.get("girias", {}).get("valor", "").strip()
-    estilo_partes = []
-    if risada:
-        estilo_partes.append(f"Risada '{risada}'")
-    if girias:
-        estilo_partes.append(f"Gírias '{girias}'")
-    if estilo_partes:
-        estilo_detalhe = " | ".join(estilo_partes) + f" ({amostras} amostras)"
-    else:
-        estilo_detalhe = f"Calibrando com suas mensagens ({amostras} amostras)"
-
-    rems = reminder_service.get_active_reminders()
-    rems_str = f"{len(rems)} ativo(s)" if rems else "Nenhum pendente"
-
-    # 3. Mídia & Conexão
-    if voice_engine.is_configured():
-        voz_str = "Novita MiniMax HD + Perfis Natural & Íntimo 🎙️"
-    else:
-        voz_str = "Desativada / Não configurada 🔇"
-
-    if getattr(settings, "PHOTO_PROVIDER_MAINTENANCE", False):
-        camera_str = "Em manutenção preventiva 🛠️"
-    else:
-        camera_online = await sd_client.is_online()
-        camera_engine = "Novita AI FLUX.1 Dev (4090)" if settings.IMAGE_ENGINE == "novita" else "SD Local"
-        camera_status = "Online 📸" if camera_online else "Indisponível ⚠️"
-        camera_str = f"{camera_engine} ({camera_status})"
-
-    status_msg = (
-        f"✨ **Status de {settings.APP_NAME} (v{settings.APP_VERSION} Oficial)**\n\n"
-        f"📍 **Vida & Rotina**\n"
-        f"• **Atividade**: {atividade.capitalize()} 🧘\n"
-        f"• **Local**: {local_str} 🏠\n"
-        f"• **Ciclo biológico**: {ciclo_str}\n"
-        f"• **Disponibilidade**: {disp_str}\n\n"
-        f"🧠 **Cérebro & Memória**\n"
-        f"• **Modelo LLM**: `{settings.LLM_MODEL}` ⚡\n"
-        f"• **Histórico salvo**: {total_msg} mensagens 💬\n"
-        f"• **Lembranças**: {total_fatos} fatos guardados sobre você 📝\n"
-        f"• **Sincronia de Estilo**: {estilo_detalhe} 🎭\n"
-        f"• **Compromissos**: {rems_str} ⏰\n\n"
-        f"🎙️ **Mídia & Conexão**\n"
-        f"• **Voz**: {voz_str}\n"
-        f"• **Câmera**: {camera_str}\n"
-        f"• **Reações**: Mão Dupla Ativas (Telegram 7.0+) 💖\n"
-        f"• **Buffer de Digitação**: {settings.MESSAGE_DEBOUNCE_SECONDS}s (anti-atropelo) ⏱️\n\n"
-        f"*(Toque no botão abaixo para fechar ou aguarde 2 min)*"
-    )
+    # 23/09 (escolha do Patrick, opção B): /status é só a vida dela agora;
+    # o técnico foi para /sistema.
+    status_msg = _status_life_text(now_local, atividade, local_str, disp_str, ciclo_info)
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🗑️ Apagar", callback_data="status_delete")]
@@ -1616,9 +1565,85 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await context.bot.send_message(
         chat_id=chat_id,
         text=status_msg,
-        parse_mode="Markdown",
         reply_markup=keyboard,
     )
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=120.0))
+
+
+def _when(at: datetime, now: datetime) -> str:
+    days = (at.date() - now.date()).days
+    dia = "hoje" if days == 0 else "amanhã" if days == 1 else \
+        ("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")[at.weekday()]
+    return f"{dia} {at:%H:%M}"
+
+
+def _status_life_text(now: datetime, atividade: str, local_str: str, disp_str: str, ciclo_info: dict) -> str:
+    """Painel do /status: onde ela está, o que faz, humor, ciclo e o que vem aí."""
+    lines = [f"✨ Marina agora · {now:%H:%M}", "",
+             f"🏠 {local_str} · {atividade}",
+             f"📱 {disp_str}"]
+    try:
+        from emotion import EmotionEngine, ENERGY_WORDS, _word
+        feel = EmotionEngine(memory_manager.db).feeling(now)
+        humor = EmotionEngine.mood_words(feel.valence, feel.arousal)
+        energia = _word(feel.energy, ENERGY_WORDS)
+        lines.append(f"🌤 {humor[:1].upper() + humor[1:]}" + ("" if energia == "ok" else f", {energia}"))
+    except Exception as e:
+        logger.warning(f"Erro ao ler o motor emocional no status: {e}")
+    lines.append(f"🌸 Dia {ciclo_info['day']} do ciclo ({ciclo_info['name'].split(' (')[0].lower()})")
+    try:
+        from calendar_world import CalendarWorld
+        nxt = CalendarWorld(memory_manager.db).next(now, include_academic=True)
+        if nxt:
+            lines.append(f"📅 Próximo: {nxt['activity']} {_when(datetime.fromisoformat(nxt['start_at']), now)}")
+    except Exception as e:
+        logger.warning(f"Erro ao ler o próximo compromisso no status: {e}")
+    try:
+        from social_day import SocialDay
+        for plan in SocialDay(memory_manager.db).upcoming_outings(now, limit=2):
+            lines.append(f"🗓️ {plan['description']} · {_when(datetime.fromisoformat(plan['event_at']), now)}")
+    except Exception as e:
+        logger.warning(f"Erro ao ler os planos no status: {e}")
+    lines += ["", "(/emocao por dentro · /sistema técnico)"]
+    return "\n".join(lines)
+
+
+async def sistema_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/sistema — o lado técnico que saiu do /status (escolha do Patrick, 23/09)."""
+    if not is_authorized(update):
+        return
+    chat_id = update.effective_chat.id
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id)
+    except Exception:
+        pass
+    total_msg = memory_manager.db.get_total_conversas()
+    total_fatos = len(memory_manager.db.get_fatos_patrick())
+    amostras = style_engine.patrick_sample_count()
+    estilo = memory_manager.db.get_estilo()
+    risada = estilo.get("risada", {}).get("valor", "").strip()
+    rems = reminder_service.get_active_reminders()
+    voz_str = "Novita MiniMax HD (natural + íntima)" if voice_engine.is_configured() else "desligada"
+    if getattr(settings, "PHOTO_PROVIDER_MAINTENANCE", False):
+        camera_str = "em manutenção"
+    else:
+        online = await sd_client.is_online()
+        engine = "Novita FLUX" if settings.IMAGE_ENGINE == "novita" else "SD local"
+        camera_str = f"{engine} ({'online' if online else 'indisponível'})"
+    text = "\n".join([
+        f"⚙️ Sistema · {settings.APP_NAME} v{settings.APP_VERSION}", "",
+        "🧠 Memória",
+        f"• {total_msg} mensagens · {total_fatos} fatos sobre você",
+        f"• Lembretes: {len(rems) if rems else 'nenhum pendente'}",
+        f"• Seu jeito: " + (f"risada '{risada}' · " if risada else "") + f"{amostras} amostras", "",
+        "🔧 Motor",
+        f"• Modelo: {settings.LLM_MODEL}",
+        f"• Voz: {voz_str}",
+        f"• Câmera: {camera_str}",
+        f"• Espera suas bolhas: {settings.MESSAGE_DEBOUNCE_SECONDS:g}–14 s (lê se você terminou)",
+        "", "(Toque em Apagar ou aguarde 2 min)"])
+    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🗑️ Apagar", callback_data="status_delete")]])
+    msg = await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=keyboard)
     asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=120.0))
 
 
@@ -3451,7 +3476,7 @@ async def process_incoming_batch(
     # sem ponto final fechando o balão (chat_naturalness).
     try:
         from chat_naturalness import (repeated_run, drop_repeated, repetition_constraint,
-                                      thin_vocative, strip_closing_periods)
+                                      thin_vocative, strip_closing_periods, drop_repeated_ideas)
         anteriores = [m["content"] for m in memory_manager.db.get_mensagens_recentes(limit=16)
                       if m["role"] == "assistant"][-6:]
         run = repeated_run(resposta_marin, anteriores)
@@ -3471,6 +3496,10 @@ async def process_incoming_batch(
                 nova = (completion.choices[0].message.content or "").strip()
                 if nova and not _needs_retry_for_junk(nova)[0] and not repeated_run(nova, anteriores):
                     resposta_marin = nova
+        sem_ideia_repetida = drop_repeated_ideas(resposta_marin, anteriores)
+        if sem_ideia_repetida != resposta_marin:
+            logger.info("chat.repeated_idea cut")
+            resposta_marin = sem_ideia_repetida
         resposta_marin = strip_closing_periods(thin_vocative(resposta_marin, anteriores))
     except Exception as exc:
         logger.warning("chat.naturalness_error: %s", exc)
@@ -3687,6 +3716,13 @@ async def process_incoming_batch(
                 Rituals(memory_manager.db).observe_marina_line(fala_limpa, datetime.now())
         except Exception:
             logger.exception("meals.observe.error")
+        try:
+            # "Te aviso quando chegar" vira lembrete dela, amarrado ao trajeto real.
+            import arrival_promise
+            if arrival_promise.observe(memory_manager.db, fala_limpa, texto_usuario):
+                logger.info("arrival_promise.made")
+        except Exception:
+            logger.exception("arrival_promise.observe.error")
     if sent_mid and avail_decision and getattr(avail_decision, 'telemetry_event_id', None):
         actual_lat = max(0.0, (datetime.now() - msg_t0).total_seconds())
         availability_service.repo.record_actual_latency(
@@ -4085,6 +4121,10 @@ _PROACTIVE_INSTRUCTIONS = {
                 "jeito — dengo, provocação, 'sumiu hein', ou puxando uma coisa real do seu dia. Se ele "
                 "não respondeu suas últimas mensagens, nada de drama pesado nem cobrança: no máximo um "
                 "'tá vivo?' carinhoso. Não invente acontecimento novo."),
+    # Promessa cumprida (arrival_promise): "te aviso quando chegar".
+    'aviso_chegada': ("{detail} e tinha prometido avisar o Patrick. Mande o aviso curtinho, do seu jeito "
+                      "('cheguei, amor', 'chegueeei'); se aconteceu algo no caminho, pode comentar. Não "
+                      "invente acontecimento novo."),
     # Fase D14 — tesão (proactivity_service.tesao_initiative).
     'tesao': ("{detail} Você está com tesão e com vontade dele. Mande uma provocação curta pra puxar ele "
               "pro flerte — malícia, dengo, uma indireta, um 'tô pensando em você de um jeito…'. Sem ser "
@@ -4247,6 +4287,17 @@ async def ritual_routine(application: Application):
                 logger.info("emotion.solo_release")
         except Exception as exc:
             logger.warning("emotion.solo_release_error: %s", exc)
+        import arrival_promise
+        promise = arrival_promise.due(memory_manager.db, now)
+        if promise:
+            # Ela prometeu avisar quando chegasse: chegou, avisa.
+            text = await asyncio.to_thread(
+                _proactive_text, 'aviso_chegada', f"Você acabou de chegar {promise['where']}", "Cheguei, amor 🖤")
+            sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
+            if sent:
+                memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
+                logger.info("arrival_promise.kept where=%s", promise['where'])
+            return
         engine = Rituals(memory_manager.db, getattr(memory_manager, 'cycle_mgr', None))
         ritual = await asyncio.to_thread(engine.tick, now)
         if not ritual:
@@ -4577,6 +4628,7 @@ def main():
     app.add_handler(CommandHandler("worlddebug", worlddebug_command))
     app.add_handler(CommandHandler("mundo", mundo_command))
     app.add_handler(CommandHandler("emocao", emocao_command))
+    app.add_handler(CommandHandler("sistema", sistema_command))
     app.add_handler(CommandHandler("refletir", refletir_command))
     app.add_handler(CommandHandler("jogo", jogo_command))
     app.add_handler(CommandHandler("botafogo", jogo_command))

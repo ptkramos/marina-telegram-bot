@@ -100,6 +100,57 @@ def repetition_constraint(run: str) -> str:
             "ideia — reaja ao que ele acabou de dizer, sem reaproveitar frases suas.")
 
 
+# ------------------------------------------------------- mesma ideia de novo --
+# Feedback do Patrick (22/09): "Não repita mensagens como 'se cuida no caminho'
+# ou 'vai com calma no caminho' se já tiver falado uma vez no ciclo" e "ser
+# repetitiva nos ciclos das conversas é um problema sério". A frase muda, a
+# ideia é a mesma — o filtro de trecho repetido não pegava.
+IDEAS = {
+    "cuidado": re.compile(r"\b(?:se\s+cuida|vai\s+com\s+(?:calma|cuidado|deus)|toma\s+cuidado|cuidado\s+no\s+caminho"
+                          r"|vai\s+com\s+cuidado)\b", re.I),
+    "avisa_chegar": re.compile(r"\b(?:me\s+avisa|avisa\s+(?:quando|assim\s+que)|me\s+(?:d[aá]|manda)\s+um\s+(?:toque|sinal))"
+                               r"[^.!?\n]{0,30}\bcheg", re.I),
+    "come_direito": re.compile(r"\b(?:come|almo[çc]a|janta|se\s+alimenta)\s+direitinho\b|\bse\s+alimenta\b", re.I),
+    "descansa": re.compile(r"\b(?:descansa(?:\s+um\s+pouco)?|voc[eê]\s+merece\s+(?:esse\s+)?descans)", re.I),
+    "saga": re.compile(r"\bsaga\b", re.I),
+}
+
+
+def repeated_ideas(reply: str, previous: Iterable[str]) -> set:
+    """Ideias (cuidado, avisa quando chegar, come direito…) que ela já falou nas últimas falas."""
+    said = {name for name, rx in IDEAS.items() for p in previous if rx.search(p or "")}
+    return {name for name, rx in IDEAS.items() if name in said and rx.search(reply or "")}
+
+
+def drop_repeated_ideas(reply: str, previous: Iterable[str]) -> str:
+    """Tira da resposta o pedaço (frase ou trecho entre vírgulas) que repete uma ideia.
+    Se não sobra fala, devolve a resposta como estava."""
+    ideas = repeated_ideas(reply, list(previous))
+    if not ideas:
+        return reply
+    rxs = [IDEAS[name] for name in ideas]
+    out_lines = []
+    for line in reply.split("\n"):
+        sentences = re.split(r"(?<=[.!?…])\s+", line)
+        kept_sentences = []
+        for sentence in sentences:
+            original = sentence.split(", ")
+            parts = [p for p in original if not any(rx.search(p) for rx in rxs)]
+            if len(parts) < len(original):
+                # "…quando chegar, tá?" sem o pedido vira um "tá?" pendurado
+                parts = [p for p in parts if _norm_words(p) not in (["ta"], ["viu"], ["ok"], ["ne"], ["hein"])]
+            text = ", ".join(parts).strip()
+            if text and len(_norm_words(text)) > 0:
+                if parts and len(parts) < len(sentence.split(", ")) and not re.search(r"[.!?…]$", text):
+                    text += "."   # a pergunta/ênfase era do pedaço que saiu
+                kept_sentences.append(text)
+        joined = " ".join(kept_sentences).strip()
+        if joined:
+            out_lines.append(joined[0].upper() + joined[1:])
+    result = "\n".join(out_lines).strip()
+    return result if len(_norm_words(result)) >= 3 else reply
+
+
 # ---------------------------------------------------------------- vocativo --
 _VOCATIVE_RE = re.compile(r",\s*amor(?=\s*[,.!?…]|\s*$)|^amor,\s*|(?<=[.!?…]\s)amor,\s*",
                           re.IGNORECASE | re.MULTILINE)

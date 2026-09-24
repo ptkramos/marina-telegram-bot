@@ -789,6 +789,17 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - **dentro do banho ela não pega o celular**: a availability adia a resposta até ela **sair do banho e se vestir** (fim do banho + 2–8 min);
   - o estado atual não diz mais "você AVISOU o Patrick" quando ela não avisou.
 
+### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅
+
+| Item | Como ficou |
+|---|---|
+| **`/emocao`**, opção A (escolha do Patrick) | Blocos CORPO (energia, fome, tesão com barrinha ▰▱ e palavra; sono; ciclo), HUMOR, SENTINDO AGORA (com causa) e COM O PATRICK (carinho, desejo, segurança, saudade; mágoa só quando existe) |
+| **`/status`**, opção B (escolha do Patrick) | Só a vida dela: onde e o que está fazendo, celular, humor + energia, dia do ciclo, próximo compromisso e planos. O técnico foi pro **`/sistema`** novo (memória, modelo, voz, câmera, espera das bolhas) |
+| **Promessa de avisar** (`arrival_promise.py`) | "Te aviso quando chegar", dito por ela, fica amarrado ao **trajeto real** do mundo (`commute.py`): em casa → perna de volta; senão, a perna em andamento ou a próxima. Quando a perna termina (+2–6 min), o ritual das 5 em 5 min manda o aviso na voz dela. 12% das vezes ela esquece, como gente. Se ela já disse "cheguei" na conversa, não repete |
+| **Mesma ideia de novo** (2 feedbacks abertos de 22/09) | `drop_repeated_ideas`: cuidado no caminho, "me avisa quando chegar", "come direitinho", "descansa" e "saga" já ditos nas últimas falas são cortados da resposta. O corte é por trecho, sem deixar "tá?" pendurado. Se não sobra fala, fica como estava |
+
+Caderno de feedback: **0 pendentes**.
+
 ### "Ela tá mais confusa que o normal" (23/09, 18h30) ✅ — sem reset de soak
 
 | Achado nos logs | Efeito | Correção |

@@ -114,7 +114,7 @@ class EmotionCoreTest(unittest.TestCase):
 
     def test_summary_for_patrick_lists_every_layer(self):
         text = self.engine.summary(NOW)
-        for part in ("Corpo:", "Humor:", "Sentindo", "Com o Patrick:"):
+        for part in ("CORPO", "Energia", "Tesão", "HUMOR", "SENTINDO AGORA", "COM O PATRICK"):
             self.assertIn(part, text)
 
 
@@ -278,7 +278,7 @@ class DesireTest(unittest.TestCase):
             text = self.engine.summary(NOW)
         self.assertIn("com tesão", lines)
         self.assertIn("Provoca e puxa pro flerte", lines)
-        self.assertIn("Tesão: vontade 0.80", text)
+        self.assertIn("Tesão    ▰▰▰▰▰▰▰▰▱▱  com tesão", text)
 
     def test_without_him_she_takes_care_of_it_before_bed(self):
         bed = NOW.replace(hour=23, minute=30)

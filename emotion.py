@@ -89,6 +89,23 @@ def _short(cause: str, limit: int = 80) -> str:
     return text if len(text) <= limit else text[:limit].rsplit(" ", 1)[0] + "…"
 
 
+def _bar(value: float, size: int = 10) -> str:
+    filled = max(0, min(size, int(round(value * size))))
+    return "▰" * filled + "▱" * (size - filled)
+
+
+def _word(value: float, scale: tuple) -> str:
+    return next((w for limit, w in scale if value < limit), scale[-1][1])
+
+
+ENERGY_WORDS = ((0.35, "exausta"), (0.55, "cansada"), (0.8, "ok"), (9, "cheia de energia"))
+HUNGER_WORDS = ((0.35, "sem fome"), (0.6, "beliscaria algo"), (0.8, "com fome"), (9, "morrendo de fome"))
+LIBIDO_WORDS = ((0.35, "sem clima"), (0.55, "de boa"), (0.72, "esquentando"), (0.85, "com tesão"),
+                (9, "com muito tesão"))
+PHASE_NAMES = {"menstrual": "menstruada", "folicular": "fase folicular", "ovulatoria": "fase fértil",
+               "lutea_inicial": "fase lútea", "tpm": "TPM"}
+
+
 def _clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
     return max(lo, min(hi, x))
 
@@ -577,28 +594,46 @@ class EmotionEngine:
         return lines
 
     def summary(self, now: Optional[datetime] = None) -> str:
-        """Texto do /emocao (só pro Patrick): camada por camada, com as causas."""
+        """Texto do /emocao (só pro Patrick): camada por camada, com as causas.
+
+        Layout de 23/09: barrinha + palavra em vez de número solto."""
         f = self.feeling(now)
-        out = [f"🫀 Como a Marina está ({f.now:%d/%m %H:%M})", "",
-               f"Corpo: energia {f.energy:.2f}"
-               + (f" · dormiu {f.hours_slept:.1f} h" if f.hours_slept is not None else "")
-               + (f" · acordada desde {f.awake_since:%H:%M}" if f.awake_since else "")
-               + f" · fome {f.hunger:.2f}" + (f" · {f.discomfort_why}" if f.discomfort_why else ""),
-               f"Humor: {self.mood_words(f.valence, f.arousal)} (bem {f.valence:.2f} · agitação {f.arousal:.2f})"
-               + (f" · fase {f.cycle_phase}" if f.cycle_phase else ""),
-               f"Brincadeira: {f.playfulness:.2f} · bateria social {f.social_battery:.2f}",
-               f"Tesão: vontade {f.libido:.2f} · excitação agora {f.excitation:.2f}"
-               + (f" · última vez há {f.hours_since_release:.0f} h" if f.hours_since_release is not None else ""),
-               ""]
-        if f.episodes:
-            out.append("Sentindo:")
-            out += [f"• {e.word} ({e.intensity:.2f}) — {e.cause}" + (" [até resolver]" if e.sticky else "")
-                    for e in f.episodes[:6]]
-        else:
-            out.append("Sentindo: nada marcante agora")
         b = f.bond
-        out += ["", f"Com o Patrick: carinho {b['affection']:.2f} · desejo {b['romantic_intensity']:.2f} · "
-                    f"segurança {b['security']:.2f} · mágoa {b['hurt']:.2f} · saudade {f.missing:.2f}"]
+        phase = PHASE_NAMES.get(f.cycle_phase, f.cycle_phase)
+        sleep = []
+        if f.hours_slept is not None:
+            sleep.append(f"dormiu {_hours(f.hours_slept)}")
+        if f.awake_since:
+            sleep.append(f"acordada desde {f.awake_since:%H:%M}")
+        out = [f"🫀 Marina por dentro · {f.now:%d/%m %H:%M}", "",
+               "🧍 CORPO",
+               f"Energia  {_bar(f.energy)}  {_word(f.energy, ENERGY_WORDS)}",
+               f"Fome     {_bar(f.hunger)}  {_word(f.hunger, HUNGER_WORDS)}",
+               f"Tesão    {_bar(f.libido)}  {_word(f.libido, LIBIDO_WORDS)}"
+               + (f" · no clima agora" if f.excitation >= 0.45 else "")
+               + (f" · última vez há {f.hours_since_release:.0f} h" if f.hours_since_release is not None else "")]
+        if sleep:
+            out.append("😴 " + " · ".join(sleep))
+        if phase or f.discomfort_why:
+            out.append("🌸 " + " · ".join(x for x in (phase, f.discomfort_why) if x))
+        out += ["", "🌤 HUMOR", self.mood_words(f.valence, f.arousal).capitalize(),
+                f"Brincadeira  {_bar(f.playfulness)}",
+                f"Pique social {_bar(f.social_battery)}", "",
+                "💭 SENTINDO AGORA"]
+        if f.episodes:
+            for e in f.episodes[:6]:
+                who = f" com {e.target}" if e.target else ""
+                tail = " (até resolver)" if e.sticky and e.intensity >= e.peak * 0.99 else ""
+                out.append(f"• {e.word}{who} {_bar(e.intensity, 5)} — {_short(e.cause, 70)}{tail}")
+        else:
+            out.append("Nada marcante agora")
+        out += ["", "💞 COM O PATRICK",
+                f"Carinho   {_bar(b['affection'])}",
+                f"Desejo    {_bar(b['romantic_intensity'])}",
+                f"Segurança {_bar(b['security'])}",
+                f"Saudade   {_bar(f.missing)}"]
+        if b["hurt"] >= 0.05:
+            out.append(f"Mágoa     {_bar(b['hurt'])}")
         return "\n".join(out)
 
 
