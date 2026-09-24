@@ -34,7 +34,7 @@ FLUX_KREA_DEV = "urn:air:flux1:checkpoint:civitai:1827475@2068069"   # Flux 1 Kr
 USER_AGENT = "marin-telegram-bot"
 TERMINAL = {"succeeded", "failed", "expired", "canceled", "cancelled"}
 POLL_S = 3.0
-TIMEOUT_S = 240
+TIMEOUT_S = 420   # checkpoint da comunidade frio leva ~3,5 min pra carregar (Yogi, 24/09)
 ALLOW_LIVE_IN_TESTS = False
 
 # AIR de cada LoRA do pipeline (sobrescrevível pelo .env: CIVITAI_LORA_<NOME>).
@@ -95,6 +95,9 @@ def select_loras(*, is_nsfw: bool, focus_angle: str = "frontal", is_mirror_selfi
 #                                           | d (Turbo + Krea 2 NSFW V4, experimental)
 KREA2_AIO = "urn:air:krea2:checkpoint:civitai:2732185@3071970"         # Krea2 turbo NSFW AIO v1.0 (12-14 passos)
 KREA2_YOGI = "urn:air:krea2:checkpoint:civitai:2786499@3329215"        # Realism by Stable Yogi v3.0 (8 passos cfg 1)
+# 24/09: a v3.0 nunca ficou disponível nos servidores (nem com prepareResource);
+# a v2.5 INT8 Turbo funciona (~3,5 min de aquecimento a frio). Escolha do Patrick.
+KREA2_YOGI_25 = "urn:air:krea2:checkpoint:civitai:2786499@3231611"
 KREA2_NICEGIRLS = "urn:air:krea2:lora:civitai:1862761@3075498"         # NiceGirls UltraReal (0.6-0.8)
 KREA2_LENOVO = "urn:air:krea2:lora:civitai:1662740@3075606"            # Lenovo UltraReal (1.2-2 no Turbo)
 KREA2_REALISM_V2 = "urn:air:krea2:lora:civitai:2728365@3090634"        # Krea2-realism V2 (1.0)
@@ -109,7 +112,10 @@ KREA2_EMOTIONS_WEIGHT = 0.6
 KREA2_SFW_GUARD = -1.0   # NSFW Helper negativo na foto normal: trava extra contra nudez acidental
 
 KREA2_STACKS = {
-    "n1": {"model": None, "steps": 8, "loras": {KREA2_NICEGIRLS: 0.7, KREA2_LENOVO: 1.2, KREA2_REALISM_V2: 1.0}},
+    # n1 = escolha do Patrick (24/09): Stable Yogi v2.5 INT8 Turbo, CFG 1, NiceGirls 0.8 + Lenovo 1.0 +
+    # Realism Engine 0.8 (+ Emotions, slider 2 e a trava −1, que entram em todas as fotos normais)
+    "n1": {"model": KREA2_YOGI_25, "steps": 8,
+           "loras": {KREA2_NICEGIRLS: 0.8, KREA2_LENOVO: 1.0, KREA2_REALISM_ENGINE: 0.8}},
     "n2": {"model": KREA2_YOGI, "steps": 8, "loras": {KREA2_SNAPSHOT: 0.6}},
     "a": {"model": None, "steps": 8, "loras": {KREA2_SNOFS: 1.0, KREA2_NSFW_HELPER: 0.5}},
     "b": {"model": KREA2_AIO, "steps": 12, "loras": {}},

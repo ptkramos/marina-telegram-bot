@@ -991,6 +991,15 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - **O Patrick escolheu a n1**, que já é o padrão.
   - O prompt puxava tudo pra selfie ("smartphone photo" + "iPhone photo"). Agora uma cena de corpo inteiro ou de longe vira "foto tirada por uma amiga a alguns metros, não é selfie".
   - O âmbar dos olhos ficou mais suave ("soft light amber-hazel").
+- **Pilha da foto normal, escolhida pelo Patrick (24/09, meio-dia):**
+  - **Base:** **Realism by Stable Yogi v2.5 INT8 Turbo** (`2786499@3231611`), CFG 1, 8 passos.
+  - **LoRAs:** NiceGirls 0.8, Lenovo 1.0, Realism Engine 0.8, Detailed Emotions 0.6, slider 2 e NSFW Helper −1 (a trava contra nudez).
+  - **Descartados:**
+    - **Krea2 Turbo_FP8:** é o mesmo Turbo oficial comprimido pra GPU caseira, e estava indisponível nos servidores.
+    - **Yogi v3.0 com CFG 1.5:** nenhuma versão v3 fica disponível, nem pedindo pelo `prepareResource`.
+    - **O "Uncensored workflow":** é um workflow de ComfyUI, não um LoRA; pela API não dá pra usar.
+  - **Custo e tempo:** ~27 Buzz por foto. Frio, o modelo leva ~3,5 min pra carregar; quente, ~2,5 min na fila de baixa prioridade. `TIMEOUT_S` subiu de 240 pra 420 s.
+  - **Ainda aberto:** a foto de corpo inteiro continua saindo selfie mesmo com o prompt corrigido.
 - **Teste quando o LoRA chegar:** 2 cenas normais × (n1, n2), 2 cenas adultas × (a, b, c, d) e a grade do slider. Mesma semente, uns 16 retratos, ~400 Buzz. O Patrick escolhe pelo olho.
 
 ### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅

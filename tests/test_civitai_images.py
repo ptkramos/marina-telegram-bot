@@ -118,12 +118,14 @@ class Krea2Test(unittest.TestCase):
         body = ci.build_workflow_krea2("p", is_nsfw=False)
         step = body["steps"][0]["input"]
         self.assertEqual((step["ecosystem"], step["model"], step["steps"], step["cfgScale"]), ("krea2", "turbo", 8, 1))
-        self.assertNotIn("diffusionModel", step)
+        self.assertEqual(step["diffusionModel"], ci.KREA2_YOGI_25, "base escolhida pelo Patrick")
         self.assertEqual(step["loras"]["urn:air:krea2:lora:civitai:1@2"], 1.0)
         self.assertEqual(step["loras"][ci.KREA2_BREAST_SLIDER], 1.5)
         self.assertEqual(step["loras"][ci.KREA2_NSFW_HELPER], ci.KREA2_SFW_GUARD)
         self.assertIn(ci.KREA2_EMOTIONS, step["loras"])
         self.assertNotIn(ci.KREA2_SNOFS, step["loras"])
+        self.assertEqual((step["loras"][ci.KREA2_NICEGIRLS], step["loras"][ci.KREA2_LENOVO],
+                          step["loras"][ci.KREA2_REALISM_ENGINE]), (0.8, 1.0, 0.8), "pilha escolhida pelo Patrick")
         self.assertFalse(body["allowMatureContent"])
         self.assertNotIn("currencies", body)
 
