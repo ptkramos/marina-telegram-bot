@@ -735,6 +735,19 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
             out.append(("vergonha", "vergonha", 0.3, "levou bronca da agência pelo peso", None))
         elif key.endswith(":saude"):
             out.append(("medo", "preocupacao", 0.35, "sentiu tontura no treino", None))
+    elif key.startswith("casa:"):             # D9 — casa e vida adulta
+        step = key.rsplit(":", 1)[-1]
+        if step == "roupa_esquecida":
+            out.append(("raiva", "frustracao", 0.3 + (0.1 if tired else 0.0), "esqueceu a roupa na máquina", None))
+        elif step == "geral":
+            out.append(("alegria", "alivio", 0.3, "o apê ficou arrumado e cheiroso", None))
+        elif step == "mercado_esqueceu":
+            out.append(("alegria", "diversao", 0.2, text, None))
+        elif step == "perrengue":
+            if "achou" in low:
+                out.append(("alegria", "contentamento", 0.3, text, None))
+            else:
+                out.append(("raiva", "irritacao", 0.3 + (0.1 if tired else 0.0), text, None))
     elif key.startswith("freela:"):          # D10 — trabalho de modelo
         step = key.rsplit(":", 1)[-1]
         if step == "oferta":

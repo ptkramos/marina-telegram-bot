@@ -662,6 +662,12 @@ class WorldStateManager:
         except Exception:
             logger.exception("milo.materialize.error")
         try:
+            # Fase D9: roupa, faxina, mercado, contas e perrengues do apê.
+            from casa import Casa
+            Casa(self.db).materialize(now)
+        except Exception:
+            logger.exception("casa.materialize.error")
+        try:
             # Fase D6: a sessão de série/anime da noite (e o que ela descobre sozinha).
             from watch import Watching
             Watching(self.db).materialize(now)

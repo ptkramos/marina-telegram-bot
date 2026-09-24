@@ -29,7 +29,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **C.2** Assistir junto (watch-along) | ⬜ | nada implementado |
 | **C.3** Rituais de namorada (bom dia, boa noite, cotidiano) | ✅ | `rituals.py` + job de 5 min: bom dia ao acordar, boa noite antes de deitar, momentos do cotidiano (saiu da aula, Milo, academia, banho) com teto de 2/dia; o banho vira estado `SHOWER` e ela some de verdade. Foto do banho espera o motor de imagem (C.1b) |
 | **C.4** Locomoção viva (uber, a pé, ônibus/metrô, carona) | ✅ tabela + API + carona | `commute.py`: ida e volta da PUC e das saídas viram estado ("voltando da PUC pra casa de ônibus"), modo sorteado por dia (pico, noite, chuva, fim de mês, cansaço, uber dividido com a amiga), imprevistos viram acontecimento do dia. Minutos pela Distance Matrix API quando há `DISTANCE_MATRIX_KEY` (1 consulta por trecho), tabela como reserva. Carona com o Theo (cânone: ele tem carro) |
-| **D** Rotina viva (refeições, sono, Milo, noite, faculdade, fim de semana, casa, freela) | 🟡 | Tabela desenhada com o Patrick em 22–23/09 (seção Fase D). **Feito:** D1 fome viva (refeições, lanches, apetite, disfarce, peso, agência), D12 laços (pai diário, Bia várias vezes, saudade do Patrick sem teto), D2+D3+D13 sono (variável, micro-despertares, manhã de trás pra frente), D4 banho v2 (por necessidade e emoção), D5 Milo + cochilo, D6 parte 1 (o que ela assiste, cânone de gostos, descoberta sozinha, curiosidade pelo que o Patrick cita), pegar no sono pelo corpo/emoção, D8 fim de semana (convites + decisão dela), D7 faculdade (trabalhos, véspera, faltas, atrasos), D6 parte 2 (TMDB), D14 motor emocional (corpo, emoções com causa, humor, vínculo, mágoa justa, ciúme leve), D11 saúde e D10 freela (24/09, decisões provisórias ⚠️). **Próximo:** D9 casa |
+| **D** Rotina viva (refeições, sono, Milo, noite, faculdade, fim de semana, casa, freela) | 🟡 | Tabela desenhada com o Patrick em 22–23/09 (seção Fase D). **Feito:** D1 fome viva (refeições, lanches, apetite, disfarce, peso, agência), D12 laços (pai diário, Bia várias vezes, saudade do Patrick sem teto), D2+D3+D13 sono (variável, micro-despertares, manhã de trás pra frente), D4 banho v2 (por necessidade e emoção), D5 Milo + cochilo, D6 parte 1 (o que ela assiste, cânone de gostos, descoberta sozinha, curiosidade pelo que o Patrick cita), pegar no sono pelo corpo/emoção, D8 fim de semana (convites + decisão dela), D7 faculdade (trabalhos, véspera, faltas, atrasos), D6 parte 2 (TMDB), D14 motor emocional (corpo, emoções com causa, humor, vínculo, mágoa justa, ciúme leve), D11 saúde, D10 freela e D9 casa (24/09, decisões provisórias ⚠️ pra revisão do Patrick). **Fase D completa**; faltam só as fatias da noite do D6 |
 | **C** Consolidação | 🟡 | **C1:** o rótulo `[COMO O PATRICK ESCREVE]` e os campos estão em pt-BR (#2 e #7), mas ainda é descrição ("risada: kkkk"), não amostras reais das mensagens dele. **C2** e **C3** ⬜ |
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
@@ -433,7 +433,7 @@ travadas em 1,0.
 | D6 | **Noite em casa** | Bloco vazio de 5 h: "curtindo a noite em casa" | Fatiar em atividades: trabalho da faculdade, série/filme, skincare, rolar o celular, ligação com a família, arrumar o quarto | "tô vendo [série]", "fazendo o trabalho de Tipografia" | 🟡 23/09: o que ela assiste + descoberta sozinha (ver "D6 parte 1"); faltam as outras fatias da noite |
 | D7 | **Faculdade além da aula** | Só a grade | Trabalhos e entregas com prazo, provas, grupo de trabalho com colegas; véspera de entrega muda o sono e a noite | "entrego sexta e não comecei" | ✅ 23/09 (ver "D7 — faculdade além da grade") |
 | D8 | **Fim de semana** | Quase igual a dia útil | Acorda tarde, brunch, praia, rolê sábado à noite, domingo preguiçoso, família | "ressaca de domingo" | ✅ 23/09: convites + decisão dela pelo emocional (ver "D8 — fim de semana"); acordar tarde e domingo preguiçoso já vêm do D2 |
-| D9 | **Casa e vida adulta** | Não existe | Mercado, lavar roupa, arrumar, conta de luz, iFood no fim do mês apertado | "fui no mercado e esqueci o que fui comprar" | ⬜ |
+| D9 | **Casa e vida adulta** | Não existe | Mercado, lavar roupa, arrumar, conta de luz, iFood no fim do mês apertado | "fui no mercado e esqueci o que fui comprar" | ✅ 24/09 (ver "D9 — Casa e vida adulta"). ⚠️ Decisões provisórias; o "fim do mês apertado" saiu porque contradiz o D1 (o pai banca) |
 | D13 | **Vaidade e se arrumar** (planejamento reverso) | Acorda 07:00 ou 08:30 fixos, sem olhar a que horas é o primeiro compromisso nem quanto tempo ela leva pra ficar pronta | A hora de acordar sai **de trás pra frente**: primeiro compromisso − trajeto (C.4) − café − se arrumar (banho, skincare, cabelo, maquiagem, roupa) − margem. Tempo de se arrumar varia (ensaio > aula > mercado). Se dorme demais ou enrola no espelho → **atraso** real (liga com D7 e C.4) | "perdi 20 min escolhendo roupa e cheguei atrasada" | 🟡 23/09: manhã de trás pra frente e despertador perdido feitos; **chegar atrasada de fato** (o trajeto e a aula se moverem) fica para o D7 |
 | D11 | **Corpo, saúde e ciclo** | Ciclo existe (energia, libido) | Cólica forte → fica em casa; banheiro (bebeu muito líquido, dor de barriga) como sumiço curtinho; farmácia; indisposição. Tom humano e discreto | "tô com cólica, hoje não vou pra aula" | ✅ 24/09 (ver "D11 — Corpo e saúde"). ⚠️ Decisões provisórias do Claude pra o Patrick revisar; banheiro e farmácia ficaram de fora |
 | D14 | **Motor emocional unificado** | Emoções espalhadas: 5 em `estado_emocional` (carinho, brincadeira, energia, intensidade romântica, bateria social), excitação em tabela própria (`intimacy_state`, C.1), fome agora em `meals.py`, ciclo à parte; cada uma com seu relógio e sem conversar entre si | Um motor só, com **categorias e subcategorias** (ex.: corpo → fome, energia, sono, excitação; coração → carinho, romance, carência/saudade; humor → alegria, irritação, ansiedade, tristeza; social → bateria social, vontade de sair), cada uma com linha de base, velocidade própria de subir/descer e influências cruzadas (fome → irritação, sono ruim → energia e paciência, saudade → procurar o Patrick). Os módulos atuais viram sensores que alimentam o motor | Tudo que ela sente conversa: "tô com fome e com saudade, péssima combinação kkk" | ⬜ pedido do Patrick em 23/09 ("você quem vai brilhar pra pensar nisso"); entra depois de D1/D12, quando houver sensores suficientes |
@@ -652,6 +652,29 @@ O aviso continua opcional (sempre com conversa rolando) e fora do teto de 2 coti
 - D5: o Milo é de que porte/raça? Ela paga passeador em dia puxado?
 - D6: que séries/filmes ela vê (títulos reais)? Ela liga pra quem da família, e com que frequência?
 - D8: como é um sábado e um domingo dela?
+
+### D9 — Casa e vida adulta ✅ (24/09, madrugada) — ⚠️ decisões provisórias pra revisar
+
+**Antes:** a casa não existia como rotina. Ela nunca lavava roupa, nunca ia ao mercado, nunca arrumava nada, e nenhuma lâmpada queimava.
+
+**Agora (`casa.py`, no molde do `milo.py`):** o plano do dia sai da data; o que já aconteceu vira acontecimento do dia (`casa:<dia>:<o quê>`), e o motor emocional sente.
+
+| Coisa | Frequência | Detalhe | Ela sente |
+|---|---|---|---|
+| **Roupa** | ⚠️ 2 máquinas por semana, à noite no dia útil e de manhã no fim de semana | ~1h30 depois estende no varal; em 15% das vezes esquece a roupa na máquina e tem que lavar de novo | esquecer → frustração |
+| **Faxina** | ⚠️ sábado ou domingo de manhã; 20% dos fins de semana fica pra depois | trocar roupa de cama, arrumar o closet, banheiro e cozinha, geral ouvindo música | alívio ("apê arrumado e cheiroso") |
+| **Mercado** | ⚠️ 1 vez por semana, terça a quinta à noite ou sábado de manhã, depois que o pai manda o dinheiro (segunda) | vira **estado** "no mercado" por 45 a 70 min (lugar: supermercado perto de casa, Botafogo); em 25% das vezes esquece justo o leite, o café, a ração do Milo… Com virose, não vai | esquecer → ri de si mesma |
+| **Contas** | ⚠️ 1 vez por mês, entre os dias 8 e 12 | luz, internet e condomínio; manda pro pai pagar | — |
+| **Perrengue** | ~1–2 por mês | lâmpada queimada, chuveiro frio, internet caiu, gás acabou, aviso de corte de água; às vezes uma coisa boa (achou a blusa perdida) | irritação (mais se estiver cansada) ou contentamento |
+
+**⚠️ Decisões provisórias (Patrick, confirma ou troca):**
+1. **Sem diarista:** ela mesma cuida do apê. O cânone pede pra não inventar gente nova.
+2. **O fim do mês não aperta:** o pai banca comida e contas (D1/D12). Por isso o item "iFood no fim do mês apertado" da tabela original **não** entrou, porque contradizia o D1.
+3. **Contas:** ela manda pro pai pagar.
+
+**Ficou de fora:** o cachê do D10 virando gasto (compras, presente pro Patrick), o apê bagunçado em semana de entrega e o porteiro como personagem.
+
+`tests/test_casa_d9.py` (8 testes).
 
 ### D10 — Freela de modelo ✅ (24/09, madrugada) — ⚠️ decisões provisórias pra revisar
 
