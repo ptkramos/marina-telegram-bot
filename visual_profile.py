@@ -104,12 +104,14 @@ KREA2_NUDE = {
 # 24/09 (teste): "full" + slider 2.5 aumentou demais — o tamanho fica só com o slider;
 # "single beauty mark… no other moles" virou 3–4 pintas: posição concreta obedece melhor.
 # 24/09 (FinePorn): "rosa" solto saía bege/amarronzado — amarrar a cor à boca dela segura o tom.
+# 24/09: a cor no meio da frase não segurou (o FinePorn embute um LoRA de seios e mamilos);
+# agora a cor abre o bloco, onde o Krea 2 dá mais peso.
 KREA2_BODY_CANON = (
-    "Her breasts are round and natural, with medium areolas and small nipples in a clear soft pink, the "
-    "same light pink as her lips, and pale triangle bikini tan lines on them. Her skin is clear and smooth, with no moles or dots "
-    "on her chest or body. Her pussy "
-    "is fully shaved, small and neat, with clear light pink inner lips, the same soft pink as her nipples, "
-    "framed by a pale bikini-bottom tan line. Her anus is small, tight and light pink."
+    "Light pink nipples and light pink pussy: her small nipples and medium areolas are a clear soft pink, "
+    "the same light pink as her lips, and her pussy lips are that same soft pink. Her breasts are round and "
+    "natural, with pale triangle bikini tan lines on them. Her skin is clear and smooth, with no moles or "
+    "dots on her chest or body. Her pussy is fully shaved, small and neat, framed by a pale bikini-bottom "
+    "tan line. Her anus is small, tight and light pink."
 )
 KREA2_MIRROR = ("She is taking a mirror selfie, holding a black iPhone 16 Pro, her hand and the phone "
                 "visible in the reflection.")
