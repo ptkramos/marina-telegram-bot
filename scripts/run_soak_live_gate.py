@@ -32,7 +32,7 @@ async def run(only=None):
         async def check(name, action):
             if only and name != only:
                 return
-            if name == 'photo_flux' and settings.PHOTO_PROVIDER_MAINTENANCE:
+            if name == 'photo_civitai' and settings.PHOTO_PROVIDER_MAINTENANCE:
                 results[name] = {'status': 'accepted_unavailable',
                                  'detail': 'User deferred GPU recovery; dynamic apology path enabled. No generation attempted.'}
                 print(name, 'accepted_unavailable', flush=True)
@@ -99,13 +99,13 @@ async def run(only=None):
             from PIL import Image
             image = Image.open(result)
             image.verify()
-            return 'configured FLUX workflow generated a valid image'
+            return 'Civitai Krea 2 generated a valid image'
 
         await check('telegram_read_only', telegram)
         await check('conversation_llm', llm)
         await check('voice_conversational', lambda: voice(PROFILE_CONVERSATIONAL))
         await check('voice_intimate', lambda: voice(PROFILE_INTIMATE))
-        await check('photo_flux', image)
+        await check('photo_civitai', image)
         await check('photo_apology_llm', photo_apology)
         passed = all(v['status'] in ('passed', 'accepted_unavailable') for v in results.values())
         report = {'release': '3.7.0', 'finished_at': datetime.now().astimezone().isoformat(),
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.CRITICAL)
     parser = argparse.ArgumentParser()
     parser.add_argument('--only', choices=['telegram_read_only', 'conversation_llm',
-                                         'voice_conversational', 'voice_intimate', 'photo_flux', 'photo_apology_llm'])
+                                         'voice_conversational', 'voice_intimate', 'photo_civitai', 'photo_apology_llm'])
     parser.add_argument('--diagnose-photo', action='store_true')
     args = parser.parse_args()
     if args.diagnose_photo:

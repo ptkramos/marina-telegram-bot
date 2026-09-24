@@ -8,7 +8,6 @@ from __future__ import annotations
 import warnings
 
 from prompt_policy import get_daypart, get_temporal_greeting, build_safe_core_prompt
-from visual_profile import visual_profile, MARINA_VISUAL_DNA_BASE, build_flux_prompt
 
 # Explicitly retired — kept as empty/raising so silent reintroduction fails loudly in tests.
 EVENTOS_COTIDIANO = ()  # retired: no random invented daily events
@@ -34,11 +33,9 @@ def build_autonomous_decision_prompt(custom_situation: str = '') -> str:
         'Respond as Marina in natural Brazilian Portuguese, 1–3 short bubbles.\n'
         'Format:\n'
         'ACAO: [Telegram text; use newlines between bubbles] | FOTO_PROMPT: '
-        '[English FLUX tags only if sending a photo of yourself, else empty]'
+        '[short English scene description only if sending a photo of yourself, else empty]'
     )
 
-
-SD_BASE_PROMPT_PREFIX = f'{MARINA_VISUAL_DNA_BASE}, '
 
 __all__ = [
     'MARIN_SYSTEM_PROMPT',
@@ -46,8 +43,5 @@ __all__ = [
     'get_daypart',
     'get_temporal_greeting',
     'build_autonomous_decision_prompt',
-    'build_flux_prompt',
     'build_safe_core_prompt',
-    'SD_BASE_PROMPT_PREFIX',
-    'MARINA_VISUAL_DNA_BASE',
 ]

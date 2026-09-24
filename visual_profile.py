@@ -1,6 +1,6 @@
 """
 Módulo de Perfil Visual & Continuidade de Câmera da Marina Salles (v3.7.0).
-Centraliza o DNA visual calibrado da Marina baseado na referência oficial (marina_teste_calibrada.png)
+Monta o prompt Krea 2 da Marina (identidade, corpo canônico, zoom por palavras)
 e gerencia o estado e a continuidade de cena/look quando o Patrick pede 'mais uma', 'outra foto' ou 'de outro ângulo'.
 """
 import re
@@ -13,65 +13,6 @@ from typing import Optional
 from db import db_manager
 
 logger = logging.getLogger("VisualProfile")
-
-# --- DNA VISUAL CALIBRADO — Marina Salles ---
-# Extraído e calibrado a partir da referência oficial (marina_teste_calibrada.png)
-# FLUX.1 Dev FP8 + marina_flux (1.0) + NSFW_master (0.7 quando nsfw)
-# Age is NOT hard-coded; use young adult descriptor only.
-MARINA_VISUAL_DNA_BASE = (
-    "candid amateur photo of marina_reference, young adult Brazilian woman, gorgeous face, "
-    "expressive luminous honey-amber eyes, delicate nose, full plump lips, full cheeks, "
-    "voluminous wavy chocolate brown hair with golden blonde tips"
-)
-
-MARINA_PHYSIQUE_DNA = (
-    "fit athletic model physique, slim waist, shapely feminine proportions, "
-    "natural standing posture, perky upright busts, round bubble butt, clean neat natural female anatomy, "
-    "subtle beach golden tan glow, natural sun-kissed skin tone with visible crisp bikini tan lines"
-)
-
-# 24/09: foto normal com o corpo descrito como na adulta ("perky upright busts,
-# round bubble butt, bikini tan lines") saiu SEM ROUPA pelo Civitai — o
-# pedido era selfie de pijama. Na foto vestida o corpo fica sem esses termos.
-MARINA_PHYSIQUE_SFW = (
-    "fit athletic model physique, slim waist, natural standing posture, "
-    "subtle beach golden tan glow, natural sun-kissed skin tone"
-)
-
-MARINA_REALISM_TAGS = (
-    "authentic natural lighting, high realism, highly detailed natural skin texture with visible fine pores, "
-    "natural skin folds and subtle imperfections, authentic flash photography reflection, realistic non-plastic non-rubber skin, "
-    "shot on iphone, raw candid mobile photography"
-)
-
-MIRROR_SELFIE_TRIGGER = (
-    "candid mirror selfie, holding space black iphone 16 pro with sleek matte titanium frame and triple camera lens module, "
-    "natural hand grip, authentic phone glass reflection, mirror reflection"
-)
-
-
-# Presets de Anatomia
-ANATOMY_SFW = ("fully clothed, wearing clothes that cover chest and body, modest casual outfit, "
-               "no nudity, no cleavage, natural model posture")
-
-ANATOMY_NSFW_FRONTAL = (
-    "completely naked, uncensored, perky natural breasts, firm upright high-set bust, "
-    "visible bikini top tan line, erect pink nipples with detailed natural areolas, slim waist, natural hips, "
-    "visible bikini bottom tan lines on hips, round bubble butt, detailed explicit female anatomy, pink labia, shaved pussy"
-)
-
-ANATOMY_NSFW_BEHIND = (
-    "from behind, round bubble butt projecting backward, firm shapely buttocks, "
-    "visible cheeky bikini tan lines on tan buttocks, perky natural female curves, "
-    "completely naked, uncensored, detailed explicit female anatomy"
-)
-
-ANATOMY_NSFW_SIDE = (
-    "side view profile, completely naked, uncensored, perky upright high-set natural breast with visible erect pink nipple and areola, "
-    "visible side bikini tan lines, slim waist, arched lower back, explicit female anatomy"
-)
-
-
 
 # --- Krea 2 (24/09) ---------------------------------------------------------
 # Os autores de todos os LoRAs Krea 2 que usamos pedem TEXTO CORRIDO (4-5
@@ -148,6 +89,24 @@ _NOT_A_PHOTO = re.compile(r"\b(photo[- ]?realistic|hyper[- ]?realistic|ultra[- ]
 # desfocada. Corpo inteiro/cômodo: o cômodo abre o prompt e o rosto fica com pouca palavra
 # (o LoRA segura o rosto). Parte do corpo encostada no cenário ("pés no tapete") entra no quadro.
 ZOOMS = ("close", "three_quarter", "full", "room")
+# Regras pra quem escreve a ação/roupa da cena (o diretor da C.1b). Patrick, 24/09, vendo as
+# fotos do apê. Sempre em frase positiva: com CFG 1 negação vira pedido.
+KREA2_DIRECTOR_RULES = (
+    # O slider fica em 2.5 (decisão); quem exagera é o bojo/decote da roupa.
+    "Outfits: prefer soft unpadded fabrics (cotton tees, tank tops, linen dresses, bralettes); if the outfit "
+    "has cups or a push-up neckline, describe it as a soft natural fit that follows her real shape.",
+    # "Síndrome do pescoço quebrado": o Krea 2 entorta a cabeça em toda foto se deixar. Não é
+    # regra fixa (Patrick): a cabeça inclinada pode aparecer quando a pose pede, só não sempre.
+    "Posture: vary it with the pose; by default her head sits upright and level with her shoulders, and a "
+    "head tilt appears only when the moment calls for it.",
+    # A cara vem do estado dela, como o corpo vem do peso (Patrick, 24/09): com tesão, expressão de
+    # tesão; cansada, chateada, com saudade — aparece no rosto. Sorriso só quando ela está bem.
+    "Expression: take it from her current mood and arousal (the Detailed Emotions LoRA follows the words); "
+    "smile only when her mood is light.",
+    # Garrafa flutuando na academia: ela segurava o celular do espelho e bebia ao mesmo tempo.
+    "Objects: every object is held in a named hand or rests on a named surface; in a mirror selfie one "
+    "hand holds the phone, so she holds at most one other object, in her free hand.",
+)
 KREA2_IDENTITY_SHORT = ("a young Brazilian woman with long chestnut brown hair with golden blonde tips and "
                         "light amber-hazel eyes")
 KREA2_ZOOM_OPEN = {
@@ -222,16 +181,6 @@ def krea2_prompt(scene: str, *, is_nsfw: bool, focus_angle: str = "frontal", is_
     parts.append(KREA2_PHOTO_DISTANT if distant else KREA2_PHOTO_PROPPED if propped else KREA2_PHOTO)
     return " ".join(parts)
 
-
-def _krea2_active() -> bool:
-    try:
-        from config import settings
-        if getattr(settings, "IMAGE_ENGINE", "") != "civitai":
-            return False
-        import civitai_images
-        return civitai_images.ecosystem() == "krea2"
-    except Exception:
-        return False
 
 # Palavras-chave para detecção
 CONTINUITY_PATTERNS = [
@@ -389,7 +338,7 @@ class VisualProfileManager:
         require_world_match: bool = False,
     ) -> tuple[str, bool, str]:
         """
-        Monta o prompt FLUX.1 Dev calibrado. Se for detectado pedido de continuidade dentro da janela
+        Monta o prompt Krea 2 da cena. Se for detectado pedido de continuidade dentro da janela
         temporal, preserva o outfit e ambiente da foto anterior variando pose/ângulo.
         Com require_world_match, só reutiliza look/sublocal se o place_key atual coincidir.
         Retorna: (full_prompt, is_nsfw, focus_angle)
@@ -443,37 +392,14 @@ class VisualProfileManager:
             final_angle = self.extract_focus_angle(combined_text, default="frontal") if focus_angle is None else focus_angle
             scene_part = scene_description.strip()
 
-        # Seleciona bloco anatômico calibrado
+        # Foto vestida nunca vira adulta: pista de roupa na cena derruba o nsfw.
         clothed_cues = ["clothed", "wearing", "dress", "vestid", "roupa", "hoodie", "top", "pajama", "pijama", "jeans", "shorts", "shirt", "casual"]
         if not final_nsfw or any(k in scene_part.lower() for k in clothed_cues):
-            anatomy_tag = ANATOMY_SFW
             final_nsfw = False
-        elif final_angle == "behind":
-            anatomy_tag = ANATOMY_NSFW_BEHIND
-        elif final_angle == "side":
-            anatomy_tag = ANATOMY_NSFW_SIDE
-        else:
-            anatomy_tag = ANATOMY_NSFW_FRONTAL
 
-        # Se for pedido de selfie no espelho, enriquece a cena com os triggers do iPhone 16 Pro preto
         is_mirror = any(kw in combined_text.lower() for kw in ["espelho", "mirror", "selfie no espelho", "mirror selfie", "segurando celular"])
-        if is_mirror and not any(kw in scene_part.lower() for kw in ["mirror selfie", "holding space black"]):
-            scene_part = f"{scene_part}, {MIRROR_SELFIE_TRIGGER}".strip(", ")
-
-        if _krea2_active():
-            scene_krea2 = scene_part
-            if is_mirror:
-                scene_krea2 = scene_krea2.replace(MIRROR_SELFIE_TRIGGER, "").strip(" ,")
-            return (krea2_prompt(scene_krea2, is_nsfw=final_nsfw, focus_angle=final_angle, is_mirror=is_mirror),
-                    final_nsfw, final_angle)
-
-        physique = MARINA_PHYSIQUE_DNA if final_nsfw else MARINA_PHYSIQUE_SFW
-        full_prompt = (
-            f"{MARINA_VISUAL_DNA_BASE}, {scene_part}, {anatomy_tag}, "
-            f"{physique}, {MARINA_REALISM_TAGS}"
-        ).strip(", ")
-
-        return full_prompt, final_nsfw, final_angle
+        return (krea2_prompt(scene_part, is_nsfw=final_nsfw, focus_angle=final_angle, is_mirror=is_mirror),
+                final_nsfw, final_angle)
 
 
     def record_photo_generation(
@@ -517,13 +443,3 @@ class VisualProfileManager:
 
 # Instância global do perfil visual
 visual_profile = VisualProfileManager()
-
-
-def build_flux_prompt(scene_tags: str, is_nsfw: bool = False, focus_angle: str = 'frontal') -> str:
-    """Thin wrapper — visual_profile is the single visual authority."""
-    prompt, _, _ = visual_profile.build_scene_prompt(
-        scene_description=scene_tags,
-        is_nsfw=is_nsfw,
-        focus_angle=focus_angle,
-    )
-    return prompt

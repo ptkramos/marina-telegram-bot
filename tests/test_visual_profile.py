@@ -4,26 +4,19 @@ Valida o DNA visual calibrado, detecção de continuidade, seleção de poses/â
 """
 import time
 import unittest
-from unittest.mock import patch
 from visual_profile import (
     VisualProfileManager,
-    MARINA_VISUAL_DNA_BASE,
-    MARINA_PHYSIQUE_DNA,
-    MARINA_REALISM_TAGS,
-    ANATOMY_SFW,
-    ANATOMY_NSFW_FRONTAL,
-    ANATOMY_NSFW_BEHIND,
-    ANATOMY_NSFW_SIDE
+    KREA2_TRIGGER,
+    KREA2_IDENTITY,
+    KREA2_CLOTHED,
+    KREA2_NUDE,
+    KREA2_BODY_CANON,
 )
 
 
 class TestVisualProfile(unittest.TestCase):
 
     def setUp(self):
-        # Estes testes cobrem o prompt do Flux; o .env pode estar no Krea 2 (24/09).
-        p = patch("visual_profile._krea2_active", return_value=False)
-        p.start()
-        self.addCleanup(p.stop)
         self.profile = VisualProfileManager()
         self.profile.clear_state()
 
@@ -31,19 +24,11 @@ class TestVisualProfile(unittest.TestCase):
         self.profile.clear_state()
 
     def test_visual_dna_constants(self):
-        """Valida que o DNA visual possui os traços marcantes calibrados da Marina."""
-        self.assertIn("marina_reference", MARINA_VISUAL_DNA_BASE)
-        self.assertIn("young adult Brazilian woman", MARINA_VISUAL_DNA_BASE)
-        self.assertNotIn("19yo", MARINA_VISUAL_DNA_BASE)
-        self.assertNotIn("20yo", MARINA_VISUAL_DNA_BASE)
-        self.assertIn("honey-amber eyes", MARINA_VISUAL_DNA_BASE)
-        self.assertIn("chocolate brown hair with golden blonde tips", MARINA_VISUAL_DNA_BASE)
-        self.assertIn("athletic model physique", MARINA_PHYSIQUE_DNA)
-        self.assertIn("round bubble butt", MARINA_PHYSIQUE_DNA)
-        self.assertIn("beach golden tan", MARINA_PHYSIQUE_DNA)
-        self.assertIn("bikini tan lines", MARINA_PHYSIQUE_DNA)
-        self.assertIn("high realism", MARINA_REALISM_TAGS)
-
+        """Traços da Marina no prompt Krea 2 (o LoRA dela usa o gatilho marinaX)."""
+        self.assertEqual(KREA2_TRIGGER, "marinaX")
+        self.assertIn("amber-hazel eyes", KREA2_IDENTITY)
+        self.assertIn("chestnut brown hair with golden blonde tips", KREA2_IDENTITY)
+        self.assertNotRegex(KREA2_IDENTITY, r"\d+\s*(yo|years?)")
 
     def test_continuity_detection(self):
         """Testa o reconhecimento de pedidos de continuidade e mais fotos."""
@@ -102,8 +87,9 @@ class TestVisualProfile(unittest.TestCase):
         )
         self.assertFalse(is_nsfw)
         self.assertEqual(angle, "frontal")
-        self.assertIn(MARINA_VISUAL_DNA_BASE, prompt)
-        self.assertIn(ANATOMY_SFW, prompt)
+        self.assertIn(KREA2_TRIGGER, prompt)
+        self.assertIn(KREA2_CLOTHED, prompt)
+        self.assertNotIn(KREA2_BODY_CANON, prompt)
         self.assertIn("sitting on sofa", prompt)
 
     def test_build_scene_prompt_new_session_nsfw(self):
@@ -114,8 +100,8 @@ class TestVisualProfile(unittest.TestCase):
         )
         self.assertTrue(is_nsfw)
         self.assertEqual(angle, "frontal")
-        self.assertIn(ANATOMY_NSFW_FRONTAL, prompt)
-        self.assertIn(MARINA_PHYSIQUE_DNA, prompt)
+        self.assertIn(KREA2_NUDE["frontal"], prompt)
+        self.assertIn(KREA2_BODY_CANON, prompt)
 
     def test_camera_continuity_flow(self):
         """
@@ -152,7 +138,7 @@ class TestVisualProfile(unittest.TestCase):
         self.assertTrue(nsfw2, "Deve manter o estado de nudez da sessão")
         self.assertEqual(angle2, "behind", "Deve alternar para o ângulo behind")
         self.assertIn("bedroom", prompt2, "Deve manter o mesmo ambiente (bedroom)")
-        self.assertIn(ANATOMY_NSFW_BEHIND, prompt2, "Deve usar o bloco anatômico traseiro")
+        self.assertIn(KREA2_NUDE["behind"], prompt2, "Deve usar o bloco de costas")
 
 
 if __name__ == "__main__":

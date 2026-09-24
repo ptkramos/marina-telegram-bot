@@ -53,32 +53,21 @@ class CivitaiTest(unittest.TestCase):
     def setUp(self):
         # Configuração falsa e isolada: a suíte recarrega `config`, e patchear o
         # settings global deixava a chave REAL vazar pro teste (e pro log).
-        self.fake = SimpleNamespace(CIVITAI_API_KEY="tok", IPHONE_LORAS_ENABLED=True)
+        self.fake = SimpleNamespace(CIVITAI_API_KEY="tok", CIVITAI_LORA_MARINA_KREA2="urn:air:krea2:lora:civitai:1@2",
+                                    CIVITAI_BREAST_SLIDER=2.5, CIVITAI_KREA2_SFW_STACK="n3",
+                                    CIVITAI_KREA2_NSFW_STACK="e")
         for p in (patch.object(ci, "ALLOW_LIVE_IN_TESTS", True), patch.object(ci, "POLL_S", 0.0),
                   patch.object(ci, "_settings", return_value=self.fake)):
             p.start()
             self.addCleanup(p.stop)
 
-    def test_same_lora_pipeline_as_the_novita_workflow(self):
-        sfw = ci.select_loras(is_nsfw=False)
-        self.assertEqual(sfw[ci.LORAS["marina"]], 1.0)
-        self.assertEqual(sfw[ci.LORAS["iphone_photo"]], 0.6)
-        self.assertIn(ci.LORAS["hands"], sfw)
-        self.assertNotIn(ci.LORAS["nsfw_master"], sfw)
-        adult = ci.select_loras(is_nsfw=True, focus_angle="behind", is_mirror_selfie=True)
-        self.assertEqual(adult[ci.LORAS["nsfw_master"]], 0.8)
-        self.assertEqual(adult[ci.LORAS["roundass"]], 0.65)
-        self.assertIn(ci.LORAS["mirror_selfie"], adult)
-        self.assertNotIn(ci.LORAS["hands"], adult)
-
     def test_adult_photo_asks_for_mature_content_and_yellow_buzz(self):
-        body = ci.build_workflow("p", {}, is_nsfw=True)
+        body = ci.build_workflow_krea2("p", is_nsfw=True)
         self.assertTrue(body["allowMatureContent"])
         self.assertEqual(body["currencies"], ["yellow"])
         step = body["steps"][0]["input"]
-        self.assertEqual((step["engine"], step["ecosystem"], step["width"], step["height"], step["steps"]),
-                         ("comfy", "flux1", 832, 1216, 24))
-        self.assertNotIn("currencies", ci.build_workflow("p", {}, is_nsfw=False))
+        self.assertEqual((step["engine"], step["ecosystem"]), ("comfy", "krea2"))
+        self.assertNotIn("currencies", ci.build_workflow_krea2("p", is_nsfw=False))
 
     def test_generate_polls_and_downloads_through_the_authenticated_blob(self):
         s = _Session()
@@ -90,6 +79,12 @@ class CivitaiTest(unittest.TestCase):
     def test_signed_url_is_the_fallback(self):
         img = asyncio.run(ci.generate("marina selfie", is_nsfw=False, session=_Session(blob_ok=False)))
         self.assertEqual(img.getvalue(), b"SIGNED")
+
+    def test_without_her_lora_nothing_is_sent(self):
+        self.fake.CIVITAI_LORA_MARINA_KREA2 = ""
+        s = _Session()
+        self.assertIsNone(asyncio.run(ci.generate("x", is_nsfw=False, session=s)), "foto sem o rosto dela não serve")
+        self.assertEqual(s.calls, [])
 
     def test_without_token_nothing_is_sent(self):
         self.fake.CIVITAI_API_KEY = ""
@@ -103,16 +98,12 @@ class Krea2Test(unittest.TestCase):
     """Pipeline Krea 2 (24/09): só liga com o LoRA Krea 2 da Marina."""
 
     def setUp(self):
-        self.fake = SimpleNamespace(CIVITAI_API_KEY="tok", CIVITAI_ECOSYSTEM="krea2",
+        self.fake = SimpleNamespace(CIVITAI_API_KEY="tok",
                                     CIVITAI_LORA_MARINA_KREA2="urn:air:krea2:lora:civitai:1@2", CIVITAI_BREAST_SLIDER=1.5,
                                     CIVITAI_KREA2_SFW_STACK="n1", CIVITAI_KREA2_NSFW_STACK="a")
         p = patch.object(ci, "_settings", return_value=self.fake)
         p.start()
         self.addCleanup(p.stop)
-
-    def test_without_her_krea2_lora_it_stays_on_flux(self):
-        self.fake.CIVITAI_LORA_MARINA_KREA2 = ""
-        self.assertEqual(ci.ecosystem(), "flux1")
 
     def test_normal_photo_n1_uses_official_turbo_and_guards_against_nudity(self):
         body = ci.build_workflow_krea2("p", is_nsfw=False)

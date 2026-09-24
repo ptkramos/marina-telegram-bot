@@ -1653,8 +1653,7 @@ async def sistema_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         camera_str = "em manutenção"
     else:
         online = await sd_client.is_online()
-        engine = {"novita": "Novita FLUX", "civitai": "Civitai FLUX"}.get(settings.IMAGE_ENGINE, "SD local")
-        camera_str = f"{engine} ({'online' if online else 'indisponível'})"
+        camera_str = f"Civitai Krea 2 ({'online' if online else 'indisponível'})"
     text = "\n".join([
         f"⚙️ Sistema · {settings.APP_NAME} v{settings.APP_VERSION}", "",
         "🧠 Memória",
@@ -3796,7 +3795,7 @@ async def process_incoming_batch(
             prompt_cenario = camera_ctx.safe_scene_tags
             try:
                 director_system = (
-                    "You are a specialized visual prompt director for FLUX.1 Dev photography. "
+                    "You are a specialized visual prompt director for smartphone photography. "
                     "Marina Salles is a 20yo Brazilian model with honey-amber eyes and wavy chocolate brown hair with blonde tips. "
                     "CRITICAL RULES FOR CLOTHING VS NUDITY: "
                     "1. If boyfriend requested a CLOTHED or CASUAL photo (e.g. 'vestida', 'roupa', 'look', 'vestido', 'pijama', 'selfie', 'casual') OR did NOT explicitly ask for nude/undies: "

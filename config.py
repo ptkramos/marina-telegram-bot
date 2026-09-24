@@ -94,10 +94,6 @@ class Settings:
     DISTANCE_MATRIX_KEY: str = os.getenv("DISTANCE_MATRIX_KEY", "").strip()
     COMMUTE_LIVE_TIMES: bool = os.getenv("COMMUTE_LIVE_TIMES", "true").strip().lower() in ("1", "true", "yes", "on")
 
-    # URL da API do Stable Diffusion na RX 570 (legado/local)
-    _raw_sd_url = os.getenv("SD_API_URL", "http://127.0.0.1:7860/").strip()
-    SD_API_URL: str = _raw_sd_url if _raw_sd_url.endswith("/") else f"{_raw_sd_url}/"
-    
     # Chat ID alvo do namorado (exclusividade total)
     TARGET_CHAT_ID: int = int(os.getenv("TARGET_CHAT_ID", "0"))
 
@@ -126,17 +122,13 @@ class Settings:
     # Consolidação Periódica de Memória
     MEMORY_CONSOLIDATION_BATCH_SIZE: int = int(os.getenv("MEMORY_CONSOLIDATION_BATCH_SIZE", "8"))
 
-    # Motor de Geração de Imagem (novita ou local)
-    IMAGE_ENGINE: str = os.getenv("IMAGE_ENGINE", "novita").strip().lower()
     # Temporary provider outage accepted for the 3.7.0 soak; not a feature rollback.
     # 23/09: /feedback é caderno de correções, não vai pro prompt (ver world_context).
     PATRICK_FEEDBACK_IN_PROMPT: bool = os.getenv("PATRICK_FEEDBACK_IN_PROMPT", "false").lower() in ("true", "1", "yes")
     PHOTO_PROVIDER_MAINTENANCE: bool = os.getenv("PHOTO_PROVIDER_MAINTENANCE", "false").lower() in ("true", "1", "yes")
-    NOVITA_API_KEY: str = os.getenv("NOVITA_API_KEY", "").strip()
-    # 24/09: fotos pelo Civitai (Orchestration API) — IMAGE_ENGINE=civitai.
+    NOVITA_API_KEY: str = os.getenv("NOVITA_API_KEY", "").strip()   # só voz (MiniMax); fotos saíram da Novita em 24/09
+    # 24/09: fotos pelo Civitai (Orchestration API), motor Krea 2.
     CIVITAI_API_KEY: str = os.getenv("CIVITAI_API_KEY", "").strip().strip('"')
-    CIVITAI_BASE_MODEL: str = os.getenv("CIVITAI_BASE_MODEL", "").strip()   # vazio = Flux.1 Dev
-    CIVITAI_ECOSYSTEM: str = os.getenv("CIVITAI_ECOSYSTEM", "flux1").strip().lower()   # flux1 | krea2
     CIVITAI_LORA_MARINA_KREA2: str = os.getenv("CIVITAI_LORA_MARINA_KREA2", "").strip()   # AIR do LoRA Krea 2 dela
     CIVITAI_BREAST_SLIDER: float = float(os.getenv("CIVITAI_BREAST_SLIDER", "2.5") or 0)   # -5..5 nua; 2.5 = escolha do Patrick (24/09)
     CIVITAI_KREA2_SFW_STACK: str = os.getenv("CIVITAI_KREA2_SFW_STACK", "n3").strip().lower()     # n1 | n2
@@ -246,11 +238,6 @@ class Settings:
     VISION_MODEL: str = os.getenv("VISION_MODEL", "google/gemini-2.5-flash").strip()
     VISION_ENABLED: bool = os.getenv("VISION_ENABLED", "true").lower() in ("true", "1", "yes")
     
-    # LoRAs de Estética iPhone e Mirror Selfie (FLUX.1 Dev)
-    IPHONE_LORAS_ENABLED: bool = os.getenv("IPHONE_LORAS_ENABLED", "false").lower() in ("true", "1", "yes")
-    IPHONE_PHOTO_LORA_NAME: str = os.getenv("IPHONE_PHOTO_LORA_NAME", "iphone_photo_flux.safetensors").strip()
-    MIRROR_SELFIE_LORA_NAME: str = os.getenv("MIRROR_SELFIE_LORA_NAME", "mirror_selfie_flux.safetensors").strip()
-    IPHONE_DEVICE_LORA_NAME: str = os.getenv("IPHONE_DEVICE_LORA_NAME", "iphone16pro_flux.safetensors").strip()
     # API-Sports / API-Football (Botafogo Live Tracking)
     APISPORTS_KEY: str = os.getenv("APISPORTS_KEY", "").strip()
     BOTAFOGO_TRACKING_ENABLED: bool = os.getenv("BOTAFOGO_TRACKING_ENABLED", "true").lower() in ("true", "1", "yes")

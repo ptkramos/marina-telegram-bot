@@ -1,15 +1,9 @@
-"""Geração de fotos da Marina pelo Civitai (Orchestration API).
+"""Geração de fotos da Marina pelo Civitai (Orchestration API), motor Krea 2.
 
-24/09: a Novita ficou sem GPU disponível para alugar (nem trocando de região),
-e o Patrick propôs o Civitai — onde o LoRA da Marina foi treinado. Aqui não
-se aluga máquina: cada foto é um "workflow" pago em Buzz (~10 Buzz ≈ 1 centavo
-de dólar no motor comfy, medido com whatif em 24/09).
-
-Mesmo pipeline do ComfyUI da Novita (sd_client._build_comfyui_workflow):
-Flux.1 Dev + LoRA da Marina 1.0 + iPhone Photo 0.6 + NSFW Master 0.8 (adulto) +
-curvas de costas/lado + mirror selfie/iPhone 16 Pro ou mãos, 24 passos,
-guidance 3.5, euler/simple, 832×1216. Os LoRAs são referenciados por AIR
-(todos achados no Civitai em 24/09; o da Marina é da conta do Patrick).
+24/09: a Novita ficou sem GPU pra alugar e o Patrick propôs o Civitai, onde o
+LoRA da Marina foi treinado (Krea 2, gatilho "marinaX"). Não se aluga máquina:
+cada foto é um "workflow" pago em Buzz. O Flux.1 (primeiro LoRA dela) saiu no
+mesmo dia — a pilha oficial está em KREA2_STACKS (n3 normal, e adulta).
 
 Conteúdo adulto: `allowMatureContent` + Buzz amarelo (comprado). As saídas
 adultas às vezes não abrem pela URL assinada (redirecionam pra
@@ -29,55 +23,16 @@ import aiohttp
 logger = logging.getLogger("CivitaiImages")
 
 BASE_URL = "https://orchestration.civitai.com"
-FLUX_DEV = "urn:air:flux1:checkpoint:civitai:618692@691639"
-FLUX_KREA_DEV = "urn:air:flux1:checkpoint:civitai:1827475@2068069"   # Flux 1 Krea Dev FP8 (aceita os LoRAs Flux1)
 USER_AGENT = "marin-telegram-bot"
 TERMINAL = {"succeeded", "failed", "expired", "canceled", "cancelled"}
 POLL_S = 3.0
 TIMEOUT_S = 420   # checkpoint da comunidade frio leva ~3,5 min pra carregar (Yogi, 24/09)
 ALLOW_LIVE_IN_TESTS = False
 
-# AIR de cada LoRA do pipeline (sobrescrevível pelo .env: CIVITAI_LORA_<NOME>).
-LORAS = {
-    "marina": "urn:air:flux1:lora:civitai:2936925@3324653",       # marina_flux (conta psrxxx)
-    "iphone_photo": "urn:air:flux1:lora:civitai:738556@967140",   # iPhone Photo (Realism booster)
-    "nsfw_master": "urn:air:flux1:lora:civitai:667086@746602",    # NSFW_master.safetensors
-    "roundass": "urn:air:flux1:lora:civitai:131822@1041921",      # roundassv16_FLUX.safetensors
-    "sideboob": "urn:air:flux1:lora:civitai:454099@766170",       # FluxSideboob-E3.safetensors
-    "mirror_selfie": "urn:air:flux1:lora:civitai:1604908@1816152",
-    "iphone_device": "urn:air:flux1:lora:civitai:1809535@2047801",
-    "hands": "urn:air:flux1:lora:civitai:200255@804967",          # "Hand v2.safetensors"
-}
-
 
 def _settings():
     from config import settings
     return settings
-
-
-def _air(name: str) -> str:
-    return (getattr(_settings(), f"CIVITAI_LORA_{name.upper()}", "") or "").strip() or LORAS[name]
-
-
-def select_loras(*, is_nsfw: bool, focus_angle: str = "frontal", is_mirror_selfie: bool = False) -> dict:
-    """Os mesmos LoRAs e pesos do workflow da Novita, por AIR."""
-    s = _settings()
-    iphone = bool(getattr(s, "IPHONE_LORAS_ENABLED", False))
-    loras = {_air("marina"): 1.0}
-    if iphone:
-        loras[_air("iphone_photo")] = 0.6
-    if is_nsfw:
-        loras[_air("nsfw_master")] = 0.8
-    if focus_angle == "behind":
-        loras[_air("roundass")] = 0.65
-    elif focus_angle == "side":
-        loras[_air("sideboob")] = 0.6
-    if iphone and is_mirror_selfie:
-        loras[_air("mirror_selfie")] = 0.65
-        loras[_air("iphone_device")] = 0.65
-    else:
-        loras[_air("hands")] = 0.5
-    return loras
 
 
 # ---------------------------------------------------------------- Krea 2 --
@@ -160,16 +115,6 @@ KREA2_STACKS = {
           "loras": {KREA2_PHONE: PHONE_SELFIE_WEIGHT, KREA2_TANLINES: 0.6}},
 }
 SFW_STACKS, NSFW_STACKS = ("n1", "n2", "n3"), ("a", "b", "c", "d", "e")
-
-
-def ecosystem() -> str:
-    """flux1 (padrão) ou krea2 — krea2 só vale com o LoRA Krea 2 da Marina configurado."""
-    s = _settings()
-    wanted = (getattr(s, "CIVITAI_ECOSYSTEM", "") or "flux1").strip().lower()
-    if wanted == "krea2" and not (getattr(s, "CIVITAI_LORA_MARINA_KREA2", "") or "").strip():
-        logger.warning("civitai.krea2_sem_lora_da_marina — usando Flux (foto sem o rosto dela não serve)")
-        return "flux1"
-    return wanted if wanted in ("flux1", "krea2") else "flux1"
 
 
 def krea2_stack_name(*, is_nsfw: bool, stack: Optional[str] = None) -> str:
@@ -296,37 +241,15 @@ def build_workflow_krea2(prompt: str, *, is_nsfw: bool, width: int = 1024, heigh
     return body
 
 
-def base_model() -> str:
-    """Modelo base (Flux.1 família, onde o LoRA da Marina funciona). CIVITAI_BASE_MODEL no .env troca."""
-    return (getattr(_settings(), "CIVITAI_BASE_MODEL", "") or "").strip() or FLUX_DEV
-
-
-def build_workflow(prompt: str, loras: dict, *, is_nsfw: bool, width: int = 832, height: int = 1216,
-                   steps: int = 24, seed: Optional[int] = None, model: Optional[str] = None) -> dict:
-    body = {
-        "steps": [{
-            "$type": "imageGen",
-            "input": {
-                "engine": "comfy", "ecosystem": "flux1", "operation": "createImage",
-                "model": model or base_model(), "prompt": prompt, "width": width, "height": height,
-                "steps": steps, "cfgScale": 3.5, "sampler": "euler", "scheduler": "simple",
-                "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
-                "quantity": 1, "loras": loras,
-            },
-        }],
-        "allowMatureContent": bool(is_nsfw),
-    }
-    if is_nsfw:
-        body["currencies"] = ["yellow"]   # conteúdo adulto só com Buzz amarelo (comprado)
-    return body
-
-
 def _token() -> str:
     return (getattr(_settings(), "CIVITAI_API_KEY", "") or "").strip().strip('"')
 
 
 def available() -> bool:
     if not _token():
+        return False
+    if not (getattr(_settings(), "CIVITAI_LORA_MARINA_KREA2", "") or "").strip():
+        logger.warning("civitai.sem_lora_da_marina — foto sem o rosto dela não serve")
         return False
     from db import _running_under_tests
     return not (_running_under_tests() and not ALLOW_LIVE_IN_TESTS)
@@ -342,18 +265,13 @@ def _images(workflow: dict) -> list[dict]:
 
 async def generate(prompt: str, *, is_nsfw: bool, focus_angle: str = "frontal",
                    is_mirror_selfie: bool = False, session: Optional[aiohttp.ClientSession] = None,
-                   model: Optional[str] = None, seed: Optional[int] = None) -> Optional[io.BytesIO]:
+                   seed: Optional[int] = None) -> Optional[io.BytesIO]:
     """Gera uma foto e devolve os bytes, ou None (sem token, erro, bloqueio, timeout)."""
     if not available():
         return None
     headers = {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json",
                "User-Agent": USER_AGENT}
-    if ecosystem() == "krea2" and model is None:
-        body = build_workflow_krea2(prompt, is_nsfw=is_nsfw, seed=seed)
-    else:
-        body = build_workflow(prompt, select_loras(is_nsfw=is_nsfw, focus_angle=focus_angle,
-                                                   is_mirror_selfie=is_mirror_selfie), is_nsfw=is_nsfw,
-                              model=model, seed=seed)
+    body = build_workflow_krea2(prompt, is_nsfw=is_nsfw, seed=seed)
     own = session is None
     session = session or aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT_S + 30))
     try:

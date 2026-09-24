@@ -251,7 +251,7 @@ class PendingCancellationTests(unittest.IsolatedAsyncioTestCase):
         from sd_client import ImageGeneratorClient
         client = ImageGeneratorClient()
         with patch.object(settings, 'PHOTO_PROVIDER_MAINTENANCE', True), \
-             patch.object(client, '_ensure_instance_running', AsyncMock()) as start:
+             patch('civitai_images.generate', AsyncMock()) as start:
             result = await client.generate_photo_with_context('synthetic fully clothed portrait')
             avatars = await client.generate_avatar()
         self.assertIsNone(result.image)

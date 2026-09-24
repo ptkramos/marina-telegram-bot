@@ -241,10 +241,8 @@ class CameraDeliveryPersistenceTests(unittest.IsolatedAsyncioTestCase):
         from visual_profile import visual_profile
         visual_profile.clear_state()
         from sd_client import sd_client
-        with patch.object(sd_client, '_generate_local_sd', new_callable=AsyncMock) as local, \
-             patch.object(settings, 'IMAGE_ENGINE', 'local'):
-            local.return_value = None
-            sd_client.novita_key = ''
+        with patch('civitai_images.generate', new_callable=AsyncMock) as civitai:
+            civitai.return_value = None
             result = await sd_client.generate_photo_with_context('sofa selfie')
         self.assertIsNone(result.image)
         self.assertIsNone(visual_profile.get_last_state())

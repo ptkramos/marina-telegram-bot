@@ -33,7 +33,7 @@ from prompts import EVENTOS_COTIDIANO, MARIN_SYSTEM_PROMPT
 from seed_world_bible_v36 import seed_world_bible
 from seed_academic_v36 import seed_academic
 from style_engine import StyleEngine
-from visual_profile import MARINA_VISUAL_DNA_BASE
+from visual_profile import KREA2_IDENTITY, KREA2_IDENTITY_SHORT
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -116,9 +116,9 @@ class BackendPromptLanguageTests(unittest.TestCase):
 
 class VisualDnaTests(unittest.TestCase):
     def test_no_fixed_numeric_age(self):
-        self.assertNotIn('19yo', MARINA_VISUAL_DNA_BASE)
-        self.assertNotIn('20yo', MARINA_VISUAL_DNA_BASE)
-        self.assertIn('young adult', MARINA_VISUAL_DNA_BASE)
+        for dna in (KREA2_IDENTITY, KREA2_IDENTITY_SHORT):
+            self.assertNotRegex(dna, r'\d+\s*(yo|years?|-year)')
+            self.assertIn('young', dna)
 
 
 class ProactivityNoEventosTests(unittest.TestCase):
