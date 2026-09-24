@@ -129,8 +129,66 @@ KREA2_FRAMING_DISTANT = ("Full body shot taken from about four meters away, show
                          "space around her, both arms relaxed at her sides.")
 KREA2_PHOTO_DISTANT = ("It is a real photo taken by a friend a few meters away with a phone, her whole body in the "
                        "frame, not a selfie: natural light, real skin texture, unblemished skin.")
+# C.1b (24/09): ela mora sozinha — foto de corpo inteiro em casa é o celular apoiado
+# numa prateleira com o timer, não "uma amiga tirando".
+# 24/09 (teste): "phone propped on a shelf" desenhou o celular DENTRO da foto — o texto não
+# pode citar o aparelho; é "foto de timer tirada da altura da prateleira".
+KREA2_PROPPED = ("self-timer", "timer", "propped", "celular apoiado")
+KREA2_FRAMING_PROPPED = ("Self-timer photo taken from shelf height about two meters in front of her, showing most "
+                         "of her body and the room around her.")
+KREA2_PHOTO_PROPPED = ("It is a real self-timer photo, her hands free, not a selfie: natural light, real skin "
+                       "texture, unblemished skin.")
+_PROPPED_PHRASE = re.compile(r",?\s*(?:with\s+)?(?:her\s+)?(?:phone|camera)\s+(?:propped|leaning|standing)[^,.]*", re.I)
 _NOT_A_PHOTO = re.compile(r"\b(photo[- ]?realistic|hyper[- ]?realistic|ultra[- ]?realistic|high realism|realism|8k|masterpiece)\b",
                           re.IGNORECASE)
+
+
+# C.1b (24/09) — zoom por palavras (guia do Loraholic pro Krea 2): o quadro é de quem vem
+# primeiro e ganha mais palavras. Close/três-quartos: ela primeiro, o cômodo numa linha
+# desfocada. Corpo inteiro/cômodo: o cômodo abre o prompt e o rosto fica com pouca palavra
+# (o LoRA segura o rosto). Parte do corpo encostada no cenário ("pés no tapete") entra no quadro.
+ZOOMS = ("close", "three_quarter", "full", "room")
+KREA2_IDENTITY_SHORT = ("a young Brazilian woman with long chestnut brown hair with golden blonde tips and "
+                        "light amber-hazel eyes")
+KREA2_ZOOM_OPEN = {
+    "close": "A close photo of",
+    "three_quarter": "A three-quarter photo, framed from just above her head down to her thighs, of",
+}
+
+
+def krea2_zoom_prompt(action: str, *, zoom: str, setting: str, backdrop: str, is_nsfw: bool,
+                      focus_angle: str = "frontal", framing: str = "selfie") -> str:
+    """Prompt com o zoom decidido. framing: selfie | mirror | timer | friend."""
+    zoom = zoom if zoom in ZOOMS else "close"
+    action = _NOT_A_PHOTO.sub("", action or "").strip(" ,.")
+    head = f"{KREA2_TRIGGER}, {KREA2_EMOTIONS_TRIGGER}."
+    if zoom in ("close", "three_quarter"):
+        identity = KREA2_IDENTITY.split(" of ", 1)[1]
+        parts = [head, f"{KREA2_ZOOM_OPEN[zoom]} {identity}, {action}."]
+        if is_nsfw:
+            parts += [KREA2_NUDE.get(focus_angle, KREA2_NUDE["frontal"]), KREA2_BODY_NSFW, KREA2_BODY_CANON]
+        else:
+            parts += [KREA2_CLOTHED, KREA2_BODY_SFW]
+        parts.append(f"Behind her, {backdrop}.")
+    else:
+        opener = "A wide view photo of" if zoom == "room" else "A photo of"
+        who = (f"In the distance, {KREA2_IDENTITY_SHORT}" if zoom == "room"
+               else f"Full body shot of {KREA2_IDENTITY_SHORT}")
+        parts = [head, f"{opener} {setting}.", f"{who}, {action}."]
+        if is_nsfw:
+            parts += [KREA2_NUDE.get(focus_angle, KREA2_NUDE["frontal"]), KREA2_BODY_NSFW, KREA2_BODY_CANON]
+        else:
+            parts += [KREA2_CLOTHED, KREA2_BODY_SFW]
+    if framing == "mirror":
+        parts.append(KREA2_MIRROR)
+        parts.append(KREA2_PHOTO)
+    elif framing == "timer":
+        parts.append(KREA2_PHOTO_PROPPED)
+    elif framing == "friend":
+        parts.append(KREA2_PHOTO_DISTANT)
+    else:
+        parts.append(KREA2_PHOTO)
+    return " ".join(parts)
 
 
 def krea2_prompt(scene: str, *, is_nsfw: bool, focus_angle: str = "frontal", is_mirror: bool = False) -> str:
@@ -138,11 +196,18 @@ def krea2_prompt(scene: str, *, is_nsfw: bool, focus_angle: str = "frontal", is_
     scene = _NOT_A_PHOTO.sub("", scene or "")
     scene = re.sub(r"\s*,(\s*,)+\s*", ", ", scene)
     scene = re.sub(r"\s{2,}", " ", scene).strip(" ,.")
-    distant = not is_mirror and any(k in scene.lower() for k in KREA2_DISTANT)
-    identity = KREA2_IDENTITY.replace("a candid smartphone photo of", "a candid full body photo of") if distant         else KREA2_IDENTITY
+    propped = not is_mirror and any(k in scene.lower() for k in KREA2_PROPPED)
+    distant = not is_mirror and not propped and any(k in scene.lower() for k in KREA2_DISTANT)
+    if propped:
+        scene = _PROPPED_PHRASE.sub("", scene).strip(" ,.")
+    identity = (KREA2_IDENTITY.replace("a candid smartphone photo of", "a candid full body photo of") if distant
+                else KREA2_IDENTITY.replace("a candid smartphone photo of", "a candid photo of") if propped
+                else KREA2_IDENTITY)
     parts = [f"{KREA2_TRIGGER}, {KREA2_EMOTIONS_TRIGGER}. {identity[0].upper()}{identity[1:]}."]
     if distant:   # o Krea 2 pesa mais o começo: o enquadramento vem antes de tudo
         parts.insert(0, KREA2_FRAMING_DISTANT)
+    elif propped:
+        parts.insert(0, KREA2_FRAMING_PROPPED)
     if scene:
         parts.append(f"Scene: {scene}.")
     if is_nsfw:
@@ -154,7 +219,7 @@ def krea2_prompt(scene: str, *, is_nsfw: bool, focus_angle: str = "frontal", is_
         parts.append(KREA2_BODY_SFW)
     if is_mirror:
         parts.append(KREA2_MIRROR)
-    parts.append(KREA2_PHOTO_DISTANT if distant else KREA2_PHOTO)
+    parts.append(KREA2_PHOTO_DISTANT if distant else KREA2_PHOTO_PROPPED if propped else KREA2_PHOTO)
     return " ".join(parts)
 
 

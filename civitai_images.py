@@ -252,6 +252,12 @@ def weight_slider(kg: Optional[float] = None) -> float:
 def conditional_loras(prompt: str, *, is_nsfw: bool) -> tuple[dict, list[str]]:
     """LoRAs de ocasião que a cena liga, e as frases-gatilho que faltam no prompt."""
     low = (prompt or "").lower()
+    try:   # o cenário fixo do apê ("glass shower enclosure", "rooftop pool") não é ação da cena
+        import apartamento
+        for room in apartamento.ROOMS.values():
+            low = low.replace(room["scene"].lower(), "").replace(room["short"].lower(), "")
+    except Exception:
+        pass
     loras, triggers = {}, []
     for air, weight, words, adult_only, trigger in CONDITIONAL:
         if adult_only and not is_nsfw:
