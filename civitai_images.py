@@ -107,10 +107,13 @@ KREA2_WETNESS = "urn:air:krea2:lora:civitai:2738333@3079282"   # Wetness Slider 
 KREA2_SPREAD = "urn:air:krea2:lora:civitai:2923413@3332400"    # Pussy Spread v2 (gatilho "vag_spread")
 KREA2_CREAMY = "urn:air:krea2:lora:civitai:2931761@3318154"    # Creamy Pussy v0.1 (gatilhos "creamythings", "creamy vagina")
 KREA2_BETTER = "urn:air:krea2:lora:civitai:2729157@3288922"    # Better Pussy v4.2.1 — testado e REPROVADO (24/09)
+KREA2_OILED = "urn:air:krea2:lora:civitai:87685@3096878"      # Oiled Skin (Krea 2 v1.0, gatilho "OiledSkin")
 KREA2_WEIGHT = "urn:air:krea2:lora:civitai:2858768@3229815"    # Body Weight Slider v2 (−3..5, maior = mais magra)
 KREA2_TANLINES = "urn:air:krea2:lora:civitai:2840638@3206585"  # Bikini Tan Lines (AiMami) — gatilho "bikini tan-lines"
 KREA2_PHONE = "urn:air:krea2:lora:civitai:2796343@3151907"     # Elusarca Smartphone Photography Slider (1–2)
-EXCLUSIVE: dict = {}   # {perdedor: vencedor} quando dois LoRAs de ocasião brigam (Better Pussy saiu em 24/09)
+# {perdedor: vencedor} quando dois LoRAs de ocasião brigam: óleo no pós-banho já brilha — a
+# molhada por cima dobrava o brilho.
+EXCLUSIVE: dict = {}
 PHONE_SELFIE_WEIGHT = 0.8   # 1.5 enchia de purpurina; 0.8 = "realismo perfeito" (Patrick, 24/09) — em TODA foto
 PHONE_DESATURATE = 0.83   # o autor corrige −15 a −20 de saturação depois de gerar; fazemos no download
 KREA2_NICEGIRLS = "urn:air:krea2:lora:civitai:1862761@3075498"         # NiceGirls UltraReal (0.6-0.8)
@@ -182,12 +185,18 @@ CONDITIONAL = (
     # Creamy só na intensidade mínima: o líquido saindo, sem virar "gozo" (Patrick, 24/09).
     (KREA2_CREAMY, 0.5, ("she came", "just came", "right after she came", "orgasm", "cumming", "climax",
                          "gozou", "gozando", "gozar", "creamy"), True, "creamythings, creamy vagina"),
+    # Óleo/creme no corpo no pós-banho, provocando (Patrick, 24/09). Força baixa (o autor usa 1.0 pro
+    # máximo); só na adulta — o autor avisa que o LoRA "quer muito" deixar a mulher nua.
+    (KREA2_OILED, 0.5, ("body oil", "oiled", "oiling", "rubbing lotion", "body lotion", "moisturizer",
+                        "cream on her body", "applying cream", "passando creme", "passando óleo", "óleo no corpo",
+                        "hidratante"), True, "OiledSkin"),
     # Molhada só de ÁGUA (banho, chuva, piscina, mar). Molhada de excitação ficou melhor SEM o slider
     # (teste do Patrick, 24/09) — aí quem descreve é o texto do prompt.
     (KREA2_WETNESS, 1.2, ("shower", "bath", "bathtub", "rain", "pool", "swimming", "in the sea", "ocean", "beach water",
                           "soaked", "wet hair", "banho", "chuva", "piscina", "no mar", "de biquíni molhado"),
      False, ""),
 )
+EXCLUSIVE[KREA2_WETNESS] = KREA2_OILED
 # De longe o rosto aparece pequeno: o LoRA dela um pouco mais fraco deixa a pose livre
 # (o Patrick viu isso na época 6 do treino).
 MARINA_WEIGHT_DISTANT = 0.9   # 0.8 soltou a pose; 0.9 = escolha do Patrick pra segurar mais o rosto
@@ -256,7 +265,8 @@ def build_workflow_krea2(prompt: str, *, is_nsfw: bool, width: int = 1024, heigh
     spec = KREA2_STACKS[name]
     extra, triggers = conditional_loras(prompt, is_nsfw=is_nsfw)
     if triggers:
-        prompt = f"{prompt} {', '.join(triggers).capitalize()}."
+        joined = ", ".join(triggers)
+        prompt = f"{prompt} {joined[:1].upper()}{joined[1:]}."   # sem .capitalize(): "OiledSkin" tem caixa
     step = {"engine": "comfy", "ecosystem": "krea2", "model": "turbo", "operation": "createImage",
             "prompt": prompt, "width": width, "height": height, "steps": spec["steps"], "cfgScale": 1,
             "sampler": "euler", "scheduler": spec.get("scheduler", "simple"),
