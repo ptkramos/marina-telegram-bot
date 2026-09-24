@@ -189,16 +189,8 @@ class Krea2Test(unittest.TestCase):
                       "gatilho do LoRA + mamilo pequeno entram no prompt")
         wet = ci.build_workflow_krea2("right after the shower, wet hair", is_nsfw=False, stack="n3")["steps"][0]["input"]
         self.assertIn(ci.KREA2_WETNESS, wet["loras"])
-        oil = ci.build_workflow_krea2("after the shower, applying body oil on her legs", is_nsfw=True,
-                                      stack="e")["steps"][0]["input"]
-        self.assertIn(ci.KREA2_OILED, oil["loras"])
-        self.assertIn("OiledSkin, clear transparent body oil", oil["prompt"])
-        self.assertIn("no white cream", oil["prompt"])
-        post = ci.build_workflow_krea2("right after the shower, applying body oil", is_nsfw=True, stack="e")["steps"][0]["input"]
-        self.assertIn(ci.KREA2_OILED, post["loras"])
-        self.assertNotIn(ci.KREA2_WETNESS, post["loras"], "óleo no pós-banho: sem a molhada por cima")
-        sfw_oil = ci.build_workflow_krea2("applying body oil on her legs", is_nsfw=False, stack="n3")["steps"][0]["input"]
-        self.assertNotIn(ci.KREA2_OILED, sfw_oil["loras"], "óleo só na foto adulta")
+        oil = ci.build_workflow_krea2("after the shower, applying body oil", is_nsfw=True, stack="e")["steps"][0]["input"]
+        self.assertNotIn(ci.KREA2_OILED, oil["loras"], "Oiled Skin reprovado")
         aroused = ci.build_workflow_krea2("her pussy visibly wet and glistening with arousal", is_nsfw=True,
                                           stack="e")["steps"][0]["input"]
         self.assertNotIn(ci.KREA2_WETNESS, aroused["loras"], "molhada de excitação: só o texto")

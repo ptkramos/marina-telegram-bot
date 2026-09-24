@@ -107,7 +107,7 @@ KREA2_WETNESS = "urn:air:krea2:lora:civitai:2738333@3079282"   # Wetness Slider 
 KREA2_SPREAD = "urn:air:krea2:lora:civitai:2923413@3332400"    # Pussy Spread v2 (gatilho "vag_spread")
 KREA2_CREAMY = "urn:air:krea2:lora:civitai:2931761@3318154"    # Creamy Pussy v0.1 (gatilhos "creamythings", "creamy vagina")
 KREA2_BETTER = "urn:air:krea2:lora:civitai:2729157@3288922"    # Better Pussy v4.2.1 — testado e REPROVADO (24/09)
-KREA2_OILED = "urn:air:krea2:lora:civitai:87685@3096878"      # Oiled Skin (Krea 2 v1.0, gatilho "OiledSkin")
+KREA2_OILED = "urn:air:krea2:lora:civitai:87685@3096878"      # Oiled Skin — REPROVADO (24/09): o FinePorn vira "esperma"
 KREA2_WEIGHT = "urn:air:krea2:lora:civitai:2858768@3229815"    # Body Weight Slider v2 (−3..5, maior = mais magra)
 KREA2_TANLINES = "urn:air:krea2:lora:civitai:2840638@3206585"  # Bikini Tan Lines (AiMami) — gatilho "bikini tan-lines"
 KREA2_PHONE = "urn:air:krea2:lora:civitai:2796343@3151907"     # Elusarca Smartphone Photography Slider (1–2)
@@ -185,20 +185,12 @@ CONDITIONAL = (
     # Creamy só na intensidade mínima: o líquido saindo, sem virar "gozo" (Patrick, 24/09).
     (KREA2_CREAMY, 0.5, ("she came", "just came", "right after she came", "orgasm", "cumming", "climax",
                          "gozou", "gozando", "gozar", "creamy"), True, "creamythings, creamy vagina"),
-    # Óleo/creme no corpo no pós-banho, provocando (Patrick, 24/09). Força baixa (o autor usa 1.0 pro
-    # máximo); só na adulta — o autor avisa que o LoRA "quer muito" deixar a mulher nua.
-    (KREA2_OILED, 0.25, ("body oil", "oiled", "oiling", "rubbing lotion", "body lotion", "moisturizer",
-                        "cream on her body", "applying cream", "passando creme", "passando óleo", "óleo no corpo",
-                        "hidratante"), True,
-     # 0.4/0.6 pareceram esperma: o óleo tem que ser TRANSPARENTE, e "cream/lotion" puxa pro branco.
-     "OiledSkin, clear transparent body oil making her skin glossy and shiny, no white cream, no white drops"),
     # Molhada só de ÁGUA (banho, chuva, piscina, mar). Molhada de excitação ficou melhor SEM o slider
     # (teste do Patrick, 24/09) — aí quem descreve é o texto do prompt.
     (KREA2_WETNESS, 1.2, ("shower", "bath", "bathtub", "rain", "pool", "swimming", "in the sea", "ocean", "beach water",
                           "soaked", "wet hair", "banho", "chuva", "piscina", "no mar", "de biquíni molhado"),
      False, ""),
 )
-EXCLUSIVE[KREA2_WETNESS] = KREA2_OILED
 # De longe o rosto aparece pequeno: o LoRA dela um pouco mais fraco deixa a pose livre
 # (o Patrick viu isso na época 6 do treino).
 MARINA_WEIGHT_DISTANT = 0.9   # 0.8 soltou a pose; 0.9 = escolha do Patrick pra segurar mais o rosto
