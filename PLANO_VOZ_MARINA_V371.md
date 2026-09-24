@@ -44,7 +44,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
 | # | Pendência | De onde |
 |---|---|---|
-| 1 | **C.1b:** diretor de cena dela pras fotos (decidir foto e pose pela conversa e pela excitação). Referência de pose: o prompt de close do Patrick | Fotos |
+| 1 | **C.1b:** diretor de cena dela pras fotos. Feito: apê canônico, zoom, timer, regras. Falta: catálogo de poses, sessão com gancho, ela decidir mandar, expressão pelo humor (ver seção C.1) | Fotos |
 | 2 | **Trocar a chave do Civitai** (vazou num log local em 24/09) | Fotos |
 | 3 | **Mudar pra VPS** (o "disk is full" de 24/09 foi pontual) | Auditoria #11 |
 | 4 | D11 pra depois: "no médico" como estado, banheiro na virose, o pai ligando mais quando ela está doente, farmácia como saída, contágio | D11 |
@@ -245,6 +245,16 @@ memorável. É ruído humano, dá contexto, some.
 - **Áudio:** 20% de chance espontânea no auge (6% fora dele). Se a voz falhar, sai texto.
 - **Sem cadência casual:** no modo, a resposta ganha o orçamento "normal" (2 balões).
 - **Não feito (C.1b):** fotos explícitas escalonadas pela excitação, que dependem do motor de imagem.
+
+**C.1b — desenho decidido com o Patrick (24/09, tarde):**
+- **Apartamento canônico ✅** (`apartamento.py`, "claro e praiano"): quarto (cabeceira de palhinha, lençol branco, manta de linho bege, abajur de cerâmica), banheiro (porcelanato tipo mármore, box de vidro, espelho redondo iluminado), closet-estúdio (prateleiras brancas, arara, espelho de corpo inteiro, ring light, poltrona creme), sala (sofá de linho areia, tapete de juta, costela-de-adão, caminha do Milo, janelão pra enseada), cozinha, varanda (guarda-corpo de vidro, cadeira suspensa, Pão de Açúcar), academia e piscina do prédio. Mesmas palavras em toda foto; a luz vem da hora e do tempo. Testado: 8 fotos, uma por cômodo (`scratchpad/fotos/05_apartamento`).
+- **Zoom por palavras ✅** (guia do Loraholic "Controlling Zoom With Words Alone"): close e três-quartos = ela primeiro e o cômodo numa linha desfocada; corpo inteiro e cômodo = o cômodo abre o prompt. `visual_profile.krea2_zoom_prompt`.
+- **Foto de timer ✅:** ela mora sozinha — corpo inteiro em casa é "self-timer", sem citar o celular (citar desenhava o aparelho na foto).
+- **Regras do diretor ✅** (`KREA2_DIRECTOR_RULES`): roupa sem bojo exagerado (o slider fica em 2.5 — o exagero vem do bojo e do FinePorn, testado); postura variada, com a cabeça reta por padrão (o Krea 2 entorta em toda foto); todo objeto numa mão ou numa superfície (garrafa flutuante no teste da academia); **expressão pelo humor e pelo tesão dela**, como o corpo segue o peso.
+- **Poses:** eu escrevo a base (~40) e o Patrick traz as que achar no site (a API do Civitai não mostra mais os prompts das imagens — testado).
+- **Sessão com gancho (a fazer):** a primeira foto fixa cômodo, roupa, posição base e câmera; as seguintes só mexem o que faz sentido (mão, dedos, intensidade, lamber os dedos, gozar). Troca de posição só se a conversa pedir.
+- **Ela decide (a fazer):** meio-termo entre "um passo por vez" e "ela decide sozinha" — no modo íntimo ela manda foto quando quer provocar; pedido tipo "goza pra mim" vira o próximo momento da mesma cena.
+- **Limpeza ✅:** a GPU da Novita, o ComfyUI, o SD local e o Flux saíram do código (a Novita fica só com a voz).
 
 **Plano original (referência):**
 
