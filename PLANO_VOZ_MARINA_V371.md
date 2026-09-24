@@ -1005,6 +1005,10 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
     - O **Lenovo entra só em selfie**.
     - O **slider fica em 2.5** (padrão no `config.py`).
     - O Yogi v2.5 continua anotado (`KREA2_YOGI_25`), mas sai da pilha.
+  - **Pilha final da foto normal (24/09, tarde):**
+    - **Base e LoRAs:** Krea 2 Turbo oficial + marinaX **1.0** (**0.9** de longe) + Realism Engine 0.8 + Detailed Emotions 0.6 + slider **2.5** + NSFW Helper −1, e Lenovo 1.0 **só na selfie**.
+    - **NiceGirls saiu.** Foi testado em 0.8, 0.6 e sem.
+    - **Foto de longe:** o enquadramento vem no começo do prompt ("Full body shot… four meters away"), e com isso ela deixou de virar selfie. Hoje o enquadramento vai até a coxa. O Patrick achou bom por enquanto; a pose vai ser revista quando a Marina decidir as poses.
 - **Teste quando o LoRA chegar:** 2 cenas normais × (n1, n2), 2 cenas adultas × (a, b, c, d) e a grade do slider. Mesma semente, uns 16 retratos, ~400 Buzz. O Patrick escolhe pelo olho.
 
 ### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅

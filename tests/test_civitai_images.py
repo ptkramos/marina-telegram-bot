@@ -124,8 +124,9 @@ class Krea2Test(unittest.TestCase):
         self.assertEqual(step["loras"][ci.KREA2_NSFW_HELPER], ci.KREA2_SFW_GUARD)
         self.assertIn(ci.KREA2_EMOTIONS, step["loras"])
         self.assertNotIn(ci.KREA2_SNOFS, step["loras"])
-        self.assertEqual((step["loras"][ci.KREA2_NICEGIRLS], step["loras"][ci.KREA2_LENOVO],
-                          step["loras"][ci.KREA2_REALISM_ENGINE]), (0.8, 1.0, 0.8), "pilha escolhida pelo Patrick")
+        self.assertEqual((step["loras"][ci.KREA2_LENOVO], step["loras"][ci.KREA2_REALISM_ENGINE]), (1.0, 0.8),
+                         "pilha escolhida pelo Patrick")
+        self.assertNotIn(ci.KREA2_NICEGIRLS, step["loras"])
         self.assertFalse(body["allowMatureContent"])
         self.assertNotIn("currencies", body)
 
@@ -134,7 +135,7 @@ class Krea2Test(unittest.TestCase):
         far = ci.build_workflow_krea2("her whole body in the frame, not a selfie", is_nsfw=False)["steps"][0]["input"]["loras"]
         self.assertIn(ci.KREA2_LENOVO, selfie)
         self.assertNotIn(ci.KREA2_LENOVO, far)
-        self.assertIn(ci.KREA2_NICEGIRLS, far)
+        self.assertIn(ci.KREA2_REALISM_ENGINE, far)
         self.assertEqual(far["urn:air:krea2:lora:civitai:1@2"], ci.MARINA_WEIGHT_DISTANT)
         self.assertEqual(selfie["urn:air:krea2:lora:civitai:1@2"], 1.0)
 

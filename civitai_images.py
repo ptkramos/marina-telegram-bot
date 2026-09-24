@@ -112,10 +112,11 @@ KREA2_EMOTIONS_WEIGHT = 0.6
 KREA2_SFW_GUARD = -1.0   # NSFW Helper negativo na foto normal: trava extra contra nudez acidental
 
 KREA2_STACKS = {
-    # n1 = escolha do Patrick (24/09): Krea 2 Turbo oficial (o da corpo_n1), CFG 1, NiceGirls 0.8 +
-    # Lenovo 1.0 (só selfie) + Realism Engine 0.8 (+ Emotions, slider 2.5 e a trava −1 em toda foto normal)
+    # n1 = escolha do Patrick (24/09, tarde): Krea 2 Turbo oficial (o da corpo_n1), CFG 1, Lenovo 1.0
+    # (só selfie) + Realism Engine 0.8 (+ Emotions, slider 2.5 e a trava −1 em toda foto normal).
+    # NiceGirls saiu depois do teste com 0.8 / 0.6 / sem.
     "n1": {"model": None, "steps": 8,
-           "loras": {KREA2_NICEGIRLS: 0.8, KREA2_LENOVO: 1.0, KREA2_REALISM_ENGINE: 0.8}},
+           "loras": {KREA2_LENOVO: 1.0, KREA2_REALISM_ENGINE: 0.8}},
     "n2": {"model": KREA2_YOGI, "steps": 8, "loras": {KREA2_SNAPSHOT: 0.6}},
     "a": {"model": None, "steps": 8, "loras": {KREA2_SNOFS: 1.0, KREA2_NSFW_HELPER: 0.5}},
     "b": {"model": KREA2_AIO, "steps": 12, "loras": {}},
@@ -150,7 +151,7 @@ def krea2_stack_name(*, is_nsfw: bool, stack: Optional[str] = None) -> str:
 SELFIE_ONLY = {KREA2_LENOVO}
 # De longe o rosto aparece pequeno: o LoRA dela um pouco mais fraco deixa a pose livre
 # (o Patrick viu isso na época 6 do treino).
-MARINA_WEIGHT_DISTANT = 0.8
+MARINA_WEIGHT_DISTANT = 0.9   # 0.8 soltou a pose; 0.9 = escolha do Patrick pra segurar mais o rosto
 NOT_SELFIE_MARK = "not a selfie"   # visual_profile.KREA2_PHOTO_DISTANT
 
 
