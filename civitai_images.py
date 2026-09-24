@@ -104,6 +104,9 @@ KREA2_FINEPORN = "urn:air:krea2:checkpoint:civitai:2762538@3215452"
 # LoRAs de ocasião (Patrick, 24/09) — entram só quando a cena pede (CONDITIONAL abaixo).
 KREA2_SQUEEZE = "urn:air:krea2:lora:civitai:2761661@3161094"   # Breast squeezing V1 (gatilho "squeezing breasts")
 KREA2_WETNESS = "urn:air:krea2:lora:civitai:2738333@3079282"   # Wetness Slider (−1..1; o FinePorn embute negativo)
+KREA2_SPREAD = "urn:air:krea2:lora:civitai:2923413@3332400"    # Pussy Spread v2 (gatilho "vag_spread")
+KREA2_CREAMY = "urn:air:krea2:lora:civitai:2931761@3318154"    # Creamy Pussy v0.1 (gatilhos "creamythings", "creamy vagina")
+KREA2_WEIGHT = "urn:air:krea2:lora:civitai:2858768@3229815"    # Body Weight Slider v2 (−3..5, maior = mais magra)
 KREA2_TANLINES = "urn:air:krea2:lora:civitai:2840638@3206585"  # Bikini Tan Lines (AiMami) — gatilho "bikini tan-lines"
 KREA2_PHONE = "urn:air:krea2:lora:civitai:2796343@3151907"     # Elusarca Smartphone Photography Slider (1–2)
 PHONE_SELFIE_WEIGHT = 0.8   # 1.5 enchia de purpurina; 0.8 = "realismo perfeito" (Patrick, 24/09) — em TODA foto
@@ -171,6 +174,12 @@ CONDITIONAL = (
     (KREA2_SQUEEZE, 0.6, ("squeezing her breast", "grabbing her breast", "holding her breasts", "squeezing breasts",
                           "grabbing breasts", "cupping her breasts", "apertando os seios", "segurando os seios"),
      True, "squeezing breasts, her nipples stay small and delicate"),   # 0.8 aumentava o mamilo
+    (KREA2_SPREAD, 0.8, ("spreading her pussy", "spread her pussy", "spreads her pussy", "pussy lips open",
+                         "pussy spread", "spread open", "abrindo a buceta", "abrindo a vagina", "abre a buceta"),
+     True, "vag_spread"),
+    # Creamy só na intensidade mínima: o líquido saindo, sem virar "gozo" (Patrick, 24/09).
+    (KREA2_CREAMY, 0.5, ("she came", "just came", "right after she came", "orgasm", "cumming", "climax",
+                         "gozou", "gozando", "gozar", "creamy"), True, "creamythings, creamy vagina"),
     (KREA2_WETNESS, 1.2, ("wet ", "wet,", "wet.", "soaked", "dripping", "rain", "shower", "bath", "pool", "sea water",
                           "molhad", "chuva", "banho", "piscina"), False, ""),
 )
@@ -187,12 +196,31 @@ def select_loras_krea2(*, is_nsfw: bool, stack: Optional[str] = None,
     loras.update({k: v for k, v in KREA2_STACKS[krea2_stack_name(is_nsfw=is_nsfw, stack=stack)]["loras"].items()
                   if selfie or k not in SELFIE_ONLY})
     loras[KREA2_EMOTIONS] = KREA2_EMOTIONS_WEIGHT
+    loras[KREA2_WEIGHT] = weight_slider()   # D1: o corpo acompanha o peso dela
     slider = float(getattr(s, "CIVITAI_BREAST_SLIDER", 0) or 0) if breast_slider is None else breast_slider
     if slider:
         loras[KREA2_BREAST_SLIDER] = slider   # mesmo valor vestida e pelada: o corpo não muda entre as fotos
     if not is_nsfw:
         loras[KREA2_NSFW_HELPER] = KREA2_SFW_GUARD
     return loras
+
+
+# Peso (D1) → slider de peso. Base 54 kg = WEIGHT_AT_BASE (magra, fit); cada kg a mais deixa
+# mais cheinha e cada kg a menos mais magra. A faixa do D1 (52–57 kg) cabe folgada no −3..5.
+WEIGHT_AT_BASE = 0.5
+WEIGHT_PER_KG = 0.75
+
+
+def weight_slider(kg: Optional[float] = None) -> float:
+    if kg is None:
+        try:
+            from db import db_manager
+            from meals import Meals
+            kg = float(Meals(db_manager).weight()["kg"])
+        except Exception:
+            kg = 54.0
+    value = WEIGHT_AT_BASE + (54.0 - float(kg)) * WEIGHT_PER_KG
+    return round(max(-3.0, min(5.0, value)), 2)
 
 
 def conditional_loras(prompt: str, *, is_nsfw: bool) -> tuple[dict, list[str]]:

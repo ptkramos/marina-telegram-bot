@@ -195,6 +195,25 @@ class Krea2Test(unittest.TestCase):
         sfw_grab = ci.build_workflow_krea2("holding her breasts", is_nsfw=False, stack="n3")["steps"][0]["input"]
         self.assertNotIn(ci.KREA2_SQUEEZE, sfw_grab["loras"], "LoRA de apertar os seios só na foto adulta")
 
+    def test_body_follows_her_weight(self):
+        self.assertEqual(ci.weight_slider(54.0), ci.WEIGHT_AT_BASE)
+        self.assertLess(ci.weight_slider(56.5), ci.weight_slider(54.0), "mais pesada = mais cheinha")
+        self.assertGreater(ci.weight_slider(52.0), ci.weight_slider(54.0))
+        self.assertEqual(ci.weight_slider(80), -3.0, "nunca passa do limite do LoRA")
+        with patch.object(ci, "weight_slider", return_value=-0.7):
+            loras = ci.build_workflow_krea2("p", is_nsfw=False, stack="n3")["steps"][0]["input"]["loras"]
+        self.assertEqual(loras[ci.KREA2_WEIGHT], -0.7)
+
+    def test_spread_and_creamy_only_when_the_scene_asks(self):
+        spread = ci.build_workflow_krea2("spreading her pussy with two fingers", is_nsfw=True, stack="e")["steps"][0]["input"]
+        self.assertEqual(spread["loras"][ci.KREA2_SPREAD], 0.8)
+        self.assertIn("Vag_spread.", spread["prompt"])
+        came = ci.build_workflow_krea2("right after she came, lying on her back", is_nsfw=True, stack="e")["steps"][0]["input"]
+        self.assertEqual(came["loras"][ci.KREA2_CREAMY], 0.5)
+        self.assertIn("creamythings, creamy vagina", came["prompt"].lower())
+        plain = ci.build_workflow_krea2("standing in her bedroom", is_nsfw=True, stack="e")["steps"][0]["input"]["loras"]
+        self.assertFalse({ci.KREA2_SPREAD, ci.KREA2_CREAMY} & set(plain))
+
     def test_phone_slider_on_every_photo_and_colors_are_corrected(self):
         for nsfw, stack in ((False, "n3"), (True, "e")):
             for text in ("a close-up selfie", "whole body, not a selfie"):
