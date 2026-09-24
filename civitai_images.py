@@ -148,13 +148,16 @@ def krea2_stack_name(*, is_nsfw: bool, stack: Optional[str] = None) -> str:
 # corpo inteiro, junto com o LoRA dela (dataset quase todo de perto), ele virava
 # tudo selfie, mesmo com o prompt dizendo "não é selfie".
 SELFIE_ONLY = {KREA2_LENOVO}
+# De longe o rosto aparece pequeno: o LoRA dela um pouco mais fraco deixa a pose livre
+# (o Patrick viu isso na época 6 do treino).
+MARINA_WEIGHT_DISTANT = 0.8
 NOT_SELFIE_MARK = "not a selfie"   # visual_profile.KREA2_PHOTO_DISTANT
 
 
 def select_loras_krea2(*, is_nsfw: bool, stack: Optional[str] = None,
                        breast_slider: Optional[float] = None, selfie: bool = True) -> dict:
     s = _settings()
-    loras = {getattr(s, "CIVITAI_LORA_MARINA_KREA2").strip(): 1.0}   # o rosto dela manda (BeMyHero: sempre 1.0)
+    loras = {getattr(s, "CIVITAI_LORA_MARINA_KREA2").strip(): 1.0 if selfie else MARINA_WEIGHT_DISTANT}
     loras.update({k: v for k, v in KREA2_STACKS[krea2_stack_name(is_nsfw=is_nsfw, stack=stack)]["loras"].items()
                   if selfie or k not in SELFIE_ONLY})
     loras[KREA2_EMOTIONS] = KREA2_EMOTIONS_WEIGHT

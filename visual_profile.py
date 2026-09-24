@@ -109,6 +109,8 @@ KREA2_PHOTO = ("It looks like a real iPhone photo: natural light, real skin text
 # Quando a cena é de longe, é alguém (amiga, fotógrafo) tirando a foto.
 KREA2_DISTANT = ("full body", "full-body", "corpo inteiro", "corpo todo", "few meters", "from a distance",
                  "wide shot", "photographer", "taken by", "de longe", "walking", "standing on")
+KREA2_FRAMING_DISTANT = ("Full body shot taken from about four meters away, showing her from head to toe with "
+                         "space around her, both arms relaxed at her sides.")
 KREA2_PHOTO_DISTANT = ("It is a real photo taken by a friend a few meters away with a phone, her whole body in the "
                        "frame, not a selfie: natural light, real skin texture, unblemished skin.")
 _NOT_A_PHOTO = re.compile(r"\b(photo[- ]?realistic|hyper[- ]?realistic|ultra[- ]?realistic|high realism|realism|8k|masterpiece)\b",
@@ -123,6 +125,8 @@ def krea2_prompt(scene: str, *, is_nsfw: bool, focus_angle: str = "frontal", is_
     distant = not is_mirror and any(k in scene.lower() for k in KREA2_DISTANT)
     identity = KREA2_IDENTITY.replace("a candid smartphone photo of", "a candid full body photo of") if distant         else KREA2_IDENTITY
     parts = [f"{KREA2_TRIGGER}, {KREA2_EMOTIONS_TRIGGER}. {identity[0].upper()}{identity[1:]}."]
+    if distant:   # o Krea 2 pesa mais o começo: o enquadramento vem antes de tudo
+        parts.insert(0, KREA2_FRAMING_DISTANT)
     if scene:
         parts.append(f"Scene: {scene}.")
     if is_nsfw:

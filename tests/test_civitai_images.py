@@ -135,6 +135,8 @@ class Krea2Test(unittest.TestCase):
         self.assertIn(ci.KREA2_LENOVO, selfie)
         self.assertNotIn(ci.KREA2_LENOVO, far)
         self.assertIn(ci.KREA2_NICEGIRLS, far)
+        self.assertEqual(far["urn:air:krea2:lora:civitai:1@2"], ci.MARINA_WEIGHT_DISTANT)
+        self.assertEqual(selfie["urn:air:krea2:lora:civitai:1@2"], 1.0)
 
     def test_normal_photo_n2_uses_stable_yogi_and_snapshot(self):
         self.fake.CIVITAI_KREA2_SFW_STACK = "n2"
@@ -185,6 +187,7 @@ class Krea2PromptTest(unittest.TestCase):
         import visual_profile as vp
         p = vp.krea2_prompt("A full body photo standing on a sidewalk, the camera a few meters away", is_nsfw=False)
         self.assertIn("full body photo of", p)
+        self.assertTrue(p.startswith("Full body shot"), "enquadramento primeiro")
         self.assertIn("not a selfie", p)
         self.assertNotIn("iPhone photo", p)
         close = vp.krea2_prompt("A close-up selfie on the couch", is_nsfw=False)
