@@ -3658,6 +3658,10 @@ async def process_incoming_batch(
                 logger.info("chat.paraphrased_idea cut")
                 resposta_marin = sem_parafrase
         resposta_marin = strip_closing_periods(thin_vocative(resposta_marin, anteriores))
+        # 25/09: "hoje à noite", não "às 19h30" — a hora só se ele perguntou (e nunca em lembrete).
+        if not (plan and (plan.get("should_offer_reminder") or plan.get("needs_clarification"))):
+            from chat_naturalness import soften_times
+            resposta_marin = soften_times(resposta_marin, texto_usuario)
         # 25/09: "vc" aqui, "você" ali — menos na conversa séria.
         from health import patrick_sick_hint
         serio = (getattr(response_policy, "mode", "") in ("serious", "supportive")
@@ -4341,8 +4345,8 @@ _PROACTIVE_INSTRUCTIONS = {
 
 
 def _proactive_text(reason: str, detail, fallback: str) -> str:
-    from chat_naturalness import abbreviate, strip_closing_periods
-    return abbreviate(strip_closing_periods(_proactive_text_raw(reason, detail, fallback)))
+    from chat_naturalness import abbreviate, soften_times, strip_closing_periods
+    return abbreviate(soften_times(strip_closing_periods(_proactive_text_raw(reason, detail, fallback))))
 
 
 def _initiative_context(now: Optional[datetime] = None) -> str:

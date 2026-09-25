@@ -112,6 +112,55 @@ def abbreviate(text: str, *, serious: bool = False) -> str:
     return text
 
 
+# ------------------------------------------------------------ hora exata --
+# 25/09 (Patrick): "tenho ensaio hj às 19h30", "vou topar o Quartinho no sábado às 21h" — o
+# horário certinho vem da agenda do prompt e soa relatório. Gente fala o período; a hora
+# só quando ele pergunta.
+_CLOCK_RE = re.compile(
+    r"\s*\b(?:[àa]s|lá\s+pelas|umas|por\s+volta\s+das)\s+(\d{1,2})(?:(?:h|:)(\d{2})?h?)(?![\w:])", re.IGNORECASE)
+ASKS_TIME_RE = re.compile(r"\bque\s+horas\b|\bhor[aá]rio\b|\bqual\s+hora\b|\bque\s+hora\b|\ba\s+que\s+horas\b",
+                          re.IGNORECASE)
+
+
+def _period(hour: int) -> str:
+    if 5 <= hour <= 11:
+        return "de manhã"
+    if 12 <= hour <= 13:
+        return "na hora do almoço"
+    if 14 <= hour <= 17:
+        return "à tarde"
+    if hour == 18:
+        return "no fim da tarde"
+    if 19 <= hour <= 23:
+        return "à noite"
+    return "de madrugada"
+
+
+_HIS_CLOCK_RE = re.compile(r"\b\d{1,2}(?:h\d{0,2}|:\d{2})\b", re.IGNORECASE)
+# combinando lembrete/aviso a hora é o conteúdo ("Te aviso às 9h30, uma horinha antes do dentista")
+_SCHEDULING_RE = re.compile(r"\b(?:te\s+)?(?:lembr\w*|aviso|avisar|chamo|chamar|ligo|mando\s+mensagem)\b", re.IGNORECASE)
+
+
+def soften_times(text: str, his_text: str = "") -> str:
+    """"às 19h30" → "à noite" quando ele não perguntou horário (nem falou em horário)."""
+    if (not text or ASKS_TIME_RE.search(his_text or "") or _HIS_CLOCK_RE.search(his_text or "")
+            or _SCHEDULING_RE.search(text)):
+        return text
+
+    def swap(m):
+        hour = int(m.group(1))
+        before = m.string[max(0, m.start() - 12):m.start()]
+        if hour > 23 or re.search(r"\b(?:d[ae]s?\s+\d{1,2}(?:h|:\d{2})?h?|at[eé])\s*$", before, re.IGNORECASE):
+            return m.group(0)                  # intervalo ("das 14h às 18h") e "até às 15h" ficam
+        return " " + _period(hour)
+    out = _CLOCK_RE.sub(swap, text)
+    # a fala já dizia o período: "hoje à noite à noite", "de noite à noite", "de tarde à tarde"
+    out = re.sub(r"\b(de\s+manhã|à\s+tarde|de\s+tarde|à\s+noite|de\s+noite|de\s+madrugada|no\s+fim\s+da\s+tarde)"
+                 r"\s+(?:de\s+manhã|à\s+tarde|à\s+noite|de\s+madrugada|no\s+fim\s+da\s+tarde|na\s+hora\s+do\s+almoço)\b",
+                 r"\1", out, flags=re.IGNORECASE)
+    return out
+
+
 # -------------------------------------------------------------- repetição --
 REPEAT_MIN_WORDS = 6
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?…])\s+|\n+")
