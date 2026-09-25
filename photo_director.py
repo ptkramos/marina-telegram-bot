@@ -128,6 +128,14 @@ POSES: tuple[Pose, ...] = (
                           "the white sheets, the dildo pushed deep inside her pussy"),
                 ("climax", f"right after she came, still sitting down on {DILDO_CLEAR_TEXT}, her thighs "
                            "trembling"))),
+    # Patrick, 24/09 (teste Y/Z): cavalgando deitada pra trás, câmera um pouco de cima. O ângulo
+    # "de trás da cabeça" do prompt dele não sai: sem rosto no quadro, o LoRA dela puxa pra frente.
+    Pose("cavalgando_reclinada", "deitada pra trás, apoiada na mão, cavalgando o dildo transparente (selfie de cima)",
+         ("quarto",), (4, 4), "three_quarter", "selfie", "leaning back on the bed on her left hand, her right arm "
+         "stretched up toward the camera taking the selfie from slightly above, her legs spread",
+         beats=(("dildo", f"riding {DILDO_CLEAR_TEXT} standing upright on its round suction-cup base on the white "
+                          "sheets, the dildo pushed deep inside her pussy"),
+                ("climax", f"right after she came, still riding {DILDO_CLEAR_TEXT}, her thighs trembling"))),
     # Aprovada no teste do Creamy (Patrick, 24/09, "R_costas"): se dedilhando por trás, ajoelhada.
     Pose("cama_costas_dedando", "ajoelhada de costas, peito baixo, se dedilhando por trás (timer)", ("quarto",),
          (4, 4), "three_quarter", "timer", "kneeling on the bed seen from behind, her chest low and her ass up "
@@ -211,7 +219,8 @@ BY_ID = {p.id: p for p in POSES}
 POSE_WORDS = (
     (r"de quatro|empinad", ("cama_de_quatro", "cama_costas_dedando")),
     (r"de costas|por tr[aá]s", ("cama_costas_dedando", "cama_de_quatro")),
-    (r"senta|sentando|cavalga|quica|rebola", ("sentando_dildo",)),
+    (r"cavalga|quica|rebola|deitada pra tr[aá]s", ("cavalgando_reclinada", "sentando_dildo")),
+    (r"senta|sentando", ("sentando_dildo", "cavalgando_reclinada")),
     (r"pernas abertas|abr\w* as pernas|arreganhad|deitada de costas", ("cama_tripe_duas_maos", "cama_pernas_abertas")),
     (r"chuveiro|no box|no banho", ("chuveiro_tocando", "chuveiro", "banheiro_toalha", "banheiro_espelho")),
     (r"poltrona", ("poltrona_aberta", "poltrona_pernas")),

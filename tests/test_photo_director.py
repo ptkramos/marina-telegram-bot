@@ -218,6 +218,12 @@ class DirectorTest(unittest.TestCase):
                          now=NOW + timedelta(minutes=3))
         self.assertEqual((come.pose_id, come.beat), ("sentando_dildo", "climax"))
 
+    def test_riding_reclined_on_the_clear_dildo(self):
+        s = self.shot("cavalga nele pra mim", turn=IntimacyTurn(state="active", arousal=0.9))
+        self.assertEqual((s.pose_id, s.beat), ("cavalgando_reclinada", "dildo"))
+        self.assertIn("clear transparent", s.prompt)
+        self.assertNotIn("light blue", s.prompt, "só dois dildos: rosa e transparente")
+
     def test_asking_for_the_dildo(self):
         hot = IntimacyTurn(state="active", arousal=0.9)
         s = self.shot("pega teu dildo e usa pra mim", turn=hot)
