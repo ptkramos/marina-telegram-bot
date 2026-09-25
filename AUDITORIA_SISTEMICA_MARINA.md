@@ -1409,6 +1409,13 @@ O Patrick acordou com amigdalite e achou que ela tinha voltado a agir como assis
 - **Correções** (detalhes no PLANO_VOZ, "Naturalidade de chat", 25/09): o hint `PATRICK_SICK_HINT`; os balões como pedaço de pensamento, a partir dos prints de casais que ele trouxe; as abreviações na saída.
 - Testes: `test_patrick_doente.py`, `test_abreviacoes.py`, `PedacoDePensamentoTests` em `test_bubbles_luna.py`. Os testes antigos que travavam "nunca quebra no meio da frase" e "sai em 2 balões" foram reescritos pela regra nova.
 
+**Mudança pra VPS (25/09, 10:56).** Com o disco do PC enchendo pela segunda vez, a Marina foi pra VPS Hostinger do Patrick:
+- **Instalação:** `/root/bots/marina`, serviço `marina.service`, no mesmo padrão dos outros bots dele. O fuso de São Paulo vale só pro serviço; o servidor segue em UTC por causa dos outros bots.
+- **Testes:** 934/934 verdes lá (faltava o `cryptography` no `requirements.txt`).
+- **Banco:** copiado com a API de backup do SQLite, que junta o `-wal`. Integridade ok, 413 mensagens, nenhuma resposta pendente. Ela voltou sem erro.
+- **Mini App:** `marina.psoft.app` com certificado.
+- **Achados do servidor que não são da Marina** (ficam com o Patrick): firewall desligado com as portas 8000/3000/3099 abertas, e o certbot do sistema quebrado desde 02/09 por um `cryptography` instalado por pip.
+
 ## O que estava certo
 
 "Tô na rua, saí pra encontrar a Júlia" às 14:53 e "cheguei sim" às 15:52 batiam com o mundo (a caminho 14:49–15:30).

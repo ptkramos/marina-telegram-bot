@@ -15,9 +15,8 @@ Criado em 25/09/2026, a partir da ideia do Patrick: são ~40 comandos (`/status`
 
 - **Servidor dentro do próprio bot.** Um `aiohttp.web` sobe no `post_init` do `Application` (python-telegram-bot 22.8 + aiohttp 3.14, os dois já instalados). Fica no mesmo processo e no mesmo banco SQLite, sem segundo processo disputando o banco. Arquivo novo: `webapp_server.py`.
 - **Frontend:** HTML, CSS e JS puro, em `webapp/`, sem framework e sem build. Usa `telegram-web-app.js` (tema claro/escuro do próprio Telegram, botão principal, vibração).
-- **Endereço HTTPS:** o Telegram exige HTTPS público.
-  - **Agora:** Cloudflare Tunnel (`cloudflared` já instalado no PC), grátis. O app só abre com o PC ligado, igual à Marina hoje.
-  - **Depois:** na VPS (pendência 3 do PLANO_VOZ), um domínio com HTTPS. O código não muda.
+- **Endereço HTTPS: pronto (25/09).** A Marina foi pra VPS, e `https://marina.psoft.app` já tem certificado e aponta, pelo nginx, pra `127.0.0.1:8787`, onde o servidor do app vai escutar. Até o app existir, responde 502.
+  - O certbot do sistema está quebrado desde 02/09 (um `cryptography` 50 instalado por pip no Python do sistema). O certificado da Marina saiu por um certbot isolado (`/opt/certbot-marina`) e renova sozinho pelo `/etc/cron.d/certbot-marina`, sem depender do sistema.
 - **Como abre:** botão de menu do chat (`MenuButtonWebApp`) e um `/app` de reserva.
 - **Segurança:**
   - Toda chamada à API manda o `initData` do Telegram, e o servidor valida o HMAC com o token do bot.
@@ -31,7 +30,7 @@ Criado em 25/09/2026, a partir da ideia do Patrick: são ~40 comandos (`/status`
 ### Etapa 1 — Esqueleto e bastidores só de leitura
 - `webapp_server.py`: rotas `/app/*` (estáticos) e `/api/*` (JSON), validação do `initData` e início junto com o bot.
 - `/api/status`: o que ela está fazendo agora, a agenda do dia e o próximo evento. Mesma fonte do `/status`, sem duplicar lógica: as funções que o `/status` usa passam a devolver dados, e o comando só formata texto.
-- `/api/emocao`: sentindo agora (episódios agrupados, como no `/emocao` depois de 25/09), vínculo, tesão, energia.
+- `/api/emocao`: sentindo agora (episódios agrupados, como no `/emocao` depois de 25/09), vínculo, tesão, energia. **Com as barrinhas do `/emocao`** (pedido do Patrick, 25/09): nos bastidores, número e barra são bem-vindos.
 - `/api/memorias` e `/api/mundo`: listas com busca.
 - Tela de início: "agora" + atalhos. Tela de bastidores.
 - **Aceite:** abre pelo botão do chat; outro usuário recebe 403; os números batem com os comandos; o bot segue respondendo normal com o servidor no ar.
@@ -72,7 +71,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 
 ## 5. Decisões do Patrick
 
-1. **Túnel agora ou esperar a VPS?** Minha recomendação: túnel agora, porque dá pra testar tudo já.
+1. **Túnel agora ou esperar a VPS?** Decidido em 25/09: **ir pra VPS primeiro** e subir o app já nela.
 2. **Delivery é surpresa** (ela só descobre quando chega) **ou ele avisa na conversa?** Recomendação: surpresa por padrão. Se ele contar na conversa, ela fica esperando.
 3. **Cardápio com nomes de lugares reais de Botafogo ou inventados?** Recomendação: inventados com cara de reais ("Açaí da Praia"), pra não ter que manter preço e horário de verdade.
 4. **Visual das telas:** esboço mostrado no chat em 25/09. Aprovar ou ajustar antes da Etapa 1.

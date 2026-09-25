@@ -51,7 +51,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | 1f | **/emocao — sentimentos do dia:** os acontecimentos grandes (cansaço do treino, fofoca da Bia, o gozo do sexting) não viram sentimento; só o carinho do planner aparece. Ensinar o avaliador de eventos a enxergar esses momentos | Emoção |
 | 1g | **FinePorn v5:** cadastrada sem ativar (pilhas n3v5/ev5); A/B pronto no script. Indisponível no Civitai em 25/09 | Fotos |
 | 2 | **Trocar a chave do Civitai** (vazou num log local em 24/09) | Fotos |
-| 3 | **Mudar pra VPS** (o "disk is full" de 24/09 foi pontual) | Auditoria #11 |
+| 3 | ✅ **Na VPS desde 25/09, 10:56.** Hostinger do Patrick, `/root/bots/marina`, `marina.service` (fuso de São Paulo só no serviço). 934 testes verdes lá. O PC virou reserva | Auditoria #11 |
 | 4 | D11 pra depois: "no médico" como estado, banheiro na virose, o pai ligando mais quando ela está doente, farmácia como saída, contágio | D11 |
 | 5 | D10 pra depois: job fora do Rio, ensaio TFP, a Lívia negociando cachê, fotos do job, cachê virando gasto | D10 |
 | 6 | D9 pra depois: apê bagunçado em semana de entrega, Dona Neide e Seu Jorge nos contatos do dia | D9 |
