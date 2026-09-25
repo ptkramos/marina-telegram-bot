@@ -67,6 +67,10 @@ KREA2_CREAMY = "urn:air:krea2:lora:civitai:2931761@3318154"    # Creamy Pussy v0
 # Grippy Pussy em 1.0 é quem faz ele entrar.
 KREA2_FINGERING = "urn:air:krea2:lora:civitai:2923170@3343699"  # Fingering v4 (gatilho "finger_fucking")
 KREA2_GRIPPY = "urn:air:krea2:lora:civitai:2796863@3152534"     # Grippy Pussy v1.0 (gatilho "GrippyPussy")
+# Reprovados na mesma bateria: Dildo Posing (luz e cor do olho), Object Insertions (dildo virava
+# "garrafa"), FINGERING-KREA2 (indisponível nos servidores) e Juicy Pussy 0.8 (mudou a Marina e
+# o escorrido saía branco). Molhada antes do gozo = só texto; no gozo, o Creamy 0.5.
+KREA2_JUICY = "urn:air:krea2:lora:civitai:2915944@3298822"      # REPROVADO (24/09)
 KREA2_BETTER = "urn:air:krea2:lora:civitai:2729157@3288922"    # Better Pussy v4.2.1 — testado e REPROVADO (24/09)
 KREA2_OILED = "urn:air:krea2:lora:civitai:87685@3096878"      # Oiled Skin — REPROVADO (24/09): o FinePorn vira "esperma"
 KREA2_WEIGHT_OLD = "urn:air:krea2:lora:civitai:2858768@3229815"  # Body Weight v2 — mexia na cabeça (reprovado)

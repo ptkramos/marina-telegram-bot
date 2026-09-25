@@ -45,7 +45,6 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | # | Pendência | De onde |
 |---|---|---|
 | 1 | **C.1b no uso real:** ver se as fotos que ela manda fazem sentido (nível, pose, cadência). Crescer o catálogo com as poses que o Patrick trouxer do site. Marquinha de cima larga na foto explícita (resistência do FinePorn, já conhecida) | Fotos |
-| 1b | **Penetração nas fotos:** em todo teste o "dedos dentro" saiu só passando o dedo por fora. Ver um LoRA Krea 2 de dedo entrando de verdade e/ou de dildo (aí o dildo vira objeto da gaveta dela no cânone) | Fotos |
 | 1c | **`/pix valor`** (feedback do Patrick, 24/09): ele manda dinheiro pra mimar ela; numa emergência ela pode preferir pedir emprestado pra ele em vez do pai. Precisa desenhar: onde o dinheiro entra (contas do D9), como ela reage, quando pede | Feedback |
 | 2 | **Trocar a chave do Civitai** (vazou num log local em 24/09) | Fotos |
 | 3 | **Mudar pra VPS** (o "disk is full" de 24/09 foi pontual) | Auditoria #11 |
@@ -967,8 +966,8 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
 - **Em toda foto:** Detailed Emotions 0.6 · Smartphone Photography 0.8 (com −17% de saturação) · Breast Size 2.5 · Ass and Thighs 2.5 · Fat/Skinny ligado ao peso do D1 (54 kg = 0, sutil).
 - **Só na foto normal:** NSFW Helper −1 (trava contra nudez).
 - **Só na foto adulta:** corpo canônico por texto (rosa, sem pinta, micro biquíni) + Genital Color −3 · Areola −2 · Protruding Nipples −1 · Pubic Hair −2 · marquinha de biquíni 0.6.
-- **Quando a cena pede:** molhada 1.2 (**só água**: banho, chuva, piscina, mar) · apertando os seios 0.6 (adulta, "mamilos pequenos") · Pussy Spread 0.8 (adulta) · Creamy 0.5 (adulta, quando ela goza).
-- **Reprovados:** Lenovo, NiceGirls, Stable Yogi, Turbo FP8, SNOFS, TextFusion, Pretty Pussy, Better Pussy, Oiled Skin (vira "esperma" no FinePorn), Body Weight antigo (mexia na cabeça), Labia Minora −2 (vulva pequena demais), Light Slider.
+- **Quando a cena pede:** molhada 1.2 (**só água**: banho, chuva, piscina, mar) · apertando os seios 0.6 (adulta, "mamilos pequenos") · Pussy Spread 0.8 (adulta) · Creamy 0.5 (adulta, quando ela goza) · **Fingering 1.0** (dedos dentro, gatilho `finger_fucking`) · **Grippy Pussy 1.0** (o dildo, feito pelo texto, entra; dildo rosa de silicone vira cânone, gaveta da mesinha). Molhada de excitação: só texto.
+- **Reprovados:** Lenovo, NiceGirls, Stable Yogi, Turbo FP8, SNOFS, TextFusion, Pretty Pussy, Better Pussy, Oiled Skin (vira "esperma" no FinePorn), Body Weight antigo (mexia na cabeça), Labia Minora −2 (vulva pequena demais), Light Slider, Dildo Posing (luz e cor do olho), Object Insertions (dildo virava garrafa), Juicy Pussy (mudou a Marina; escorrido branco), FINGERING-KREA2 (indisponível).
 - **Lições:** com CFG 1, **negação vira pedido** (nunca "sem X" no prompt); cor e posição concretas obedecem mais que adjetivo; o Krea 2 dá mais peso ao começo do prompt; LoRA recém-publicado precisa aparecer "available" em `/v2/resources/{air}` antes de gastar.
 - **Custo:** ~18–27 Buzz por foto, menos de 1 min (modelo quente).
 
