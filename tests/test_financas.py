@@ -37,6 +37,19 @@ class FinancasTest(unittest.TestCase):
     def st(self):
         return json.loads(self.db.get_estado_relacional(financas.KEY))
 
+    def test_pix_prometido_e_pagamento_nao_presente(self):
+        """25/09: 'te mando o pix mais tarde' do açaí chegava como 'de presente, sem você pedir'."""
+        loop = self.db.adicionar_open_loop("task", "Patrick ficou de enviar o Pix do açaí mais tarde.")
+        res = financas.receive_pix(self.db, 38, "", T + timedelta(hours=1))
+        self.assertEqual(res["kind"], "prometido")
+        self.assertIsNone(self.st()["presente"], "não vira presente pra gastar num segundo açaí")
+        self.assertEqual(self.db.get_open_loop(loop)["status"], "resolved")
+        text = financas.pix_turn_text(38, "", res)
+        self.assertIn("tinha prometido", text)
+        self.assertNotIn("sem você pedir", text)
+        self.assertEqual(financas.receive_pix(self.db, 20, "", T + timedelta(hours=2))["kind"], "presente",
+                         "promessa paga: o próximo pix volta a ser presente")
+
     def test_world_moves_the_balance(self):
         _life(self.db, "freela:2026-09-20:sinal", T + timedelta(hours=1), "A Lívia fez o pix de metade do cachê (x): R$ 450.")
         _life(self.db, "casa:2026-09-25:contas_dela", T + timedelta(hours=2), "Pagou as contas dela.")

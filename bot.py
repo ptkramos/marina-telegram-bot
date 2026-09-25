@@ -2535,10 +2535,8 @@ async def pix_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Não consegui registrar o pix agora 😕")
         return
     logger.info("pix.recebido valor=%s kind=%s", valor, res["kind"])
-    # Ela reage pelo fluxo normal: vê a conversa, o saldo e se era o aperto dela.
-    motivo = "pra cobrir o aperto que você contou" if res["kind"] == "emprestimo" else "de presente, sem você pedir"
-    texto = f"[Pix de R$ {valor} do Patrick {motivo}" + (f" — recado: \"{nota}\"" if nota else "") + "]"
-    await process_incoming_batch(update, context, texto, availability_bypass=True)
+    # Ela reage pelo fluxo normal: vê a conversa, o saldo e se era o aperto ou o pix prometido.
+    await process_incoming_batch(update, context, financas.pix_turn_text(valor, nota, res), availability_bypass=True)
 
 
 async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -4678,8 +4676,7 @@ async def _webapp_pix(application: Application, valor: int, nota: str) -> dict:
     await asyncio.to_thread(financas.materialize, memory_manager.db, now)
     res = await asyncio.to_thread(financas.receive_pix, memory_manager.db, valor, nota, now)
     logger.info("pix.recebido valor=%s kind=%s via=webapp", valor, res["kind"])
-    motivo = "pra cobrir o aperto que você contou" if res["kind"] == "emprestimo" else "de presente, sem você pedir"
-    texto = f"[Pix de R$ {valor} do Patrick {motivo}" + (f" — recado: \"{nota}\"" if nota else "") + "]"
+    texto = financas.pix_turn_text(valor, nota, res)
     fake_update, fake_context = _fake_turn(application)
     # A reação sai pelo fluxo normal, em segundo plano (o app responde na hora).
     asyncio.create_task(process_incoming_batch(fake_update, fake_context, texto, availability_bypass=True))

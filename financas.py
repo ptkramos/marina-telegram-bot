@@ -165,11 +165,57 @@ def _repay(db, st: dict, at: datetime, now: datetime) -> int:
 
 
 # ------------------------------------------------------------------- /pix --
+# 25/09: "Pede o iFood que eu te mando o pix mais tarde" virou pendência ("Patrick ficou de
+# enviar o Pix do açaí mais tarde"), mas o pix chegava como "de presente, sem você pedir" e
+# ainda virava um presente pra gastar (num segundo açaí). Pix prometido é pagamento.
+_PROMISED_PIX_RE = re.compile(r"\bpix\b", re.IGNORECASE)
+
+
+def promised_pix_loop(db) -> Optional[dict]:
+    """Pendência aberta de um pix que o Patrick ficou de mandar."""
+    try:
+        with db.get_connection() as conn:
+            rows = conn.execute(
+                "SELECT id, content FROM open_loops WHERE status='open' AND COALESCE(is_archived,0)=0 "
+                "ORDER BY id DESC").fetchall()
+    except Exception:
+        return None
+    for row in rows:
+        content = row["content"] or ""
+        if _PROMISED_PIX_RE.search(content) and "patrick" in content.casefold():
+            return {"id": row["id"], "content": content}
+    return None
+
+
+def pix_turn_text(valor: int, nota: str, res: dict) -> str:
+    """Como o pix entra na conversa dela (o /pix e o Mini App usam o mesmo texto)."""
+    if res["kind"] == "prometido":
+        motivo = f"— é o pix que ele tinha prometido ({res['promessa'].rstrip('.')})"
+    elif res["kind"] == "emprestimo":
+        motivo = "pra cobrir o aperto que você contou"
+    else:
+        motivo = "de presente, sem você pedir"
+    return f"[Pix de R$ {valor} do Patrick {motivo}" + (f" — recado: \"{nota}\"" if nota else "") + "]"
+
+
 def receive_pix(db, valor: int, nota: str, now: datetime) -> dict:
-    """Pix do Patrick. Com pedido em aberto vira empréstimo; sem pedido, presente que ela vai usar."""
+    """Pix do Patrick. Prometido: paga o combinado. Com pedido em aberto: empréstimo. Senão, presente."""
     st = _init(_load(db), now)
     _mov(st, now, valor, f"pix do Patrick{': ' + nota if nota else ''}")
     pedido = st.get("pedido")
+    promised = None if pedido else promised_pix_loop(db)
+    if promised:
+        kind = "prometido"
+        try:
+            db.resolver_open_loop(promised["id"], f"O Patrick mandou o pix de R$ {valor} ({now:%d/%m %H:%M}).")
+        except Exception:
+            logger.exception("financas.promised_loop.resolve_error")
+        _event(db, f"financas:{now:%Y-%m-%dT%H%M%S}:pix", now,
+               f"O Patrick mandou o pix de R$ {valor} que tinha prometido ({promised['content'].rstrip('.')})"
+               + (f" ('{nota}')" if nota else "") + ".", now, 0.7)
+        _save(db, st)
+        logger.info("financas.pix valor=%s kind=prometido loop=%s saldo=%s", valor, promised["id"], st["saldo"])
+        return {"kind": kind, "saldo": st["saldo"], "promessa": promised["content"]}
     if pedido:
         kind = "emprestimo"
         st.setdefault("emprestimos", []).append(
