@@ -203,6 +203,21 @@ class DirectorTest(unittest.TestCase):
             body = ci.build_workflow_krea2(s.prompt, is_nsfw=True, seed=1, lora_weights=s.lora_weights)
             self.assertEqual(body["steps"][0]["input"]["loras"][ci.KREA2_CREAMY], w, "o peso do diretor vence")
 
+    def test_sitting_on_the_clear_dildo(self):
+        """24/09 (teste X): 'senta nele' → agachada no dildo transparente, só com o Grippy."""
+        import civitai_images as ci
+        hot = IntimacyTurn(state="active", arousal=0.9)
+        s = self.shot("senta nesse dildo pra mim", turn=hot)
+        self.assertEqual(s.pose_id, "sentando_dildo")
+        self.assertEqual(s.beat, "dildo")
+        self.assertIn("clear transparent", s.prompt)
+        loras, _ = ci.conditional_loras(s.prompt, is_nsfw=True)
+        self.assertEqual(loras.get(ci.KREA2_GRIPPY), 1.0)
+        self.assertNotIn(ci.KREA2_FINGERING, loras)
+        come = self.shot("goza sentando", turn=IntimacyTurn(state="climax", arousal=0.95),
+                         now=NOW + timedelta(minutes=3))
+        self.assertEqual((come.pose_id, come.beat), ("sentando_dildo", "climax"))
+
     def test_asking_for_the_dildo(self):
         hot = IntimacyTurn(state="active", arousal=0.9)
         s = self.shot("pega teu dildo e usa pra mim", turn=hot)

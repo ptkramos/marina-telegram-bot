@@ -59,6 +59,7 @@ class Pose:
 
 
 DILDO_TEXT = "a realistic pink silicone dildo with a veined shaft"
+DILDO_CLEAR_TEXT = "a clear transparent glass-like dildo"
 
 
 def _beats(where: str, hand: str, other: str = "") -> tuple:
@@ -118,6 +119,15 @@ POSES: tuple[Pose, ...] = (
          "three_quarter", "timer", "on all fours on the bed seen from behind, her knees apart and her back arched, "
          "looking back over her shoulder", angle="behind",
          beats=_beats("her ass up toward the camera", "right")),
+    # Aprovada pelo Patrick (24/09, teste "X"): sentando no dildo transparente (o 2º brinquedo da
+    # gaveta), só com o Grippy — o Pussy Helper não acrescentou e sumia com as mãos.
+    Pose("sentando_dildo", "agachada de frente, sentando no dildo transparente preso na cama (timer)",
+         ("quarto",), (4, 4), "three_quarter", "timer", "squatting on the bed facing the camera, her knees wide "
+         "apart and her hands resting on her knees",
+         beats=(("dildo", f"sinking down onto {DILDO_CLEAR_TEXT} standing upright on its round suction-cup base on "
+                          "the white sheets, the dildo pushed deep inside her pussy"),
+                ("climax", f"right after she came, still sitting down on {DILDO_CLEAR_TEXT}, her thighs "
+                           "trembling"))),
     # Aprovada no teste do Creamy (Patrick, 24/09, "R_costas"): se dedilhando por trás, ajoelhada.
     Pose("cama_costas_dedando", "ajoelhada de costas, peito baixo, se dedilhando por trás (timer)", ("quarto",),
          (4, 4), "three_quarter", "timer", "kneeling on the bed seen from behind, her chest low and her ass up "
@@ -201,6 +211,7 @@ BY_ID = {p.id: p for p in POSES}
 POSE_WORDS = (
     (r"de quatro|empinad", ("cama_de_quatro", "cama_costas_dedando")),
     (r"de costas|por tr[aá]s", ("cama_costas_dedando", "cama_de_quatro")),
+    (r"senta|sentando|cavalga|quica|rebola", ("sentando_dildo",)),
     (r"pernas abertas|abr\w* as pernas|arreganhad|deitada de costas", ("cama_tripe_duas_maos", "cama_pernas_abertas")),
     (r"chuveiro|no box|no banho", ("chuveiro_tocando", "chuveiro", "banheiro_toalha", "banheiro_espelho")),
     (r"poltrona", ("poltrona_aberta", "poltrona_pernas")),
@@ -434,7 +445,8 @@ def _pick_beat(pose: Pose, request: str, turn, session: Optional[dict]) -> Optio
     if prev in tags and session and session.get("pose") == pose.id:
         return tags[min(tags.index(prev) + 1, len(tags) - 2)]  # avança um momento; o gozo fica reservado
     from intimacy import HOT_AT
-    return "touch" if getattr(turn, "arousal", 0) >= HOT_AT else "tease"
+    pick = "touch" if getattr(turn, "arousal", 0) >= HOT_AT else "tease"
+    return pick if pick in tags else tags[0]     # pose com momentos próprios (sentando no dildo)
 
 
 def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_ctx=None, turn=None,
