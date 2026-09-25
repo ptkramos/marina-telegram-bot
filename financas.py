@@ -237,6 +237,16 @@ def receive_pix(db, valor: int, nota: str, now: datetime) -> dict:
     return {"kind": kind, "saldo": st["saldo"]}
 
 
+def spend(db, valor: int, desc: str, now: datetime) -> Optional[int]:
+    """Ela gasta do próprio saldo (ex.: delivery que ela manda pro Patrick). None se não tem."""
+    st = _init(_load(db), now)
+    if st["saldo"] < valor:
+        return None
+    _mov(st, now, -int(valor), desc)
+    _save(db, st)
+    return st["saldo"]
+
+
 def parse_value(text: str) -> Optional[int]:
     m = re.search(r"(\d+(?:[.,]\d{1,2})?)", (text or "").replace("R$", ""))
     if not m:

@@ -63,6 +63,12 @@ const loaders = {
       $("inicio-agora").textContent = a.atividade.charAt(0).toUpperCase() + a.atividade.slice(1);
       $("inicio-disp").textContent = a.disponivel;
       $("inicio-pedido").innerHTML = pedidoCard(d.pedido);
+      const pv = d.pra_voce;
+      $("inicio-pra-voce").innerHTML = pv ? `<div class="pedido dela">
+        <div class="small muted">${pv.surprise ? "Surpresa da Marina 🤍" : "A Marina te mandou"}</div>
+        <div class="t">${esc(cap(pv.what))}</div><div class="small">${esc(pv.restaurant)}</div>
+        <div class="small">${pv.status === "entregue" ? "✅ " : "🛵 "}${esc(pv.detalhe)}</div>
+        ${pv.note ? `<div class="small muted">"${esc(pv.note)}"</div>` : ""}</div>` : "";
     } catch (e) { failIn($("inicio-agora"), e); }
   },
 

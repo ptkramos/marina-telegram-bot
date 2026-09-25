@@ -49,6 +49,7 @@ button.primary:disabled { opacity: .5; }
 .err { color: #d64545; font-size: 13px; min-height: 0; }
 .pedido { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; }
 .pedido .t { font-weight: 600; }
+.pedido.dela { background: color-mix(in srgb, #d4537e 14%, transparent); }
 .bar-row { display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 10px; padding: 5px 0; }
 .bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }

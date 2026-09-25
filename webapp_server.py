@@ -158,8 +158,10 @@ async def api_inicio(request: web.Request) -> web.Response:
     now = hooks.now()
     snap = await asyncio.to_thread(hooks.status, now)
     import delivery
+    import pedido_dela
     return _json({"agora": {k: snap.get(k) for k in ("now", "atividade", "local", "disponivel")},
-                  "pedido": order_view(delivery._load(hooks.db), now)})
+                  "pedido": order_view(delivery._load(hooks.db), now),
+                  "pra_voce": pedido_dela.app_view(hooks.db, now)})
 
 
 async def api_bastidores(request: web.Request) -> web.Response:

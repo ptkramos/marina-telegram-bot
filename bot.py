@@ -3905,6 +3905,18 @@ async def process_incoming_batch(
         except Exception:
             logger.exception("delivery.observe.error")
         try:
+            # 25/09: "vou te mandar um suquinho pelo app" vira pedido de verdade pro Patrick.
+            import pedido_dela
+            import webapp_server
+            from health import patrick_sick_hint
+            if pedido_dela.observe_marina_line(memory_manager.db, webapp_server.load_cardapio(), fala_limpa,
+                                               texto_usuario, datetime.now(),
+                                               sick=bool(patrick_sick_hint([texto_usuario]))):
+                # a última bolha da fala em que ela conta que mandou ganha o link de acompanhar
+                asyncio.create_task(_attach_tracking_link(context.bot, sent_mid))
+        except Exception:
+            logger.exception("pedido_dela.observe.error")
+        try:
             # "Te aviso quando chegar" vira lembrete dela, amarrado ao trajeto real.
             import arrival_promise
             if arrival_promise.observe(memory_manager.db, fala_limpa, texto_usuario):
@@ -4310,6 +4322,10 @@ _PROACTIVE_INSTRUCTIONS = {
                           "espontânea, do seu jeito (surpresa, dengo, gratidão, provocação carinhosa). Se tinha "
                           "bilhete, reaja ao bilhete. Se tinha acabado de comer, pode rir disso em vez de fingir "
                           "fome. Não invente detalhe além do que está aqui."),
+    # 25/09: ela mandou algo de surpresa pro Patrick (pedido_dela.py); a mensagem leva o link de acompanhar.
+    'surpresa_pra_ele': ("{detail} Conte pra ele numa mensagem curtinha, do seu jeito (carinho, um pouco de marra, "
+                         "mistério: 'fiz uma coisinha pra você', 'acompanha aí', 'abre a porta daqui a pouco'). "
+                         "Sua mensagem vai com o link de acompanhar a entrega, então não precisa descrever tudo."),
     'aviso_chegada': ("{detail} e tinha prometido avisar o Patrick. Mande o aviso curtinho, do seu jeito "
                       "('cheguei, amor', 'chegueeei'); se aconteceu algo no caminho, pode comentar. Não "
                       "invente acontecimento novo."),
@@ -4718,11 +4734,72 @@ async def _webapp_pix(application: Application, valor: int, nota: str) -> dict:
     return {"kind": res["kind"], "saldo": res["saldo"]}
 
 
+async def _attach_tracking_link(bot, message_id: Optional[int]) -> None:
+    """A mensagem dela em que conta que mandou ganha o 'link' de acompanhar (abre o Mini App).
+
+    Patrick, 25/09: chat é chat e app é app — nada de notificação solta no chat."""
+    if not message_id or not getattr(settings, "WEBAPP_ENABLED", False):
+        return
+    from telegram import WebAppInfo
+    try:
+        await bot.edit_message_reply_markup(
+            chat_id=settings.TARGET_CHAT_ID, message_id=message_id,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(
+                "🛵 Acompanhar entrega", web_app=WebAppInfo(url=settings.WEBAPP_URL))]]))
+    except Exception as exc:
+        logger.warning("pedido_dela.link_error: %s", exc)
+
+
+async def _pedido_dela_tick(application: Application, now: datetime) -> None:
+    """Entrega o pedido dela pro Patrick e, às vezes, ela manda um de surpresa."""
+    import pedido_dela
+    db = memory_manager.db
+    pedido_dela.tick(db, now)
+    if pedido_dela.open_order(db):
+        return
+    with db.get_connection() as conn:
+        rows = conn.execute("SELECT timestamp, content FROM conversas WHERE role='user' AND timestamp>=? "
+                            "ORDER BY id", ((now - pedido_dela.SURPRISE_WINDOW).isoformat(),)).fetchall()
+    reason = pedido_dela.surprise_reason([(datetime.fromisoformat(r["timestamp"]), r["content"]) for r in rows], now)
+    if not reason:
+        return
+    at = pedido_dela.plan_surprise(db, reason, now)
+    if not at or now < at:
+        return
+    from sleep_plan import SleepPlan
+    if SleepPlan(db).is_asleep(now):
+        return
+    try:
+        act_code, *_ = availability_service.policy._resolve_activity(now)
+        if availability_service.policy.profiles.get(act_code, {}).get("phone_access") == "LOW":
+            return                                     # na aula, no banho…: pede quando puder
+    except Exception:
+        pass
+    import webapp_server
+    cardapio = webapp_server.load_cardapio()
+    rest, item = pedido_dela.surprise_item(cardapio, reason, now)
+    order = pedido_dela.place(db, cardapio, rest, item, now, surprise=True)
+    pedido_dela.mark_surprise_done(db, reason, now)
+    if not order:
+        return
+    motivo = "ele está doente" if reason == "doente" else "ele teve um dia ruim"
+    detail = f"Você acabou de mandar de surpresa {item['nome']} do {rest['nome']} pro Patrick pelo app, porque {motivo}."
+    text = await asyncio.to_thread(_proactive_text, 'surpresa_pra_ele', detail, "Fiz uma coisinha pra você 👀")
+    sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
+    if isinstance(getattr(sent, 'message_id', None), int) and sent.message_id > 0:
+        memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
+        await _attach_tracking_link(application.bot, sent.message_id)
+
+
 async def delivery_gift_routine(application: Application):
     """O delivery surpresa que o Patrick mandou pelo app chega, e ela reage quando pega."""
     if not settings.TARGET_CHAT_ID:
         return
     import delivery
+    try:
+        await _pedido_dela_tick(application, datetime.now())
+    except Exception as exc:
+        logger.error('Erro no pedido da Marina pro Patrick: %s', exc, exc_info=True)
     try:
         now = datetime.now()
         order = delivery.open_order(memory_manager.db)

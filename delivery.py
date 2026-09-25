@@ -50,6 +50,9 @@ def observe(db, text: str, now: datetime, context: str = "") -> bool:
     """Fala dela ('vou pedir pelo iFood'): abre um pedido. context = conversa recente, pra achar o quê."""
     if not ORDER_RE.search(text or ""):
         return False
+    from pedido_dela import is_offer
+    if is_offer(text):
+        return False                                   # "pedi um açaí pra você": é pro Patrick (pedido_dela)
     cur = _load(db)
     if cur and not cur.get("arrived_at"):
         return False                                   # já tem pedido a caminho

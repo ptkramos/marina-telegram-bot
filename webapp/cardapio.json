@@ -9,7 +9,8 @@
       "itens": [
         {"id": "acai-500", "nome": "açaí de 500 ml com banana e granola", "curto": "Açaí 500 ml", "preco": 38, "come": true},
         {"id": "acai-700", "nome": "açaí de 700 ml com morango e leite ninho", "curto": "Açaí 700 ml", "preco": 46, "come": true},
-        {"id": "suco-verde", "nome": "suco verde com gengibre", "curto": "Suco verde", "preco": 16, "come": false}
+        {"id": "suco-verde", "nome": "suco verde com gengibre", "curto": "Suco verde", "preco": 16, "come": false},
+        {"id": "suco-laranja", "nome": "suco de laranja de 500 ml", "curto": "Suco de laranja", "preco": 14, "come": false}
       ]
     },
     {
@@ -51,7 +52,18 @@
       "eta": [25, 40],
       "itens": [
         {"id": "brigadeiros", "nome": "caixinha com 6 brigadeiros gourmet", "curto": "6 brigadeiros", "preco": 32, "come": false},
-        {"id": "bolo-pote", "nome": "bolo de pote de ninho com Nutella", "curto": "Bolo de pote", "preco": 18, "come": false}
+        {"id": "bolo-pote", "nome": "bolo de pote de ninho com Nutella", "curto": "Bolo de pote", "preco": 18, "come": false},
+        {"id": "picoles", "nome": "kit com 4 picolés de fruta", "curto": "4 picolés de fruta", "preco": 28, "come": false}
+      ]
+    },
+    {
+      "id": "caldo-e-cia",
+      "nome": "Caldo & Cia",
+      "tipo": "Caldos e sopas",
+      "eta": [30, 45],
+      "itens": [
+        {"id": "canja", "nome": "canja de galinha de 500 ml", "curto": "Canja", "preco": 29, "come": true},
+        {"id": "sopa-legumes", "nome": "sopa de legumes com mandioquinha", "curto": "Sopa de legumes", "preco": 27, "come": true}
       ]
     }
   ]
