@@ -85,6 +85,63 @@ class DebouncerSerializationTests(unittest.TestCase):
 
         self.assertEqual(recebidos, ["oi\namor\ntudo bem?"])
 
+    def _turno(self, deb, log, chat=1):
+        """Imita o pipeline: gera (demora) e, antes do 1º balão, cede se chegou bolha nova."""
+        async def callback(update, context, texto):
+            await asyncio.sleep(0.15)                  # LLM
+            if deb.should_yield(chat, texto):
+                log.append(f"cedeu:{texto}")
+                return
+            log.append(f"enviou:{texto}")
+        return callback
+
+    def test_bolha_durante_a_geracao_vira_uma_resposta_so(self):
+        """25/09 12:16: 'Pode deixar amor…' + 'Obg por se preocupar' 15 s depois = duas respostas."""
+        deb = bot.MessageDebouncer(delay_seconds=0.01)
+        log: list[str] = []
+        cb = self._turno(deb, log)
+
+        async def cenario():
+            deb.add_message(1, "Pode deixar amor", MagicMock(), MagicMock(), cb)
+            await asyncio.sleep(0.08)                  # ela já está gerando
+            deb.add_message(1, "Obg por se preocupar", MagicMock(), MagicMock(), cb)
+            await asyncio.sleep(0.8)
+
+        asyncio.run(cenario())
+        self.assertEqual(log, ["cedeu:Pode deixar amor", "enviou:Pode deixar amor\nObg por se preocupar"])
+
+    def test_nao_cede_pra_sempre(self):
+        """Ele mandando bolha sem parar: depois de MAX_YIELDS ela responde mesmo assim."""
+        deb = bot.MessageDebouncer(delay_seconds=0.01)
+        log: list[str] = []
+        cb = self._turno(deb, log)
+
+        async def cenario():
+            for i in range(6):
+                deb.add_message(1, f"b{i}", MagicMock(), MagicMock(), cb)
+                await asyncio.sleep(0.1)
+            await asyncio.sleep(1.2)
+
+        asyncio.run(cenario())
+        enviados = [x for x in log if x.startswith("enviou:")]
+        self.assertTrue(enviados, log)
+        self.assertLessEqual(sum(1 for x in log if x.startswith("cedeu:")), 2 * len(enviados), log)
+        juntos = "\n".join(e.split(":", 1)[1] for e in enviados)
+        for i in range(6):
+            self.assertIn(f"b{i}", juntos, "nenhuma bolha se perde")
+
+    def test_sem_bolha_nova_responde_normal(self):
+        deb = bot.MessageDebouncer(delay_seconds=0.01)
+        log: list[str] = []
+        cb = self._turno(deb, log)
+
+        async def cenario():
+            deb.add_message(1, "oi amor", MagicMock(), MagicMock(), cb)
+            await asyncio.sleep(0.4)
+
+        asyncio.run(cenario())
+        self.assertEqual(log, ["enviou:oi amor"])
+
     def test_chats_diferentes_nao_bloqueiam_um_ao_outro(self):
         """O lock é por chat — conversa de outro chat não fica na fila."""
         deb = bot.MessageDebouncer(delay_seconds=0.01)

@@ -1350,9 +1350,16 @@ class MessageDebouncer:
     terminar e, ao assumir, drena o buffer de novo (juntando o que chegou
     durante a espera).
     """
+    # 25/09 (Patrick: "ela responde bolha por bolha, não o lote"): ele digita com calma e a
+    # 2ª bolha chegava 15 s depois da 1ª, com a resposta da 1ª ainda sendo gerada — saíam
+    # duas respostas completas pra uma fala só. Agora, se chegou bolha nova antes do 1º balão
+    # dela sair, ela desiste desta resposta e o próximo turno responde tudo junto.
+    MAX_YIELDS = 2          # depois disso responde mesmo assim (ele pode estar mandando sem parar)
+
     def __init__(self, delay_seconds: float = 2.8, adaptive: bool = False):
         self.delay = delay_seconds
         self.adaptive = adaptive
+        self._yields: dict[int, int] = {}
         self.buffers: dict[int, list[str]] = {}
         self.tasks: dict[int, asyncio.Task] = {}
         self.latest_updates: dict[int, Update] = {}
@@ -1360,6 +1367,16 @@ class MessageDebouncer:
         # Só as tasks ainda dentro da janela de debounce — as em execução saem
         # daqui para não serem canceladas no meio do turno.
         self._waiting: dict[int, asyncio.Task] = {}
+
+    def should_yield(self, chat_id: int, text: str) -> bool:
+        """Chegou bolha dele durante o turno? Devolve `text` pra frente da fila e diz pra desistir."""
+        waiting = self.buffers.get(chat_id)
+        if not waiting or self._yields.get(chat_id, 0) >= self.MAX_YIELDS:
+            self._yields[chat_id] = 0
+            return False
+        self._yields[chat_id] = self._yields.get(chat_id, 0) + 1
+        waiting.insert(0, text)
+        return True
 
     def _lock_for(self, chat_id: int) -> asyncio.Lock:
         lock = self._locks.get(chat_id)
@@ -3746,6 +3763,13 @@ async def process_incoming_batch(
     if response_policy:
         from response_rhythm import log_output
         log_output(fala_limpa, response_policy, voice=pediu_audio or queria_audio)
+
+    # 25/09: bolha nova dele chegou enquanto ela pensava e nada saiu ainda → não manda esta
+    # resposta; o texto volta pra fila e o próximo turno responde as bolhas juntas. Só em
+    # turno de mensagem real dele (o pix do app e as respostas adiadas seguem direto).
+    if pending_batch_id is None and msg_id and debouncer.should_yield(chat_id, texto_usuario):
+        logger.info("turn.yielded chat=%s: chegou bolha nova antes de ela responder", chat_id)
+        return
 
     # Persist the received user turn now. The assistant turn and plan effects
     # are committed only after Telegram confirms delivery with a message_id.
