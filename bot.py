@@ -4818,9 +4818,12 @@ async def delivery_gift_routine(application: Application):
             shower = any(w in activity for w in ("banho", "chuveiro"))
             home = meals._at_home()
             why = "dormindo" if asleep else "banho" if shower else "" if home else "fora"
+            # 25/09: a janela do Meals é 3 h; o bolo das 15:06 virou "tinha acabado de comer" com o
+            # almoço às 12:38. "Acabou de comer" pro presente é até 1h30.
+            last = meals._recent_meal(now)
+            ate_recently = bool(last) and now - datetime.fromisoformat(last["event_at"]) <= timedelta(minutes=90)
             delivery.gift_tick(memory_manager.db, now, can_receive=home and not asleep and not shower, why_not=why,
-                               ate_recently=bool(meals._recent_meal(now)),
-                               transition_busy=meals._transition_busy(now))
+                               ate_recently=ate_recently, transition_busy=meals._transition_busy(now))
         gift = delivery.gift_to_announce(memory_manager.db)
         if not gift:
             return
