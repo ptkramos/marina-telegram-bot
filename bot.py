@@ -4594,6 +4594,8 @@ class _PendingDeliveryBot:
 async def pending_response_routine(application: Application):
     """Claim and send due deferred conversational batches (v3.7.0)."""
     try:
+        if availability_service.policy._shower_until(datetime.now()) is None:
+            availability_service.repo.release_after_shower(datetime.now())
         availability_service.repo.mark_ready_due(datetime.now())
         owner = f'worker-{id(application)}'
         batch = availability_service.repo.claim_due(datetime.now(), owner=owner)

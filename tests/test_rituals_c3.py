@@ -142,6 +142,12 @@ class CotidianoTests(_Base):
         decision = policy.evaluate("amor?", now=planned + timedelta(minutes=5), telegram_message_id=7)
         self.assertEqual(decision.activity_type, "SHOWER")
         self.assertGreaterEqual((decision.selected_target_at - (planned + timedelta(minutes=5))).total_seconds(), 60)
+        # 25/09 17:06: ela disse que saiu do banho; o retrato "tomando banho" não segura mais as mensagens.
+        self.r.end_shower(planned + timedelta(minutes=6))
+        after = planned + timedelta(minutes=7)
+        decision = policy.evaluate("que bom que vc tá a salvo", now=after, telegram_message_id=8)
+        self.assertNotEqual(decision.activity_type, "SHOWER")
+        self.assertLessEqual((decision.selected_target_at - after).total_seconds(), 300)
 
     def _evening_slot(self, day=None):
         day = day or self.class_day

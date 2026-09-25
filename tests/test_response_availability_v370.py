@@ -205,6 +205,24 @@ class PendingBatchTests(unittest.TestCase):
         again = self.repo.create_batch(self._decision(decision_seed='seed-2'))
         self.assertNotEqual(again['id'], batch['id'])
 
+    def test_adiada_pelo_banho_sai_quando_o_banho_acabou(self):
+        """25/09 17:06: retrato velho de banho adiou pra 17:36; o banho já tinha acabado."""
+        busy = self.repo.create_batch(self._decision(
+            activity_type='SHOWER', reason_code='shower_busy',
+            selected_target_at=self.now + timedelta(minutes=30)))
+        with self.db.get_connection() as conn:
+            conn.execute('UPDATE response_pending_batches SET updated_at=? WHERE id=?',
+                         (self.now.isoformat(), busy['id']))
+            conn.commit()
+        self.assertEqual(self.repo.release_after_shower(self.now + timedelta(minutes=1)), 1)
+        self.assertEqual(self.repo.mark_ready_due(self.now + timedelta(minutes=2)), 1)
+
+    def test_adiada_ate_se_vestir_nao_e_antecipada(self):
+        self.repo.create_batch(self._decision(
+            activity_type='SHOWER', reason_code='in_shower_until_dressed',
+            selected_target_at=self.now + timedelta(minutes=10)))
+        self.assertEqual(self.repo.release_after_shower(self.now + timedelta(minutes=1)), 0)
+
     def test_expired_sending_lease_becomes_unknown_not_resent(self):
         batch = self.repo.create_batch(self._decision(selected_target_at=self.now))
         cid = self.db.adicionar_mensagem('user', 'oi')

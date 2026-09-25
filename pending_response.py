@@ -275,6 +275,27 @@ class PendingResponseRepository:
             )
             return cur.rowcount
 
+    def release_after_shower(self, now: datetime) -> int:
+        """25/09 17:06: adiadas "pelo banho" depois que ela já tinha saído ficaram pra 17:36.
+        Sem banho em andamento, o que foi adiado pelo banho sai (2 min depois da última mensagem).
+        As adiadas "até se vestir" já sabem o fim do banho e ficam como estão."""
+        now_dt = local_naive(now)
+        with self.db.get_connection() as conn:
+            rows = conn.execute(
+                """SELECT id, updated_at FROM response_pending_batches
+                   WHERE status='PENDING' AND activity_type='SHOWER' AND selected_target_at>?
+                     AND reason_code!='in_shower_until_dressed'""",
+                (now_dt.isoformat(),),
+            ).fetchall()
+            for row in rows:
+                target = max(now_dt, datetime.fromisoformat(row['updated_at']) + timedelta(minutes=2))
+                conn.execute("UPDATE response_pending_batches SET selected_target_at=? WHERE id=?",
+                             (target.isoformat(), row['id']))
+            conn.commit()
+        if rows:
+            logger.info('pending.release_after_shower batches=%s', [r['id'] for r in rows])
+        return len(rows)
+
     def claim_due(self, now: datetime, *, owner: str, lease_seconds: int = 120) -> Optional[dict]:
         now_dt = local_naive(now)
         now_s = now_dt.isoformat()

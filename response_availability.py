@@ -343,6 +343,10 @@ class ResponseAvailabilityPolicy:
         # volto") é plano dela, não palpite da rotina — sem isso o atraso ficava
         # limitado a 3 min e ela "saía do banho" pra responder na hora.
         if reason in ('explicit_plan', 'announced_transition'):
+            # 25/09 17:06: o retrato "tomando banho" (até 17:08) seguiu valendo depois
+            # que ela saiu do banho; as mensagens dele ficaram adiadas pra 17:36.
+            if mapped == 'SHOWER' and self._shower_until(now_naive) is None:
+                return 'UNKNOWN', 'UNKNOWN', snapshot['id'], 'stale', False
             return mapped, 'WORLD_STATE', snapshot['id'], 'fresh', True
         # Routine / free_time: soft signal only.
         return mapped, 'ROUTINE_PROBABILITY', snapshot['id'], 'fresh', False
