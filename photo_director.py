@@ -118,6 +118,11 @@ POSES: tuple[Pose, ...] = (
          "three_quarter", "timer", "on all fours on the bed seen from behind, her knees apart and her back arched, "
          "looking back over her shoulder", angle="behind",
          beats=_beats("her ass up toward the camera", "right")),
+    # Aprovada no teste do Creamy (Patrick, 24/09, "R_costas"): se dedilhando por trás, ajoelhada.
+    Pose("cama_costas_dedando", "ajoelhada de costas, peito baixo, se dedilhando por trás (timer)", ("quarto",),
+         (4, 4), "three_quarter", "timer", "kneeling on the bed seen from behind, her chest low and her ass up "
+         "toward the camera, looking back over her shoulder, her left forearm resting on the pillow",
+         angle="behind", beats=_beats("from behind, her ass up toward the camera", "right")),
     # ---------------------------------------------------------------- closet --
     Pose("espelho_corpo", "de pé na frente do espelho grande do closet", ("closet",), (0, 3), "full", "mirror",
          "standing barefoot in front of the tall mirror, her weight on one leg, her free hand resting on her hip"),
@@ -194,7 +199,8 @@ BY_ID = {p.id: p for p in POSES}
 # A posição que eles escreveram manda na pose (24/09: ela disse "de quatro na cama" e o sorteio
 # mandou de costas no espelho). Em ordem de preferência; vale a primeira que aceita o nível.
 POSE_WORDS = (
-    (r"de quatro|empinad|por tr[aá]s", ("cama_de_quatro",)),
+    (r"de quatro|empinad", ("cama_de_quatro", "cama_costas_dedando")),
+    (r"de costas|por tr[aá]s", ("cama_costas_dedando", "cama_de_quatro")),
     (r"pernas abertas|abr\w* as pernas|arreganhad|deitada de costas", ("cama_tripe_duas_maos", "cama_pernas_abertas")),
     (r"chuveiro|no box|no banho", ("chuveiro_tocando", "chuveiro", "banheiro_toalha", "banheiro_espelho")),
     (r"poltrona", ("poltrona_aberta", "poltrona_pernas")),
@@ -290,6 +296,7 @@ class DirectedShot:
     facts: str
     declined: str = ""            # "fora de casa": pediu mais do que dá pra mandar da rua
     session: dict = field(default_factory=dict)
+    lora_weights: dict = field(default_factory=dict)   # pesos decididos aqui (Creamy pela excitação)
 
 
 def asked_level(text: str) -> Optional[int]:
@@ -517,6 +524,13 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         setting, backdrop = visual, f"{visual.split(',')[0]} in soft focus"
     else:
         setting, backdrop = apartamento.setting(room, now, rain), apartamento.backdrop(room, now, rain)
+    lora_weights = {}
+    creamy = creamy_weight(beat, getattr(turn, "arousal", 0.0))
+    if creamy:
+        import civitai_images
+        lora_weights[civitai_images.KREA2_CREAMY] = creamy
+        if beat != "climax":            # no gozo o gatilho já entra pelo "right after she came"
+            action = f"{action}, creamy wetness around her fingers, creamythings, creamy vagina"
     nude = level >= 3 and outfit is None
     prompt = krea2_zoom_prompt(action, zoom=pose.zoom, setting=setting, backdrop=backdrop,
                                is_nsfw=nude, focus_angle=pose.angle, framing=pose.framing,
@@ -533,7 +547,23 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     adult = level >= 2 or bool(outfit and re.search(r"panties|thong|towel", outfit))
     return DirectedShot(prompt=prompt, is_nsfw=adult, focus_angle=pose.angle, place_key=place or "",
                         room=room, pose_id=pose.id, level=level, beat=beat, outfit=outfit, seed=seed,
-                        facts=facts, declined=declined, session=new_session)
+                        facts=facts, declined=declined, session=new_session, lora_weights=lora_weights)
+
+
+# Creamy pela excitação (Patrick, 24/09): sem Creamy no começo; se dedilhando, do degrau
+# explícito pra cima ele sobe de 0.3 a 0.7 com o tesão; no gozo, 0.7.
+CREAMY_MIN, CREAMY_MAX = 0.3, 0.7
+CREAMY_BEATS = ("touch", "fingers", "spread")
+
+
+def creamy_weight(beat: Optional[str], arousal: float) -> float:
+    from intimacy import HOT_AT
+    if beat == "climax":
+        return CREAMY_MAX
+    if beat not in CREAMY_BEATS or arousal < HOT_AT:
+        return 0.0
+    frac = min(1.0, (arousal - HOT_AT) / (1.0 - HOT_AT))
+    return round(CREAMY_MIN + frac * (CREAMY_MAX - CREAMY_MIN), 2)
 
 
 def confirm_sent(db, shot: DirectedShot) -> None:

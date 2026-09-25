@@ -187,6 +187,22 @@ class DirectorTest(unittest.TestCase):
         sfw, _ = ci.conditional_loras("a dildo on the shelf", is_nsfw=False)
         self.assertEqual(sfw, {}, "nunca em foto normal")
 
+    def test_creamy_grows_with_arousal_while_fingering(self):
+        """24/09: sem Creamy no começo; se dedilhando sobe de 0.3 a 0.7; no gozo, 0.7."""
+        self.assertEqual(pd.creamy_weight("fingers", 0.5), 0.0)
+        self.assertEqual(pd.creamy_weight("fingers", 0.7), 0.3)
+        self.assertEqual(pd.creamy_weight("fingers", 1.0), 0.7)
+        self.assertEqual(pd.creamy_weight("climax", 0.35), 0.7)
+        self.assertEqual(pd.creamy_weight("dildo", 0.95), 0.0)
+        import civitai_images as ci
+        s = self.shot("se dedilha de costas pra mim", turn=IntimacyTurn(state="active", arousal=0.85))
+        self.assertEqual(s.pose_id, "cama_costas_dedando")
+        if s.beat in pd.CREAMY_BEATS:
+            w = s.lora_weights[ci.KREA2_CREAMY]
+            self.assertTrue(0.3 < w < 0.7)
+            body = ci.build_workflow_krea2(s.prompt, is_nsfw=True, seed=1, lora_weights=s.lora_weights)
+            self.assertEqual(body["steps"][0]["input"]["loras"][ci.KREA2_CREAMY], w, "o peso do diretor vence")
+
     def test_asking_for_the_dildo(self):
         hot = IntimacyTurn(state="active", arousal=0.9)
         s = self.shot("pega teu dildo e usa pra mim", turn=hot)
