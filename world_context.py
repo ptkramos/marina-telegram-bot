@@ -571,6 +571,10 @@ class WorldContextBuilder:
             dia = 'hoje' if quando.date() == now.date() else (
                 'amanhã' if (quando.date() - now.date()).days == 1 else dias[quando.weekday()])
             lines.append(f"- Plano combinado: {p['description']} ({dia}, {quando.strftime('%H:%M')})")
+        if planos:
+            # 25/09 (Patrick): ela repetia a agenda ("tenho um rolê hj às 19h30 no Quartinho com o Theo e a Júlia").
+            lines.append("  (Pra contar dos seus planos, fale como aviso de WhatsApp: \"hj à noite vou sair com a "
+                         "galera\". Hora, nomes e lugar só se ele perguntar.)")
         # Fase D8: convite de fim de semana ainda sem resposta — ela decide no dia.
         for inv in day.pending_invites(now):
             lines.append(f"- Convite em aberto: {inv['text']} ({day._dia(datetime.fromisoformat(inv['start']), now)}) "
