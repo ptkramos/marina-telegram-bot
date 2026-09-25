@@ -2090,6 +2090,7 @@ class DatabaseManager:
     # e empurrar perto do teto/piso rende cada vez menos.
     EMOTION_HALF_LIFE_HOURS = 6.0
     EMOTION_SOFT_EDGE = 0.30
+    BOND_ABOVE_BASELINE_DAMP = frozenset({"affection", "romantic_intensity", "security"})
     # Bateria social não relaxa pelo relógio: gasta/recarrega pela agenda
     # (social_battery.accrue) e pelo tipo de conversa com o Patrick.
     EMOTIONS_WITHOUT_TIME_RELAX = frozenset({"social_battery"})
@@ -2142,6 +2143,11 @@ class DatabaseManager:
                 folga = (1.0 - atual) if delta > 0 else atual
                 efetivo = (delta * min(1.0, max(0.0, folga) / self.EMOTION_SOFT_EDGE)
                            if soft_edges else delta)
+                baseline = float(row["baseline"])
+                if soft_edges and delta > 0 and chave in self.BOND_ABOVE_BASELINE_DAMP and atual > baseline:
+                    # 25/09 (/emocao): numa noite boa carinho/desejo/segurança iam a 0,97+ e ficavam no teto.
+                    # Acima do normal dela cada empurrão rende menos (quadrático até o teto).
+                    efetivo *= ((1.0 - atual) / max(1e-3, 1.0 - baseline)) ** 2
                 novo_valor = max(0.0, min(1.0, atual + efetivo))
                 cursor.execute(
                     "UPDATE estado_emocional SET valor = ?, updated_at = ? WHERE chave = ?",

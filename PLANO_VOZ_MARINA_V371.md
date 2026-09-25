@@ -48,6 +48,8 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | 1c | **`/pix valor`** (feedback do Patrick, 24/09): ele manda dinheiro pra mimar ela; numa emergência ela pode preferir pedir emprestado pra ele em vez do pai. Precisa desenhar: onde o dinheiro entra (contas do D9), como ela reage, quando pede | Feedback |
 | 1d | **Ângulo sem rosto ("de trás da cabeça", POV por cima do ombro):** testado com e sem o LoRA dela (24/09, fotos Y/Z/ZZ) e sempre sai selfie de frente. Quem puxa é o prompt (descrição do rosto, expressão, texto de selfie, LoRA de smartphone), não o LoRA. Fazer um prompt próprio pra foto sem rosto; o Patrick topa tirar o LoRA dela nesses casos se o corpo se mantiver | Fotos |
 | 1e | **Fatores do gozo especial** (esguicho): hoje é provisório (25%, o dobro no fértil). Candidatos: tesão acumulado, sessão longa no auge, período fértil, saudade, pedido dele | Fotos |
+| 1f | **/emocao — sentimentos do dia:** os acontecimentos grandes (cansaço do treino, fofoca da Bia, o gozo do sexting) não viram sentimento; só o carinho do planner aparece. Ensinar o avaliador de eventos a enxergar esses momentos | Emoção |
+| 1g | **FinePorn v5:** cadastrada sem ativar (pilhas n3v5/ev5); A/B pronto no script. Indisponível no Civitai em 25/09 | Fotos |
 | 2 | **Trocar a chave do Civitai** (vazou num log local em 24/09) | Fotos |
 | 3 | **Mudar pra VPS** (o "disk is full" de 24/09 foi pontual) | Auditoria #11 |
 | 4 | D11 pra depois: "no médico" como estado, banheiro na virose, o pai ligando mais quando ela está doente, farmácia como saída, contágio | D11 |

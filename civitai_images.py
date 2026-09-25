@@ -56,6 +56,9 @@ KREA2_YOGI_25 = "urn:air:krea2:checkpoint:civitai:2786499@3231611"
 # FinePorn v4 (Patrick, 24/09): Turbo com Realism Engine, NSFW V4.3, Breasts&Nipples etc. já
 # embutidos → sem SNOFS/NSFW Helper por cima. Só a v4 nvfp4 fica no ar (a bf16 não carrega).
 KREA2_FINEPORN = "urn:air:krea2:checkpoint:civitai:2762538@3215452"
+# FinePorn v5 INT8 (saiu 25/09): o autor pede Euler Simple, 12 passos, CFG 1. GUARDADA pra A/B —
+# a oficial continua a v4 até o Patrick aprovar a comparação (rosto, cor, sliders, LoRAs).
+KREA2_FINEPORN_V5 = "urn:air:krea2:checkpoint:civitai:2762538@3356355"
 # LoRAs de ocasião (Patrick, 24/09) — entram só quando a cena pede (CONDITIONAL abaixo).
 KREA2_SQUEEZE = "urn:air:krea2:lora:civitai:2761661@3161094"   # Breast squeezing V1 (gatilho "squeezing breasts")
 KREA2_WETNESS = "urn:air:krea2:lora:civitai:2738333@3079282"   # Wetness Slider (−1..1; o FinePorn embute negativo)
@@ -134,8 +137,12 @@ KREA2_STACKS = {
     # Marquinha de biquíni realista (tirinhas, borda suave) só na foto adulta, em 0.6 (Patrick, 24/09).
     "e": {"model": KREA2_FINEPORN, "steps": 10, "scheduler": "beta",
           "loras": {KREA2_PHONE: PHONE_SELFIE_WEIGHT, KREA2_TANLINES: 0.6}},
+    # Candidatas com a v5 (A/B): mesmos LoRAs da n3/e, receita do autor.
+    "n3v5": {"model": KREA2_FINEPORN_V5, "steps": 12, "scheduler": "simple", "loras": {KREA2_PHONE: PHONE_SELFIE_WEIGHT}},
+    "ev5": {"model": KREA2_FINEPORN_V5, "steps": 12, "scheduler": "simple",
+            "loras": {KREA2_PHONE: PHONE_SELFIE_WEIGHT, KREA2_TANLINES: 0.6}},
 }
-SFW_STACKS, NSFW_STACKS = ("n1", "n2", "n3"), ("a", "b", "c", "d", "e")
+SFW_STACKS, NSFW_STACKS = ("n1", "n2", "n3", "n3v5"), ("a", "b", "c", "d", "e", "ev5")
 
 
 def krea2_stack_name(*, is_nsfw: bool, stack: Optional[str] = None) -> str:

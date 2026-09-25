@@ -62,6 +62,9 @@ BOND_KEYS = ("affection", "romantic_intensity", "security", "hurt")
 BOND_BASELINES = {"affection": 0.85, "romantic_intensity": 0.80, "security": 0.80, "hurt": 0.0}
 BOND_HALF_LIFE_HOURS = {"affection": 72.0, "romantic_intensity": 48.0, "security": 96.0, "hurt": 36.0}
 PLANNER_BOND_SCALE = 0.4    # o planner empurra o vínculo devagar (antes: teto em 1 dia)
+MERGE_WINDOW = timedelta(hours=3)   # mesmo sentimento pela mesma pessoa: reforça em vez de repetir
+LIBIDO_FROM_EPISODES_MAX = 0.08     # carinho/diversão com ele somam no máximo isso na vontade
+RELEASE_RECOVERY_H = (3, 8)         # depois de gozar: travada até 3 h, volta aos poucos até 8 h
 
 _guard = threading.local()
 
@@ -260,6 +263,24 @@ class EmotionEngine:
             raise ValueError(f"família emocional desconhecida: {family}")
         now = now or datetime.now()
         with self.db.get_connection() as conn:
+            if source_key and conn.execute("SELECT 1 FROM emotion_episodes WHERE source_key=?",
+                                           (source_key,)).fetchone():
+                return False
+            # 25/09 (/emocao): o planner sentia "carinho" de novo a cada mensagem — 23 episódios iguais
+            # numa noite, que ainda somavam tesão. O mesmo sentimento pela mesma pessoa em 3 h reforça o
+            # episódio que já existe (a causa vira a mais recente).
+            if not sticky:
+                row = conn.execute(
+                    """SELECT id, intensity FROM emotion_episodes WHERE family=? AND kind=? AND
+                       COALESCE(target,'')=COALESCE(?,'') AND sticky=0 AND resolved_at IS NULL AND started_at>=?
+                       ORDER BY started_at DESC LIMIT 1""",
+                    (family, kind, target, (now - MERGE_WINDOW).isoformat())).fetchone()
+                if row:
+                    merged = _clamp(max(float(row["intensity"]), intensity) + 0.1 * intensity)
+                    conn.execute("UPDATE emotion_episodes SET intensity=?, cause=?, started_at=? WHERE id=?",
+                                 (round(merged, 3), cause, now.isoformat(), row["id"]))
+                    conn.commit()
+                    return True
             cur = conn.execute(
                 """INSERT OR IGNORE INTO emotion_episodes
                    (family, kind, intensity, cause, target, source_key, started_at, half_life_min, sticky, created_at)
@@ -474,7 +495,8 @@ class EmotionEngine:
         v += min(0.35, 0.012 * (since if since is not None else 12.0))   # sem registro: meio dia
         v += 0.25 * (bond["romantic_intensity"] - 0.8) + 0.15 * (valence - 0.6) + 0.1 * (energy - 0.55)
         v += 0.08 * missing - 0.4 * discomfort - 0.6 * bond["hurt"]
-        v += sum(0.1 * e.intensity for e in eps if e.target == PATRICK_TARGET and e.kind in ("diversao", "carinho"))
+        v += min(LIBIDO_FROM_EPISODES_MAX,
+                 sum(0.1 * e.intensity for e in eps if e.target == PATRICK_TARGET and e.kind in ("diversao", "carinho")))
         excitation = 0.0
         try:
             from intimacy import IntimacyEngine
@@ -482,8 +504,12 @@ class EmotionEngine:
         except Exception:
             pass
         v += 0.5 * excitation
-        if since is not None and since < 3:
-            v *= 0.3   # acabou de gozar
+        # 25/09 (Patrick): exausta às 2h, TPM e gozou há 5 h aparecia "esquentando" (0.62). Cansaço pesa
+        # de verdade, e depois do gozo a vontade volta aos poucos, não de uma vez às 3 h.
+        v *= 0.55 + 0.45 * min(1.0, energy / 0.6)
+        lo, hi = RELEASE_RECOVERY_H
+        if since is not None and since < hi:
+            v *= 0.3 if since < lo else 0.3 + 0.7 * (since - lo) / (hi - lo)
         return round(_clamp(v), 3), round(excitation, 3), (round(since, 1) if since is not None else None)
 
     def maybe_release_alone(self, now: Optional[datetime] = None) -> Optional[str]:
@@ -663,10 +689,22 @@ class EmotionEngine:
                 f"Pique social {_bar(f.social_battery)}", "",
                 "💭 SENTINDO AGORA"]
         if f.episodes:
-            for e in f.episodes[:6]:
+            # 25/09: o mesmo sentimento pela mesma pessoa vira uma linha só (antes: 6 × "carinhosa").
+            groups: dict = {}
+            for e in f.episodes:
+                g = groups.setdefault((e.kind, e.target), [])
+                g.append(e)
+            rows = []
+            for eps_ in groups.values():
+                # o mais forte + um pouco por repetição (somar 19 carinhos pequenos enchia a barra)
+                strongest = max(e.intensity for e in eps_)
+                last = max(eps_, key=lambda e: e.started_at)
+                rows.append((min(1.0, strongest + 0.02 * (len(eps_) - 1)), last, len(eps_)))
+            for value, e, n in sorted(rows, key=lambda r: r[0], reverse=True)[:5]:
                 who = f" com {e.target}" if e.target else ""
                 tail = " (até resolver)" if e.sticky and e.intensity >= e.peak * 0.99 else ""
-                out.append(f"• {e.word}{who} {_bar(e.intensity, 5)} — {_short(e.cause, 70)}{tail}")
+                many = f" · {n} momentos" if n > 1 else ""
+                out.append(f"• {e.word}{who} {_bar(value, 5)} — {_short(e.cause, 70)}{tail}{many}")
         else:
             out.append("Nada marcante agora")
         out += ["", "💞 COM O PATRICK",
