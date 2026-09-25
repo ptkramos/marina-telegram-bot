@@ -60,7 +60,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | 8 | D6: o resto das fatias da noite (skincare, rolar o celular, ligação com a família, arrumar o quarto) | Fase D |
 | 9 | Slider de peso ligado ao D1: aprovado, **acompanhar** se o corpo muda direito quando o peso dela mexer | Fotos |
 | 10 | C.2 assistir junto; C2/C3 da consolidação | Fases |
-| 11 | Bolha que chega depois que ela começou a gerar vira o turno seguinte | Naturalidade |
+| 11 | ✅ **25/09:** bolha que chega enquanto ela gera, antes do 1º balão sair, faz ela desistir da resposta e responder o lote junto (`MessageDebouncer.should_yield`, até 2 vezes seguidas). Se o 1º balão já saiu, a bolha nova continua sendo o turno seguinte, como numa conversa de verdade | Naturalidade |
 | 12 | Perda de coerência entre turnos e qualidade das mensagens espontâneas: observar depois do restart (usar `/bom` e `/ruim`) | Auditorias #3 e #6 |
 | 13 | Técnicas antigas: `KnowledgeDialogue` com frase pronta, câmera/fator proativo com regra própria de 60 min, código morto da proatividade antiga, `build_safe_core_prompt`, blocos de finalização duplicados, erros de concordância | Auditorias #2–#6 |
 
