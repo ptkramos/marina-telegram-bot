@@ -2,6 +2,7 @@
 import random
 import tempfile
 import unittest
+import unittest.mock
 from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
@@ -73,7 +74,7 @@ class DirectorTest(unittest.TestCase):
             self.assertEqual(lick.beat, "lick")
             come = self.shot("goza pra mim", turn=hot, now=NOW + timedelta(minutes=7))
             self.assertEqual(come.beat, "climax")
-            self.assertIn("right after she came", come.prompt)
+            self.assertIn("squirting hands-free" if come.special else "right after she came", come.prompt)
 
     def test_asking_to_turn_around_changes_the_pose(self):
         hot = IntimacyTurn(state="active", arousal=0.9)
@@ -223,6 +224,54 @@ class DirectorTest(unittest.TestCase):
         self.assertEqual((s.pose_id, s.beat), ("cavalgando_reclinada", "dildo"))
         self.assertIn("clear transparent", s.prompt)
         self.assertNotIn("light blue", s.prompt, "só dois dildos: rosa e transparente")
+
+    def test_special_climax_squirts_without_creamy(self):
+        """25/09 (teste MM): às vezes o gozo se dedilhando é o especial, com esguicho e sem Creamy."""
+        import civitai_images as ci
+        hot = IntimacyTurn(state="active", arousal=0.9)
+        self.shot("se dedilha pra mim, abre as pernas", turn=hot)
+        with unittest.mock.patch.object(pd, "SPECIAL_CLIMAX_CHANCE", 1.0):
+            come = self.shot("goza pra mim", turn=IntimacyTurn(state="climax", arousal=0.95),
+                             now=NOW + timedelta(minutes=3))
+        self.assertTrue(come.special)
+        self.assertIn("squirting hands-free", come.prompt)
+        self.assertIn("both hands squeezing her breasts", come.prompt)
+        self.assertTrue(any(e.split(":")[0].split(",")[0] in come.prompt for e in pd.SPECIAL_EXPRESSIONS))
+        body = ci.build_workflow_krea2(come.prompt, is_nsfw=True, seed=1, lora_weights=come.lora_weights)
+        loras = body["steps"][0]["input"]["loras"]
+        self.assertEqual(loras.get(ci.KREA2_SQUIRT), 1.5)
+        self.assertNotIn(ci.KREA2_FINGERING, loras)
+        self.assertEqual(loras.get(ci.KREA2_SQUEEZE), 0.6, "as duas mãos nos seios")
+        self.assertNotIn(ci.KREA2_CREAMY, loras, "o Creamy embranquece o jato")
+        self.assertNotIn("creamythings", body["steps"][0]["input"]["prompt"])
+        after = self.shot("", turn=IntimacyTurn(state="afterglow", arousal=0.35), force_pose="pos_gozo",
+                          expression_override=pd.AFTER_SPECIAL_EXPRESSION, now=NOW + timedelta(minutes=4))
+        self.assertEqual(after.pose_id, "pos_gozo")
+        self.assertIn("half-closed sleepy eyes", after.prompt)
+
+    def test_sucking_the_dildo_uses_suck_not_grippy(self):
+        import civitai_images as ci
+        s = self.shot("faz um boquete no teu dildo pra mim", turn=IntimacyTurn(state="active", arousal=0.8))
+        self.assertEqual(s.pose_id, "boquete_dildo")
+        loras, triggers = ci.conditional_loras(s.prompt, is_nsfw=True)
+        self.assertEqual(loras.get(ci.KREA2_SUCK), 0.5)
+        self.assertEqual(loras.get(ci.KREA2_POVBJ), 0.8, "canon do Patrick: POV 0.8 + Suck 0.5 (ZB/ZE)")
+        self.assertNotIn(ci.KREA2_GRIPPY, loras)
+        self.assertFalse(any("GrippyPussy" in t for t in triggers))
+        side = self.shot("chupa de lado o dildo preso na cama", turn=IntimacyTurn(state="active", arousal=0.8),
+                         now=NOW + timedelta(minutes=2))
+        self.assertEqual(side.pose_id, "boquete_de_lado")
+        loras, _ = ci.conditional_loras(side.prompt, is_nsfw=True)
+        self.assertEqual((loras.get(ci.KREA2_POVBJ), loras.get(ci.KREA2_SUCK)), (0.8, 0.5))
+
+    def test_pov_watermark_strip_is_cropped(self):
+        import io
+        import civitai_images as ci
+        from PIL import Image
+        buf = io.BytesIO()
+        Image.new("RGB", (100, 200), "white").save(buf, format="JPEG")
+        out = Image.open(io.BytesIO(ci._crop_bottom(buf.getvalue(), ci.WATERMARK_CROP)))
+        self.assertEqual(out.size, (100, 188))
 
     def test_asking_for_the_dildo(self):
         hot = IntimacyTurn(state="active", arousal=0.9)

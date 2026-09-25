@@ -71,6 +71,17 @@ KREA2_GRIPPY = "urn:air:krea2:lora:civitai:2796863@3152534"     # Grippy Pussy v
 # "garrafa"), FINGERING-KREA2 (indisponível nos servidores) e Juicy Pussy 0.8 (mudou a Marina e
 # o escorrido saía branco). Molhada antes do gozo = só texto; no gozo, o Creamy 0.5.
 KREA2_JUICY = "urn:air:krea2:lora:civitai:2915944@3298822"      # REPROVADO (24/09)
+# 25/09 (Patrick): gozo especial = Krea2 Squirt 1.5 sem Creamy e sem Fingering (teste WW);
+# boquete no dildo = Suck Something 0.5 (0.8 igual, 0.5 mexe menos). Reprovados: GoddesSquirt
+# (jato branco/grosso), Filter Bypass (o FinePorn não tem censura pra destravar), Pussy Helper.
+KREA2_SQUIRT = "urn:air:krea2:lora:civitai:2817445@3177828"     # Krea2 Squirt (gatilho "squirt, female ejaculation")
+KREA2_SUCK = "urn:air:krea2:lora:civitai:2805527@3163300"       # Suck Something (gatilho "sucking")
+KREA2_AHEGAO = "urn:air:krea2:lora:civitai:2743970@3086237"     # Ahegao Face (0.5, só no gozo especial)
+# Boquete no dildo (Patrick, 25/09, testes ZB/ZE): POV Blowjob 0.8 + Suck 0.5. O POV carimba uma marca
+# d'água ("MARINAAX", o gatilho deformado) no canto de baixo à direita → a foto com ele sai sem os
+# 6% de baixo (só lençol ali). Deepthroat (143472) reprovado: desenhava um homem na cena.
+KREA2_POVBJ = "urn:air:krea2:lora:civitai:380283@3296875"      # (Mainly) POV Blowjob v2 K2
+WATERMARK_CROP = 0.06
 KREA2_BETTER = "urn:air:krea2:lora:civitai:2729157@3288922"    # Better Pussy v4.2.1 — testado e REPROVADO (24/09)
 KREA2_OILED = "urn:air:krea2:lora:civitai:87685@3096878"      # Oiled Skin — REPROVADO (24/09): o FinePorn vira "esperma"
 KREA2_WEIGHT_OLD = "urn:air:krea2:lora:civitai:2858768@3229815"  # Body Weight v2 — mexia na cabeça (reprovado)
@@ -89,7 +100,7 @@ KREA2_TANLINES = "urn:air:krea2:lora:civitai:2840638@3206585"  # Bikini Tan Line
 KREA2_PHONE = "urn:air:krea2:lora:civitai:2796343@3151907"     # Elusarca Smartphone Photography Slider (1–2)
 # {perdedor: vencedor} quando dois LoRAs de ocasião brigam: óleo no pós-banho já brilha — a
 # molhada por cima dobrava o brilho.
-EXCLUSIVE: dict = {}
+EXCLUSIVE: dict = {}   # preenchido depois do CONDITIONAL
 PHONE_SELFIE_WEIGHT = 0.8   # 1.5 enchia de purpurina; 0.8 = "realismo perfeito" (Patrick, 24/09) — em TODA foto
 PHONE_DESATURATE = 0.83   # o autor corrige −15 a −20 de saturação depois de gerar; fazemos no download
 KREA2_NICEGIRLS = "urn:air:krea2:lora:civitai:1862761@3075498"         # NiceGirls UltraReal (0.6-0.8)
@@ -155,12 +166,16 @@ CONDITIONAL = (
                             "finger_fucking", "dedos dentro", "dedo dentro"),
      True, "She slides two fingers into her vagina and moves them in and out, finger_fucking"),
     (KREA2_GRIPPY, 1.0, ("dildo", "consolo"), True, "GrippyPussy's vulva tightly gripping the dildo shaft"),
+    (KREA2_SUCK, 0.5, ("sucking it", "lips tightly wrapped", "boquete", "chupando o dildo"), True, "sucking"),
+    (KREA2_POVBJ, 0.8, ("sucking it", "lips tightly wrapped", "boquete", "chupando o dildo"), True, ""),
     # Molhada só de ÁGUA (banho, chuva, piscina, mar). Molhada de excitação ficou melhor SEM o slider
     # (teste do Patrick, 24/09) — aí quem descreve é o texto do prompt.
     (KREA2_WETNESS, 1.2, ("shower", "bath", "bathtub", "rain", "pool", "swimming", "in the sea", "ocean", "beach water",
                           "soaked", "wet hair", "banho", "chuva", "piscina", "no mar", "de biquíni molhado"),
      False, ""),
 )
+# Chupando o dildo não é o dildo entrando: o Grippy (e o gatilho dele) sai.
+EXCLUSIVE[KREA2_GRIPPY] = KREA2_SUCK
 # De longe o rosto aparece pequeno: o LoRA dela um pouco mais fraco deixa a pose livre
 # (o Patrick viu isso na época 6 do treino).
 MARINA_WEIGHT_DISTANT = 0.9   # 0.8 soltou a pose; 0.9 = escolha do Patrick pra segurar mais o rosto
@@ -208,7 +223,7 @@ def weight_slider(kg: Optional[float] = None) -> float:
     return round(max(-4.0, min(4.0, value)), 2)
 
 
-def conditional_loras(prompt: str, *, is_nsfw: bool) -> tuple[dict, list[str]]:
+def conditional_loras(prompt: str, *, is_nsfw: bool, exclude=()) -> tuple[dict, list[str]]:
     """LoRAs de ocasião que a cena liga, e as frases-gatilho que faltam no prompt."""
     low = (prompt or "").lower()
     try:   # o cenário fixo do apê ("glass shower enclosure", "rooftop pool") não é ação da cena
@@ -219,7 +234,7 @@ def conditional_loras(prompt: str, *, is_nsfw: bool) -> tuple[dict, list[str]]:
         pass
     loras, triggers = {}, []
     for air, weight, words, adult_only, trigger in CONDITIONAL:
-        if adult_only and not is_nsfw:
+        if (adult_only and not is_nsfw) or air in exclude:
             continue
         if any(w in low for w in words):
             loras[air] = weight
@@ -236,7 +251,8 @@ def build_workflow_krea2(prompt: str, *, is_nsfw: bool, width: int = 1024, heigh
                          breast_slider: Optional[float] = None, lora_weights: Optional[dict] = None) -> dict:
     name = krea2_stack_name(is_nsfw=is_nsfw, stack=stack)
     spec = KREA2_STACKS[name]
-    extra, triggers = conditional_loras(prompt, is_nsfw=is_nsfw)
+    off = {k for k, v in (lora_weights or {}).items() if not v}   # peso 0 do diretor = desligado
+    extra, triggers = conditional_loras(prompt, is_nsfw=is_nsfw, exclude=off)
     if triggers:
         joined = ", ".join(triggers)
         prompt = f"{prompt} {joined[:1].upper()}{joined[1:]}."   # sem .capitalize(): "OiledSkin" tem caixa
@@ -247,7 +263,7 @@ def build_workflow_krea2(prompt: str, *, is_nsfw: bool, width: int = 1024, heigh
             "quantity": 1, "loras": select_loras_krea2(is_nsfw=is_nsfw, stack=name, breast_slider=breast_slider,
                                                        selfie=NOT_SELFIE_MARK not in prompt)}
     step["loras"].update(extra)
-    step["loras"].update(lora_weights or {})   # peso decidido pelo diretor (ex.: Creamy pela excitação)
+    step["loras"].update({k: v for k, v in (lora_weights or {}).items() if v})   # peso decidido pelo diretor
     if spec["model"]:
         step["diffusionModel"] = spec["model"]
     body = {"steps": [{"$type": "imageGen", "input": step}], "allowMatureContent": bool(is_nsfw)}
@@ -337,6 +353,8 @@ async def generate(prompt: str, *, is_nsfw: bool, focus_angle: str = "frontal",
             data = await _download(session, headers, image)
             if data and KREA2_PHONE in (body["steps"][0]["input"].get("loras") or {}):
                 data = _desaturate(data, PHONE_DESATURATE)
+            if data and KREA2_POVBJ in (body["steps"][0]["input"].get("loras") or {}):
+                data = _crop_bottom(data, WATERMARK_CROP)
             if data:
                 logger.info("civitai.image_ok id=%s bytes=%d", wf_id, len(data))
                 return io.BytesIO(data)
@@ -348,6 +366,19 @@ async def generate(prompt: str, *, is_nsfw: bool, focus_angle: str = "frontal",
     finally:
         if own:
             await session.close()
+
+
+def _crop_bottom(data: bytes, frac: float) -> bytes:
+    """Tira a faixa de baixo (a marca d'água que o POV Blowjob desenha no canto)."""
+    try:
+        from PIL import Image
+        img = Image.open(io.BytesIO(data)).convert("RGB")
+        w, h = img.size
+        out = io.BytesIO()
+        img.crop((0, 0, w, int(h * (1 - frac)))).save(out, format="JPEG", quality=93)
+        return out.getvalue()
+    except Exception:
+        return data
 
 
 def _desaturate(data: bytes, factor: float) -> bytes:

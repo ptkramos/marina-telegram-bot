@@ -136,6 +136,17 @@ POSES: tuple[Pose, ...] = (
          beats=(("dildo", f"riding {DILDO_CLEAR_TEXT} standing upright on its round suction-cup base on the white "
                           "sheets, the dildo pushed deep inside her pussy"),
                 ("climax", f"right after she came, still riding {DILDO_CLEAR_TEXT}, her thighs trembling"))),
+    # Patrick, 25/09 (teste BB 0.5): provocando, chupando o dildo rosa olhando pra câmera.
+    Pose("boquete_dildo", "deitada de lado, chupando o dildo rosa olhando pra câmera (selfie)", ("quarto",), (3, 4),
+         "close", "selfie", "lying on her side on the bed, her right arm stretched toward the camera taking the "
+         f"selfie, her left hand holding {DILDO_TEXT} to her mouth, her lips tightly wrapped around its tip, sucking "
+         "it slowly while looking straight at the camera with teasing eyes"),
+    # Patrick, 25/09 (teste ZE): de bruços meio de lado, chupando o dildo rosa em pé na ventosa (timer).
+    Pose("boquete_de_lado", "de bruços na cama, chupando o dildo rosa em pé na ventosa (timer)", ("quarto",), (3, 4),
+         "three_quarter", "timer", "side view photo, lying on her side on the bed with her head lowered toward "
+         f"the sheets, sucking deep on {DILDO_TEXT} that stands upright on its round suction-cup base on the white "
+         "sheets, her lips tightly wrapped around it far down the shaft, her eyes watering, her hands resting on "
+         "the sheets", angle="side"),
     # Aprovada no teste do Creamy (Patrick, 24/09, "R_costas"): se dedilhando por trás, ajoelhada.
     Pose("cama_costas_dedando", "ajoelhada de costas, peito baixo, se dedilhando por trás (timer)", ("quarto",),
          (4, 4), "three_quarter", "timer", "kneeling on the bed seen from behind, her chest low and her ass up "
@@ -219,6 +230,8 @@ BY_ID = {p.id: p for p in POSES}
 POSE_WORDS = (
     (r"de quatro|empinad", ("cama_de_quatro", "cama_costas_dedando")),
     (r"de costas|por tr[aá]s", ("cama_costas_dedando", "cama_de_quatro")),
+    (r"(boquete|chupa\w*) de lado|dildo (preso|em p[eé]) na cama", ("boquete_de_lado",)),
+    (r"boquete|mamada|chupa(ndo)? (o|esse|teu|seu) (dildo|consolo|brinquedo)", ("boquete_dildo", "boquete_de_lado")),
     (r"cavalga|quica|rebola|deitada pra tr[aá]s", ("cavalgando_reclinada", "sentando_dildo")),
     (r"senta|sentando", ("sentando_dildo", "cavalgando_reclinada")),
     (r"pernas abertas|abr\w* as pernas|arreganhad|deitada de costas", ("cama_tripe_duas_maos", "cama_pernas_abertas")),
@@ -317,6 +330,7 @@ class DirectedShot:
     declined: str = ""            # "fora de casa": pediu mais do que dá pra mandar da rua
     session: dict = field(default_factory=dict)
     lora_weights: dict = field(default_factory=dict)   # pesos decididos aqui (Creamy pela excitação)
+    special: bool = False                              # gozo especial (esguicho) → depois vai a selfie molinha
 
 
 def asked_level(text: str) -> Optional[int]:
@@ -460,7 +474,8 @@ def _pick_beat(pose: Pose, request: str, turn, session: Optional[dict]) -> Optio
 
 def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_ctx=None, turn=None,
            feeling=None, her_initiative: bool = False, chooser: Optional[Callable] = None,
-           rng: Optional[random.Random] = None) -> DirectedShot:
+           rng: Optional[random.Random] = None, fertile: bool = False, force_pose: Optional[str] = None,
+           expression_override: str = "") -> DirectedShot:
     """Decide a foto inteira e devolve o prompt pronto pro Krea 2."""
     from visual_profile import krea2_zoom_prompt
     rng = rng or random.Random()
@@ -485,6 +500,8 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         current = BY_ID.get((session or {}).get("pose", ""))
         if not (current and current.beats):          # sem cena com "momentos" rolando: foto do depois
             worded = BY_ID["pos_gozo"]
+    if force_pose in BY_ID:
+        worded = BY_ID[force_pose]
     change = bool(_POSE_CHANGE.search((request or "").lower())) or bool(
         worded and session and worded.id != session.get("pose"))
     room_asked = apartamento.room_for(request) if at_home else None
@@ -555,7 +572,20 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     nude = level >= 3 and outfit is None
     prompt = krea2_zoom_prompt(action, zoom=pose.zoom, setting=setting, backdrop=backdrop,
                                is_nsfw=nude, focus_angle=pose.angle, framing=pose.framing,
-                               outfit=outfit, expression=expression(feeling, turn))
+                               outfit=outfit, expression=expression_override or expression(feeling, turn))
+    # Gozo especial: se dedilhando (pose com o momento "fingers"), às vezes — o dobro no período fértil.
+    special = (beat == "climax" and "fingers" in dict(pose.beats) and room in apartamento.ROOMS
+               and rng.random() < SPECIAL_CLIMAX_CHANCE * (2 if fertile else 1))
+    if special:
+        import civitai_images
+        sp = BY_ID[SPECIAL_POSE]
+        prompt = krea2_zoom_prompt(f"{sp.action}, {SPECIAL_ACTION}", zoom=sp.zoom, setting=setting,
+                                   backdrop=backdrop, is_nsfw=True, focus_angle=sp.angle, framing=sp.framing,
+                                   expression=(face := rng.choice(SPECIAL_EXPRESSIONS)))
+        lora_weights = {civitai_images.KREA2_SQUIRT: 1.5, civitai_images.KREA2_CREAMY: 0.0,
+                        civitai_images.KREA2_FINGERING: 0.0}
+        if face == AHEGAO_TRIGGER:
+            lora_weights[civitai_images.KREA2_AHEGAO] = AHEGAO_WEIGHT
     where = apartamento.ROOMS[room]["pt"] if room in apartamento.ROOMS else "na rua"
     facts = f"lugar: {where}; pose: {pose.pt}; roupa: {outfit or 'pelada'}"
     if beat:
@@ -568,7 +598,8 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     adult = level >= 2 or bool(outfit and re.search(r"panties|thong|towel", outfit))
     return DirectedShot(prompt=prompt, is_nsfw=adult, focus_angle=pose.angle, place_key=place or "",
                         room=room, pose_id=pose.id, level=level, beat=beat, outfit=outfit, seed=seed,
-                        facts=facts, declined=declined, session=new_session, lora_weights=lora_weights)
+                        facts=facts + ("; gozo especial: esguichou forte" if special else ""), declined=declined,
+                        session=new_session, lora_weights=lora_weights, special=special)
 
 
 # Creamy pela excitação (Patrick, 24/09): sem Creamy no começo; se dedilhando, do degrau
@@ -585,6 +616,28 @@ def creamy_weight(beat: Optional[str], arousal: float) -> float:
         return 0.0
     frac = min(1.0, (arousal - HOT_AT) / (1.0 - HOT_AT))
     return round(CREAMY_MIN + frac * (CREAMY_MAX - CREAMY_MIN), 2)
+
+
+# Gozo especial (Patrick, 25/09, teste "WW"): a cena do tripé, as duas mãos apertando os seios e o
+# esguicho saindo sozinho; Krea2 Squirt 1.5, SEM Fingering e SEM Creamy (o Creamy embranquece o jato).
+# O prompt personalizado de squirt (teste MM) quebrava junto com o Fingering: ficou a cena padrão.
+# Expressão varia a cada gozo extremo, "nessa linha" (Patrick). Depois ela manda a selfie molinha.
+# PROVISÓRIO até o Patrick definir os fatores: 25% dos gozos se dedilhando, o dobro no período fértil.
+SPECIAL_CLIMAX_CHANCE = 0.25
+SPECIAL_POSE = "cama_tripe_duas_maos"
+SPECIAL_ACTION = ("both hands squeezing her breasts while she comes, her legs spread wide on the white sheets, her "
+                  "thighs trembling, squirting hands-free, a clear jet of liquid spraying from her pussy onto the "
+                  "white sheets, squirt, female ejaculation")
+# Ahegao (Patrick, 25/09, teste YY): LoRA Ahegao Face em 0.5 — 0.8 revirava demais e mexia no corpo.
+AHEGAO_TRIGGER = "She is making the ahegao face - eyes rolled back and tongue hanging out, her cheeks flushed"
+AHEGAO_WEIGHT = 0.5
+SPECIAL_EXPRESSIONS = (
+    "heavy-lidded eyes still looking straight at the camera, her lips parted in a trembling moan, her cheeks flushed",
+    "biting her lower lip hard, heavy-lidded eyes on the camera, her cheeks flushed",
+    "her mouth open in a silent moan, her brows raised, her eyes half closed but still on the camera, cheeks flushed",
+    AHEGAO_TRIGGER,
+)
+AFTER_SPECIAL_EXPRESSION = "half-closed sleepy eyes, all limp and relaxed on the bed, a faint dazed smile"
 
 
 def confirm_sent(db, shot: DirectedShot) -> None:

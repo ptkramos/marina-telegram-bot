@@ -2467,6 +2467,41 @@ async def restart_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await asyncio.sleep(2.5)
     sys.exit(0)
 
+def _fase_fertil() -> bool:
+    try:
+        info = memory_manager.cycle_mgr.get_cycle_info() if getattr(memory_manager, "cycle_mgr", None) else {}
+        return "ovula" in str(info.get("phase_key", "")).lower()
+    except Exception:
+        return False
+
+
+async def _selfie_depois_do_gozo(context, chat_id: int, camera_ctx, feeling, fala: str) -> None:
+    """A segunda foto do gozo especial: selfie de olhos meio fechados, toda mole na cama."""
+    import photo_director
+    try:
+        await asyncio.sleep(random.uniform(20, 45))   # recupera o fôlego antes de pegar o celular
+        now = datetime.now()
+        shot = photo_director.direct(memory_manager.db, now, camera_ctx=camera_ctx, feeling=feeling,
+                                     turn=IntimacyTurn("afterglow", 0.35), her_initiative=True,
+                                     force_pose="pos_gozo",
+                                     expression_override=photo_director.AFTER_SPECIAL_EXPRESSION)
+        gen = await sd_client.generate_directed(shot, world_snapshot_id=camera_ctx.snapshot_id)
+        if not gen.image:
+            return
+        legenda = generate_dynamic_speech(
+            "Você acabou de gozar muito forte, esguichou, e agora mandou pro Patrick uma selfie jogada na cama, "
+            f"toda mole, de olhos meio fechados. Você tinha dito: '{fala[:160]}'. Escreva UMA legenda curtinha, "
+            "mole e manhosa, sem repetir o que já disse. Sem introdução, sem Ps: nem parênteses.",
+            max_tokens=50, temperature=0.75, model=intimate_model() or settings.LLM_MODEL)
+        if not legenda or _is_policy_refusal(legenda):
+            legenda = "não consigo nem levantar 🫠"
+        sent = await context.bot.send_photo(chat_id=chat_id, photo=gen.image, caption=legenda)
+        if getattr(sent, "message_id", None):
+            photo_director.confirm_sent(memory_manager.db, shot)
+    except Exception:
+        logger.exception("foto.pos_gozo_especial.error")
+
+
 async def pix_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/pix <valor> [recado] — o Patrick manda dinheiro pra ela (feedback de 24/09)."""
     if not is_authorized(update):
@@ -3894,7 +3929,7 @@ async def process_incoming_batch(
                 memory_manager.db, now_foto, request=texto_usuario, her_line=fala_limpa,
                 camera_ctx=camera_ctx, feeling=feeling, her_initiative=foto_dela,
                 turn=IntimacyTurn("climax", 0.95) if gozou_agora else intimacy_turn,
-                chooser=_escolhe_pose)
+                chooser=_escolhe_pose, fertile=_fase_fertil())
             logger.info("📸 diretor: pose=%s nível=%s momento=%s cômodo=%s dela=%s", shot.pose_id, shot.level,
                         shot.beat, shot.room, foto_dela)
             gen = await sd_client.generate_directed(shot, world_snapshot_id=camera_ctx.snapshot_id)
@@ -3944,6 +3979,9 @@ async def process_incoming_batch(
                         place_key=shot.place_key,
                         world_snapshot_id=camera_ctx.snapshot_id,
                     )
+                    if shot.special:
+                        # Patrick, 25/09: depois do gozo especial, a selfie dela toda molinha na cama.
+                        await _selfie_depois_do_gozo(context, chat_id, camera_ctx, feeling, fala_limpa)
             else:
                 aviso_foto = "Amor, tentei te mandar a fotinho agora mas a câmera do apê travou 🥺 Me pede de novo daqui a pouco que eu tiro outra pra você!"
                 await send_human_messages(chat_id, context.bot, aviso_foto, reply_to_message_id=reply_to_id)
