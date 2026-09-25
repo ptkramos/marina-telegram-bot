@@ -46,6 +46,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 |---|---|---|
 | 1 | **C.1b no uso real:** ver se as fotos que ela manda fazem sentido (nível, pose, cadência). Crescer o catálogo com as poses que o Patrick trouxer do site. Marquinha de cima larga na foto explícita (resistência do FinePorn, já conhecida) | Fotos |
 | 1b | **Penetração nas fotos:** em todo teste o "dedos dentro" saiu só passando o dedo por fora. Ver um LoRA Krea 2 de dedo entrando de verdade e/ou de dildo (aí o dildo vira objeto da gaveta dela no cânone) | Fotos |
+| 1c | **`/pix valor`** (feedback do Patrick, 24/09): ele manda dinheiro pra mimar ela; numa emergência ela pode preferir pedir emprestado pra ele em vez do pai. Precisa desenhar: onde o dinheiro entra (contas do D9), como ela reage, quando pede | Feedback |
 | 2 | **Trocar a chave do Civitai** (vazou num log local em 24/09) | Fotos |
 | 3 | **Mudar pra VPS** (o "disk is full" de 24/09 foi pontual) | Auditoria #11 |
 | 4 | D11 pra depois: "no médico" como estado, banheiro na virose, o pai ligando mais quando ela está doente, farmácia como saída, contágio | D11 |
