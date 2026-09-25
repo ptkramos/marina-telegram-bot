@@ -1,0 +1,87 @@
+"""25/09 15:22–15:34: ela prometeu foto do bolo e as duas opções de look, e nada chegava."""
+import random
+import tempfile
+import unittest
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import photo_director
+import promessa_foto
+from db import DatabaseManager
+
+T = datetime(2026, 9, 25, 15, 34)
+
+
+class PromessaTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = DatabaseManager(Path(self.temp.name) / "p.db")
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_falas_reais(self):
+        self.assertTrue(promessa_foto.is_promise(
+            "Vou te mandar uma foto do bolo quando eu abrir, pra você conferir se eu me comportei"))
+        self.assertTrue(promessa_foto.is_promise("Tô separando as duas opções aqui na cama... jaja te mando pra você dar a nota kkk"))
+        self.assertIsNone(promessa_foto.is_promise("Se eu te mandar duas opções, vc dá o veredito?"), "pergunta")
+        self.assertIsNone(promessa_foto.is_promise("te mando mensagem quando chegar"))
+        self.assertIsNone(promessa_foto.is_promise("Vou te mandar um suquinho pelo app pra vc não precisar levantar"),
+                          "delivery é do pedido_dela")
+        self.assertIsNone(promessa_foto.is_promise("Vou te mandar um beijo bem gostoso"))
+        # falsos positivos achados nas falas reais dela
+        self.assertIsNone(promessa_foto.is_promise("E não consigo te mandar uma foto agora, a função tá em manutenção"))
+        self.assertIsNone(promessa_foto.is_promise(
+            "quem sabe eu não perco a vergonha e te mando pra você babar no meu estado?"))
+
+    def test_roupa_e_comida_pelo_contexto(self):
+        line = "Vou trocar agora, amor! Vou escolher uma bem linda e estilosa e já te mostro pra você aprovar kkk"
+        p = promessa_foto.observe_marina_line(self.db, line, "", T)
+        self.assertEqual(p["kind"], "looks")
+        promessa_foto.close(self.db, "cumprida")
+        seg = promessa_foto.is_promise("Quando chegar eu te mando uma foto antes de atacar kkk")
+        self.assertEqual(promessa_foto.classify(seg, "Teu açaí já chegou?")[0], "comida")
+
+    def test_duas_opcoes_de_look_pelo_contexto(self):
+        ctx = "Se eu te mandar duas opções, vc dá o veredito? Vamos descobrir… quando escolher os dois finalistas"
+        p = promessa_foto.observe_marina_line(
+            self.db, "Fechado então! Tô separando as duas opções aqui na cama... jaja te mando pra você dar a nota kkk",
+            ctx, T)
+        self.assertEqual((p["kind"], p["count"]), ("looks", 2))
+        due = datetime.fromisoformat(p["due_at"])
+        self.assertTrue(T + timedelta(minutes=3) <= due <= T + timedelta(minutes=10), "jaja = logo")
+        self.assertIn("opções de look", promessa_foto.prompt_lines(self.db, T)[0])
+        self.assertIsNone(promessa_foto.due(self.db, T))
+        self.assertIsNotNone(promessa_foto.due(self.db, due))
+        promessa_foto.close(self.db, "cumprida")
+        self.assertEqual(promessa_foto.prompt_lines(self.db, T), [])
+
+    def test_foto_do_bolo_mais_tarde(self):
+        p = promessa_foto.observe_marina_line(
+            self.db, "Vou te mandar uma foto do bolo quando eu abrir, pra você conferir", "", T)
+        self.assertEqual((p["kind"], p["subject"]), ("comida", "bolo"))
+        self.assertGreaterEqual(datetime.fromisoformat(p["due_at"]), T + timedelta(minutes=20), "'quando eu abrir'")
+
+    def test_expira_e_limita_tentativas(self):
+        promessa_foto.observe_marina_line(self.db, "jaja te mando uma foto", "", T)
+        self.assertIsNone(promessa_foto.due(self.db, T + timedelta(hours=4)))
+        self.assertIsNone(promessa_foto.pending(self.db), "expirou")
+        promessa_foto.observe_marina_line(self.db, "jaja te mando uma foto", "", T)
+        for _ in range(promessa_foto.MAX_ATTEMPTS):
+            self.assertTrue(promessa_foto.attempt(self.db))
+        self.assertFalse(promessa_foto.attempt(self.db))
+        self.assertIsNone(promessa_foto.pending(self.db))
+
+    def test_looks_mesma_cena_roupas_diferentes(self):
+        a, b = photo_director.WARDROBE["sair"][:2]
+        shots = [photo_director.direct(self.db, T, request="look de sair", force_pose="espelho_corpo",
+                                       her_initiative=True, outfit_override=o, rng=random.Random(7)) for o in (a, b)]
+        self.assertEqual({s.pose_id for s in shots}, {"espelho_corpo"})
+        self.assertEqual(shots[0].seed, shots[1].seed, "mesma cena")
+        self.assertIn(a, shots[0].prompt)
+        self.assertIn(b, shots[1].prompt)
+        self.assertFalse(any(s.is_nsfw for s in shots))
+
+
+if __name__ == "__main__":
+    unittest.main()

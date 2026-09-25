@@ -254,7 +254,10 @@ FOODS = (
     (r"brigadeiro", "a small plate of brigadeiros"),
     (r"caf[eé]\b|cappuccino", "a cup of coffee"),
     (r"salada", "a bowl of salad"),
+    (r"bolo de pote", "a small clear jar of layered cake with Nutella and powdered milk, a spoon in it"),
     (r"bolo", "a slice of cake"),
+    (r"canja|sopa|caldo", "a bowl of hot chicken soup"),
+    (r"picol[eé]", "a fruit popsicle"),
 )
 
 
@@ -290,6 +293,13 @@ WARDROBE = {
     "provoca": ("only an oversized white t-shirt slipping off one shoulder and white cotton panties",
                 "a tiny white cotton tank top and matching cotton panties",
                 "a light pink satin camisole and tiny matching shorts"),
+    # 25/09: "se eu te mandar duas opções, vc dá o veredito?" — roupa de sair à noite (bar, rolê).
+    "sair": ("a black satin slip midi dress with thin straps",
+             "a white off-shoulder linen top and high-waisted light blue jeans",
+             "a light blue ribbed crop top and a flowy white midi skirt",
+             "a little black cotton dress and white sneakers",
+             "a denim mini skirt and a soft black ribbed tank top",
+             "a floral wrap dress in soft terracotta tones"),
     "lingerie": ("a soft unpadded white lace bralette and matching panties",
                  "a light pink unpadded lace bralette and thong",
                  "a black sheer unpadded lace bralette and matching thong"),
@@ -475,7 +485,7 @@ def _pick_beat(pose: Pose, request: str, turn, session: Optional[dict]) -> Optio
 def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_ctx=None, turn=None,
            feeling=None, her_initiative: bool = False, chooser: Optional[Callable] = None,
            rng: Optional[random.Random] = None, fertile: bool = False, force_pose: Optional[str] = None,
-           expression_override: str = "") -> DirectedShot:
+           expression_override: str = "", outfit_override: Optional[str] = None) -> DirectedShot:
     """Decide a foto inteira e devolve o prompt pronto pro Krea 2."""
     from visual_profile import krea2_zoom_prompt
     rng = rng or random.Random()
@@ -548,6 +558,8 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         seed = rng.randint(1, 2**31 - 1)
         outfit = _outfit(pose, level, now, at_home, rng)
 
+    if outfit_override and level <= 1:
+        outfit = outfit_override           # 25/09: as duas opções de look que ela prometeu mandar
     beat = _pick_beat(pose, request, turn, session if keep else None) if level >= 4 else None
     action = dict(pose.beats)[beat] if beat else pose.action
     if beat:

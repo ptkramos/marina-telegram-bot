@@ -3921,6 +3921,15 @@ async def process_incoming_batch(
         except Exception:
             logger.exception("pedido_dela.observe.error")
         try:
+            # 25/09: "jaja te mando as duas opções" / "vou te mandar uma foto do bolo" viram foto de verdade.
+            import promessa_foto
+            dela = [m.get("content", "") for m in memory_manager.get_historico_recente(limit=8)
+                    if m.get("role") == "assistant"][-3:]
+            promessa_foto.observe_marina_line(memory_manager.db, fala_limpa,
+                                              " ".join([texto_usuario, *dela]), datetime.now())
+        except Exception:
+            logger.exception("promessa_foto.observe.error")
+        try:
             # "Te aviso quando chegar" vira lembrete dela, amarrado ao trajeto real.
             import arrival_promise
             if arrival_promise.observe(memory_manager.db, fala_limpa, texto_usuario):
@@ -4044,6 +4053,8 @@ async def process_incoming_batch(
                 # Sessão e continuidade só depois do send_photo confirmado (message_id).
                 if getattr(sent_photo, 'message_id', None):
                     photo_director.confirm_sent(memory_manager.db, shot)
+                    import promessa_foto
+                    promessa_foto.close(memory_manager.db, "cumprida")   # a foto de agora vale a promessa
                     if foto_dela:
                         photo_director.mark_self_initiated(memory_manager.db, now_foto)
                     from visual_profile import visual_profile
@@ -4795,6 +4806,80 @@ async def _pedido_dela_tick(application: Application, now: datetime) -> None:
         await _attach_tracking_link(application.bot, sent.message_id)
 
 
+async def _promessa_foto_tick(application: Application, now: datetime) -> None:
+    """Ela prometeu foto ("jaja te mando as duas opções"): na hora, manda de verdade."""
+    import promessa_foto
+    import photo_director
+    db = memory_manager.db
+    p = promessa_foto.due(db, now)
+    if not p or getattr(settings, 'PHOTO_PROVIDER_MAINTENANCE', False):
+        return
+    from sleep_plan import SleepPlan
+    if SleepPlan(db).is_asleep(now):
+        return                                   # espera ela acordar (ou a promessa expirar)
+    if not promessa_foto.attempt(db):
+        return
+    from camera_world import CameraWorldBuilder
+    camera_ctx = CameraWorldBuilder(db).build(now, user_request=p["said"])
+    try:
+        from emotion import EmotionEngine
+        feeling = EmotionEngine(db).feeling(now)
+    except Exception:
+        feeling = None
+    seed = random.randint(1, 2**31 - 1)
+    shots = []
+    if p["kind"] == "looks":
+        outfits = random.sample(photo_director.WARDROBE["sair"], p["count"])
+        for outfit in outfits:      # mesma cena (mesmo sorteio), roupa diferente
+            shots.append(photo_director.direct(
+                db, now, request="look de sair", her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
+                her_initiative=True, force_pose="espelho_corpo", outfit_override=outfit,
+                rng=random.Random(seed)))
+        o_que = "as duas opções de look pra ele escolher" if p["count"] > 1 else "o look pra ele dar a opinião"
+    elif p["kind"] == "comida":
+        shots.append(photo_director.direct(db, now, request=f"foto do {p['subject'] or 'lanche'}",
+                                           her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
+                                           her_initiative=True, force_pose="mostrando_comida"))
+        o_que = f"a foto {('do ' + p['subject']) if p['subject'] else 'da comida'} que você prometeu"
+    else:
+        shots.append(photo_director.direct(db, now, her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
+                                           her_initiative=True))
+        o_que = "a foto que você prometeu"
+    images = []
+    for shot in shots:
+        gen = await sd_client.generate_directed(shot, world_snapshot_id=camera_ctx.snapshot_id)
+        if gen.image:
+            images.append(gen.image)
+    if not images:
+        logger.warning("promessa_foto.sem_imagem")
+        return                                   # tenta de novo no próximo minuto (até expirar)
+    legenda = generate_dynamic_speech(
+        f"Você está mandando pro Patrick {o_que}. Você tinha dito: '{p['said'][:160]}'. Como é a foto: "
+        f"{shots[0].facts}. Escreva UMA legenda curtinha, do seu jeito"
+        + (" (pode perguntar qual ele prefere: 1 ou 2)" if len(images) > 1 else "")
+        + ". Sem introdução, sem Ps: nem parênteses.", max_tokens=50, temperature=0.75)
+    if not legenda or _is_policy_refusal(legenda):
+        legenda = "1 ou 2? 👀" if len(images) > 1 else "prometido é devido 😌"
+    from chat_naturalness import strip_closing_periods
+    legenda = strip_closing_periods(limpar_fala_marina(legenda))
+    bot = application.bot
+    if len(images) > 1:
+        from telegram import InputMediaPhoto
+        sent = await bot.send_media_group(chat_id=settings.TARGET_CHAT_ID, media=[
+            InputMediaPhoto(img, caption=legenda if i == 0 else None) for i, img in enumerate(images)])
+        ok = bool(sent)
+    else:
+        sent = await bot.send_photo(chat_id=settings.TARGET_CHAT_ID, photo=images[0], caption=legenda)
+        ok = bool(getattr(sent, "message_id", None))
+    if ok:
+        for shot in shots:
+            photo_director.confirm_sent(db, shot)
+        memory_manager.db.registrar_iniciativa_marina(f"[{len(images)} foto(s): {o_que}] {legenda}",
+                                                      media_type='photo')
+        promessa_foto.close(db, "cumprida")
+        logger.info("promessa_foto.cumprida kind=%s fotos=%s", p["kind"], len(images))
+
+
 async def delivery_gift_routine(application: Application):
     """O delivery surpresa que o Patrick mandou pelo app chega, e ela reage quando pega."""
     if not settings.TARGET_CHAT_ID:
@@ -4804,6 +4889,10 @@ async def delivery_gift_routine(application: Application):
         await _pedido_dela_tick(application, datetime.now())
     except Exception as exc:
         logger.error('Erro no pedido da Marina pro Patrick: %s', exc, exc_info=True)
+    try:
+        await _promessa_foto_tick(application, datetime.now())
+    except Exception as exc:
+        logger.error('Erro na promessa de foto: %s', exc, exc_info=True)
     try:
         now = datetime.now()
         order = delivery.open_order(memory_manager.db)
