@@ -64,6 +64,30 @@ _DOCTOR_RE = re.compile(r"\b(?:vai|v[aá]|ir|passa|procura|marca|marcar)\b[^.!?\
                         r"emerg[eê]ncia|pronto[- ]?socorro|upa|hospital|consulta)\b", re.IGNORECASE)
 
 
+# 25/09 (Patrick com amigdalite): sem regra pra quando ELE está doente, o modelo
+# virou farmacêutico — "segue a dose da bula", "não mistura anti-inflamatório",
+# "se tiver dificuldade pra respirar… procura atendimento hoje" — e perguntou de
+# novo os sintomas que ele já tinha contado.
+PATRICK_SICK_RE = re.compile(
+    r"\b(?:dod[oó]i|doente|gripad[oa]|resfriad[oa]|febre|febril|amigdalite|sinusite|virose|"
+    r"garganta (?:fechada|inflamada|doendo|ruim)|dor (?:no corpo|de cabe[cç]a|de garganta|de barriga)|"
+    r"passando mal|vomitando|vomitei|enjoad[oa]|diarreia|tossindo|ibuprofeno|dipirona|antibi[oó]tico)\b",
+    re.IGNORECASE)
+PATRICK_SICK_HINT = (
+    "[ELE ESTÁ DOENTE] O Patrick contou que está mal. Você é a namorada dele, não médica nem "
+    "farmacêutica: nada de dose, bula, 'não mistura com…', lista de sinais de alerta, 'procura "
+    "atendimento se…', e não pergunte de novo o que ele já contou. Reaja com dengo e do seu jeito — "
+    "pena, manha, bronca carinhosa, vontade de estar lá, algo concreto seu (passar lá depois, mandar "
+    "um picolé ou sopa pelo app, ficar em áudio com ele). Curto, no máximo uma pergunta. Médico só "
+    "se ele estiver piorando ou mal há dias, e aí como namorada ('amor, vai no médico, por favor')."
+)
+
+
+def patrick_sick_hint(his_recent_texts) -> str:
+    """Hint quando ele falou que está doente nas últimas mensagens dele."""
+    return PATRICK_SICK_HINT if any(PATRICK_SICK_RE.search(t or "") for t in his_recent_texts) else ""
+
+
 def _rng(key: str) -> random.Random:
     return random.Random(f"marina-saude:{key}")
 

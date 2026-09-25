@@ -3395,6 +3395,16 @@ async def process_incoming_batch(
     transition_hint = _maybe_announce_transition()
     if transition_hint:
         messages.append({"role": "system", "content": transition_hint})
+    if not intimacy_turn.expanded:
+        try:
+            from health import patrick_sick_hint
+            recent = memory_manager.get_historico_recente(limit=8)
+            sick_hint = patrick_sick_hint([texto_usuario] + [m.get("content", "") for m in recent
+                                                             if m.get("role") == "user"])
+            if sick_hint:
+                messages.append({"role": "system", "content": sick_hint})
+        except Exception:
+            logger.exception("health.patrick_sick_hint.error")
     import photo_director
     photo_ok = (not pediu_foto and not getattr(settings, 'PHOTO_PROVIDER_MAINTENANCE', False)
                 and photo_director.may_self_initiate(memory_manager.db, datetime.now(), intimacy_turn))
