@@ -55,6 +55,12 @@ SHOWER_PROMISE_RE = re.compile(
 # 25/09 16:28–16:39 (sexting): "vou entrar debaixo da água agora", "vou levar o transparente pro box",
 # "já tô entrando debaixo da água quente" — nenhuma casava, ela nunca entrava no banho e ficava
 # anunciando no chat por 10 min.
+# "gozei… já tô saindo do chuveiro pra secar a mão" (16:53): o banho acaba quando ela diz que saiu,
+# não no horário sorteado — senão as mensagens dele ficam presas "até ela se vestir".
+SHOWER_END_RE = re.compile(
+    r"\b(?:(?:t[oô]|j[aá]\s+t[oô])\s+saindo|sa[ií]|acabei\s+de\s+sair)\s+d[oa]\s+(?:banho|chuveiro|box)\b",
+    re.IGNORECASE,
+)
 SHOWER_NOW_RE = re.compile(
     r"\b(?:vou|t[oô]|j[aá]\s+t[oô])\s+(?:entrar|entrando|indo)\s+(?:debaixo\s+d[ao]\s+(?:[aá]gua|chuveiro)|"
     r"no\s+(?:chuveiro|box|banho)|pro\s+(?:chuveiro|box|banho))\b|\bpro\s+box\b",
@@ -467,8 +473,27 @@ class Rituals:
         logger.info("ritual.banho start=%s end=%s", start.isoformat(timespec="minutes"),
                     end.isoformat(timespec="minutes"))
 
+    def end_shower(self, now: datetime) -> bool:
+        """Ela disse que saiu do banho: termina agora (já se secando)."""
+        raw = self.db.get_estado_relacional().get("pending_transition_json")
+        try:
+            pending = json.loads(raw) if raw else None
+        except (TypeError, ValueError):
+            pending = None
+        if not pending or pending.get("routine_type") != "shower":
+            return False
+        if datetime.fromisoformat(pending["end_at"]) <= now:
+            return False
+        pending["end_at"] = max(now, datetime.fromisoformat(pending["transition_at"])).isoformat()
+        self.db.set_estado_relacional("pending_transition_json", json.dumps(pending))
+        logger.info("ritual.banho end_early at=%s", now.isoformat(timespec="minutes"))
+        return True
+
     def observe_marina_line(self, text: str, now: datetime) -> bool:
         """"Vou tomar banho, já volto" dito na conversa vira banho de verdade."""
+        if SHOWER_END_RE.search(text or ""):
+            self.end_shower(now)
+            return False
         if not (SHOWER_PROMISE_RE.search(text or "") or SHOWER_NOW_RE.search(text or "")):
             return False
         last = self._last_shower_at(now.date())

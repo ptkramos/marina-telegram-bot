@@ -113,6 +113,26 @@ class SextingNoBanhoTest(unittest.TestCase):
         self.assertNotIn(photo_director.DILDO_TEXT, shots[0].prompt)
         self.assertTrue(all(s.is_nsfw for s in shots))
 
+    def test_saiu_do_banho_encerra_o_banho(self):
+        """16:53 'gozei… já tô saindo do chuveiro': as mensagens dele ficaram presas até 17:10."""
+        import json
+        from rituals import Rituals
+        r = Rituals(self.db)
+        self.assertTrue(r.observe_marina_line("vou entrar debaixo da água agora", T))
+        pend = json.loads(self.db.get_estado_relacional("pending_transition_json"))
+        self.assertGreater(datetime.fromisoformat(pend["end_at"]), T + timedelta(minutes=15))
+        r.observe_marina_line("gozei, pqp… já tô saindo do chuveiro pra secar a mão", T + timedelta(minutes=6))
+        pend = json.loads(self.db.get_estado_relacional("pending_transition_json"))
+        self.assertEqual(datetime.fromisoformat(pend["end_at"]), T + timedelta(minutes=6))
+
+    def test_estrago_no_sexting_e_promessa_intima(self):
+        p = promessa_foto.observe_marina_line(self.db, "vou me tocar até tremer as pernas / já te mando o estrago todinho",
+                                              "", T, intimate=True)
+        self.assertEqual((p["kind"], p["subject"]), ("intimo", ""))
+        promessa_foto.close(self.db, "cumprida")
+        p = promessa_foto.observe_marina_line(self.db, "jaja te mando uma foto", "", T)
+        self.assertEqual(p["kind"], "selfie", "fora do clima continua selfie")
+
     def test_promessa_intima_vence_na_saida_do_banho(self):
         saida = T + timedelta(minutes=20)
         promessa_foto.promise_intimate(self.db, "já te mando o estrago", saida, T)

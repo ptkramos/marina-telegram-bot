@@ -3933,7 +3933,8 @@ async def process_incoming_batch(
             dela = [m.get("content", "") for m in memory_manager.get_historico_recente(limit=8)
                     if m.get("role") == "assistant"][-3:]
             promessa_foto.observe_marina_line(memory_manager.db, fala_limpa,
-                                              " ".join([texto_usuario, *dela]), datetime.now())
+                                              " ".join([texto_usuario, *dela]), datetime.now(),
+                                              intimate=intimacy_turn.state in ("active", "climax"))
         except Exception:
             logger.exception("promessa_foto.observe.error")
         try:
@@ -4849,7 +4850,7 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
                 her_initiative=True, force_pose="espelho_corpo", outfit_override=outfit,
                 rng=random.Random(seed)))
         o_que = "as duas opções de look pra ele escolher" if p["count"] > 1 else "o look pra ele dar a opinião"
-    elif p["kind"] == "intimo":
+    elif p["kind"] == "intimo" and p.get("subject") == "banho":
         # Os registros do banho: o brinquedo (transparente se a conversa falou nele) e o gozo, no chuveiro.
         for turn in (IntimacyTurn("active", 0.9), IntimacyTurn("climax", 0.95)):
             shots.append(photo_director.direct(
@@ -4858,6 +4859,12 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
                 rng=random.Random(seed), fertile=_fase_fertil()))
         o_que = ("os registros que você prometeu: você no chuveiro se tocando com o brinquedo e logo depois de "
                  "gozar pensando nele")
+    elif p["kind"] == "intimo":
+        # promessa no clima, fora do banho: o diretor segue a cena (mesma sessão, momento do tesão)
+        shots.append(photo_director.direct(db, now, request=p["said"], her_line=p["said"], camera_ctx=camera_ctx,
+                                           feeling=feeling, turn=IntimacyTurn("active", 0.85), her_initiative=True,
+                                           fertile=_fase_fertil()))
+        o_que = "a foto que você prometeu no clima"
     elif p["kind"] == "comida":
         # 25/09: a do bolo saiu adulta (roupa "provoca", com calcinha). Promessa de comida é foto de casa.
         casual = random.choice(photo_director.WARDROBE["casa_noite" if now.hour >= 20 or now.hour < 7 else "casa_dia"])
@@ -4878,7 +4885,7 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
     if not images:
         logger.warning("promessa_foto.sem_imagem")
         return                                   # tenta de novo no próximo minuto (até expirar)
-    intimo = p["kind"] == "intimo"
+    intimo = p["kind"] == "intimo" and p.get("subject") == "banho"      # o gozo do banho
     legenda = generate_dynamic_speech(
         f"Você está mandando pro Patrick {o_que}. Você tinha dito: '{p['said'][:160]}'. Como é a foto: "
         f"{shots[-1].facts}. Escreva UMA legenda curtinha, do seu jeito"

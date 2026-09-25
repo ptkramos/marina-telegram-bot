@@ -85,12 +85,15 @@ def classify(segment: str, context: str) -> tuple[str, int, str]:
     return "selfie", 1, ""
 
 
-def observe_marina_line(db, line: str, context: str, now: datetime) -> Optional[dict]:
+def observe_marina_line(db, line: str, context: str, now: datetime, *, intimate: bool = False) -> Optional[dict]:
     """Depois que a fala dela saiu: promessa de foto vira compromisso com hora."""
     seg = is_promise(line)
     if not seg or pending(db):
         return None
     kind, count, subject = classify(seg, f"{line} {context}")   # a frase inteira dela conta
+    if intimate and kind == "selfie":
+        # 25/09 16:39: "já te mando o estrago" no sexting virou selfie de conjunto. No clima, é íntima.
+        kind, count, subject = "intimo", 1, ""
     rng = random.Random(f"promessa:{now.isoformat()}")
     window = (20, 50) if _LATER_RE.search(seg) else (3, 10) if _SOON_RE.search(line) else (5, 15)
     due = now + timedelta(minutes=rng.randint(*window))
@@ -162,6 +165,7 @@ def prompt_lines(db, now: datetime) -> list[str]:
     o_que = {"looks": "as opções de look" if p["count"] > 1 else "o look",
              "comida": f"a foto {('do ' + p['subject']) if p['subject'] else 'da comida'}",
              "selfie": "uma foto sua",
-             "intimo": "os registros do banho (você se tocando e o depois) quando sair"}[p["kind"]]
+             "intimo": ("os registros do banho (você se tocando e o depois) quando sair" if p["subject"] == "banho"
+                        else "a foto que você prometeu no clima")}[p["kind"]]
     return [f"[SUA PROMESSA] Você disse que ia mandar {o_que} pro Patrick; vai mandar daqui a pouco. "
             "Não diga que já mandou e não prometa de novo."]
