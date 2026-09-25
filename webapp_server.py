@@ -176,17 +176,20 @@ def timeline(ordered: datetime, eta: datetime, now: datetime, *, delivered: bool
     return steps, headline
 
 
+# 25/09 (Patrick): pedido entregue ficava 3 h na tela inicial. No iFood o "Pedido entregue"
+# aparece e some; a Marina continua lembrando (prompt_lines) pelas 3 h dela.
+SHOW_DELIVERED = timedelta(minutes=30)
+
+
 def order_view(order: Optional[dict], now: datetime) -> Optional[dict]:
     """O pedido do Patrick como ele vê no app (o dela não aparece: é a vida dela)."""
     if not order or order.get("by") != "patrick":
         return None
     status = order.get("status")
     eta = datetime.fromisoformat(order["eta_at"])
-    if status == "recebido":
-        got = datetime.fromisoformat(order["received_at"]) if order.get("received_at") else eta
-        if now - got > timedelta(hours=3):
-            return None
     delivered = status in ("portaria", "recebido")
+    if delivered and now - eta > SHOW_DELIVERED:
+        return None
     # "Entregue na portaria" sem motivo: o iFood não sabe onde ela está (decisão do Patrick).
     final = "Entregue na portaria" if order.get("waited") else "Pedido entregue"
     steps, headline = timeline(datetime.fromisoformat(order["ordered_at"]), eta, now, delivered=delivered,
@@ -203,7 +206,7 @@ def gift_to_him_view(db, now: datetime) -> Optional[dict]:
         return None
     eta = datetime.fromisoformat(p["eta_at"])
     delivered = p["status"] == "entregue"
-    if delivered and now - eta > pedido_dela.SHOW_AFTER_DELIVERY:
+    if delivered and now - eta > SHOW_DELIVERED:
         return None
     steps, headline = timeline(datetime.fromisoformat(p["ordered_at"]), eta, now, delivered=delivered)
     return {"what": p["short"], "restaurant": p["restaurant"], "note": p.get("note") or "", "status": p["status"],

@@ -126,6 +126,11 @@ class DeliveryGiftTest(unittest.TestCase):
         view = webapp_server.order_view(delivery._load(self.db), T + timedelta(minutes=40))
         self.assertTrue(view["headline"].startswith("Entregue na portaria"))
         self.assertNotIn("dormindo", json.dumps(view), "o iFood não sabe onde ela está")
+        order = delivery._load(self.db)
+        eta = datetime.fromisoformat(order["eta_at"])
+        self.assertIsNotNone(webapp_server.order_view(order, eta + timedelta(minutes=25)))
+        self.assertIsNone(webapp_server.order_view(order, eta + timedelta(minutes=35)),
+                          "entregue some da tela inicial (25/09: ficava 3 h)")
         self.assertIsNone(webapp_server.order_view({"by": "marina"}, T), "o pedido dela não aparece")
 
 

@@ -419,3 +419,52 @@ def debounce_delay(messages: list[str], base: float) -> float:
     if len(_norm_words(last)) <= 3 and not _CLOSED_END_RE.search(last):
         delay += 1.5
     return max(DEBOUNCE_MIN_S, min(DEBOUNCE_MAX_S, delay))
+
+
+# ---------------------------------------------------------------------------
+# Turno curtinho (25/09, Patrick): "na maioria das vezes um balão com 2 a 3 palavras
+# já resolve". Ela mandava "Tenho sim, amor, fica sussa" e a chuva continuava: guardei
+# dos jobs / dá pros drinks / foca em ficar bom. Na conversa casual, a maioria dos
+# turnos é só a reação + uma frase curta; o resto do texto é cortado.
+# ---------------------------------------------------------------------------
+
+SHORT_TURN_CHANCE = {"casual_short": 0.65, "normal": 0.4}
+# ele pediu conteúdo: "me conta", "como foi", "por quê"… aí não é turno curtinho
+_WANTS_MORE_RE = re.compile(
+    r"\b(?:me\s+conta|conta\s+(?:a[ií]|tudo|mais)|como\s+foi|o\s+que\s+(?:aconteceu|rolou|houve)|"
+    r"por\s*qu[eê]|explica|qual\s+(?:foi|[ée])|quais|onde|detalhe|fala\s+mais)\b", re.IGNORECASE)
+_REACTION_ONLY_RE = re.compile(
+    r"^(?:k{2,}|(?:ha){2,}h?|(?:he){2,}|rs(?:rs)*|a+i+|a+h+|o+h+|nossa|eita|ixi|s[eé]rio|mds|pqp|aff|"
+    r"hmm+|awn+|own+)[\s!?.…kK]*$", re.IGNORECASE)
+_EMOJI_ONLY_RE = re.compile(r"^[\W_]+$")
+
+SHORT_TURN_HINT = (
+    "[ESTE TURNO] Resposta curtinha: uma frase de 2 a 6 palavras (pode vir depois de um riso "
+    "ou reação), como quem responde no WhatsApp e volta pro que tava fazendo. Sem comentário "
+    "extra, sem conselho, sem pergunta de volta.")
+
+
+def short_turn(his_text: str, mode: str, seed: str) -> bool:
+    """Sorteia se este turno é curtinho (determinístico pelo seed)."""
+    chance = SHORT_TURN_CHANCE.get(mode or "", 0.0)
+    lines = [ln for ln in (his_text or "").split("\n") if ln.strip()]
+    if not chance or not lines or _WANTS_MORE_RE.search(his_text):
+        return False
+    # "esse pix é pro açaí e um mimo | se controla | já almoçou?": várias coisas pra responder
+    if len(lines) > 2 or ("?" in his_text and len(lines) > 1):
+        return False
+    return random.Random(f"curtinho:{seed}").random() < chance
+
+
+def keep_short(text: str) -> str:
+    """Riso/reação de abertura + o primeiro balão com conteúdo; o resto sai."""
+    if not text or "[" in text:
+        return text
+    lines = [ln for ln in text.split("\n") if ln.strip()]
+    kept = []
+    for ln in lines:
+        kept.append(ln)
+        s = ln.strip()
+        if not (_REACTION_ONLY_RE.match(s) or _EMOJI_ONLY_RE.match(s)):
+            break
+    return "\n".join(kept) if kept else text

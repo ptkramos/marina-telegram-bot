@@ -3420,6 +3420,13 @@ async def process_incoming_batch(
             soft_char_limit=max(response_policy.soft_char_limit, settings.RESPONSE_NORMAL_SOFT_CHARS),
             reason_code="intimate_mode")
     messages[0]['content'] = apply_policy(messages[0]['content'], response_policy)
+    # 25/09 (Patrick): na maioria das vezes "um balão com 2 a 3 palavras já resolve".
+    from chat_naturalness import short_turn, SHORT_TURN_HINT
+    turno_curtinho = (not intimacy_turn.expanded and not pediu_foto and not pediu_audio
+                      and not (plan and (plan.get("should_offer_reminder") or plan.get("needs_clarification")))
+                      and short_turn(texto_usuario, response_policy.mode, f"{texto_usuario}|{datetime.now():%Y%m%d%H%M}"))
+    if turno_curtinho:
+        messages.append({"role": "system", "content": SHORT_TURN_HINT})
     transition_hint = _maybe_announce_transition()
     if transition_hint:
         messages.append({"role": "system", "content": transition_hint})
@@ -3657,6 +3664,12 @@ async def process_incoming_batch(
             if sem_parafrase != resposta_marin:
                 logger.info("chat.paraphrased_idea cut")
                 resposta_marin = sem_parafrase
+        if turno_curtinho:
+            from chat_naturalness import keep_short
+            curta = keep_short(resposta_marin)
+            if curta != resposta_marin:
+                logger.info("chat.short_turn cut=%d", resposta_marin.count("\n") - curta.count("\n"))
+                resposta_marin = curta
         resposta_marin = strip_closing_periods(thin_vocative(resposta_marin, anteriores))
         # 25/09: "hoje à noite", não "às 19h30" — a hora só se ele perguntou (e nunca em lembrete).
         if not (plan and (plan.get("should_offer_reminder") or plan.get("needs_clarification"))):
