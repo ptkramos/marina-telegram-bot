@@ -4837,9 +4837,12 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
                 rng=random.Random(seed)))
         o_que = "as duas opções de look pra ele escolher" if p["count"] > 1 else "o look pra ele dar a opinião"
     elif p["kind"] == "comida":
+        # 25/09: a do bolo saiu adulta (roupa "provoca", com calcinha). Promessa de comida é foto de casa.
+        casual = random.choice(photo_director.WARDROBE["casa_noite" if now.hour >= 20 or now.hour < 7 else "casa_dia"])
         shots.append(photo_director.direct(db, now, request=f"foto do {p['subject'] or 'lanche'}",
                                            her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
-                                           her_initiative=True, force_pose="mostrando_comida"))
+                                           her_initiative=True, force_pose="mostrando_comida",
+                                           outfit_override=casual))
         o_que = f"a foto {('do ' + p['subject']) if p['subject'] else 'da comida'} que você prometeu"
     else:
         shots.append(photo_director.direct(db, now, her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
