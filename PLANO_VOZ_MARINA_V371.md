@@ -11,9 +11,9 @@ detalhado de cada entrega, na ordem em que aconteceram.
 
 ---
 
-## 0. Painel de status — atualizado em 2026-09-24 (noite)
+## 0. Painel de status — atualizado em 2026-09-25 (manhã)
 
-Cada item foi conferido **no código**, não no que este plano dizia. Suíte: ~880 testes verdes.
+Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 934 testes verdes.
 
 Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
@@ -30,7 +30,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **C.3** Rituais | ✅ | Bom dia, boa noite, cotidiano. Desde 24/09 nada sai de dentro do chuveiro |
 | **C.4** Locomoção viva | ✅ | `commute.py` + Distance Matrix + carona com o Theo |
 | **D** Rotina viva | ✅ | D1 comida · D2/D3/D13 sono · D4 banho · D5 Milo · D6 o que ela assiste + TMDB · D7 faculdade · D8 fim de semana · **D9 casa (revisado 24/09)** · **D10 freela (aprovado 24/09)** · **D11 saúde (revisado 24/09)** · D12 laços · D14 motor emocional. Falta só o resto das fatias da noite do D6 |
-| **Naturalidade de chat** | ✅ | Sem ponto final de fecho, repetição e ideia repetida cortadas, espera ele terminar de digitar, ela conta do dia dela, reações, bolhas livres (até 10) |
+| **Naturalidade de chat** | ✅ | Sem ponto final de fecho, repetição e ideia repetida cortadas, espera ele terminar de digitar, ela conta do dia dela, reações, bolhas livres (até 10). **25/09:** balão como pedaço de pensamento (~40 caracteres), abreviações misturadas, ela não vira farmacêutica quando ele está doente |
 | **Fotos (Civitai, Krea 2)** | ✅ ligado no `.env` | LoRA `marinaX` (v1.1), base FinePorn v4, sliders do Loraholic pro corpo canônico, LoRAs de ocasião. Tudo na seção "Fotos pelo Civitai" |
 | **C** Consolidação | 🟡 | C1 parcial (estilo do Patrick é descrição, não amostras); C2 e C3 ⬜ |
 
@@ -960,6 +960,11 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   - se ele escreve **antes** de ela entrar no banho, a resposta avisa ("vou tomar banho, já volto"), uma vez só;
   - **dentro do banho ela não pega o celular**: a availability adia a resposta até ela **sair do banho e se vestir** (fim do banho + 2–8 min);
   - o estado atual não diz mais "você AVISOU o Patrick" quando ela não avisou.
+
+**25/09, manhã: ele doente, balões e abreviações.** Três problemas, todos corrigidos:
+- **Ele com amigdalite e ela farmacêutica.** "Segue a dose da bula", "não mistura com outro anti-inflamatório", lista de sinais de alerta e "procura atendimento hoje". Também perguntou de novo os sintomas que ele já tinha contado. Não foi o disco cheio: os 2 erros das 05:55 passaram na nova tentativa e o banco está íntegro. Faltava regra pra quando **ele** está mal. Agora, quando as mensagens recentes dele falam de doença (dodói, febre, garganta, amigdalite, ibuprofeno…), ela recebe `health.PATRICK_SICK_HINT`: reage como namorada, curto, no máximo uma pergunta. Nada de dose, bula ou sinais de alerta. Médico só se ele piorar ou estiver mal há dias. Não entra no sexting.
+- **Balões: pedaço de pensamento, não frase.** Prints de casais reais que o Patrick trouxe: 3,9 balões por fala, ~23 caracteres cada, e a frase continua no balão de baixo ("tu me faz lembrar daquelas brisas de fim de tarde" / "ou início de manhã"). Ela saía com 1,9 balão de ~68 caracteres, e 138 das 208 falas tinham exatamente dois. Agora `response_rhythm._split_clauses` corta **dentro da frase** (vírgula ou antes de e/ou/mas/aí/porque/então/tipo/até), com um alvo de 32 a 60 caracteres sorteado por fala. Risada na frente sai sozinha ("Kkkk" e depois o resto). Não corta antes de com/quando/sem, que separavam o complemento do verbo. O prompt de ritmo diz o mesmo: 3 a 10 palavras por balão, reação sozinha antes. Nas falas reais de 23–25/09: **3,7 balões de ~40 caracteres**, nenhum com 100+.
+- **Abreviações.** De 20 a 25/09 ela escreveu "você" 159 vezes e "vc" nenhuma. Agora `chat_naturalness.abbreviate`, **na saída** (no prompt o modelo ignora ou exagera), usa ~35% de vc/vcs/tb/pq/hj/dps/cmg, 30% de mt e raros q (6%) e n (5%). A conversa séria e a de quando ele está doente ficam com um terço disso. Forma cheia e abreviada passam pelo mesmo sorteio, então o modelo copiar "vc" do histórico não faz a taxa subir. O texto só encolhe ~1%: o tamanho vem do conteúdo, e isso ficou com os balões. **Gírias ficam de fora de propósito:** gíria forçada soa pior que nenhuma; o caminho é a biblioteca, com falas aprovadas pelo Patrick.
 
 ### Fotos pelo Civitai ✅ (24/09) — ligado no `.env`
 

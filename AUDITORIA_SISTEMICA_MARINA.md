@@ -1401,6 +1401,14 @@ O disco tem 256 GB livres; foi pontual. Fica a mudança pra VPS, que já estava 
 - **C.1b feita:** apartamento canônico, zoom por palavras e diretor de cena (`photo_director.py`). Detalhes no PLANO_VOZ, seção C.1.
 - **Soak não resetado:** simulado o primeiro tick numa cópia do banco de produção (vida registrada desde 22/09): entram só 4 eventos plausíveis da casa (roupa na máquina ontem, Dona Neide hoje), nenhum casting e nenhuma doença retroativa. Um reset apagaria a conversa de 23–24/09 que as correções da #11 usam.
 
+## Depois da auditoria (25/09, manhã) — "ela piorou de novo"
+
+O Patrick acordou com amigdalite e achou que ela tinha voltado a agir como assistente, com textão. O HD tinha enchido de novo, mas **não foi a causa**:
+- **Disco:** só 2 erros "database or disk is full", às 05:55, no envio da resposta ao boa-noite. A resposta passou na nova tentativa, o banco está íntegro (`PRAGMA quick_check` = ok) e tudo depois das 08:03 gravou normal. O item VPS (pendência 3 do painel) continua valendo.
+- **Causa real:** nenhuma regra cobria **ele** doente. No modo apoio, o GPT-5.6 Luna caiu no padrão de orientação de saúde (dose, bula, sinais de alerta, "procura atendimento") e repetiu a pergunta dos sintomas. A resposta das 08:06 teve 336 caracteres em 3 balões.
+- **Correções** (detalhes no PLANO_VOZ, "Naturalidade de chat", 25/09): o hint `PATRICK_SICK_HINT`; os balões como pedaço de pensamento, a partir dos prints de casais que ele trouxe; as abreviações na saída.
+- Testes: `test_patrick_doente.py`, `test_abreviacoes.py`, `PedacoDePensamentoTests` em `test_bubbles_luna.py`. Os testes antigos que travavam "nunca quebra no meio da frase" e "sai em 2 balões" foram reescritos pela regra nova.
+
 ## O que estava certo
 
 "Tô na rua, saí pra encontrar a Júlia" às 14:53 e "cheguei sim" às 15:52 batiam com o mundo (a caminho 14:49–15:30).
