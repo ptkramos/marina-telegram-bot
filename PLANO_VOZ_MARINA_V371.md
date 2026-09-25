@@ -46,6 +46,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 |---|---|---|
 | 1 | **C.1b no uso real:** ver se as fotos que ela manda fazem sentido (nível, pose, cadência). Crescer o catálogo com as poses que o Patrick trouxer do site. Marquinha de cima larga na foto explícita (resistência do FinePorn, já conhecida) | Fotos |
 | 1c | **`/pix valor`** (feedback do Patrick, 24/09): ele manda dinheiro pra mimar ela; numa emergência ela pode preferir pedir emprestado pra ele em vez do pai. Precisa desenhar: onde o dinheiro entra (contas do D9), como ela reage, quando pede | Feedback |
+| 1d | **Ângulo sem rosto ("de trás da cabeça", POV por cima do ombro):** testado com e sem o LoRA dela (24/09, fotos Y/Z/ZZ) e sempre sai selfie de frente. Quem puxa é o prompt (descrição do rosto, expressão, texto de selfie, LoRA de smartphone), não o LoRA. Fazer um prompt próprio pra foto sem rosto; o Patrick topa tirar o LoRA dela nesses casos se o corpo se mantiver | Fotos |
 | 2 | **Trocar a chave do Civitai** (vazou num log local em 24/09) | Fotos |
 | 3 | **Mudar pra VPS** (o "disk is full" de 24/09 foi pontual) | Auditoria #11 |
 | 4 | D11 pra depois: "no médico" como estado, banheiro na virose, o pai ligando mais quando ela está doente, farmácia como saída, contágio | D11 |
