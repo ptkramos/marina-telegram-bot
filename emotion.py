@@ -766,6 +766,19 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
             out.append(("tristeza", "decepcao", 0.5 if step == "job_perdido" else 0.3, text, None))
         elif step in ("cache", "sinal"):
             out.append(("alegria", "contentamento", 0.45 if step == "cache" else 0.35, text, None))
+    elif key.startswith("financas:"):        # /pix e o dinheiro dela (24/09)
+        step = key.rsplit(":", 1)[-1]
+        if step in ("emergencia", "aperto"):
+            out.append(("medo", "preocupacao", 0.45, text, None))
+        elif step == "pix":
+            out.append(("afeto", "gratidao" if "presente" in low else "carinho", 0.5, "o Patrick fez um pix pra ela",
+                        PATRICK))
+            if "aperto" in low:
+                out.append(("alegria", "alivio", 0.45, "o Patrick cobriu o aperto", None))
+        elif step == "devolveu":
+            out.append(("alegria", "alivio", 0.35, "devolveu o que devia pro Patrick", None))
+        elif step == "presente_usado":
+            out.append(("alegria", "contentamento", 0.35, text, None))
     elif key.startswith("falta:"):
         out.append(("vergonha", "culpa", 0.35, text, None))
     elif key.startswith("atraso:"):

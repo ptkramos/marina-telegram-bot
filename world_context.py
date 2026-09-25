@@ -544,6 +544,8 @@ class WorldContextBuilder:
             comida += Meals(self.db).prompt_lines(now)
             from delivery import prompt_lines as delivery_lines
             comida += delivery_lines(self.db, now)   # 24/09: o iFood de verdade
+            from financas import prompt_lines as financas_lines
+            comida += financas_lines(self.db, now)   # 24/09: saldo, aperto, /pix
             from watch import Watching
             comida += Watching(self.db).prompt_lines()
             from college import College

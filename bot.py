@@ -2467,6 +2467,32 @@ async def restart_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await asyncio.sleep(2.5)
     sys.exit(0)
 
+async def pix_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/pix <valor> [recado] — o Patrick manda dinheiro pra ela (feedback de 24/09)."""
+    if not is_authorized(update):
+        return
+    import financas
+    args = " ".join(context.args or []).strip()
+    valor = financas.parse_value(args)
+    if not valor or valor <= 0:
+        await update.message.reply_text("Uso: /pix 50  ou  /pix 50 pro teu açaí")
+        return
+    nota = re.sub(r"^\s*(R\$\s*)?\d+(?:[.,]\d{1,2})?\s*", "", args).strip()
+    now = datetime.now()
+    try:
+        financas.materialize(memory_manager.db, now)   # saldo em dia antes do pix
+        res = financas.receive_pix(memory_manager.db, valor, nota, now)
+    except Exception:
+        logger.exception("pix.error")
+        await update.message.reply_text("Não consegui registrar o pix agora 😕")
+        return
+    logger.info("pix.recebido valor=%s kind=%s", valor, res["kind"])
+    # Ela reage pelo fluxo normal: vê a conversa, o saldo e se era o aperto dela.
+    motivo = "pra cobrir o aperto que você contou" if res["kind"] == "emprestimo" else "de presente, sem você pedir"
+    texto = f"[Pix de R$ {valor} do Patrick {motivo}" + (f" — recado: \"{nota}\"" if nota else "") + "]"
+    await process_incoming_batch(update, context, texto, availability_bypass=True)
+
+
 async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /audio ou /voz para gerar um áudio nativo da Marina."""
     if not is_authorized(update):
@@ -4696,6 +4722,7 @@ def main():
     app.add_handler(CommandHandler("reset", restart_command))
     app.add_handler(CommandHandler("limpar", limpar_command))
     app.add_handler(CommandHandler("clear", limpar_command))
+    app.add_handler(CommandHandler("pix", pix_command))
     app.add_handler(CommandHandler("audio", audio_command))
     app.add_handler(CommandHandler("voz", audio_command))
     app.add_handler(CommandHandler("voz_natural", voz_natural_command))

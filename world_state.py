@@ -682,6 +682,12 @@ class WorldStateManager:
         except Exception:
             logger.exception("delivery.materialize.error")
         try:
+            # 24/09: o dinheiro dela (cachês, contas, delivery, apertos, pix do Patrick).
+            from financas import materialize as financas_materialize
+            financas_materialize(self.db, now)
+        except Exception:
+            logger.exception("financas.materialize.error")
+        try:
             # Fase D6: a sessão de série/anime da noite (e o que ela descobre sozinha).
             from watch import Watching
             Watching(self.db).materialize(now)
