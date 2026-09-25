@@ -32,8 +32,14 @@ ACTIVE_ON = 0.45            # entra no modo
 ACTIVE_OFF = 0.20           # sai do modo (histerese)
 HOT_AT = 0.70               # degrau explícito
 CLIMAX_MIN_AROUSAL = 0.80
-CLIMAX_AFTER_HOT_TURNS = 6  # sem pedido dele, ela chega lá depois de um tempo no auge
+# 24/09 (Patrick): o gozo segue o que ELA escreve. O antigo "goza sozinha depois de 6 turnos
+# no auge" marcou clímax às 20:43 enquanto ela escrevia "tô quase", e o refratário travou o
+# gozo de verdade das 20:55. Agora o pedido dele abre a cena do clímax; quem registra o gozo
+# é a fala dela (observe_marina_line).
 AFTERGLOW_MIN = 40
+POST_CLIMAX_DAMP_MIN = 90     # por quanto tempo o tesão demora a voltar depois do gozo
+POST_CLIMAX_GAIN = 0.35
+POST_CLIMAX_GAIN_FERTILE = 0.8
 REFRACTORY_MIN = 20
 GROWTH = 1.5
 
@@ -65,7 +71,8 @@ _WARM = re.compile(
     r"(😏|🔥|🫦|😈|🥵|\bsafad\w*|\bgostos[ao]\b|\bdelicia\b|\bpescoco\b|\bna cama\b|\bprovoca\w*|"
     r"vontade de (voce|vc|te)\b|me deixa louc\w*|louc[oa] por (voce|vc)|saudade do (seu|teu) corpo|"
     r"de um jeito bem|\blingerie\b|\bcalcinha\b|sem roupa|queria (voce|vc) aqui)")
-_HIS_CLIMAX = re.compile(r"\b(gozei|gozando|vou gozar|goza (comigo|pra mim|junto))\b")
+_HIS_CLIMAX = re.compile(r"\b(gozei|gozando|vou gozar|goza|gozar junto)\b")
+_HER_CLIMAX = re.compile(r"\b(to gozando|estou gozando|gozei|acabei de gozar|gozando (muito|gostoso|todinha|demais))\b")
 _CUT = re.compile(
     r"\b(depois (amor|a gente|agente|continua\w*)|agora nao|outra hora|para com isso|chega por hoje|chega disso|"
     r"to (cansad\w*|mort[oa])|nao to no clima|sem clima|mudando de assunto|deixa pra (la|depois))\b")
@@ -202,8 +209,12 @@ class IntimacyEngine:
                                       or plan.get("intent") == "flirting"):
             gain += GAIN_PLAN
         glow = self._afterglow(st, now)
-        if glow is not None and glow <= REFRACTORY_MIN:
-            gain *= 0.5
+        since = self._minutes(st.get("climax_at"), now)
+        if since is not None and since <= POST_CLIMAX_DAMP_MIN:
+            # 24/09 (Patrick): depois de gozar ela fica mole — custa mais esquentar de novo,
+            # menos no período fértil.
+            fertile = self._cycle_libido() >= CYCLE_LIBIDO["ovulatoria"]
+            gain *= POST_CLIMAX_GAIN_FERTILE if fertile else POST_CLIMAX_GAIN
         gain *= self._libido()
         a = min(1.0, st["arousal"] + gain * (1.0 - st["arousal"]) * GROWTH)
         st["arousal"], st["updated_at"] = a, now.isoformat()
@@ -212,12 +223,10 @@ class IntimacyEngine:
         if active and not st["mode_since"]:
             st["mode_since"] = now.isoformat()
 
-        if active and a >= CLIMAX_MIN_AROUSAL and (
-                _HIS_CLIMAX.search(t) or st["hot_turns"] >= CLIMAX_AFTER_HOT_TURNS):
-            st.update(arousal=0.35, mode_since=None, hot_turns=0, climax_at=now.isoformat())
+        if active and a >= HOT_AT and _HIS_CLIMAX.search(t) and (glow is None or glow > REFRACTORY_MIN):
+            # Ele pediu/gozou: abre a cena do clímax. O gozo só fica registrado se ela escrever.
             self._save(st)
-            logger.info("intimacy.climax")
-            return IntimacyTurn("climax", 0.35, strong, 0.0)
+            return IntimacyTurn("climax", round(a, 3), strong, glow)
 
         if active and _CLOSE.search(t):
             st.update(arousal=a * 0.5, mode_since=None, hot_turns=0)
@@ -261,6 +270,24 @@ _RULES = (
 )
 
 
+def observe_marina_line(db, text: str, now: Optional[datetime] = None) -> bool:
+    """Ela escreveu que está gozando: vira o clímax de verdade (afterglow + refratário)."""
+    now = now or datetime.now()
+    if not _HER_CLIMAX.search(_norm(text)):
+        return False
+    engine = IntimacyEngine(db)
+    st = engine._decayed(engine._load(), now)
+    if not (st["mode_since"] or st["arousal"] >= ACTIVE_OFF):
+        return False
+    glow = engine._afterglow(st, now)
+    if glow is not None and glow <= REFRACTORY_MIN:
+        return False
+    st.update(arousal=0.35, mode_since=None, hot_turns=0, climax_at=now.isoformat(), updated_at=now.isoformat())
+    engine._save(st)
+    logger.info("intimacy.climax by=marina")
+    return True
+
+
 def _examples_for(band: str, limit: int = 3) -> str:
     try:
         from voice_library import parse_biblioteca_comportamental, format_examples_block
@@ -301,8 +328,9 @@ def system_block(turn: IntimacyTurn, cycle_info: Optional[dict] = None, *, photo
         body = (f"[MODO ÍNTIMO — sexting com o Patrick]\n- Como ela está agora: {_BAND_TEXT[turn.band]}."
                 f"{lib_line}\n{_RULES}")
     elif turn.state == "climax":
-        body = ("[MODO ÍNTIMO — CLÍMAX]\nEla está gozando agora, junto com ele. Conta isso numa mensagem curta, "
-                "intensa e entrecortada, com palavrão se sair; logo depois escapa carinho e vulnerabilidade. "
+        body = ("[MODO ÍNTIMO — CLÍMAX]\nEle está gozando ou pediu pra ela gozar. Se ela está no ponto, goza "
+                "junto agora: mensagem curta, intensa e entrecortada, com palavrão se sair, e logo depois escapa "
+                "carinho e vulnerabilidade. Se ainda não chegou lá, diz que está quase e continua. "
                 "Nada de narrar como livro, nada de falar de regras.")
     elif turn.state == "afterglow":
         mins = int(turn.minutes_since_climax or 0)

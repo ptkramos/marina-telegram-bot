@@ -196,7 +196,7 @@ def is_authorized(update: Update) -> bool:
     return chat_id == settings.TARGET_CHAT_ID or user_id == settings.TARGET_CHAT_ID
 
 def generate_dynamic_speech(instruction: str, max_tokens: int = 120, temperature: float = 0.72,
-                            *, with_history: bool = False) -> str:
+                            *, with_history: bool = False, model: Optional[str] = None) -> str:
     """Gera uma fala espontânea e orgânica da Marina usando a LLM com temperatura equilibrada anti-glitch.
 
     24/09: `with_history` — a iniciativa dela era gerada SEM a conversa; às 20:53 ela
@@ -230,9 +230,9 @@ def generate_dynamic_speech(instruction: str, max_tokens: int = 120, temperature
     ]
     try:
         completion = llm_client.chat.completions.create(
-            model=settings.LLM_MODEL,
+            model=model or settings.LLM_MODEL,
             messages=messages,
-            **llm_kwargs(max_tokens),
+            **llm_kwargs(max_tokens, model=model),
             temperature=temperature
         )
         spoken = completion.choices[0].message.content.strip().strip('"').strip("'")
@@ -559,6 +559,9 @@ def is_photo_request(texto: str) -> bool:
         return False
     return bool(_FOTO_PEDIDO_RE.search((texto or "").lower()))
 
+_VER_NO_CLIMA_RE = re.compile(r"\b(deixa eu v[eê]+r?|me mostra|mostra (pra mim|pro seu|pra eu|a|o|essa|esse)|quero (te )?ver)\b")
+
+
 def is_audio_request(texto: str) -> bool:
     return bool(_AUDIO_PEDIDO_RE.search((texto or "").lower()))
 
@@ -600,6 +603,14 @@ def is_time_clarification_question(text: str) -> bool:
     padrao = r"(?:\b(quando|que horas|qual hor[aá]rio|qual hora|que dia)\b.*?\?|\b(a que horas|em que momento)\b.*?\?)"
     return bool(re.search(padrao, t_clean, re.DOTALL))
 
+async def _typing(bot, chat_id: int) -> None:
+    """'digitando…' é enfeite: falha de rede aqui não pode matar a resposta (24/09, 20:04)."""
+    try:
+        await bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+    except Exception as exc:
+        logger.warning("typing.failed %s", type(exc).__name__)
+
+
 async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_message_id: int = None, response_policy=None):
     """Envia a mensagem em balões curtos sucessivos com animação realista de digitação e rastreia IDs."""
     if settings.VOICE_PROSODY_ENABLED:
@@ -621,7 +632,7 @@ async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_messag
         for idx, bubble in enumerate(bubbles):
             rep_id = reply_to_message_id if idx == 0 else None
             
-            await bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+            await _typing(bot, chat_id)
             delay = min(max(len(bubble) * 0.035, 1.2), 3.0)
             await asyncio.sleep(delay)
             
@@ -633,7 +644,7 @@ async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_messag
     else:
         tempo_digitacao = min(max(len(full_text) * 0.035, 1.5), 4.0)
         await asyncio.sleep(random.uniform(0.8, 1.5))
-        await bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+        await _typing(bot, chat_id)
         await asyncio.sleep(tempo_digitacao)
         sent_msg = await bot.send_message(chat_id=chat_id, text=bubbles[0], reply_to_message_id=reply_to_message_id)
         ULTIMAS_MENSAGENS_MARINA[chat_id].append({"message_id": sent_msg.message_id, "text": full_text})
@@ -826,7 +837,8 @@ def _proposes_live_call(text: str) -> bool:
 _POLICY_REFUSAL_RE = re.compile(
     r"(descri[cç][aã]o|conte[uú]do|linguagem|detalhes?)\s+(sexua(l|is)\s+)?expl[ií]cit"
     r"|sem\s+(entrar\s+em|ficar|ser|detalhar)\s*(\w+\s+)?expl[ií]cit"
-    r"|n[aã]o\s+(posso|consigo|vou|devo)\s+(descrever|detalhar|entrar\s+em\s+detalhe|escrever\s+isso|gerar)"
+    r"|n[aã]o\s+(posso|consigo|vou|devo)\s+(descrever|detalhar|entrar\s+em\s+detalhe|escrever\s+isso|gerar|criar)"
+    r"|legenda\s+(sexual|expl[ií]cit)"   # 24/09: "Não posso criar uma legenda sexual explícita" vazou na foto
     r"|diretrizes|pol[ií]ticas?\s+de\s+conte[uú]do"
     r"|como\s+(uma\s+)?(ia|intelig[eê]ncia\s+artificial|assistente)\b"
     r"|\bI\s+(can(no|['’])t|am\s+not\s+able)\b",
@@ -1176,7 +1188,7 @@ def _reaction_chance(chat_id: int, text: str, from_planner: bool) -> float:
     """Quão provável ela reagir no balão dele. Gente reage de vez em quando."""
     t = (text or "").lower()
     chance = 0.35 if from_planner else 0.25
-    if re.search(r"k{4,}|(?:ks){3,}|hahaha", t) or re.search(r"te amo|meu mundo", t):
+    if re.search(r"k{4,}|(?:ks){3,}|hahaha", t) or re.search(r"\bte amo\b|meu mundo", t):
         chance = 0.7
     last = _LAST_REACTION_AT.get(chat_id)
     if last and datetime.now() - last < timedelta(minutes=3):
@@ -3289,6 +3301,10 @@ async def process_incoming_batch(
 
     # 8. Verifica se pediu foto ou áudio normal
     pediu_foto = is_photo_request(texto_usuario)
+    # 24/09: "DEIXA EU VER!" no meio do sexting não contava como pedido de foto.
+    if (not pediu_foto and intimacy_turn.state in ("active", "climax", "afterglow")
+            and _VER_NO_CLIMA_RE.search(texto_usuario.lower())):
+        pediu_foto = True
     pediu_audio = is_audio_request(texto_usuario)
 
     # Executa busca na web em tempo real caso a mensagem do Patrick envolva fatos, lançamentos ou perguntas
@@ -3326,6 +3342,8 @@ async def process_incoming_batch(
         if getattr(memory_manager, "cycle_mgr", None) else None, photo_ok=photo_ok)
     if intimacy_hint:
         messages.append({"role": "system", "content": intimacy_hint})
+    elif photo_ok and intimacy_turn.state in ("off", "warming", "afterglow"):
+        messages.append({"role": "system", "content": photo_director.SELF_PHOTO_HINT_CASUAL})
     if plan and plan.get("should_offer_reminder"):
         event_desc = plan.get("event_details", {}).get("description") or "compromisso"
         messages.append({
@@ -3577,6 +3595,7 @@ async def process_incoming_batch(
     queria_audio = bool(re.search(r'\[MANDAR_AUDIO\]|\[AUDIO\]', resposta_marin, flags=re.IGNORECASE))
     # C.1b: no modo íntimo ela manda foto quando quer provocar (marca [FOTO] no fim da fala).
     foto_dela = False
+    gozou_agora = False
     if photo_director.SELF_PHOTO_TAG.search(resposta_marin or ""):
         resposta_marin = photo_director.SELF_PHOTO_TAG.sub(" ", resposta_marin).strip()
         if photo_ok:
@@ -3629,7 +3648,11 @@ async def process_incoming_batch(
             fala_limpa = f"{fala_limpa.strip()}{pergunta_tempo}"
 
     # Chance espontânea adicional: ~6% de mandar áudio por vontade própria em mensagens carinhosas (apenas se não for pedido de foto)
-    if not reminder_decision_instruction and not pediu_foto and not pediu_audio and not queria_audio and random.random() < (0.20 if intimacy_turn.state == "active" and intimacy_turn.arousal >= 0.6 else 0.06) and len(fala_limpa) > 30:
+    # 24/09 (Patrick): "senti falta de mais áudios no sexting" — gemendo, ofegando, sussurrando.
+    audio_chance = (0.45 if intimacy_turn.state == "climax"
+                    else 0.35 if intimacy_turn.state == "active" and intimacy_turn.arousal >= 0.6
+                    else 0.06)
+    if not reminder_decision_instruction and not pediu_foto and not pediu_audio and not queria_audio and random.random() < audio_chance and len(fala_limpa) > 30:
         queria_audio = True
 
     if response_policy:
@@ -3751,12 +3774,30 @@ async def process_incoming_batch(
         except Exception:
             logger.exception("meals.observe.error")
         try:
+            # 24/09: "vou pedir pelo iFood" vira pedido com hora pra chegar.
+            import delivery
+            recentes = " ".join(m.get("content", "")   # mais recente primeiro: o que ela falou agora
+                                for m in reversed(memory_manager.get_historico_recente(limit=8)))
+            delivery.observe(memory_manager.db, fala_limpa, datetime.now(), context=f"{texto_usuario} {recentes}")
+        except Exception:
+            logger.exception("delivery.observe.error")
+        try:
             # "Te aviso quando chegar" vira lembrete dela, amarrado ao trajeto real.
             import arrival_promise
             if arrival_promise.observe(memory_manager.db, fala_limpa, texto_usuario):
                 logger.info("arrival_promise.made")
         except Exception:
             logger.exception("arrival_promise.observe.error")
+        try:
+            # 24/09 (Patrick): o gozo segue o que ela escreve, não uma contagem de turnos.
+            from intimacy import observe_marina_line as intimacy_observe_marina
+            if intimacy_observe_marina(memory_manager.db, fala_limpa, datetime.now()):
+                # Patrick, 24/09: quando ela goza, avisa e geralmente manda foto do depois.
+                if (not pediu_foto and not getattr(settings, 'PHOTO_PROVIDER_MAINTENANCE', False)
+                        and random.random() < photo_director.CLIMAX_PHOTO_CHANCE):
+                    pediu_foto = foto_dela = gozou_agora = True
+        except Exception:
+            logger.exception("intimacy.observe_marina.error")
         try:
             # D11 (Patrick, 24/09): mal de verdade + "vai no médico" dele → ela vai.
             from health import Health
@@ -3818,14 +3859,15 @@ async def process_incoming_batch(
                         {"role": "user", "content": f"Ele disse: '{pedido}'. Você respondeu: '{fala[:300]}'.\n"
                          f"Opções:\n{lista}"},
                     ],
-                    **llm_kwargs(20),
+                    **llm_kwargs(40, model=turn_model),   # 24/09: sem o model, o Gemini devolvia 400
                     temperature=0.7,
                 )
                 return (res.choices[0].message.content or "").strip().split()[0].strip("`'\".,:")
 
             shot = photo_director.direct(
-                memory_manager.db, now_foto, request="" if foto_dela else texto_usuario, her_line=fala_limpa,
-                camera_ctx=camera_ctx, turn=intimacy_turn, feeling=feeling, her_initiative=foto_dela,
+                memory_manager.db, now_foto, request=texto_usuario, her_line=fala_limpa,
+                camera_ctx=camera_ctx, feeling=feeling, her_initiative=foto_dela,
+                turn=IntimacyTurn("climax", 0.95) if gozou_agora else intimacy_turn,
                 chooser=_escolhe_pose)
             logger.info("📸 diretor: pose=%s nível=%s momento=%s cômodo=%s dela=%s", shot.pose_id, shot.level,
                         shot.beat, shot.room, foto_dela)
@@ -3833,15 +3875,24 @@ async def process_incoming_batch(
             foto_stream = gen.image
 
             if foto_stream:
-                motivo = "porque quis provocar ele" if foto_dela else f"que ele pediu ('{texto_usuario}')"
+                motivo = ("logo depois de gozar, pra ele ver como você ficou" if gozou_agora
+                          else "porque quis provocar ele" if foto_dela else f"que ele pediu ('{texto_usuario}')")
+                ideias = photo_director.CLIMAX_CAPTION_IDEAS if gozou_agora else ""
                 prompt_legenda = (
-                    f"Você está mandando uma foto sua pro Patrick, {motivo}. Como é a foto: {shot.facts}. "
+                    f"Você está mandando uma foto sua pro Patrick, {motivo}. Como é a foto: {shot.facts}. {ideias}"
                     f"Você acabou de dizer: '{fala_limpa[:200]}'. "
                     "Escreva UMA frase curta e espontânea de legenda, no tom do momento, sem repetir o que já disse. "
                     "Não invente local nem roupa além do que está na foto. "
                     "Sem introduções longas, apenas a fala da legenda. Sem Ps: nem parênteses de bastidor."
                 )
-                legenda_dinamica = generate_dynamic_speech(prompt_legenda, max_tokens=60, temperature=0.72) or "Olha o que eu tirei só pra você, amor... Gostou? 💕"
+                # 24/09: a legenda da foto adulta saiu do Luna como recusa ("Não posso criar uma legenda
+                # sexual explícita…") e foi enviada. Foto adulta: legenda pelo modelo do turno íntimo.
+                legenda_model = (intimate_model() or turn_model) if shot.is_nsfw else None
+                legenda_dinamica = generate_dynamic_speech(prompt_legenda, max_tokens=60, temperature=0.72,
+                                                           model=legenda_model)
+                if not legenda_dinamica or _is_policy_refusal(legenda_dinamica):
+                    legenda_dinamica = ("olha o que você fez comigo 🫣" if shot.is_nsfw
+                                        else "olha o que eu tirei só pra você 💕")
                 try:
                     await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.UPLOAD_PHOTO)
                 except Exception:

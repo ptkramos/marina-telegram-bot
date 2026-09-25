@@ -676,6 +676,12 @@ class WorldStateManager:
         except Exception:
             logger.exception("casa.materialize.error")
         try:
+            # 24/09: o pedido do iFood chega de verdade (e ela vai comer).
+            from delivery import materialize as delivery_materialize
+            delivery_materialize(self.db, now)
+        except Exception:
+            logger.exception("delivery.materialize.error")
+        try:
             # Fase D6: a sessão de série/anime da noite (e o que ela descobre sozinha).
             from watch import Watching
             Watching(self.db).materialize(now)

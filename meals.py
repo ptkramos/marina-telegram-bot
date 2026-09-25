@@ -110,8 +110,17 @@ def meal_kind(now: datetime) -> str:
     return "lanche"
 
 
+# 24/09: "vou ficar aqui jantando", "tô engolindo correndo" — nada disso abria refeição, e o
+# /status seguia mostrando outra coisa. Presente/imediato: começa já, sem atraso.
+MEAL_NOW_RE = re.compile(
+    r"\b(?:t[oô]|estou|t[oô] aqui|fico aqui|vou ficar aqui)\s+(?:jantando|almo[çc]ando|comendo|lanchando|"
+    r"engolindo|atacando|devorando|tomando (?:meu|o) (?:caf[eé]|a[çc]a[ií]))\b",
+    re.IGNORECASE,
+)
+
+
 def announces_meal(text: str) -> bool:
-    return bool(MEAL_PROMISE_RE.search(text or ""))
+    return bool(MEAL_PROMISE_RE.search(text or "") or MEAL_NOW_RE.search(text or ""))
 
 
 def _rng(day: date, name: str) -> random.Random:
@@ -373,7 +382,7 @@ class Meals:
         if kind != "lanche" and self._logged(now.date(), kind):
             return None
         rng = random.Random(f"meal-promise:{now.isoformat(timespec='minutes')}")
-        start = now + timedelta(minutes=rng.randint(*START_DELAY_MIN))
+        start = now if MEAL_NOW_RE.search(text or "") else now + timedelta(minutes=rng.randint(*START_DELAY_MIN))
         planned = {s.kind: s for s in self.day_plan(now.date())}
         dish = planned[kind].dish if kind in planned else rng.choice(MENU["lanche"])
         slot = MealSlot(kind, f"meal:{now.date().isoformat()}:{kind}" + (":p" if kind == "lanche" else ""),

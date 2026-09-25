@@ -542,6 +542,8 @@ class WorldContextBuilder:
                     comida += ["[SEU SONO — aconteceu de verdade]", *sono]
             from meals import Meals
             comida += Meals(self.db).prompt_lines(now)
+            from delivery import prompt_lines as delivery_lines
+            comida += delivery_lines(self.db, now)   # 24/09: o iFood de verdade
             from watch import Watching
             comida += Watching(self.db).prompt_lines()
             from college import College

@@ -59,21 +59,38 @@ class IntimacyEngineTests(unittest.TestCase):
         self.assertEqual(self.eng.current(T0).state, "off")
         self.assertEqual(self.eng.observe("beijo, boa noite", now=T0).state, "off")
 
-    def test_gozo_dele_leva_ao_climax_e_depois_ao_pos(self):
+    def test_gozo_dele_abre_a_cena_e_o_dela_registra(self):
+        """24/09: o pedido dele abre a cena; o gozo só vale quando ela escreve."""
+        from intimacy import observe_marina_line
         falas = ["tô com um tesão do caralho", "fala putaria pra mim", "quero te foder gostoso",
                  "goza pra mim, amor"]
         turns = self._run(falas)
         self.assertEqual(turns[-1].state, "climax")
+        at = T0 + timedelta(minutes=4)
+        self.assertFalse(observe_marina_line(self.db, "tô quase, amor… não para", at), "quase não é gozo")
+        self.assertTrue(observe_marina_line(self.db, "Tô gozando… tô gozando muito em você agora", at))
         depois = self.eng.observe("nossa... que delícia, amor", now=T0 + timedelta(minutes=10))
         self.assertEqual(depois.state, "afterglow")
         self.assertTrue(depois.routed)
         tarde = self.eng.current(T0 + timedelta(hours=2))
         self.assertEqual(tarde.state, "off")
 
-    def test_ela_chega_la_sozinha_depois_de_um_tempo_no_auge(self):
+    def test_depois_de_gozar_custa_esquentar_de_novo(self):
+        """24/09: ela fica mole depois de gozar (menos no período fértil)."""
+        from intimacy import observe_marina_line
+        self._run(["tô com um tesão do caralho", "fala putaria pra mim", "quero te foder gostoso"])
+        self.assertTrue(observe_marina_line(self.db, "tô gozando todinha", T0 + timedelta(minutes=4)))
+        antes = self.eng.current(T0 + timedelta(minutes=60)).arousal
+        depois = self.eng.observe("quero te foder de novo, safada", now=T0 + timedelta(minutes=60)).arousal
+        fresca = IntimacyEngine(DatabaseManager(Path(self.temp.name) / "outra.db"), _Cycle("folicular"))
+        sem_gozo = fresca.observe("quero te foder de novo, safada", now=T0 + timedelta(minutes=60)).arousal
+        self.assertLess(depois - antes, sem_gozo, "o mesmo estímulo esquenta menos logo depois do gozo")
+
+    def test_nao_goza_sozinha_por_contagem_de_turnos(self):
+        """24/09: o antigo 'depois de 6 turnos no auge' marcou gozo enquanto ela dizia 'tô quase'."""
         falas = ["tesão do caralho", "fala putaria"] + ["continua, tô louco de tesão"] * 8
         states = [t.state for t in self._run(falas, gap=1)]
-        self.assertIn("climax", states)
+        self.assertNotIn("climax", states)
 
     def test_corte_desce_na_hora(self):
         self._run(["tô com um tesão do caralho", "fala putaria pra mim"])

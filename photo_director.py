@@ -28,7 +28,15 @@ import apartamento
 SESSION_KEY = "photo_session_json"
 SESSION_TTL_MIN = 45
 SELF_PHOTO_KEY = "photo_self_initiated_at"
-SELF_PHOTO_GAP_MIN = 12
+# Patrick, 24/09: "uma só foto por sexting é sacanagem" — no clima ela manda mais (sem exagerar).
+SELF_PHOTO_GAP_MIN = 5           # no modo íntimo
+CLIMAX_PHOTO_CHANCE = 0.8        # quando ela goza, geralmente manda foto do depois
+# Ideias pra legenda do pós-gozo (inspiração pro LLM, nunca frase fixa).
+CLIMAX_CAPTION_IDEAS = (
+    "Ideias de tom pra legenda (inspire-se, não copie): mostrar o estrago que ele fez ('olha como você me "
+    "deixou'), ainda tremendo ou sem ar, sem forças pra levantar da cama, cabelo e lençol destruídos, "
+    "culpar ele de brincadeira, um pedido manhoso de carinho depois.")
+SELF_PHOTO_GAP_CASUAL_MIN = 60   # no dia a dia (Patrick, 24/09: "libera com limite")
 PROVOKE_BELOW_CHANCE = 0.3   # pediu dois degraus acima: às vezes ela provoca com um só
 
 # Teto de ousadia pelo clima (intimacy.IntimacyTurn.band).
@@ -95,19 +103,20 @@ POSES: tuple[Pose, ...] = (
          beats=_beats("her legs spread wide on the white sheets", "left")),
     # Tripé (Patrick, 24/09): celular fixo, as duas mãos livres pra se tocar.
     Pose("cama_tripe_duas_maos", "deitada de pernas abertas, celular no tripé, as duas mãos livres (timer)",
-         ("quarto",), (4, 4), "three_quarter", "timer", "lying back on the pillows with her knees up and her legs "
+         ("quarto",), (3, 4), "three_quarter", "timer", "lying back on the pillows with her knees up and her legs "
          "spread apart, both hands free", beats=_beats("her legs spread wide on the white sheets", "right",
                                                       _SQUEEZE_LEFT)),
-    Pose("cama_de_quatro", "de quatro na cama, de costas pra câmera (timer)", ("quarto",), (3, 4),
+    Pose("cama_de_quatro", "de quatro na cama, de costas pra câmera (timer)", ("quarto",), (1, 4),
          "three_quarter", "timer", "on all fours on the bed seen from behind, her knees apart and her back arched, "
          "looking back over her shoulder", angle="behind",
          beats=_beats("her ass up toward the camera", "right")),
     # ---------------------------------------------------------------- closet --
     Pose("espelho_corpo", "de pé na frente do espelho grande do closet", ("closet",), (0, 3), "full", "mirror",
          "standing barefoot in front of the tall mirror, her weight on one leg, her free hand resting on her hip"),
-    Pose("espelho_costas", "de costas pro espelho, olhando por cima do ombro", ("closet",), (1, 3), "full",
-         "mirror", "standing with her back to the tall mirror, looking over her shoulder at the reflection, her "
-         "free hand resting on her lower back", angle="behind"),
+    # 24/09 (/ruim): "de costas pro espelho" saiu irreal (reflexo e selfie brigando) — de costas é timer.
+    Pose("closet_costas", "de costas pra câmera no closet, olhando por cima do ombro (timer)", ("closet",), (1, 3),
+         "full", "timer", "standing with her back to the camera near the clothing rack, looking back over her "
+         "shoulder, one hand resting on her lower back", angle="behind"),
     Pose("poltrona_pernas", "sentada de lado na poltrona, pernas no braço (timer)", ("closet",), (1, 3), "full",
          "timer", "sitting sideways in the cream armchair with her legs draped over one armrest, one hand in her "
          "hair"),
@@ -154,6 +163,16 @@ POSES: tuple[Pose, ...] = (
     Pose("piscina_espreguicadeira", "deitada na espreguiçadeira da piscina (timer)", ("piscina",), (0, 1), "full",
          "timer", "lying on a white lounger with one knee raised, her hands behind her head",
          outfit="a small soft triangle bikini in light blue"),
+    # Depois de gozar (Patrick, 24/09: "adoro ver como você fica depois que goza").
+    Pose("pos_gozo", "jogada na cama logo depois de gozar, selfie de cima", ("quarto",), (3, 4), "close",
+         "selfie", "lying on her back on the messy white sheets right after she came, her hair tangled over the "
+         "pillow, her skin glowing with sweat, her chest rising with heavy breaths, her right arm stretched up "
+         "toward the camera taking the selfie"),
+    # --------------------------------------------------- mostrando algo --
+    # 24/09: ela prometeu 3x a foto do açaí e nunca mandou. {food} vem da conversa (FOODS).
+    Pose("mostrando_comida", "selfie mostrando a comida", ("cozinha", "sala", "quarto", "varanda", "fora"),
+         (0, 1), "close", "selfie", "holding {food} up close to the camera in her left hand, her right arm "
+         "stretched toward the camera taking the selfie"),
     # ------------------------------------------------------------------ rua --
     Pose("fora_selfie", "selfie na rua", ("fora",), (0, 1), "close", "selfie",
          "her right arm stretched toward the camera taking the selfie at arm's length"),
@@ -163,6 +182,52 @@ POSES: tuple[Pose, ...] = (
          "three_quarter", "friend", "walking toward the camera mid-step, one hand tucking her hair behind her ear"),
 )
 BY_ID = {p.id: p for p in POSES}
+
+# A posição que eles escreveram manda na pose (24/09: ela disse "de quatro na cama" e o sorteio
+# mandou de costas no espelho). Em ordem de preferência; vale a primeira que aceita o nível.
+POSE_WORDS = (
+    (r"de quatro|empinad|por tr[aá]s", ("cama_de_quatro",)),
+    (r"pernas abertas|abr\w* as pernas|arreganhad|deitada de costas", ("cama_tripe_duas_maos", "cama_pernas_abertas")),
+    (r"chuveiro|no box|no banho", ("chuveiro_tocando", "chuveiro", "banheiro_toalha", "banheiro_espelho")),
+    (r"poltrona", ("poltrona_aberta", "poltrona_pernas")),
+    (r"apertando (os|meus) (seios|peitos)", ("cama_apertando",)),
+    (r"de bru[cç]os", ("cama_de_brucos",)),
+    (r"ajoelhad|de joelhos", ("cama_ajoelhada",)),
+    (r"espelho", ("espelho_corpo", "banheiro_espelho", "academia_espelho")),
+    (r"sof[aá]", ("sofa_timer", "sofa_selfie")),
+    (r"bancada", ("cozinha_bancada", "cozinha_cafe")),
+    (r"varanda", ("varanda_cadeira", "varanda_parapeito")),
+)
+FOODS = (
+    (r"a[cç]a[ií]", "a bowl of açaí topped with granola"),
+    (r"pizza", "a slice of pizza"),
+    (r"hamb[uú]rg|burger", "a juicy burger"),
+    (r"sushi|temaki", "a tray of sushi"),
+    (r"sorvete", "an ice cream cone"),
+    (r"brigadeiro", "a small plate of brigadeiros"),
+    (r"caf[eé]\b|cappuccino", "a cup of coffee"),
+    (r"salada", "a bowl of salad"),
+    (r"bolo", "a slice of cake"),
+)
+
+
+def _worded_pose(text: str, level: int, at_home: bool) -> Optional[Pose]:
+    low = (text or "").lower()
+    for pattern, ids in POSE_WORDS:
+        if re.search(pattern, low):
+            for pid in ids:
+                pose = BY_ID[pid]
+                if pose.levels[0] <= level <= pose.levels[1] and ("fora" in pose.rooms) != at_home:
+                    return pose
+    return None
+
+
+def _food(text: str) -> Optional[str]:
+    low = (text or "").lower()
+    for pattern, food in FOODS:
+        if re.search(pattern, low):
+            return food
+    return None
 
 # Guarda-roupa (regra do Patrick: tecido macio, sem bojo exagerado).
 WARDROBE = {
@@ -373,7 +438,17 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     if not at_home and level > 1:
         declined, level = "fora de casa", 1
 
-    change = bool(_POSE_CHANGE.search((request or "").lower()))
+    # A posição dita na conversa manda: pedido dele primeiro, depois a fala dela.
+    worded = _worded_pose(request, level, at_home) or _worded_pose(her_line, level, at_home)
+    food = _food(f"{request} {her_line}") if level <= 1 else None
+    if food:
+        worded = BY_ID["mostrando_comida"]
+    if getattr(turn, "state", "") == "climax" and not worded and level >= 3:
+        current = BY_ID.get((session or {}).get("pose", ""))
+        if not (current and current.beats):          # sem cena com "momentos" rolando: foto do depois
+            worded = BY_ID["pos_gozo"]
+    change = bool(_POSE_CHANGE.search((request or "").lower())) or bool(
+        worded and session and worded.id != session.get("pose"))
     room_asked = apartamento.room_for(request) if at_home else None
     keep = (session is not None and not change and (room_asked in (None, session.get("room")))
             and session.get("pose") in BY_ID)
@@ -405,8 +480,10 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         if not candidates and at_home:                       # o cômodo não tem pose desse nível: vai pro quarto
             room = "quarto"
             candidates = [p for p in POSES if "quarto" in p.rooms and p.levels[0] <= level <= p.levels[1]]
-        pose = None
-        if chooser and len(candidates) > 1:
+        pose = worded
+        if pose and room not in pose.rooms:
+            room = pose.rooms[0] if at_home else "fora"
+        if pose is None and chooser and len(candidates) > 1:
             try:
                 picked = chooser([(p.id, p.pt) for p in candidates], request, her_line)
                 pose = BY_ID.get(picked) if picked in {p.id for p in candidates} else None
@@ -420,6 +497,7 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     action = dict(pose.beats)[beat] if beat else pose.action
     if beat:
         action = f"{pose.action}, {action}"
+    action = action.replace("{food}", food or _food(session.get("food", "") if session else "") or "her snack")
     weather = getattr(camera_ctx, "weather", None) if camera_ctx else None
     rain = "chuva" if weather and (weather.get("heavy_rain") or "rain" in json.dumps(weather).lower()) else None
     if room == "fora":
@@ -440,7 +518,7 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     if declined:
         facts += "; ela está fora de casa e não dá pra mandar foto mais ousada daqui — provoca prometendo pra depois"
     new_session = {"place": place or HOME, "room": room, "pose": pose.id, "level": level, "outfit": outfit,
-                   "beat": beat, "seed": seed, "at": now.isoformat()}
+                   "beat": beat, "seed": seed, "at": now.isoformat(), "food": f"{request} {her_line}" if food else ""}
     # Calcinha/toalha em foto "normal" o moderador do Civitai barra: vai como adulta (Buzz amarelo).
     adult = level >= 2 or bool(outfit and re.search(r"panties|thong|towel", outfit))
     return DirectedShot(prompt=prompt, is_nsfw=adult, focus_angle=pose.angle, place_key=place or "",
@@ -455,12 +533,14 @@ def confirm_sent(db, shot: DirectedShot) -> None:
 
 # ------------------------------------------------------- iniciativa dela --
 def may_self_initiate(db, now: datetime, turn) -> bool:
-    """No modo íntimo ela pode mandar foto por conta própria — de vez em quando."""
-    if getattr(turn, "state", "off") not in ("active", "climax"):
+    """Ela pode mandar foto por conta própria: no clima a cada 12 min; no dia a dia 1 por hora."""
+    state = getattr(turn, "state", "off")
+    if state in ("cut", "closing"):
         return False
+    gap = SELF_PHOTO_GAP_MIN if state in ("active", "climax") else SELF_PHOTO_GAP_CASUAL_MIN
     try:
         last = db.get_estado_relacional(SELF_PHOTO_KEY)
-        if last and now - datetime.fromisoformat(last) < timedelta(minutes=SELF_PHOTO_GAP_MIN):
+        if last and now - datetime.fromisoformat(last) < timedelta(minutes=gap):
             return False
     except Exception:
         pass
@@ -472,5 +552,8 @@ def mark_self_initiated(db, now: datetime) -> None:
 
 
 SELF_PHOTO_TAG = re.compile(r"\s*\[FOTO\]\s*", re.IGNORECASE)
+SELF_PHOTO_HINT_CASUAL = ("[FOTO SUA] Se você prometeu mandar foto de alguma coisa e agora dá (ex.: a comida "
+                          "chegou), ou quer mostrar algo seu de verdade (a comida, o look, o pós-treino), termine a "
+                          "mensagem com [FOTO]. Só quando fizer sentido — nunca por obrigação.")
 SELF_PHOTO_HINT = ("- Se VOCÊ quiser provocar ele com uma foto sua agora (não precisa ele pedir), termine a "
                    "mensagem com [FOTO]. Só quando fizer sentido na cena — de vez em quando, não toda hora.")

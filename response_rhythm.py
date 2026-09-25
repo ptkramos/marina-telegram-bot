@@ -23,6 +23,7 @@ logger = logging.getLogger('ResponseRhythm')
 # bubbles; beyond this we fold the tail so a hallucinated burst can't spam the
 # user. Not a stylistic rule.
 _SANITY_CEILING = 10   # 24/09 (Patrick): se ela quiser mandar 10 mensagens curtas, pode
+LONG_SINGLE_BUBBLE = 140
 
 # Opening interjections / short laughs that deserve to stand alone as bubble #1
 # when Marina emits them followed by more substance. Case-insensitive.
@@ -427,7 +428,9 @@ def _semantic_split(text, policy):
                     ' '.join(sentences[2 * third:]).strip()]
             if all(len(part) >= 15 for part in trio):
                 return trio, 'casual_three_beats'
-        if roll < 78:
+        # 24/09 (Patrick: "bolha longa demais"): 170+ caracteres num balão só saíam no sorteio
+        # dos 22%. Fala longa com duas frases ou mais vai sempre em pelo menos dois.
+        if roll < 78 or len(text) >= LONG_SINGLE_BUBBLE:
             idx = _balanced_split_index(sentences)
             first = ' '.join(sentences[:idx]).strip()
             rest = ' '.join(sentences[idx:]).strip()
@@ -478,6 +481,24 @@ def _apply_transport_limit(parts):
     return result
 
 
+GIANT_BUBBLE = 160
+
+
+def _split_giants(bubbles):
+    """Mesmo quando o modelo já quebrou em linhas, um balão de 200+ caracteres vira dois."""
+    out = []
+    for bubble in bubbles:
+        sentences = _split_sentences(bubble)
+        if len(bubble) >= GIANT_BUBBLE and len(sentences) >= 2:
+            idx = _balanced_split_index(sentences)
+            first, rest = ' '.join(sentences[:idx]).strip(), ' '.join(sentences[idx:]).strip()
+            if len(first) >= 20 and len(rest) >= 20:
+                out += [first, rest]
+                continue
+        out.append(bubble)
+    return out
+
+
 def segment(text, policy):
     """Turn Marina's raw reply into a list of Telegram-ready chat bubbles.
 
@@ -498,7 +519,7 @@ def segment(text, policy):
     if len(paragraphs) > 1:
         coalesced = _coalesce_paragraphs(paragraphs)
         if len(coalesced) > 1:
-            bubbles, reason = coalesced, 'llm_newlines'
+            bubbles, reason = _split_giants(coalesced), 'llm_newlines'
         else:
             # Everything collapsed into a single coherent thought — keep the
             # original text (its internal \n is a soft line break inside one

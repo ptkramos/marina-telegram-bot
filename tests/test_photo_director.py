@@ -130,11 +130,35 @@ class DirectorTest(unittest.TestCase):
 
     def test_self_initiative_is_rationed(self):
         hot = IntimacyTurn(state="active", arousal=0.8)
-        self.assertFalse(pd.may_self_initiate(self.db, NOW, IntimacyTurn()))
+        self.assertTrue(pd.may_self_initiate(self.db, NOW, IntimacyTurn()), "dia a dia: liberado com limite")
+        self.assertFalse(pd.may_self_initiate(self.db, NOW, IntimacyTurn(state="cut")))
         self.assertTrue(pd.may_self_initiate(self.db, NOW, hot))
         pd.mark_self_initiated(self.db, NOW)
-        self.assertFalse(pd.may_self_initiate(self.db, NOW + timedelta(minutes=5), hot))
+        self.assertFalse(pd.may_self_initiate(self.db, NOW + timedelta(minutes=2), hot))
         self.assertTrue(pd.may_self_initiate(self.db, NOW + timedelta(minutes=pd.SELF_PHOTO_GAP_MIN + 1), hot))
+        self.assertFalse(pd.may_self_initiate(self.db, NOW + timedelta(minutes=30), IntimacyTurn()), "1 por hora")
+
+    def test_position_she_described_wins(self):
+        """24/09: ela disse 'de quatro na cama' e o sorteio mandou de costas no espelho."""
+        hot = IntimacyTurn(state="active", arousal=0.6)
+        s = self.shot("mostra pro seu amor em que posição", turn=hot,
+                      her_line="De quatro na cama, amor... com a bunda empinada pra você", her_initiative=True)
+        self.assertEqual(s.pose_id, "cama_de_quatro")
+        self.assertEqual(s.room, "quarto")
+        self.assertNotIn("espelho_costas", pd.BY_ID)
+
+    def test_after_she_comes_the_photo_is_the_aftermath(self):
+        s = self.shot("", turn=IntimacyTurn(state="climax", arousal=0.95), her_initiative=True,
+                      her_line="Tô gozando... tô gozando muito em você agora")
+        self.assertEqual(s.pose_id, "pos_gozo")
+        self.assertIn("right after she came", s.prompt)
+
+    def test_food_photo_shows_what_she_promised(self):
+        s = self.shot("", her_line="O açaí chegou! olha que coisa linda", her_initiative=True,
+                      now=datetime(2026, 9, 24, 20, 20))
+        self.assertEqual(s.pose_id, "mostrando_comida")
+        self.assertIn("açaí", s.prompt)
+        self.assertFalse(s.is_nsfw)
 
     def test_tripod_frees_both_hands(self):
         import civitai_images as ci
