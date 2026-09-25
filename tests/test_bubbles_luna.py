@@ -15,16 +15,17 @@ class EmojiBoundaryTests(unittest.TestCase):
         self.policy = select_policy("oi amor")
 
     def test_emoji_separa_duas_batidas(self):
+        # 25/09: o balão também quebra dentro da frase; o emoji continua fechando a batida.
         falas = {
-            "Bom dia, amor 😘 Bom trabalho pra você, vai com calma e se cuida.":
-                ["Bom dia, amor 😘", "Bom trabalho pra você, vai com calma e se cuida."],
+            "Bom dia, amor 😘 Bom trabalho pra você, vai com calma e se cuida.": ("😘", "Bom trabalho"),
             "Kkkkk beleza nada, amor, aula de Cristianismo é teste de resistência 😭 Mas tô sobrevivendo aqui.":
-                ["Kkkkk beleza nada, amor, aula de Cristianismo é teste de resistência 😭",
-                 "Mas tô sobrevivendo aqui."],
+                ("😭", "Mas tô sobrevivendo"),
         }
-        for fala, esperado in falas.items():
+        for fala, (fim, comeco) in falas.items():
             with self.subTest(fala=fala):
-                self.assertEqual(segment(fala, self.policy), esperado)
+                baloes = segment(fala, self.policy)
+                i = next(i for i, b in enumerate(baloes) if b.endswith(fim))
+                self.assertTrue(baloes[i + 1].startswith(comeco), baloes)
 
     def test_emoji_no_fim_nao_quebra_nada(self):
         fala = "Tô na PUC ainda, amor, na aula até as 15h 😘"
@@ -32,7 +33,8 @@ class EmojiBoundaryTests(unittest.TestCase):
 
     def test_balao_com_emoji_sozinho_junta_na_fala(self):
         fala = "Fico feliz que ajudou, amor. Você não precisa passar por isso sozinho, tá?\n🖤"
-        self.assertEqual(len(segment(fala, self.policy)), 1)
+        baloes = segment(fala, self.policy)
+        self.assertTrue(all(any(c.isalpha() for c in b) for b in baloes), baloes)
 
     def test_emoji_depois_da_pergunta_fica_com_a_pergunta(self):
         """Soak: "…agora? 🤨" virava dois balões, o segundo só com o emoji."""
@@ -48,11 +50,15 @@ class CasualTwoBeatsTests(unittest.TestCase):
     def setUp(self):
         self.policy = select_policy("oi amor")
 
-    def test_quando_quebra_o_corte_cai_entre_as_frases(self):
-        """A quebra varia por fala, mas nunca pica uma frase no meio."""
+    def test_corte_cai_em_pedaco_de_pensamento(self):
+        """25/09: pode quebrar dentro da frase, mas em vírgula/conjunção, nunca no meio de palavra
+        nem deixando vírgula pendurada no fim do balão."""
         fala = "Tô na PUC, amor, na aula de O Cristianismo. Vai até às 15h, então tô aqui firme ainda."
-        frases = ["Tô na PUC, amor, na aula de O Cristianismo.", "Vai até às 15h, então tô aqui firme ainda."]
-        self.assertIn(segment(fala, self.policy), ([fala], frases))
+        baloes = segment(fala, self.policy)
+        self.assertGreater(len(baloes), 1)
+        self.assertTrue(all(not b.endswith(",") and len(b) >= 10 for b in baloes), baloes)
+        junto = " ".join(baloes).replace(",", "").split()
+        self.assertEqual(junto, fala.replace(",", "").split())
 
     def test_fala_curta_continua_num_balao(self):
         self.assertEqual(segment("Oi amor! Tudo bem?", self.policy), ["Oi amor! Tudo bem?"])
@@ -74,7 +80,31 @@ class CasualTwoBeatsTests(unittest.TestCase):
             "Vou ver o jogo aqui em casa, amor. Se o Fogão ganhar eu vou gritar tanto que o vizinho reclama.",
         ]
         contagens = {len(segment(f, self.policy)) for f in falas}
-        self.assertEqual(contagens, {1, 2}, "esperado misturar um e dois balões entre falas longas")
+        self.assertGreaterEqual(len(contagens), 2, "o número de balões varia entre falas")
+        self.assertNotEqual(contagens, {2}, "não pode sair sempre em exatamente dois")
+
+
+class PedacoDePensamentoTests(unittest.TestCase):
+    """25/09 (Patrick, prints de casais no WhatsApp): ~23 caracteres por balão e
+    a continuação da frase no balão de baixo ("tão confortável", "ou início de manhã")."""
+
+    def setUp(self):
+        self.policy = select_policy("oi amor")
+
+    def test_fala_comprida_vira_pedacos_curtos(self):
+        fala = ("Tô aqui jogada, com o cabelo todo bagunçado no travesseiro e a bochecha vermelha de tanto "
+                "que você me fez suspirar... A culpa é todinha sua que eu tô nesse estado mole, sabia?")
+        baloes = segment(fala, self.policy)
+        self.assertGreaterEqual(len(baloes), 3)
+        self.assertTrue(all(len(b) <= 80 for b in baloes), baloes)
+
+    def test_risada_na_frente_sai_sozinha(self):
+        baloes = segment("Kkkk nem vem! Você ia rir da minha cara de destruída", self.policy)
+        self.assertEqual(baloes[0], "Kkkk")
+
+    def test_nao_separa_o_complemento_do_verbo(self):
+        fala = "Fode mais rápido, por favor... me bate gostoso com o quadril até eu gozar todinha no seu pau!"
+        self.assertFalse(any(b.startswith("com o quadril") for b in segment(fala, self.policy)))
 
 
 class TrailingGibberishTests(unittest.TestCase):

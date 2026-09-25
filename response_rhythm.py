@@ -150,14 +150,12 @@ def select_policy(message='', *, plan=None, voice=False, storytelling=False,
 
 _MODE_RULE = {
     'casual_short':
-        'Ritmo casual de WhatsApp: no total, uma a três frases curtas de chat. '
-        'Quando o turno tem duas batidas — reação e depois pergunta, riso e '
-        'depois substância, informação e depois comentário —, mande em dois '
-        'balões, quebrando com uma linha nova. Uma batida só continua num '
-        'balão só.',
+        'Ritmo casual de WhatsApp: pouco conteúdo no total, em balões curtos '
+        '— reação, depois o que você tem a dizer, às vezes uma pergunta. Pode '
+        'ser um balão só ou vários; o número varia de um turno pro outro.',
     'normal':
-        'Ritmo de chat: duas a quatro frases, quebrando com linha nova entre '
-        'as batidas (em geral dois balões, três quando há três assuntos).',
+        'Ritmo de chat: um pouco mais de conteúdo, ainda em balões curtos com '
+        'linha nova entre eles — quantos a fala pedir, sem padrão fixo.',
     'supportive':
         'Reaja como a namorada dele em uma frase quente — sem script de '
         'cuidadora, sem promessa genérica de estar disponível. No máximo uma '
@@ -195,14 +193,13 @@ def apply_policy(prompt, policy):
     mode_rule = _MODE_RULE.get(policy.mode, '')
     guidance = [
         '[RITMO DE RESPOSTA]',
-        "Responda como Marina. Quebre em balões separados com quebra de linha "
-        "('\\n') onde a batida muda: interjeição curta antes da substância "
-        "(\"kkkk\" e depois a resposta), reação antes de uma pergunta de "
-        "acompanhamento, um pensamento antes de outro. No chat, você quase "
-        "sempre escreve assim, em mensagens curtas seguidas, e não num "
-        "parágrafo único. Emoji não substitui a quebra de linha: se a ideia "
-        "mudou depois do emoji, quebre a linha. Não existe contagem fixa — "
-        "mande quantos o momento pedir, sem picar um pensamento no meio.",
+        # 25/09 (Patrick, prints de casais reais): balão é pedaço de pensamento.
+        "Responda como Marina, em mensagens curtas seguidas, uma por linha "
+        "('\\n'), nunca num parágrafo. Cada balão é um pedaço de pensamento, "
+        "em geral de 3 a 10 palavras; a continuação da frase pode ir no balão "
+        "de baixo, como quem digita enquanto pensa (\"tô morrendo de sono\" / "
+        "\"e ainda tenho aula às 8\"). Reação sai sozinha antes (\"sério???\", "
+        "\"kkkkk\", \"ixi\"). Quantidade livre, sem padrão fixo.",
         'Um único riso ou interjeição pode ser um turno completo sozinho.',
         'Otimize para o próximo turno da conversa, não para completude desta '
         'resposta. Pule tranquilizações prontas ("estou aqui se precisar") e '
@@ -499,6 +496,71 @@ def _split_giants(bubbles):
     return out
 
 
+# 25/09 (Patrick, prints de casais no WhatsApp): gente divide por PEDAÇO DE
+# PENSAMENTO, não por frase. Nos prints: 3,9 balões por fala, ~23 caracteres
+# cada, 65% com até 30, nenhum com 100+; e 9 de 51 balões continuam a frase do
+# anterior ("tu me faz lembrar daquelas brisas de fim de tarde" / "ou início
+# de manhã"). A Marina em 208 falas: 1,9 balão de ~68 caracteres, e 138 falas
+# com exatamente dois. O corte agora também cai dentro da frase.
+CLAUSE_TARGET = {'explanatory': (80, 120), 'serious': (50, 80)}
+CLAUSE_TARGET_DEFAULT = (32, 60)     # alvo por balão, sorteado por fala
+CLAUSE_MIN = 10                      # nenhum pedaço menor que isso vira balão
+_LAUGH_LEAD_RE = re.compile(r"^((?:k{3,}|(?:ha){2,}h?|(?:he){2,}|rs(?:rs)+)[!?.…]*)\s+(?=\S)", re.IGNORECASE)
+# Onde um pedaço novo pode começar, em ordem de força do corte.
+_CUT_SENTENCE_RE = re.compile(r"(?<=[.!?…])\s+")
+_CUT_COMMA_RE = re.compile(r",\s+")
+_CUT_CONJ_RE = re.compile(
+    r"\s+(?=(?:e|ou|mas|a[íi]|porque|pq|ent[aã]o|tipo|s[oó] que|at[eé]|que nem)\s)",
+    re.IGNORECASE)
+# "com"/"quando"/"sem" cortavam o complemento do verbo ("me bate gostoso" / "com o quadril").
+_CUT_WEIGHT = ((_CUT_SENTENCE_RE, 0), (_CUT_COMMA_RE, 8), (_CUT_CONJ_RE, 14))
+
+
+def _roll(text, salt=''):
+    return int(hashlib.sha256(f'{salt}{text}'.encode('utf-8')).hexdigest()[:8], 16)
+
+
+def _clause_cut(bubble, target):
+    """Melhor ponto pra quebrar `bubble` perto de `target` caracteres, ou None."""
+    best = None
+    for regex, penalty in _CUT_WEIGHT:
+        for m in regex.finditer(bubble):
+            left = bubble[:m.start()].rstrip(' ,')
+            right = bubble[m.end():].strip()
+            if len(left) < CLAUSE_MIN or len(right) < CLAUSE_MIN or len(right.split()) < 2:
+                continue
+            if regex is _CUT_CONJ_RE and len(right.split()) < 3:
+                continue
+            if left.count('(') != left.count(')') or left.count('"') % 2:
+                continue
+            score = abs(len(left) - target) + penalty
+            if best is None or score < best[0]:
+                best = (score, left, right)
+    return best
+
+
+def _split_clauses(bubbles, policy):
+    """Quebra cada balão comprido em pedaços de pensamento, como gente no chat."""
+    lo, hi = CLAUSE_TARGET.get(getattr(policy, 'mode', ''), CLAUSE_TARGET_DEFAULT)
+    out = []
+    for bubble in bubbles:
+        m = _LAUGH_LEAD_RE.match(bubble)
+        if m and len(bubble) - m.end() >= CLAUSE_MIN:
+            out.append(m.group(1))                 # "kkkk" sai sozinho, como nos prints
+            bubble = bubble[m.end():]
+        while True:
+            target = lo + _roll(bubble, 'alvo') % (hi - lo + 1)
+            if len(bubble) <= target + 12:
+                break
+            cut = _clause_cut(bubble, target)
+            if not cut:
+                break
+            out.append(cut[1])
+            bubble = cut[2]
+        out.append(bubble)
+    return out
+
+
 def segment(text, policy):
     """Turn Marina's raw reply into a list of Telegram-ready chat bubbles.
 
@@ -527,6 +589,10 @@ def segment(text, policy):
             bubbles, reason = [text], 'llm_newlines_coalesced'
     else:
         bubbles, reason = _semantic_split(paragraphs[0], policy)
+
+    clauses = _split_clauses(bubbles, policy)
+    if len(clauses) > len(bubbles):
+        bubbles, reason = clauses, f'{reason}+clauses'
 
     # Anti-runaway sanity ceiling. Fold the tail into the last kept bubble so
     # nothing is lost.
