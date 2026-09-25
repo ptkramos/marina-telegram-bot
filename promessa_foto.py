@@ -118,6 +118,18 @@ def due(db, now: datetime) -> Optional[dict]:
     return p if datetime.fromisoformat(p["due_at"]) <= now else None
 
 
+def promise_intimate(db, said: str, due_at: datetime, now: datetime, *, where: str = "banho") -> dict:
+    """Sexting: "vou pro box com o transparente… já te mando o estrago". Ao sair do banho ela manda
+    os registros (o brinquedo e o gozo) — 25/09 16:28–16:39 ela anunciou 4x e nada chegava."""
+    promise = {"kind": "intimo", "count": 2, "subject": where, "said": said.strip()[:200],
+               "made_at": now.isoformat(), "due_at": due_at.isoformat(), "status": "pendente"}
+    st = _load(db)
+    st["promessa"] = promise
+    _save(db, st)
+    logger.info("promessa_foto.made kind=intimo where=%s due=%s", where, due_at.isoformat(timespec="minutes"))
+    return promise
+
+
 MAX_ATTEMPTS = 3
 
 
@@ -149,6 +161,7 @@ def prompt_lines(db, now: datetime) -> list[str]:
         return []
     o_que = {"looks": "as opções de look" if p["count"] > 1 else "o look",
              "comida": f"a foto {('do ' + p['subject']) if p['subject'] else 'da comida'}",
-             "selfie": "uma foto sua"}[p["kind"]]
+             "selfie": "uma foto sua",
+             "intimo": "os registros do banho (você se tocando e o depois) quando sair"}[p["kind"]]
     return [f"[SUA PROMESSA] Você disse que ia mandar {o_que} pro Patrick; vai mandar daqui a pouco. "
             "Não diga que já mandou e não prometa de novo."]

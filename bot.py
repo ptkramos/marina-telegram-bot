@@ -3897,7 +3897,14 @@ async def process_incoming_batch(
             from meals import Meals
             from rituals import Rituals
             if not Meals(memory_manager.db).observe_marina_line(fala_limpa, datetime.now()):
-                Rituals(memory_manager.db).observe_marina_line(fala_limpa, datetime.now())
+                if (Rituals(memory_manager.db).observe_marina_line(fala_limpa, datetime.now())
+                        and intimacy_turn.state in ("active", "climax")):
+                    # 25/09: foi pro box no meio do sexting → ao sair, os registros (brinquedo e gozo).
+                    import promessa_foto
+                    pend = json.loads(memory_manager.db.get_estado_relacional("pending_transition_json") or "{}")
+                    saida = datetime.fromisoformat(pend["end_at"]) + timedelta(minutes=random.randint(1, 3))
+                    promessa_foto.promise_intimate(memory_manager.db, f"{texto_usuario} / {fala_limpa}",
+                                                   saida, datetime.now())
         except Exception:
             logger.exception("meals.observe.error")
         try:
@@ -4772,6 +4779,12 @@ async def _pedido_dela_tick(application: Application, now: datetime) -> None:
     pedido_dela.tick(db, now)
     if pedido_dela.open_order(db):
         return
+    # 25/09 16:31: a surpresa ("fiz uma coisinha pra você, dodói") saiu no meio do sexting.
+    with db.get_connection() as conn:
+        row = conn.execute("SELECT arousal, updated_at FROM intimacy_state WHERE id=1").fetchone()
+    if row and row["updated_at"] and float(row["arousal"] or 0) >= 0.45 and \
+            now - datetime.fromisoformat(row["updated_at"]) < timedelta(minutes=30):
+        return
     with db.get_connection() as conn:
         rows = conn.execute("SELECT timestamp, content FROM conversas WHERE role='user' AND timestamp>=? "
                             "ORDER BY id", ((now - pedido_dela.SURPRISE_WINDOW).isoformat(),)).fetchall()
@@ -4836,6 +4849,15 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
                 her_initiative=True, force_pose="espelho_corpo", outfit_override=outfit,
                 rng=random.Random(seed)))
         o_que = "as duas opções de look pra ele escolher" if p["count"] > 1 else "o look pra ele dar a opinião"
+    elif p["kind"] == "intimo":
+        # Os registros do banho: o brinquedo (transparente se a conversa falou nele) e o gozo, no chuveiro.
+        for turn in (IntimacyTurn("active", 0.9), IntimacyTurn("climax", 0.95)):
+            shots.append(photo_director.direct(
+                db, now, request=f"no chuveiro com o dildo {p['said']}", her_line=p["said"], camera_ctx=camera_ctx,
+                feeling=feeling, turn=turn, her_initiative=True, force_pose="chuveiro_tocando",
+                rng=random.Random(seed), fertile=_fase_fertil()))
+        o_que = ("os registros que você prometeu: você no chuveiro se tocando com o brinquedo e logo depois de "
+                 "gozar pensando nele")
     elif p["kind"] == "comida":
         # 25/09: a do bolo saiu adulta (roupa "provoca", com calcinha). Promessa de comida é foto de casa.
         casual = random.choice(photo_director.WARDROBE["casa_noite" if now.hour >= 20 or now.hour < 7 else "casa_dia"])
@@ -4856,13 +4878,17 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
     if not images:
         logger.warning("promessa_foto.sem_imagem")
         return                                   # tenta de novo no próximo minuto (até expirar)
+    intimo = p["kind"] == "intimo"
     legenda = generate_dynamic_speech(
         f"Você está mandando pro Patrick {o_que}. Você tinha dito: '{p['said'][:160]}'. Como é a foto: "
-        f"{shots[0].facts}. Escreva UMA legenda curtinha, do seu jeito"
-        + (" (pode perguntar qual ele prefere: 1 ou 2)" if len(images) > 1 else "")
-        + ". Sem introdução, sem Ps: nem parênteses.", max_tokens=50, temperature=0.75)
+        f"{shots[-1].facts}. Escreva UMA legenda curtinha, do seu jeito"
+        + (" (pode perguntar qual ele prefere: 1 ou 2)" if p["kind"] == "looks" and len(images) > 1 else "")
+        + (" — você acabou de gozar no banho pensando nele, conta isso, manhosa e ainda ofegante" if intimo else "")
+        + ". Sem introdução, sem Ps: nem parênteses.", max_tokens=50, temperature=0.75,
+        model=(intimate_model() or settings.LLM_MODEL) if intimo else None)
     if not legenda or _is_policy_refusal(legenda):
-        legenda = "1 ou 2? 👀" if len(images) > 1 else "prometido é devido 😌"
+        legenda = ("gozei tanto pensando em você que minhas pernas ainda tão tremendo 🫠" if intimo
+                   else "1 ou 2? 👀" if len(images) > 1 else "prometido é devido 😌")
     from chat_naturalness import strip_closing_periods
     legenda = strip_closing_periods(limpar_fala_marina(legenda))
     bot = application.bot
@@ -4880,6 +4906,10 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
         memory_manager.db.registrar_iniciativa_marina(f"[{len(images)} foto(s): {o_que}] {legenda}",
                                                       media_type='photo')
         promessa_foto.close(db, "cumprida")
+        if intimo:
+            # o gozo do banho vale como o dela (refratário, "tesão demora a voltar")
+            from intimacy import observe_marina_line as intimacy_observe_marina
+            intimacy_observe_marina(db, "gozei", now)
         logger.info("promessa_foto.cumprida kind=%s fotos=%s", p["kind"], len(images))
 
 

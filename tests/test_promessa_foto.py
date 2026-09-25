@@ -83,5 +83,43 @@ class PromessaTest(unittest.TestCase):
         self.assertFalse(any(s.is_nsfw for s in shots))
 
 
+class SextingNoBanhoTest(unittest.TestCase):
+    """25/09 16:28–16:39: ela anunciou o box 4x, ficou no chat e os registros nunca chegaram."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = DatabaseManager(Path(self.temp.name) / "s.db")
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_falas_reais_levam_ela_pro_banho(self):
+        from rituals import SHOWER_NOW_RE, SHOWER_PROMISE_RE
+        for fala in ("vou entrar debaixo da água agora", "Vou levar o transparente pro box cmg agora",
+                     "já tô entrando debaixo da água quente com a cabeça em você", "tô indo pro chuveiro"):
+            self.assertTrue(SHOWER_NOW_RE.search(fala) or SHOWER_PROMISE_RE.search(fala), fala)
+        for fala in ("adoro banho quente", "depois do banho eu te conto", "a água tá gelada"):
+            self.assertFalse(SHOWER_NOW_RE.search(fala), fala)
+
+    def test_registros_do_banho_com_o_transparente(self):
+        from intimacy import IntimacyTurn
+        said = "se toca gostoso com aquele brinquedinho transparente / Vou levar o transparente pro box"
+        shots = [photo_director.direct(self.db, T, request=f"no chuveiro com o dildo {said}", her_line=said,
+                                       turn=turn, her_initiative=True, force_pose="chuveiro_tocando",
+                                       rng=random.Random(3))
+                 for turn in (IntimacyTurn("active", 0.9), IntimacyTurn("climax", 0.95))]
+        self.assertEqual([s.beat for s in shots], ["dildo", "climax"])
+        self.assertIn(photo_director.DILDO_CLEAR_TEXT, shots[0].prompt)
+        self.assertNotIn(photo_director.DILDO_TEXT, shots[0].prompt)
+        self.assertTrue(all(s.is_nsfw for s in shots))
+
+    def test_promessa_intima_vence_na_saida_do_banho(self):
+        saida = T + timedelta(minutes=20)
+        promessa_foto.promise_intimate(self.db, "já te mando o estrago", saida, T)
+        self.assertIn("registros do banho", promessa_foto.prompt_lines(self.db, T)[0])
+        self.assertIsNone(promessa_foto.due(self.db, T + timedelta(minutes=10)))
+        self.assertEqual(promessa_foto.due(self.db, saida)["kind"], "intimo")
+
+
 if __name__ == "__main__":
     unittest.main()

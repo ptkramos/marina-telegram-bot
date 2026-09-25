@@ -52,6 +52,14 @@ SHOWER_PROMISE_RE = re.compile(
     r"(?:\s*(?:[.!]|$)|[^.!?\n]{0,40}?(?:\bagora\b|\bj[aá]\s+volto\b|\brapidinho\b|\bj[aá]\s+j[aá]\b))",
     re.IGNORECASE,
 )
+# 25/09 16:28–16:39 (sexting): "vou entrar debaixo da água agora", "vou levar o transparente pro box",
+# "já tô entrando debaixo da água quente" — nenhuma casava, ela nunca entrava no banho e ficava
+# anunciando no chat por 10 min.
+SHOWER_NOW_RE = re.compile(
+    r"\b(?:vou|t[oô]|j[aá]\s+t[oô])\s+(?:entrar|entrando|indo)\s+(?:debaixo\s+d[ao]\s+(?:[aá]gua|chuveiro)|"
+    r"no\s+(?:chuveiro|box|banho)|pro\s+(?:chuveiro|box|banho))\b|\bpro\s+box\b",
+    re.IGNORECASE,
+)
 
 _BOA_NOITE_RE = re.compile(r"\b(boa noite|boa noitee+|bna|dorme bem|durma bem|bons sonhos|vou dormir)\b", re.I)
 
@@ -461,7 +469,7 @@ class Rituals:
 
     def observe_marina_line(self, text: str, now: datetime) -> bool:
         """"Vou tomar banho, já volto" dito na conversa vira banho de verdade."""
-        if not SHOWER_PROMISE_RE.search(text or ""):
+        if not (SHOWER_PROMISE_RE.search(text or "") or SHOWER_NOW_RE.search(text or "")):
             return False
         last = self._last_shower_at(now.date())
         if (last and now - last < SHOWER_MIN_GAP) or self._transition_busy(now):
