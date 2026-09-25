@@ -64,8 +64,8 @@ def observe(db, text: str, now: datetime, context: str = "") -> bool:
 def materialize(db, now: datetime) -> bool:
     """Chegou a hora: o pedido chega (acontecimento do dia) e ela passa a comer."""
     cur = _load(db)
-    if not cur or cur.get("arrived_at"):
-        return False
+    if not cur or cur.get("arrived_at") or cur.get("by") == "patrick":
+        return False                                   # o presente dele é do gift_tick
     eta = datetime.fromisoformat(cur["eta_at"])
     if eta > now:
         return False
@@ -101,10 +101,124 @@ def materialize(db, now: datetime) -> bool:
     return True
 
 
+# ------------------------------------------------- presente do Patrick (Mini App, 25/09) --
+# Ele pede pelo app e ela não sabe: é surpresa. Quando o entregador chega, o mundo
+# decide: em casa e acordada, ela recebe e (se não comeu há pouco) come; fora, dormindo
+# ou no banho, fica com o Seu Jorge na portaria até ela poder pegar. Ele paga: o evento
+# é "meal:…:presente", que as finanças não cobram (elas cobram só "meal:…:delivery").
+GIFT_SHOW_AFTER = timedelta(hours=3)
+
+
+def open_order(db) -> Optional[dict]:
+    """Pedido ainda não resolvido (dela a caminho, ou presente não recebido)."""
+    cur = _load(db)
+    if not cur:
+        return None
+    if cur.get("by") == "patrick":
+        return None if cur.get("status") == "recebido" else cur
+    return None if cur.get("arrived_at") else cur
+
+
+def gift(db, *, what: str, restaurant: str, price: int, eta_min: tuple, note: str, now: datetime,
+         eats: bool = True) -> Optional[dict]:
+    """O Patrick manda comida pra ela. None se já tem pedido em aberto."""
+    if open_order(db):
+        return None
+    rng = random.Random(f"presente:{now.isoformat()}")
+    eta = now + timedelta(minutes=rng.randint(*eta_min))
+    data = {"by": "patrick", "what": what, "restaurant": restaurant, "price": int(price),
+            "note": (note or "").strip()[:200], "eats": bool(eats), "ordered_at": now.isoformat(),
+            "eta_at": eta.isoformat(), "arrived_at": None, "status": "a_caminho",
+            "received_at": None, "waited": None, "ate_recently": False, "announced": False}
+    _save(db, data)
+    logger.info("delivery.gift what=%s eta=%s", what, eta.isoformat(timespec="minutes"))
+    return data
+
+
+def gift_tick(db, now: datetime, *, can_receive: bool, why_not: str = "", ate_recently: bool = False,
+              transition_busy: bool = False) -> Optional[str]:
+    """Anda o presente: 'portaria' (chegou e ela não pôde pegar) ou 'recebido'."""
+    cur = _load(db)
+    if not cur or cur.get("by") != "patrick" or cur.get("status") == "recebido":
+        return None
+    eta = datetime.fromisoformat(cur["eta_at"])
+    if eta > now:
+        return None
+    if cur["status"] == "a_caminho":
+        cur["arrived_at"] = eta.isoformat()
+        if not can_receive:
+            cur["status"], cur["waited"] = "portaria", why_not or "fora"
+            _save(db, cur)
+            logger.info("delivery.gift.portaria why=%s", cur["waited"])
+            return "portaria"
+    elif not can_receive:
+        return None                                    # continua na portaria
+    at = eta if cur["status"] == "a_caminho" else now
+    cur.update(status="recebido", received_at=at.isoformat(), ate_recently=bool(ate_recently))
+    _save(db, cur)
+    what, rest = cur["what"], cur["restaurant"]
+    portaria = " (tinha ficado na portaria com o Seu Jorge)" if cur.get("waited") else ""
+    eats_now = cur.get("eats", True) and not ate_recently
+    if eats_now:
+        summary = f"O Patrick mandou de surpresa {what} do {rest} pelo app; ela recebeu{portaria} e foi comer."
+    else:
+        summary = (f"O Patrick mandou de surpresa {what} do {rest} pelo app; ela recebeu{portaria}"
+                   + (" e guardou pra depois, porque tinha acabado de comer." if ate_recently else "."))
+    if cur.get("note"):
+        summary += f" Bilhete dele: \"{cur['note']}\"."
+    from meals import meal_kind
+    key = (f"meal:{at.date().isoformat()}:{meal_kind(at)}:presente" if eats_now
+           else f"presente:{at.isoformat(timespec='minutes')}")
+    with db.get_connection() as conn:
+        conn.execute(
+            """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
+               autonomy_level,importance,participants_json,share_worthy,created_at)
+               VALUES (?,?,?,'presente do Patrick',?,'simulated',1,0.6,?,0.9,?)""",
+            (key, at.isoformat(), "meal" if eats_now else "gift", summary,
+             json.dumps(["marina", "patrick", "jorge_almeida"]), now.isoformat()))
+        conn.commit()
+    end = at + timedelta(minutes=random.Random(cur["ordered_at"]).randint(*EAT_MIN))
+    if eats_now and end > now and not transition_busy:
+        db.set_estado_relacional("pending_transition_json", json.dumps({
+            "routine_type": "meal", "activity": f"comendo o {what} que o Patrick mandou", "place_key": "marina_apartment",
+            "announced_at": now.isoformat(), "transition_at": at.isoformat(), "end_at": end.isoformat(),
+            "dish": what}, ensure_ascii=False))
+    logger.info("delivery.gift.recebido what=%s waited=%s ate_recently=%s", what, cur.get("waited"), ate_recently)
+    return "recebido"
+
+
+def gift_to_announce(db) -> Optional[dict]:
+    cur = _load(db)
+    if cur and cur.get("by") == "patrick" and cur.get("status") == "recebido" and not cur.get("announced"):
+        return cur
+    return None
+
+
+def mark_announced(db) -> None:
+    cur = _load(db)
+    if cur:
+        cur["announced"] = True
+        _save(db, cur)
+
+
 def prompt_lines(db, now: datetime) -> list[str]:
     cur = _load(db)
     if not cur:
         return []
+    if cur.get("by") == "patrick":
+        # Surpresa: até receber ela não sabe de nada.
+        if cur.get("status") != "recebido" or not cur.get("received_at"):
+            return []
+        got = datetime.fromisoformat(cur["received_at"])
+        if now - got > GIFT_SHOW_AFTER:
+            return []
+        line = (f"[DELIVERY] O Patrick te mandou de surpresa {cur['what']} do {cur['restaurant']} pelo app; "
+                f"chegou pra você às {got:%H:%M}")
+        if cur.get("ate_recently"):
+            line += " (você tinha acabado de comer e guardou pra depois)"
+        if cur.get("note"):
+            line += f". Bilhete dele: \"{cur['note']}\""
+        return [line + "."]
     ordered = datetime.fromisoformat(cur["ordered_at"])
     if cur.get("arrived_at"):
         arrived = datetime.fromisoformat(cur["arrived_at"])

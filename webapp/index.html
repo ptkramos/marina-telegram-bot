@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marina</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="/static/app.css?v=__V__">
+</head>
+<body>
+<main id="app">
+  <button id="voltar" class="link" hidden>‹ Voltar</button>
+  <section id="v-inicio" class="view">
+    <header class="top"><h1>Marina</h1><p class="sub" id="inicio-sub">…</p></header>
+    <div class="card agora"><div class="muted small">agora</div><div id="inicio-agora" class="big">…</div><div id="inicio-disp" class="muted small"></div></div>
+    <div id="inicio-pedido"></div>
+    <div class="tiles">
+      <button class="tile" data-go="banco"><span class="ico">🏦</span>Banco</button>
+      <button class="tile" data-go="delivery"><span class="ico">🛵</span>Delivery</button>
+      <button class="tile off" disabled><span class="ico">🎁</span>Presentes<span class="soon">em breve</span></button>
+      <button class="tile off" disabled><span class="ico">📅</span>Datas<span class="soon">em breve</span></button>
+    </div>
+    <button class="link" data-go="bastidores">⚙️ Bastidores</button>
+  </section>
+
+  <section id="v-banco" class="view" hidden>
+    <header class="top"><h1>Banco</h1><p class="sub">Conta da Marina Salles</p></header>
+    <div class="muted small">Saldo dela</div>
+    <div class="saldo" id="banco-saldo">…</div>
+    <div id="banco-tags"></div>
+    <div class="card">
+      <div class="row"><label for="pix-valor">Valor do pix</label></div>
+      <input id="pix-valor" type="number" inputmode="numeric" min="1" max="5000" placeholder="50">
+      <input id="pix-recado" type="text" maxlength="200" placeholder="Recado (opcional): pro teu açaí">
+      <div class="err" id="pix-err"></div>
+      <button class="primary" id="pix-enviar">Fazer pix</button>
+    </div>
+    <h2>Extrato</h2>
+    <div id="banco-movs" class="list"></div>
+  </section>
+
+  <section id="v-delivery" class="view" hidden>
+    <header class="top"><h1>Delivery</h1><p class="sub">Entregar em: apê dela, Botafogo</p></header>
+    <div id="delivery-pedido"></div>
+    <div id="delivery-lista" class="list"></div>
+  </section>
+
+  <section id="v-item" class="view" hidden>
+    <header class="top"><h1 id="item-rest">…</h1><p class="sub" id="item-sub"></p></header>
+    <div id="item-lista" class="list"></div>
+    <div class="card" id="item-form" hidden>
+      <div class="big" id="item-escolhido"></div>
+      <textarea id="item-bilhete" rows="2" maxlength="200" placeholder="Bilhete pra ela (opcional)"></textarea>
+      <p class="muted small">Ela não fica sabendo antes: é surpresa. Se não estiver em casa, fica na portaria com o Seu Jorge.</p>
+      <div class="err" id="item-err"></div>
+      <button class="primary" id="item-pedir">Pedir pra ela</button>
+    </div>
+  </section>
+
+  <section id="v-bastidores" class="view" hidden>
+    <header class="top"><h1>Bastidores</h1><p class="sub">Só você vê isso</p></header>
+    <div id="bast-status" class="card"></div>
+    <h2>Corpo</h2><div id="bast-corpo" class="card"></div>
+    <h2>Humor</h2><div id="bast-humor" class="card"></div>
+    <h2>Sentindo agora</h2><div id="bast-sentindo" class="card"></div>
+    <h2>Com você</h2><div id="bast-vinculo" class="card"></div>
+    <h2>Hoje</h2><div id="bast-hoje" class="list"></div>
+    <h2>Mundo</h2><pre id="bast-mundo" class="card pre"></pre>
+  </section>
+
+  <div id="toast" hidden></div>
+</main>
+<script src="/static/app.js?v=__V__"></script>
+</body>
+</html>

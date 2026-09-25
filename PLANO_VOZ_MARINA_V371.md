@@ -32,6 +32,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **D** Rotina viva | ✅ | D1 comida · D2/D3/D13 sono · D4 banho · D5 Milo · D6 o que ela assiste + TMDB · D7 faculdade · D8 fim de semana · **D9 casa (revisado 24/09)** · **D10 freela (aprovado 24/09)** · **D11 saúde (revisado 24/09)** · D12 laços · D14 motor emocional. Falta só o resto das fatias da noite do D6 |
 | **Naturalidade de chat** | ✅ | Sem ponto final de fecho, repetição e ideia repetida cortadas, espera ele terminar de digitar, ela conta do dia dela, reações, bolhas livres (até 10). **25/09:** balão como pedaço de pensamento (~40 caracteres), abreviações misturadas, ela não vira farmacêutica quando ele está doente |
 | **Fotos (Civitai, Krea 2)** | ✅ ligado no `.env` | LoRA `marinaX` (v1.1), base FinePorn v4, sliders do Loraholic pro corpo canônico, LoRAs de ocasião. Tudo na seção "Fotos pelo Civitai" |
+| **Mini App** (banco, delivery surpresa, bastidores) | ✅ 25/09 | `https://marina.psoft.app`, botão "Marina" no chat. Plano e detalhes em `PLANO_WEBAPP_MARINA.md` |
 | **C** Consolidação | 🟡 | C1 parcial (estilo do Patrick é descrição, não amostras); C2 e C3 ⬜ |
 
 ### O que o Patrick decidiu em 24/09 (resumo)

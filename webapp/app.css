@@ -1,0 +1,63 @@
+:root {
+  --bg: var(--tg-theme-bg-color, #ffffff);
+  --bg2: var(--tg-theme-secondary-bg-color, #f2f2f5);
+  --fg: var(--tg-theme-text-color, #111111);
+  --muted: var(--tg-theme-hint-color, #8a8a8e);
+  --accent: var(--tg-theme-button-color, #2b7de9);
+  --on-accent: var(--tg-theme-button-text-color, #ffffff);
+  --line: color-mix(in srgb, var(--muted) 25%, transparent);
+  --ok: #2e9e5b;
+  --warn: #c7811a;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 560px; margin: 0 auto; padding: 16px 16px 40px; }
+h1 { font-size: 22px; font-weight: 600; margin: 0; }
+h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: none; margin: 20px 0 8px; }
+.top { margin-bottom: 14px; }
+.sub, .muted { color: var(--muted); }
+.sub { margin: 2px 0 0; font-size: 13px; }
+.small { font-size: 12px; }
+.big { font-size: 17px; font-weight: 600; }
+.card { background: var(--bg2); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+.agora .big { margin: 2px 0; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+.tile { background: var(--bg2); color: var(--fg); border: 0; border-radius: 14px; padding: 16px 8px;
+  font: inherit; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+.tile .ico { font-size: 24px; }
+.tile.off { opacity: .45; cursor: default; }
+.tile .soon { font-size: 11px; font-weight: 400; color: var(--muted); }
+.link { background: none; border: 0; color: var(--muted); font: inherit; padding: 8px 0; cursor: pointer; }
+.saldo { font-size: 32px; font-weight: 700; margin: 2px 0 8px; }
+.tag { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 999px; margin: 0 6px 8px 0;
+  background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.list .item { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 11px 2px; border-bottom: 1px solid var(--line); }
+.list .item:last-child { border-bottom: 0; }
+.list button.item { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line);
+  color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.item .t { font-weight: 600; }
+.item .d { font-size: 12px; color: var(--muted); }
+.plus { color: var(--ok); font-weight: 600; white-space: nowrap; }
+.minus { white-space: nowrap; }
+input, textarea { width: 100%; background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px; font: inherit; margin: 6px 0; }
+button.primary { width: 100%; background: var(--accent); color: var(--on-accent); border: 0; border-radius: 12px;
+  padding: 12px; font: inherit; font-weight: 600; margin-top: 6px; cursor: pointer; }
+button.primary:disabled { opacity: .5; }
+.err { color: #d64545; font-size: 13px; min-height: 0; }
+.pedido { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; }
+.pedido .t { font-weight: 600; }
+.bar-row { display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 10px; padding: 5px 0; }
+.bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.bar.warm > i { background: #d4537e; }
+.bar-row .w { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.feel { padding: 7px 0; border-bottom: 1px solid var(--line); }
+.feel:last-child { border-bottom: 0; }
+.feel .head { display: grid; grid-template-columns: 1fr 70px; gap: 10px; align-items: center; }
+.feel .why { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.pre { white-space: pre-wrap; font: 13px/1.5 inherit; margin: 0; }
+#toast { position: fixed; left: 16px; right: 16px; bottom: 20px; background: var(--fg); color: var(--bg);
+  padding: 12px 14px; border-radius: 12px; font-size: 14px; text-align: center; }

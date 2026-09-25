@@ -1136,6 +1136,8 @@ def _parse_available_reactions(available) -> set[str] | None:
 async def set_safe_message_reaction(bot, chat_id: int, message_id: int, emoji: str) -> bool:
     """React only when Telegram will accept the emoji; cache rejections."""
     import time
+    if not message_id:
+        return False       # turno sem mensagem real dele (pix do Mini App): nada pra reagir
     original = emoji
     emoji = _reaction_aliases.get(emoji, emoji)
     if emoji not in _safe_reactions:
@@ -1545,8 +1547,23 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
-    # 1. Vida & Rotina (Living World & Disponibilidade)
-    now_local = datetime.now()
+    # 23/09 (escolha do Patrick, opção B): /status é só a vida dela agora;
+    # o técnico foi para /sistema.
+    status_msg = _status_life_text(_status_snapshot(datetime.now()))
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🗑️ Apagar", callback_data="status_delete")]
+    ])
+    msg = await context.bot.send_message(
+        chat_id=chat_id,
+        text=status_msg,
+        reply_markup=keyboard,
+    )
+    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=120.0))
+
+
+def _status_snapshot(now_local: datetime) -> dict:
+    """O que o /status mostra, em dados (o comando e o Mini App saem daqui)."""
     atividade = "em repouso"
     local_str = "Rio de Janeiro"
     try:
@@ -1569,7 +1586,6 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.warning(f"Erro ao resolver estado no status: {e}")
 
     ciclo_info = memory_manager.cycle_mgr.get_cycle_info()
-    ciclo_str = f"Dia {ciclo_info['day']} de {ciclo_info.get('cycle_length', 28)} ({ciclo_info['name']}) 🌸"
 
     disp_str = "Disponível pra conversar"
     try:
@@ -1587,19 +1603,36 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.warning(f"Erro ao calcular disponibilidade no status: {e}")
 
-    # 23/09 (escolha do Patrick, opção B): /status é só a vida dela agora;
-    # o técnico foi para /sistema.
-    status_msg = _status_life_text(now_local, atividade, local_str, disp_str, ciclo_info)
-
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🗑️ Apagar", callback_data="status_delete")]
-    ])
-    msg = await context.bot.send_message(
-        chat_id=chat_id,
-        text=status_msg,
-        reply_markup=keyboard,
-    )
-    asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=120.0))
+    snap = {"now": now_local, "atividade": atividade, "local": local_str, "disponivel": disp_str,
+            "humor": None, "energia": None,
+            "ciclo_dia": ciclo_info["day"], "ciclo_fase": ciclo_info["name"].split(" (")[0].lower(),
+            "saude": [], "proximo": None, "planos": []}
+    try:
+        from emotion import EmotionEngine, ENERGY_WORDS, _word
+        feel = EmotionEngine(memory_manager.db).feeling(now_local)
+        snap["humor"] = EmotionEngine.mood_words(feel.valence, feel.arousal)
+        snap["energia"] = _word(feel.energy, ENERGY_WORDS)
+    except Exception as e:
+        logger.warning(f"Erro ao ler o motor emocional no status: {e}")
+    try:
+        from health import Health   # D11
+        snap["saude"] = [(cond.label, cond.remedy) for cond in Health(memory_manager.db).conditions(now_local)]
+    except Exception as e:
+        logger.warning(f"Erro ao ler a saúde no status: {e}")
+    try:
+        from calendar_world import CalendarWorld
+        nxt = CalendarWorld(memory_manager.db).next(now_local, include_academic=True)
+        if nxt:
+            snap["proximo"] = (nxt["activity"], _when(datetime.fromisoformat(nxt["start_at"]), now_local))
+    except Exception as e:
+        logger.warning(f"Erro ao ler o próximo compromisso no status: {e}")
+    try:
+        from social_day import SocialDay
+        snap["planos"] = [(plan["description"], _when(datetime.fromisoformat(plan["event_at"]), now_local))
+                          for plan in SocialDay(memory_manager.db).upcoming_outings(now_local, limit=2)]
+    except Exception as e:
+        logger.warning(f"Erro ao ler os planos no status: {e}")
+    return snap
 
 
 def _when(at: datetime, now: datetime) -> str:
@@ -1609,39 +1642,19 @@ def _when(at: datetime, now: datetime) -> str:
     return f"{dia} {at:%H:%M}"
 
 
-def _status_life_text(now: datetime, atividade: str, local_str: str, disp_str: str, ciclo_info: dict) -> str:
+def _status_life_text(snap: dict) -> str:
     """Painel do /status: onde ela está, o que faz, humor, ciclo e o que vem aí."""
-    lines = [f"✨ Marina agora · {now:%H:%M}", "",
-             f"🏠 {local_str} · {atividade}",
-             f"📱 {disp_str}"]
-    try:
-        from emotion import EmotionEngine, ENERGY_WORDS, _word
-        feel = EmotionEngine(memory_manager.db).feeling(now)
-        humor = EmotionEngine.mood_words(feel.valence, feel.arousal)
-        energia = _word(feel.energy, ENERGY_WORDS)
+    lines = [f"✨ Marina agora · {snap['now']:%H:%M}", "",
+             f"🏠 {snap['local']} · {snap['atividade']}",
+             f"📱 {snap['disponivel']}"]
+    if snap["humor"]:
+        humor, energia = snap["humor"], snap["energia"]
         lines.append(f"🌤 {humor[:1].upper() + humor[1:]}" + ("" if energia == "ok" else f", {energia}"))
-    except Exception as e:
-        logger.warning(f"Erro ao ler o motor emocional no status: {e}")
-    lines.append(f"🌸 Dia {ciclo_info['day']} do ciclo ({ciclo_info['name'].split(' (')[0].lower()})")
-    try:
-        from health import Health   # D11
-        for cond in Health(memory_manager.db).conditions(now):
-            lines.append(f"🤒 {cond.label} · {cond.remedy}")
-    except Exception as e:
-        logger.warning(f"Erro ao ler a saúde no status: {e}")
-    try:
-        from calendar_world import CalendarWorld
-        nxt = CalendarWorld(memory_manager.db).next(now, include_academic=True)
-        if nxt:
-            lines.append(f"📅 Próximo: {nxt['activity']} {_when(datetime.fromisoformat(nxt['start_at']), now)}")
-    except Exception as e:
-        logger.warning(f"Erro ao ler o próximo compromisso no status: {e}")
-    try:
-        from social_day import SocialDay
-        for plan in SocialDay(memory_manager.db).upcoming_outings(now, limit=2):
-            lines.append(f"🗓️ {plan['description']} · {_when(datetime.fromisoformat(plan['event_at']), now)}")
-    except Exception as e:
-        logger.warning(f"Erro ao ler os planos no status: {e}")
+    lines.append(f"🌸 Dia {snap['ciclo_dia']} do ciclo ({snap['ciclo_fase']})")
+    lines += [f"🤒 {label} · {remedy}" for label, remedy in snap["saude"]]
+    if snap["proximo"]:
+        lines.append(f"📅 Próximo: {snap['proximo'][0]} {snap['proximo'][1]}")
+    lines += [f"🗓️ {desc} · {when}" for desc, when in snap["planos"]]
     lines += ["", "(/emocao por dentro · /sistema técnico)"]
     return "\n".join(lines)
 
@@ -2994,7 +3007,7 @@ async def process_incoming_batch(
                 msg_cancel = "Tudo bem amor, fica pra depois então! 💕"
                 memory_manager.registrar_mensagem_usuario(texto_usuario)
                 sent_cancel = await send_human_messages(
-                    chat_id, context.bot, msg_cancel, reply_to_message_id=msg_id,
+                    chat_id, context.bot, msg_cancel, reply_to_message_id=msg_id or None,
                 )
                 if getattr(sent_cancel, "message_id", None):
                     memory_manager.registrar_mensagem_assistente(msg_cancel)
@@ -3052,7 +3065,7 @@ async def process_incoming_batch(
     if topics:
         replies = dialogue.prepare_replies(topics)
         await send_registered_privacy_replies(
-            chat_id, context.bot, replies, reply_to_message_id=msg_id,
+            chat_id, context.bot, replies, reply_to_message_id=msg_id or None,
             db=memory_manager.db,
         )
         if avail_decision and getattr(avail_decision, 'telemetry_event_id', None):
@@ -3315,7 +3328,7 @@ async def process_incoming_batch(
             else:
                 u_id = memory_manager.registrar_mensagem_usuario(texto_usuario)
             sent_avatar_reply = await send_human_messages(
-                chat_id, context.bot, resposta, reply_to_message_id=msg_id)
+                chat_id, context.bot, resposta, reply_to_message_id=msg_id or None)
             sent_avatar_id = getattr(sent_avatar_reply, 'message_id', None)
             if pending_batch_id and sent_avatar_id:
                 if availability_service.repo.mark_sent(
@@ -3358,7 +3371,7 @@ async def process_incoming_batch(
     else:
         deve_citar = random.random() < 0.25
 
-    reply_to_id = msg_id if deve_citar else None
+    reply_to_id = msg_id if deve_citar and msg_id else None   # 0 = turno sem mensagem real (Mini App)
 
     # 8. Verifica se pediu foto ou áudio normal
     pediu_foto = is_photo_request(texto_usuario)
@@ -4259,6 +4272,11 @@ _PROACTIVE_INSTRUCTIONS = {
                 "pode falar mesmo assim, cobrar de brincadeira, perguntar como está sendo, mandar um "
                 "carinho, contar uma coisa sua…). Nada de drama pesado."),
     # Promessa cumprida (arrival_promise): "te aviso quando chegar".
+    # Mini App (25/09): o delivery surpresa que ele mandou chegou.
+    'presente_delivery': ("{detail} Você não sabia de nada: foi surpresa. Mande pra ele a sua reação "
+                          "espontânea, do seu jeito (surpresa, dengo, gratidão, provocação carinhosa). Se tinha "
+                          "bilhete, reaja ao bilhete. Se tinha acabado de comer, pode rir disso em vez de fingir "
+                          "fome. Não invente detalhe além do que está aqui."),
     'aviso_chegada': ("{detail} e tinha prometido avisar o Patrick. Mande o aviso curtinho, do seu jeito "
                       "('cheguei, amor', 'chegueeei'); se aconteceu algo no caminho, pode comentar. Não "
                       "invente acontecimento novo."),
@@ -4643,6 +4661,110 @@ async def session_reflection_routine(application: Application):
     except Exception as e:
         logger.error(f"Erro no job de session_reflection_routine: {e}", exc_info=True)
 
+# --- MINI APP (PLANO_WEBAPP_MARINA.md, 25/09) ---
+
+def _fake_turn(application: Application):
+    """Update/contexto sem mensagem real (message_id 0), como o pending_response_routine."""
+    fake_update = SimpleNamespace(
+        message=SimpleNamespace(message_id=0, text="", reply_to_message=None),
+        effective_chat=SimpleNamespace(id=settings.TARGET_CHAT_ID))
+    return fake_update, SimpleNamespace(bot=application.bot)
+
+
+async def _webapp_pix(application: Application, valor: int, nota: str) -> dict:
+    """Pix pelo app: mesmo registro e mesma reação do /pix."""
+    import financas
+    now = datetime.now()
+    await asyncio.to_thread(financas.materialize, memory_manager.db, now)
+    res = await asyncio.to_thread(financas.receive_pix, memory_manager.db, valor, nota, now)
+    logger.info("pix.recebido valor=%s kind=%s via=webapp", valor, res["kind"])
+    motivo = "pra cobrir o aperto que você contou" if res["kind"] == "emprestimo" else "de presente, sem você pedir"
+    texto = f"[Pix de R$ {valor} do Patrick {motivo}" + (f" — recado: \"{nota}\"" if nota else "") + "]"
+    fake_update, fake_context = _fake_turn(application)
+    # A reação sai pelo fluxo normal, em segundo plano (o app responde na hora).
+    asyncio.create_task(process_incoming_batch(fake_update, fake_context, texto, availability_bypass=True))
+    return {"kind": res["kind"], "saldo": res["saldo"]}
+
+
+async def delivery_gift_routine(application: Application):
+    """O delivery surpresa que o Patrick mandou pelo app chega, e ela reage quando pega."""
+    if not settings.TARGET_CHAT_ID:
+        return
+    import delivery
+    try:
+        now = datetime.now()
+        order = delivery.open_order(memory_manager.db)
+        if order and order.get("by") == "patrick" and datetime.fromisoformat(order["eta_at"]) <= now:
+            from meals import Meals
+            from sleep_plan import SleepPlan
+            from world_repository import WorldStateRepository
+            meals = Meals(memory_manager.db)
+            asleep = SleepPlan(memory_manager.db).is_asleep(now)
+            latest = WorldStateRepository(memory_manager.db).latest() or {}
+            activity = (latest.get("activity") or "").casefold()
+            shower = any(w in activity for w in ("banho", "chuveiro"))
+            home = meals._at_home()
+            why = "dormindo" if asleep else "banho" if shower else "" if home else "fora"
+            delivery.gift_tick(memory_manager.db, now, can_receive=home and not asleep and not shower, why_not=why,
+                               ate_recently=bool(meals._recent_meal(now)),
+                               transition_busy=meals._transition_busy(now))
+        gift = delivery.gift_to_announce(memory_manager.db)
+        if not gift:
+            return
+        detail = f"O Patrick te mandou de surpresa {gift['what']} do {gift['restaurant']} pelo app de delivery"
+        if gift.get("waited") == "dormindo":
+            detail += "; chegou enquanto você dormia e o Seu Jorge guardou na portaria, você pegou agora"
+        elif gift.get("waited"):
+            detail += "; chegou quando você não podia pegar e ficou na portaria com o Seu Jorge, você pegou agora"
+        else:
+            detail += "; o Seu Jorge interfonou e você acabou de receber"
+        if gift.get("ate_recently"):
+            detail += ". Você tinha acabado de comer"
+        if gift.get("note"):
+            detail += f". Veio com um bilhete dele: \"{gift['note']}\""
+        detail += "."
+        text = await asyncio.to_thread(_proactive_text, 'presente_delivery', detail,
+                                       "Amooor, você mandou comida pra mim?? 🥺")
+        sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
+        if isinstance(getattr(sent, 'message_id', None), int) and sent.message_id > 0:
+            memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
+            delivery.mark_announced(memory_manager.db)
+            logger.info("delivery.gift.announced")
+    except Exception as exc:
+        logger.error('Erro no delivery do Patrick: %s', exc, exc_info=True)
+
+
+async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/app — abre o Mini App (o botão de menu do chat faz o mesmo)."""
+    if not is_authorized(update):
+        return
+    from telegram import WebAppInfo
+    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Abrir", web_app=WebAppInfo(url=settings.WEBAPP_URL))]])
+    await update.message.reply_text("Banco, delivery e bastidores:", reply_markup=keyboard)
+
+
+async def _start_webapp(application: Application):
+    if not getattr(settings, "WEBAPP_ENABLED", False) or not settings.TARGET_CHAT_ID:
+        return
+    try:
+        import webapp_server
+        hooks = webapp_server.Hooks(
+            db=memory_manager.db, bot_token=settings.TELEGRAM_BOT_TOKEN,
+            allowed_user_id=settings.TARGET_CHAT_ID, status=_status_snapshot,
+            pix=lambda valor, nota: _webapp_pix(application, valor, nota))
+        application.bot_data["webapp_runner"] = await webapp_server.start(hooks, port=settings.WEBAPP_PORT)
+    except OSError as exc:
+        logger.warning("webapp.not_started: %s", exc)     # porta ocupada (ex.: outra instância): o bot segue
+        return
+    try:
+        from telegram import MenuButtonWebApp, WebAppInfo
+        await application.bot.set_chat_menu_button(
+            chat_id=settings.TARGET_CHAT_ID,
+            menu_button=MenuButtonWebApp(text="Marina", web_app=WebAppInfo(url=settings.WEBAPP_URL)))
+    except Exception as exc:
+        logger.warning("webapp.menu_button_error: %s", exc)
+
+
 # --- INICIALIZAÇÃO ---
 
 async def post_init(application: Application):
@@ -4740,6 +4862,11 @@ async def post_init(application: Application):
         )
         logger.info(f"Job do Botafogo Live Tracking agendado a cada {bota_poll_sec}s.")
 
+    if getattr(settings, "WEBAPP_ENABLED", False):
+        scheduler.add_job(delivery_gift_routine, 'interval', seconds=60, args=[application],
+                          max_instances=1, coalesce=True)
+        await _start_webapp(application)
+
     scheduler.start()
     ciclo_info = memory_manager.cycle_mgr.get_cycle_info()
     logger.info(f"Agendador autônomo iniciado! Marina está no Dia {ciclo_info['day']} do Ciclo ({ciclo_info['name']}).")
@@ -4777,6 +4904,7 @@ def main():
     app.add_handler(CommandHandler("limpar", limpar_command))
     app.add_handler(CommandHandler("clear", limpar_command))
     app.add_handler(CommandHandler("pix", pix_command))
+    app.add_handler(CommandHandler("app", app_command))
     app.add_handler(CommandHandler("audio", audio_command))
     app.add_handler(CommandHandler("voz", audio_command))
     app.add_handler(CommandHandler("voz_natural", voz_natural_command))

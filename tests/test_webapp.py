@@ -1,0 +1,192 @@
+"""Mini App da Marina (25/09): autenticação do Telegram, rotas, e o delivery surpresa no mundo dela."""
+import hashlib
+import hmac
+import json
+import tempfile
+import time
+import unittest
+from datetime import datetime, timedelta
+from pathlib import Path
+from unittest.mock import AsyncMock
+from urllib.parse import urlencode
+
+from aiohttp.test_utils import TestClient, TestServer
+
+import delivery
+import financas
+import webapp_server
+from db import DatabaseManager
+
+TOKEN = "123456:TESTE"
+PATRICK = 753715685
+T = datetime(2026, 9, 25, 19, 0)
+
+
+def signed(user_id=PATRICK, token=TOKEN, auth_date=None, tamper=False):
+    fields = {"auth_date": str(int(auth_date if auth_date is not None else time.time())),
+              "query_id": "AAE", "user": json.dumps({"id": user_id, "first_name": "Patrick"})}
+    check = "\n".join(f"{k}={v}" for k, v in sorted(fields.items()))
+    secret = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()
+    fields["hash"] = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
+    if tamper:
+        fields["user"] = json.dumps({"id": 1, "first_name": "Outro"})
+    return urlencode(fields)
+
+
+class InitDataTest(unittest.TestCase):
+    def test_valida_assinatura_do_telegram(self):
+        self.assertEqual(webapp_server.validate_init_data(signed(), TOKEN)["id"], PATRICK)
+
+    def test_recusa_adulterado_expirado_e_token_errado(self):
+        self.assertIsNone(webapp_server.validate_init_data(signed(tamper=True), TOKEN))
+        self.assertIsNone(webapp_server.validate_init_data(signed(auth_date=time.time() - 2 * 86400), TOKEN))
+        self.assertIsNone(webapp_server.validate_init_data(signed(token="999:OUTRO"), TOKEN))
+        self.assertIsNone(webapp_server.validate_init_data("", TOKEN))
+        self.assertIsNone(webapp_server.validate_init_data("user=%7B%7D&auth_date=1", TOKEN))
+
+
+class DeliveryGiftTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = DatabaseManager(Path(self.temp.name) / "g.db")
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def _gift(self, note="pra aguentar a aula", eats=True):
+        return delivery.gift(self.db, what="açaí de 500 ml", restaurant="Açaí da Praia", price=38,
+                             eta_min=(30, 30), note=note, now=T, eats=eats)
+
+    def _events(self):
+        with self.db.get_connection() as conn:
+            return [dict(r) for r in conn.execute("SELECT event_key, event_type, summary FROM life_events")]
+
+    def test_em_casa_recebe_na_hora_e_come_sem_cobrar_dela(self):
+        self._gift()
+        financas.materialize(self.db, T)
+        saldo = financas._load(self.db)["saldo"]
+        self.assertIsNone(delivery.gift_tick(self.db, T + timedelta(minutes=10), can_receive=True))
+        self.assertEqual(delivery.gift_tick(self.db, T + timedelta(minutes=31), can_receive=True), "recebido")
+        ev = self._events()
+        self.assertTrue(any(e["event_key"].endswith(":presente") and e["event_type"] == "meal" for e in ev), ev)
+        self.assertIn("pra aguentar a aula", ev[0]["summary"])
+        financas.materialize(self.db, T + timedelta(minutes=40))
+        self.assertEqual(financas._load(self.db)["saldo"], saldo, "quem pagou foi ele")
+        self.assertIsNotNone(delivery.gift_to_announce(self.db))
+        delivery.mark_announced(self.db)
+        self.assertIsNone(delivery.gift_to_announce(self.db))
+
+    def test_surpresa_nao_vaza_antes_de_receber(self):
+        self._gift()
+        self.assertEqual(delivery.prompt_lines(self.db, T + timedelta(minutes=5)), [])
+        delivery.gift_tick(self.db, T + timedelta(minutes=31), can_receive=False, why_not="fora")
+        self.assertEqual(delivery.prompt_lines(self.db, T + timedelta(minutes=40)), [], "na portaria ela ainda não sabe")
+        delivery.gift_tick(self.db, T + timedelta(minutes=90), can_receive=True)
+        lines = delivery.prompt_lines(self.db, T + timedelta(minutes=95))
+        self.assertTrue(lines and "surpresa" in lines[0] and "pra aguentar a aula" in lines[0])
+
+    def test_fora_fica_na_portaria_e_ela_pega_depois(self):
+        self._gift()
+        self.assertEqual(delivery.gift_tick(self.db, T + timedelta(minutes=31), can_receive=False, why_not="fora"),
+                         "portaria")
+        self.assertIsNone(delivery.gift_to_announce(self.db))
+        self.assertIsNone(delivery.gift_tick(self.db, T + timedelta(minutes=60), can_receive=False))
+        self.assertEqual(delivery.gift_tick(self.db, T + timedelta(minutes=120), can_receive=True), "recebido")
+        g = delivery.gift_to_announce(self.db)
+        self.assertEqual(g["waited"], "fora")
+        self.assertIn("portaria", self._events()[0]["summary"])
+
+    def test_comeu_ha_pouco_guarda_pra_depois(self):
+        self._gift()
+        delivery.gift_tick(self.db, T + timedelta(minutes=31), can_receive=True, ate_recently=True)
+        ev = self._events()[0]
+        self.assertEqual(ev["event_type"], "gift")
+        self.assertIn("guardou pra depois", ev["summary"])
+
+    def test_um_pedido_por_vez_e_o_dela_nao_atrapalha_o_proximo(self):
+        self.assertIsNotNone(self._gift())
+        self.assertIsNone(self._gift(), "já tem um a caminho")
+        delivery.gift_tick(self.db, T + timedelta(minutes=31), can_receive=True)
+        self.assertIsNotNone(delivery.gift(self.db, what="x", restaurant="y", price=10, eta_min=(20, 20),
+                                           note="", now=T + timedelta(hours=2)))
+
+    def test_materialize_dela_nao_mexe_no_presente(self):
+        self._gift()
+        self.assertFalse(delivery.materialize(self.db, T + timedelta(hours=2)))
+        self.assertEqual(delivery._load(self.db)["status"], "a_caminho")
+
+    def test_order_view(self):
+        order = self._gift()
+        self.assertIn("A caminho", webapp_server.order_view(order, T)["detalhe"])
+        delivery.gift_tick(self.db, T + timedelta(minutes=31), can_receive=False, why_not="dormindo")
+        self.assertIn("dormindo", webapp_server.order_view(delivery._load(self.db), T)["detalhe"])
+        self.assertIsNone(webapp_server.order_view({"by": "marina"}, T), "o pedido dela não aparece")
+
+
+class ApiTest(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = DatabaseManager(Path(self.temp.name) / "a.db")
+        self.pix = AsyncMock(return_value={"kind": "presente", "saldo": 690})
+        status = lambda now: {"now": now, "atividade": "tempo livre em casa", "local": "Apê (Botafogo)",
+                              "disponivel": "Online"}
+        hooks = webapp_server.Hooks(db=self.db, bot_token=TOKEN, allowed_user_id=PATRICK, status=status,
+                                    pix=self.pix, now=lambda: T)
+        self.client = TestClient(TestServer(webapp_server.make_app(hooks)))
+        await self.client.start_server()
+        self.h = {"X-Telegram-Init-Data": signed()}
+
+    async def asyncTearDown(self):
+        await self.client.close()
+        self.temp.cleanup()
+
+    async def test_sem_initdata_ou_outro_usuario_da_403(self):
+        self.assertEqual((await self.client.get("/api/banco")).status, 403)
+        other = {"X-Telegram-Init-Data": signed(user_id=42)}
+        self.assertEqual((await self.client.get("/api/banco", headers=other)).status, 403)
+
+    async def test_index_abre_sem_login(self):
+        r = await self.client.get("/")
+        self.assertEqual(r.status, 200)
+        self.assertIn("telegram-web-app.js", await r.text())
+
+    async def test_banco_e_pix(self):
+        r = await self.client.get("/api/banco", headers=self.h)
+        self.assertEqual((await r.json())["saldo"], financas.START_BALANCE)
+        bad = await self.client.post("/api/pix", headers=self.h, json={"valor": 0})
+        self.assertEqual(bad.status, 400)
+        ok = await self.client.post("/api/pix", headers=self.h, json={"valor": "50", "recado": "pro açaí"})
+        self.assertEqual(ok.status, 200)
+        self.pix.assert_awaited_once_with(50, "pro açaí")
+
+    async def test_delivery_pede_e_nao_deixa_pedir_em_dobro(self):
+        d = await (await self.client.get("/api/delivery", headers=self.h)).json()
+        rest = d["cardapio"]["restaurantes"][0]
+        body = {"restaurante": rest["id"], "item": rest["itens"][0]["id"], "bilhete": "surpresa"}
+        self.assertEqual((await self.client.post("/api/delivery", headers=self.h, json=body)).status, 200)
+        self.assertEqual((await self.client.post("/api/delivery", headers=self.h, json=body)).status, 409)
+        self.assertEqual((await self.client.post("/api/delivery", headers=self.h,
+                                                 json={"restaurante": "x", "item": "y"})).status, 400)
+        inicio = await (await self.client.get("/api/inicio", headers=self.h)).json()
+        self.assertEqual(inicio["pedido"]["status"], "a_caminho")
+
+    async def test_bastidores_traz_as_barrinhas(self):
+        d = await (await self.client.get("/api/bastidores", headers=self.h)).json()
+        self.assertEqual([b["label"] for b in d["emocao"]["body"]], ["Energia", "Fome", "Tesão"])
+        self.assertTrue(all(0 <= b["value"] <= 1 for b in d["emocao"]["bond"]))
+
+
+class CardapioTest(unittest.TestCase):
+    def test_cardapio_bem_formado(self):
+        c = webapp_server.load_cardapio()
+        ids = set()
+        for r in c["restaurantes"]:
+            self.assertEqual(len(r["eta"]), 2)
+            for i in r["itens"]:
+                self.assertGreater(i["preco"], 0)
+                self.assertNotIn((r["id"], i["id"]), ids)
+                ids.add((r["id"], i["id"]))
+
+
+if __name__ == "__main__":
+    unittest.main()

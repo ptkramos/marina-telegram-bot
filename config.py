@@ -97,6 +97,12 @@ class Settings:
     # Chat ID alvo do namorado (exclusividade total)
     TARGET_CHAT_ID: int = int(os.getenv("TARGET_CHAT_ID", "0"))
 
+    # Mini App (PLANO_WEBAPP_MARINA.md, 25/09): servidor dentro do bot, só em 127.0.0.1;
+    # o nginx da VPS publica em WEBAPP_URL. Desligado, o bot funciona igual (só sem o app).
+    WEBAPP_ENABLED: bool = os.getenv("WEBAPP_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
+    WEBAPP_URL: str = os.getenv("WEBAPP_URL", "https://marina.psoft.app")
+    WEBAPP_PORT: int = int(os.getenv("WEBAPP_PORT", "8787"))
+
     # Buffer Inteligente de Digitação (Debounce)
     MESSAGE_DEBOUNCE_SECONDS: float = float(os.getenv("MESSAGE_DEBOUNCE_SECONDS", "3.8"))
     # Patch 030 — remove pergunta de entrevista no fecho de turno casual

@@ -13,7 +13,7 @@ HOST=root@82.29.60.214
 DIR=/root/bots/marina
 SSH=(ssh -i "$HOME/.ssh/marina_vps" -o BatchMode=yes "$HOST")
 QUIET_MIN=5          # não reinicia se a última mensagem foi há menos que isso
-QUICK_TESTS="tests.test_response_rhythm tests.test_bubbles_luna tests.test_chat_naturalness tests.test_abreviacoes tests.test_patrick_doente tests.test_intimacy_c1 tests.test_photo_director"
+QUICK_TESTS="tests.test_response_rhythm tests.test_bubbles_luna tests.test_chat_naturalness tests.test_abreviacoes tests.test_patrick_doente tests.test_intimacy_c1 tests.test_photo_director tests.test_webapp"
 ENVS="TZ=America/Sao_Paulo PYTHONUTF8=1"
 
 full=0; now=0

@@ -80,7 +80,24 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 
 | Etapa | Status |
 |---|---|
-| 1 Esqueleto + bastidores | ⬜ |
-| 2 Banco | ⬜ |
-| 3 Delivery pra ela | ⬜ |
+| 1 Esqueleto + bastidores | ✅ 25/09 |
+| 2 Banco | ✅ 25/09 |
+| 3 Delivery pra ela | ✅ 25/09 |
 | 4 Presentes, datas, aposentar comandos | ⬜ |
+
+### Como ficou (25/09)
+- **Arquivos:**
+  - `webapp_server.py` (aiohttp, validação do `initData`, rotas);
+  - `webapp/` (`index.html`, `app.js`, `app.css`, `cardapio.json`);
+  - ligação no `bot.py`: `_start_webapp`, `_webapp_pix`, `delivery_gift_routine` (a cada 60 s) e `/app`.
+- **Abrir:** botão de menu "Marina" no chat (`set_chat_menu_button`) ou `/app`.
+- **Mesma fonte dos comandos:** `/status` e `/emocao` passaram a sair de `_status_snapshot` e `EmotionEngine.panel`. O texto dos comandos ficou idêntico (conferido em 3 horários).
+- **Pix pelo app:** mesmo registro do `/pix`, e ela reage pelo fluxo normal de conversa (turno sem mensagem real, `message_id` 0: sem citação e sem reação por emoji).
+- **Delivery surpresa** (`delivery.gift` / `gift_tick`):
+  - Em casa e acordada: recebe na hora, come e vira a refeição do horário (`meal:…:presente`, que as finanças não cobram).
+  - Fora, dormindo ou no banho: fica na portaria com o Seu Jorge e ela pega quando pode.
+  - Se comeu há pouco: guarda pra depois (evento `gift`).
+  - Até receber, o prompt dela não sabe de nada.
+  - Quando recebe, ela manda uma iniciativa (`presente_delivery`) com o bilhete, e o avaliador de emoções registra carinho por ele.
+- **Cache:** o `index.html` sai com a versão dos arquivos no link, pra o webview do Telegram não segurar o `app.js` antigo depois de um deploy.
+- **Testes:** `tests/test_webapp.py` (15), e telas conferidas num navegador em tamanho de celular.

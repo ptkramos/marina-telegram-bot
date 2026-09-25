@@ -1,0 +1,58 @@
+{
+  "_sobre": "Delivery do Mini App (25/09). Lugares inventados com cara de Botafogo; preços em reais, coerentes com financas.DELIVERY_PRICE. O Patrick pode editar à vontade. eta = minutos (mín, máx). come = ela come na hora (false: doce/lanche que ela pode guardar).",
+  "restaurantes": [
+    {
+      "id": "acai-da-praia",
+      "nome": "Açaí da Praia",
+      "tipo": "Açaí e sucos",
+      "eta": [25, 40],
+      "itens": [
+        {"id": "acai-500", "nome": "açaí de 500 ml com banana e granola", "curto": "Açaí 500 ml", "preco": 38, "come": true},
+        {"id": "acai-700", "nome": "açaí de 700 ml com morango e leite ninho", "curto": "Açaí 700 ml", "preco": 46, "come": true},
+        {"id": "suco-verde", "nome": "suco verde com gengibre", "curto": "Suco verde", "preco": 16, "come": false}
+      ]
+    },
+    {
+      "id": "pizzaria-do-largo",
+      "nome": "Pizzaria do Largo",
+      "tipo": "Pizza",
+      "eta": [40, 55],
+      "itens": [
+        {"id": "margherita", "nome": "pizza margherita média", "curto": "Margherita média", "preco": 68, "come": true},
+        {"id": "calabresa", "nome": "pizza de calabresa com cebola média", "curto": "Calabresa média", "preco": 72, "come": true},
+        {"id": "brotinho-chocolate", "nome": "brotinho de chocolate com morango", "curto": "Brotinho doce", "preco": 34, "come": false}
+      ]
+    },
+    {
+      "id": "japa-botafogo",
+      "nome": "Japa Botafogo",
+      "tipo": "Japonês",
+      "eta": [45, 55],
+      "itens": [
+        {"id": "combinado-30", "nome": "combinado de 30 peças", "curto": "Combinado 30 peças", "preco": 95, "come": true},
+        {"id": "temaki-salmao", "nome": "temaki de salmão com cream cheese", "curto": "Temaki de salmão", "preco": 42, "come": true},
+        {"id": "poke", "nome": "poke de salmão", "curto": "Poke de salmão", "preco": 49, "come": true}
+      ]
+    },
+    {
+      "id": "burger-da-voluntarios",
+      "nome": "Burger da Voluntários",
+      "tipo": "Hambúrguer",
+      "eta": [30, 45],
+      "itens": [
+        {"id": "smash", "nome": "smash burger duplo com fritas", "curto": "Smash duplo + fritas", "preco": 54, "come": true},
+        {"id": "veggie", "nome": "burger de grão-de-bico com fritas", "curto": "Veggie + fritas", "preco": 48, "come": true}
+      ]
+    },
+    {
+      "id": "doceria-sorocaba",
+      "nome": "Doceria da Sorocaba",
+      "tipo": "Doces",
+      "eta": [25, 40],
+      "itens": [
+        {"id": "brigadeiros", "nome": "caixinha com 6 brigadeiros gourmet", "curto": "6 brigadeiros", "preco": 32, "come": false},
+        {"id": "bolo-pote", "nome": "bolo de pote de ninho com Nutella", "curto": "Bolo de pote", "preco": 18, "come": false}
+      ]
+    }
+  ]
+}

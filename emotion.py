@@ -661,39 +661,16 @@ class EmotionEngine:
                      "o que sente como gente de verdade.")
         return lines
 
-    def summary(self, now: Optional[datetime] = None) -> str:
-        """Texto do /emocao (só pro Patrick): camada por camada, com as causas.
-
-        Layout de 23/09: barrinha + palavra em vez de número solto."""
+    def panel(self, now: Optional[datetime] = None) -> dict:
+        """Os números do /emocao, estruturados (o texto do comando e o Mini App saem daqui)."""
         f = self.feeling(now)
         b = f.bond
-        phase = PHASE_NAMES.get(f.cycle_phase, f.cycle_phase)
-        sleep = []
-        if f.hours_slept is not None:
-            sleep.append(f"dormiu {_hours(f.hours_slept)}")
-        if f.awake_since:
-            sleep.append(f"acordada desde {f.awake_since:%H:%M}")
-        out = [f"🫀 Marina por dentro · {f.now:%d/%m %H:%M}", "",
-               "🧍 CORPO",
-               f"Energia  {_bar(f.energy)}  {_word(f.energy, ENERGY_WORDS)}",
-               f"Fome     {_bar(f.hunger)}  {_word(f.hunger, HUNGER_WORDS)}",
-               f"Tesão    {_bar(f.libido)}  {_word(f.libido, LIBIDO_WORDS)}"
-               + (f" · no clima agora" if f.excitation >= 0.45 else "")
-               + (f" · última vez há {f.hours_since_release:.0f} h" if f.hours_since_release is not None else "")]
-        if sleep:
-            out.append("😴 " + " · ".join(sleep))
-        if phase or f.discomfort_why:
-            out.append("🌸 " + " · ".join(x for x in (phase, f.discomfort_why) if x))
-        out += ["", "🌤 HUMOR", self.mood_words(f.valence, f.arousal).capitalize(),
-                f"Brincadeira  {_bar(f.playfulness)}",
-                f"Pique social {_bar(f.social_battery)}", "",
-                "💭 SENTINDO AGORA"]
+        feelings = []
         if f.episodes:
             # 25/09: o mesmo sentimento pela mesma pessoa vira uma linha só (antes: 6 × "carinhosa").
             groups: dict = {}
             for e in f.episodes:
-                g = groups.setdefault((e.kind, e.target), [])
-                g.append(e)
+                groups.setdefault((e.kind, e.target), []).append(e)
             rows = []
             for eps_ in groups.values():
                 # o mais forte + um pouco por repetição (somar 19 carinhos pequenos enchia a barra)
@@ -701,19 +678,68 @@ class EmotionEngine:
                 last = max(eps_, key=lambda e: e.started_at)
                 rows.append((min(1.0, strongest + 0.02 * (len(eps_) - 1)), last, len(eps_)))
             for value, e, n in sorted(rows, key=lambda r: r[0], reverse=True)[:5]:
-                who = f" com {e.target}" if e.target else ""
-                tail = " (até resolver)" if e.sticky and e.intensity >= e.peak * 0.99 else ""
-                many = f" · {n} momentos" if n > 1 else ""
-                out.append(f"• {e.word}{who} {_bar(value, 5)} — {_short(e.cause, 70)}{tail}{many}")
-        else:
-            out.append("Nada marcante agora")
-        out += ["", "💞 COM O PATRICK",
-                f"Carinho   {_bar(b['affection'])}",
-                f"Desejo    {_bar(b['romantic_intensity'])}",
-                f"Segurança {_bar(b['security'])}",
-                f"Saudade   {_bar(f.missing)}"]
+                feelings.append({"word": e.word, "target": e.target, "value": value,
+                                 "cause": _short(e.cause, 70), "count": n,
+                                 "until_resolved": bool(e.sticky and e.intensity >= e.peak * 0.99)})
+        bond = [("Carinho", b["affection"]), ("Desejo", b["romantic_intensity"]),
+                ("Segurança", b["security"]), ("Saudade", f.missing)]
         if b["hurt"] >= 0.05:
-            out.append(f"Mágoa     {_bar(b['hurt'])}")
+            bond.append(("Mágoa", b["hurt"]))
+        return {
+            "now": f.now,
+            "body": [{"label": "Energia", "value": f.energy, "word": _word(f.energy, ENERGY_WORDS)},
+                     {"label": "Fome", "value": f.hunger, "word": _word(f.hunger, HUNGER_WORDS)},
+                     {"label": "Tesão", "value": f.libido, "word": _word(f.libido, LIBIDO_WORDS)}],
+            "in_the_mood": f.excitation >= 0.45,
+            "hours_since_release": f.hours_since_release,
+            "hours_slept": f.hours_slept,
+            "awake_since": f.awake_since,
+            "phase": PHASE_NAMES.get(f.cycle_phase, f.cycle_phase),
+            "discomfort_why": f.discomfort_why,
+            "mood": self.mood_words(f.valence, f.arousal),
+            "mood_bars": [{"label": "Brincadeira", "value": f.playfulness},
+                          {"label": "Pique social", "value": f.social_battery}],
+            "feelings": feelings,
+            "bond": [{"label": k, "value": v} for k, v in bond],
+        }
+
+    def summary(self, now: Optional[datetime] = None) -> str:
+        """Texto do /emocao (só pro Patrick): camada por camada, com as causas.
+
+        Layout de 23/09: barrinha + palavra em vez de número solto."""
+        p = self.panel(now)
+        energy, hunger, libido = p["body"]
+        sleep = []
+        if p["hours_slept"] is not None:
+            sleep.append(f"dormiu {_hours(p['hours_slept'])}")
+        if p["awake_since"]:
+            sleep.append(f"acordada desde {p['awake_since']:%H:%M}")
+        out = [f"🫀 Marina por dentro · {p['now']:%d/%m %H:%M}", "",
+               "🧍 CORPO",
+               f"Energia  {_bar(energy['value'])}  {energy['word']}",
+               f"Fome     {_bar(hunger['value'])}  {hunger['word']}",
+               f"Tesão    {_bar(libido['value'])}  {libido['word']}"
+               + (f" · no clima agora" if p["in_the_mood"] else "")
+               + (f" · última vez há {p['hours_since_release']:.0f} h" if p["hours_since_release"] is not None else "")]
+        if sleep:
+            out.append("😴 " + " · ".join(sleep))
+        if p["phase"] or p["discomfort_why"]:
+            out.append("🌸 " + " · ".join(x for x in (p["phase"], p["discomfort_why"]) if x))
+        playful, social = p["mood_bars"]
+        out += ["", "🌤 HUMOR", p["mood"].capitalize(),
+                f"Brincadeira  {_bar(playful['value'])}",
+                f"Pique social {_bar(social['value'])}", "",
+                "💭 SENTINDO AGORA"]
+        for fe in p["feelings"]:
+            who = f" com {fe['target']}" if fe["target"] else ""
+            tail = " (até resolver)" if fe["until_resolved"] else ""
+            many = f" · {fe['count']} momentos" if fe["count"] > 1 else ""
+            out.append(f"• {fe['word']}{who} {_bar(fe['value'], 5)} — {fe['cause']}{tail}{many}")
+        if not p["feelings"]:
+            out.append("Nada marcante agora")
+        out += ["", "💞 COM O PATRICK"]
+        for row in p["bond"]:
+            out.append(f"{row['label']:<10}{_bar(row['value'])}")
         return "\n".join(out)
 
 
@@ -804,6 +830,9 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
             out.append(("tristeza", "decepcao", 0.5 if step == "job_perdido" else 0.3, text, None))
         elif step in ("cache", "sinal"):
             out.append(("alegria", "contentamento", 0.45 if step == "cache" else 0.35, text, None))
+    elif key.endswith(":presente") or key.startswith("presente:"):   # delivery surpresa pelo Mini App (25/09)
+        out.append(("afeto", "carinho", 0.6, "o Patrick mandou comida de surpresa pra ela", PATRICK))
+        out.append(("alegria", "contentamento", 0.45, "a surpresa do delivery", None))
     elif key.startswith("financas:"):        # /pix e o dinheiro dela (24/09)
         step = key.rsplit(":", 1)[-1]
         if step in ("emergencia", "aperto"):
