@@ -3431,6 +3431,11 @@ async def process_incoming_batch(
                                                              if m.get("role") == "user"])
             if sick_hint:
                 messages.append({"role": "system", "content": sick_hint})
+            # 25/09: só as falas dela da conversa em andamento (as últimas 8 mensagens).
+            from chat_naturalness import recent_ideas_hint
+            ideas_hint = recent_ideas_hint([m.get("content", "") for m in recent if m.get("role") == "assistant"])
+            if ideas_hint:
+                messages.append({"role": "system", "content": ideas_hint})
         except Exception:
             logger.exception("health.patrick_sick_hint.error")
     import photo_director
@@ -3646,6 +3651,12 @@ async def process_incoming_batch(
         if sem_ideia_repetida != resposta_marin:
             logger.info("chat.repeated_idea cut")
             resposta_marin = sem_ideia_repetida
+        if not intimacy_turn.expanded:      # no sexting, voltar ao mesmo desejo é o ponto
+            from chat_naturalness import drop_paraphrased
+            sem_parafrase = drop_paraphrased(resposta_marin, anteriores[-3:])
+            if sem_parafrase != resposta_marin:
+                logger.info("chat.paraphrased_idea cut")
+                resposta_marin = sem_parafrase
         resposta_marin = strip_closing_periods(thin_vocative(resposta_marin, anteriores))
         # 25/09: "vc" aqui, "você" ali — menos na conversa séria.
         from health import patrick_sick_hint

@@ -169,13 +169,75 @@ IDEAS = {
     "come_direito": re.compile(r"\b(?:come|almo[çc]a|janta|se\s+alimenta)\s+direitinho\b|\bse\s+alimenta\b", re.I),
     "descansa": re.compile(r"\b(?:descansa(?:\s+um\s+pouco)?|voc[eê]\s+merece\s+(?:esse\s+)?descans)", re.I),
     "saga": re.compile(r"\bsaga\b", re.I),
+    # 25/09 (ele com amigdalite): "se piorar, vai no médico" em 3 respostas seguidas.
+    "medico": re.compile(r"\b(?:vai|ir|vá|procura|passa)\b[^.!?\n]{0,25}\bm[eé]dic", re.I),
+    "hidrata": re.compile(r"\bse\s+hidrat|\b(?:beb[ea]|toma)\s+(?:bastante\s+|muita\s+)?[aá]gua\b", re.I),
 }
+
+# 25/09: a mesma ideia com outras palavras ("queria estar aí fazendo carinho na sua cabeça e
+# levando um suco geladinho" / "queria te levar um suco geladinho e ficar fazendo carinho nessa
+# cabeça dodói") passava pelos dois filtros. Mesma ideia = muitas palavras de conteúdo em comum
+# com um trecho de uma fala recente dela, independente da ordem.
+_STOP = set("""a o as os um uma uns umas de do da dos das no na nos nas em pra pro pras pros para por com sem
+e ou mas que se me te lhe nos vos eu tu ele ela voce vc vcs a gente meu minha meus minhas seu sua seus suas teu tua
+isso isto esse essa este esta aquele aquela aqui ai la ja so tambem tb muito mt mais menos bem tao ta to tava
+estou esta estar ser foi era sou vai vou ir ter tem tenho fica ficar fico mesmo ainda agora depois hoje entao
+nao sim ne amor amorzinho vida bebe meu bem kkk kkkk kkkkk haha pq porque como quando onde quem qual tudo nada
+coisa jeito sempre pouco pouquinho ne viu hein ok""".split())
+# Medido em 125 falas reais (23–25/09): com 3/0.5 cortava respostas legítimas ("vou topar o
+# Quartinho", respondendo a pergunta dele com as palavras da pergunta dela); com 4/0.6 sobram só
+# as repetições de verdade. O que escapa daqui fica com o recent_ideas_hint, antes de gerar.
+IDEA_OVERLAP_MIN = 4
+IDEA_OVERLAP_RATIO = 0.6
+
+
+def _stems(text: str) -> set:
+    return {w[:5] for w in _norm_words(text) if w not in _STOP and len(w) > 2}
+
+
+def _same_idea(piece: str, previous: Iterable[str]) -> bool:
+    mine = _stems(piece)
+    if len(mine) < IDEA_OVERLAP_MIN:
+        return False
+    for old in previous:
+        for clause in _clauses(old or ""):
+            common = mine & _stems(clause)
+            if len(common) >= IDEA_OVERLAP_MIN and len(common) / len(mine) >= IDEA_OVERLAP_RATIO:
+                return True
+    return False
 
 
 def repeated_ideas(reply: str, previous: Iterable[str]) -> set:
     """Ideias (cuidado, avisa quando chegar, come direito…) que ela já falou nas últimas falas."""
     said = {name for name, rx in IDEAS.items() for p in previous if rx.search(p or "")}
     return {name for name, rx in IDEAS.items() if name in said and rx.search(reply or "")}
+
+
+def drop_paraphrased(reply: str, previous: Iterable[str]) -> str:
+    """Tira as frases que repetem, com outras palavras, uma ideia das falas recentes dela.
+    Se não sobra fala, devolve a resposta como estava."""
+    previous = [p for p in previous if p]
+    if not previous:
+        return reply
+    out_lines = []
+    for line in reply.split("\n"):
+        kept = [s for s in re.split(r"(?<=[.!?…])\s+", line) if s.strip() and not _same_idea(s, previous)]
+        joined = " ".join(kept).strip()
+        if joined:
+            out_lines.append(joined[0].upper() + joined[1:])
+    result = "\n".join(out_lines).strip()
+    return result if len(_norm_words(result)) >= 3 else reply
+
+
+def recent_ideas_hint(previous: list[str], limit: int = 2) -> str:
+    """Antes de gerar: o que ela acabou de dizer, pra não voltar nisso com outras palavras."""
+    recent = [p.replace("\n", " / ").strip()[:220] for p in previous[-limit:] if p and p.strip()]
+    if not recent:
+        return ""
+    return ("[NÃO SE REPITA] Nas suas últimas respostas você já disse: "
+            + " | ".join(f"«{r}»" for r in recent)
+            + ". Não volte a essas ideias nem com outras palavras (oferta, conselho, carinho, desejo): "
+              "diga algo novo ou só reaja ao que ele disse agora.")
 
 
 def drop_repeated_ideas(reply: str, previous: Iterable[str]) -> str:
