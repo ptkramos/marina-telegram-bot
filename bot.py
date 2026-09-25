@@ -3593,7 +3593,8 @@ async def process_incoming_batch(
     # sem ponto final fechando o balão (chat_naturalness).
     try:
         from chat_naturalness import (repeated_run, drop_repeated, repetition_constraint,
-                                      thin_vocative, strip_closing_periods, drop_repeated_ideas)
+                                      thin_vocative, strip_closing_periods, drop_repeated_ideas,
+                                      abbreviate)
         anteriores = [m["content"] for m in memory_manager.db.get_mensagens_recentes(limit=16)
                       if m["role"] == "assistant"][-6:]
         run = repeated_run(resposta_marin, anteriores)
@@ -3618,6 +3619,11 @@ async def process_incoming_batch(
             logger.info("chat.repeated_idea cut")
             resposta_marin = sem_ideia_repetida
         resposta_marin = strip_closing_periods(thin_vocative(resposta_marin, anteriores))
+        # 25/09: "vc" aqui, "você" ali — menos na conversa séria.
+        from health import patrick_sick_hint
+        serio = (getattr(response_policy, "mode", "") in ("serious", "supportive")
+                 or bool(patrick_sick_hint([texto_usuario])))
+        resposta_marin = abbreviate(resposta_marin, serious=serio)
     except Exception as exc:
         logger.warning("chat.naturalness_error: %s", exc)
 
@@ -4268,8 +4274,8 @@ _PROACTIVE_INSTRUCTIONS = {
 
 
 def _proactive_text(reason: str, detail, fallback: str) -> str:
-    from chat_naturalness import strip_closing_periods
-    return strip_closing_periods(_proactive_text_raw(reason, detail, fallback))
+    from chat_naturalness import abbreviate, strip_closing_periods
+    return abbreviate(strip_closing_periods(_proactive_text_raw(reason, detail, fallback)))
 
 
 def _initiative_context(now: Optional[datetime] = None) -> str:

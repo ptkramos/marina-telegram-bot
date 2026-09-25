@@ -56,6 +56,62 @@ def strip_closing_periods(text: str) -> str:
     return _CLOSING_PERIOD_RE.sub("", text)
 
 
+# ------------------------------------------------------------ abreviações --
+# 25/09 (Patrick): de 20 a 25/09 ela escreveu "você" 159 vezes e "vc" nenhuma —
+# tudo por extenso é assinatura de IA; gente mistura ("vc" aqui, "você" ali).
+# O Patrick quase não abrevia, então a dose é moderada. Decidido na SAÍDA, não
+# no prompt (o modelo ignora ou exagera), e as duas formas passam pelo mesmo
+# sorteio: se o modelo começar a copiar "vc" do histórico, a taxa não sobe.
+ABBREVIATIONS = (
+    # (regex da forma cheia OU da abreviada, abreviação, taxa)
+    (r"voc[eê]s|vcs", "vcs", 0.35),
+    (r"voc[eê]|vc", "vc", 0.35),
+    (r"tamb[eé]m|tbm?", "tb", 0.35),
+    (r"porque|por que|pq", "pq", 0.35),
+    (r"muit[oa]|mto|mt", "mt", 0.30),
+    (r"hoje|hj", "hj", 0.35),
+    (r"depois|dps", "dps", 0.35),
+    (r"comigo|cmg", "cmg", 0.35),
+    (r"que|q", "q", 0.06),
+    (r"n[aã]o(?=\s+\w)|n(?=\s+\w)", "n", 0.05),   # "não" no fim ("né não") fica
+)
+ABBREVIATION_SERIOUS_FACTOR = 0.3      # briga, ele doente: escreve mais inteiro
+_FULL = {"vcs": "vocês", "vc": "você", "tb": "também", "pq": "porque", "mt": "muito",
+         "hj": "hoje", "dps": "depois", "cmg": "comigo", "q": "que", "n": "não"}
+_ABBR_RES = [(re.compile(rf"(?<![\w\[])(?:{pat})(?![\w\]])", re.IGNORECASE), ab, rate)
+             for pat, ab, rate in ABBREVIATIONS]
+
+
+def _match_case(model: str, word: str) -> str:
+    if model.isupper() and len(model) > 1:
+        return word.upper()
+    return word[0].upper() + word[1:] if model[:1].isupper() else word
+
+
+def abbreviate(text: str, *, serious: bool = False) -> str:
+    """Abrevia parte das palavras (e desabrevia o excesso), sorteio fixo por fala."""
+    if not text:
+        return text
+    import hashlib
+    factor = ABBREVIATION_SERIOUS_FACTOR if serious else 1.0
+    counter = [0]
+
+    for regex, ab, rate in _ABBR_RES:
+        def swap(m, ab=ab, rate=rate):
+            counter[0] += 1
+            seed = hashlib.sha256(f"{text}|{ab}|{counter[0]}".encode("utf-8")).hexdigest()[:8]
+            short = int(seed, 16) % 1000 < rate * factor * 1000
+            word = m.group(0)
+            if short:
+                return _match_case(word, ab)
+            # O modelo abreviou e o sorteio disse que não. "mt" fica: não dá pra saber se era muito ou muita.
+            if word.casefold() in (ab, "tbm") and ab != "mt":
+                return _match_case(word, _FULL[ab])
+            return word
+        text = regex.sub(swap, text)
+    return text
+
+
 # -------------------------------------------------------------- repetição --
 REPEAT_MIN_WORDS = 6
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?…])\s+|\n+")
