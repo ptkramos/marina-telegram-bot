@@ -171,6 +171,30 @@ class DirectorTest(unittest.TestCase):
         self.assertIn(ci.KREA2_SQUEEZE, loras, "o LoRA de apertar entra sozinho")
         self.assertNotIn("squeezing", dict(pd.BY_ID["cama_pernas_abertas"].beats)["fingers"], "selfie: uma mão")
 
+    def test_penetration_loras_approved_by_patrick(self):
+        """24/09: dedo = Fingering 1.0; dildo = texto + Grippy 1.0 (3 rodadas de teste)."""
+        import civitai_images as ci
+        beats = dict(pd.BY_ID["cama_tripe_duas_maos"].beats)
+        fingers, _ = ci.conditional_loras(beats["fingers"], is_nsfw=True)
+        self.assertEqual(fingers.get(ci.KREA2_FINGERING), 1.0)
+        self.assertNotIn(ci.KREA2_GRIPPY, fingers)
+        dildo, triggers = ci.conditional_loras(beats["dildo"], is_nsfw=True)
+        self.assertEqual(dildo.get(ci.KREA2_GRIPPY), 1.0)
+        self.assertNotIn(ci.KREA2_FINGERING, dildo)
+        self.assertTrue(any("GrippyPussy" in t for t in triggers))
+        touch, _ = ci.conditional_loras(beats["touch"], is_nsfw=True)
+        self.assertNotIn(ci.KREA2_FINGERING, touch, "se tocando por fora não liga o Fingering")
+        sfw, _ = ci.conditional_loras("a dildo on the shelf", is_nsfw=False)
+        self.assertEqual(sfw, {}, "nunca em foto normal")
+
+    def test_asking_for_the_dildo(self):
+        hot = IntimacyTurn(state="active", arousal=0.9)
+        s = self.shot("pega teu dildo e usa pra mim", turn=hot)
+        self.assertEqual(s.level, 4)
+        if pd.BY_ID[s.pose_id].beats:
+            self.assertEqual(s.beat, "dildo")
+            self.assertIn("dildo", s.prompt)
+
     def test_panties_go_as_adult_workflow(self):
         s = self.shot("manda uma foto", turn=IntimacyTurn(state="warming", arousal=0.35))
         if s.outfit and "panties" in s.outfit:

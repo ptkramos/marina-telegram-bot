@@ -61,6 +61,12 @@ KREA2_SQUEEZE = "urn:air:krea2:lora:civitai:2761661@3161094"   # Breast squeezin
 KREA2_WETNESS = "urn:air:krea2:lora:civitai:2738333@3079282"   # Wetness Slider (−1..1; o FinePorn embute negativo)
 KREA2_SPREAD = "urn:air:krea2:lora:civitai:2923413@3332400"    # Pussy Spread v2 (gatilho "vag_spread")
 KREA2_CREAMY = "urn:air:krea2:lora:civitai:2931761@3318154"    # Creamy Pussy v0.1 (gatilhos "creamythings", "creamy vagina")
+# Penetração (Patrick, 24/09, 3 rodadas): sem LoRA ela só passava o dedo por fora.
+# Dedo: Fingering v4 em 1.0 (0.5 não entrava; 0.8 ficava na entrada). Dildo: o objeto sai do
+# TEXTO (Dildo Posing mudava a luz e o olho dela; Object Insertions fazia "garrafa") e o
+# Grippy Pussy em 1.0 é quem faz ele entrar.
+KREA2_FINGERING = "urn:air:krea2:lora:civitai:2923170@3343699"  # Fingering v4 (gatilho "finger_fucking")
+KREA2_GRIPPY = "urn:air:krea2:lora:civitai:2796863@3152534"     # Grippy Pussy v1.0 (gatilho "GrippyPussy")
 KREA2_BETTER = "urn:air:krea2:lora:civitai:2729157@3288922"    # Better Pussy v4.2.1 — testado e REPROVADO (24/09)
 KREA2_OILED = "urn:air:krea2:lora:civitai:87685@3096878"      # Oiled Skin — REPROVADO (24/09): o FinePorn vira "esperma"
 KREA2_WEIGHT_OLD = "urn:air:krea2:lora:civitai:2858768@3229815"  # Body Weight v2 — mexia na cabeça (reprovado)
@@ -141,6 +147,10 @@ CONDITIONAL = (
     # Creamy só na intensidade mínima: o líquido saindo, sem virar "gozo" (Patrick, 24/09).
     (KREA2_CREAMY, 0.5, ("she came", "just came", "right after she came", "orgasm", "cumming", "climax",
                          "gozou", "gozando", "gozar", "creamy"), True, "creamythings, creamy vagina"),
+    (KREA2_FINGERING, 1.0, ("up to the knuckles", "fingers inside her", "fingers sliding inside",
+                            "finger_fucking", "dedos dentro", "dedo dentro"),
+     True, "She slides two fingers into her vagina and moves them in and out, finger_fucking"),
+    (KREA2_GRIPPY, 1.0, ("dildo", "consolo"), True, "GrippyPussy's vulva tightly gripping the dildo shaft"),
     # Molhada só de ÁGUA (banho, chuva, piscina, mar). Molhada de excitação ficou melhor SEM o slider
     # (teste do Patrick, 24/09) — aí quem descreve é o texto do prompt.
     (KREA2_WETNESS, 1.2, ("shower", "bath", "bathtub", "rain", "pool", "swimming", "in the sea", "ocean", "beach water",

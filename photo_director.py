@@ -58,6 +58,9 @@ class Pose:
     beats: tuple = ()             # (marca, ação) em ordem; a última é o gozo
 
 
+DILDO_TEXT = "a realistic pink silicone dildo with a veined shaft"
+
+
 def _beats(where: str, hand: str, other: str = "") -> tuple:
     """Momentos da cena explícita — a posição fica, só a mão avança.
 
@@ -68,8 +71,13 @@ def _beats(where: str, hand: str, other: str = "") -> tuple:
     return (
         ("tease", f"her {hand} hand resting on her inner thigh, {where}"),
         ("touch", f"her {hand} fingers rubbing her clit{two}, {where}"),
-        ("fingers", f"two fingers of her {hand} hand sliding inside her wet pussy{two}, {where}"),
+        # Texto aprovado com o Fingering 1.0 (Patrick, 24/09): o "dentro" com profundidade concreta.
+        ("fingers", f"two fingers of her {hand} hand pushed deep inside her wet pussy up to the knuckles{two}, "
+                    f"{where}"),
         ("spread", f"her {hand} fingers spreading her pussy open{two}, {where}"),
+        # O dildo dela (cânone, gaveta da mesinha): feito pelo texto, o Grippy 1.0 faz entrar (24/09).
+        ("dildo", f"{DILDO_TEXT} pushed deep inside her pussy, her {hand} hand holding its round suction-cup "
+                  f"base{two}, {where}"),
         ("lick", f"bringing her glistening {hand} fingers to her lips and licking them, {where}"),
         ("climax", f"right after she came, her body trembling and her {hand} hand resting on her pussy{two}, "
                    f"{where}"),
@@ -251,6 +259,7 @@ WARDROBE = {
 # Pedido dele → degrau. O mais alto que aparecer vale.
 _ASK = (
     (4, r"buceta|xota|xoxota|pussy|se toca|te toca|tocando|siririca|masturb|dedo|dedinho|enfia|abre (a|as|pra)|"
+        r"dildo|consolo|brinquedo|"
         r"abrindo|goza|gozando|gozei|molhadinha"),
     (3, r"pelad|\bnua\b|nude|sem roupa|peit|seio|mamilo|bunda|raba|tira a roupa|tira tudo"),
     (2, r"calcinha|suti[aã]|lingerie|langerie|renda|fio dental|de toalha"),
@@ -261,7 +270,8 @@ _POSE_CHANGE = re.compile(r"\b(deita|deitada|vira|virada|de quatro|de costas|sen
                           r"em p[eé]|ajoelha|outra posi[cç][aã]o|muda (a|de) posi|no chuveiro|no espelho|na cama|"
                           r"no sof[aá]|na poltrona|na bancada)\b")
 _CLIMAX = re.compile(r"\b(goza pra mim|goza comigo|gozei|gozando|vou gozar|gozar junto|goza)\b")
-_BEAT_ASK = (("lick", r"lamb|chupa (o|os) dedo"), ("spread", r"abre|abrindo"),
+_BEAT_ASK = (("dildo", r"dildo|consolo|brinquedo|vibrador"), ("lick", r"lamb|chupa (o|os) dedo"),
+             ("spread", r"abre|abrindo"),
              ("fingers", r"enfia|dedo dentro|dedos dentro|dedinho"), ("touch", r"se toca|te toca|tocando|siririca"))
 
 
