@@ -10,51 +10,66 @@
 <body>
 <main id="app">
   <button id="voltar" class="link" hidden>‹ Voltar</button>
+
   <section id="v-inicio" class="view">
     <header class="top"><h1>Marina</h1><p class="sub" id="inicio-sub">…</p></header>
-    <div id="inicio-pra-voce"></div>
-    <div class="card agora"><div class="muted small">agora</div><div id="inicio-agora" class="big">…</div><div id="inicio-disp" class="muted small"></div></div>
+    <div id="inicio-presente"></div>
+    <div class="card agora"><div class="muted small">Agora</div><div id="inicio-agora" class="big">…</div><div id="inicio-disp" class="muted small"></div></div>
     <div id="inicio-pedido"></div>
     <div class="tiles">
-      <button class="tile" data-go="banco"><span class="ico">🏦</span>Banco</button>
-      <button class="tile" data-go="delivery"><span class="ico">🛵</span>Delivery</button>
-      <button class="tile off" disabled><span class="ico">🎁</span>Presentes<span class="soon">em breve</span></button>
-      <button class="tile off" disabled><span class="ico">📅</span>Datas<span class="soon">em breve</span></button>
+      <button class="tile" data-go="nubank"><img src="/static/marcas/nubank.svg" alt="" class="logo"><span>Nubank</span></button>
+      <button class="tile" data-go="ifood"><img src="/static/marcas/ifood.svg" alt="" class="logo"><span>iFood</span></button>
+      <button class="tile off" disabled><span>Presentes</span><span class="soon">em breve</span></button>
+      <button class="tile off" disabled><span>Datas</span><span class="soon">em breve</span></button>
     </div>
-    <button class="link" data-go="bastidores">⚙️ Bastidores</button>
+    <button class="link" data-go="bastidores">Bastidores</button>
   </section>
 
-  <section id="v-banco" class="view" hidden>
-    <header class="top"><h1>Banco</h1><p class="sub">Conta da Marina Salles</p></header>
-    <div class="muted small">Saldo dela</div>
-    <div class="saldo" id="banco-saldo">…</div>
-    <div id="banco-tags"></div>
-    <div class="card">
-      <div class="row"><label for="pix-valor">Valor do pix</label></div>
-      <input id="pix-valor" type="number" inputmode="numeric" min="1" max="5000" placeholder="50">
-      <input id="pix-recado" type="text" maxlength="200" placeholder="Recado (opcional): pro teu açaí">
-      <div class="err" id="pix-err"></div>
-      <button class="primary" id="pix-enviar">Fazer pix</button>
+  <section id="v-nubank" class="view nu" hidden>
+    <header class="brandbar nu"><img src="/static/marcas/nubank.svg" alt="Nubank" class="brandlogo white"><span>Área Pix</span></header>
+    <div class="contato"><div class="avatar">MS</div><div><div class="t">Marina Salles</div><div class="d">Itaú Personnalité</div></div></div>
+    <label class="pergunta" for="pix-valor">Quanto você quer transferir para Marina Salles?</label>
+    <div class="valor-wrap"><span>R$</span><input id="pix-valor" type="number" inputmode="decimal" min="1" max="5000" placeholder="0,00"></div>
+    <input id="pix-recado" type="text" maxlength="200" placeholder="Adicionar mensagem (opcional)">
+    <div class="err" id="pix-err"></div>
+    <button class="primary nu" id="pix-continuar">Transferir</button>
+  </section>
+
+  <section id="v-revisao" class="view nu" hidden>
+    <header class="brandbar nu"><img src="/static/marcas/nubank.svg" alt="Nubank" class="brandlogo white"><span>Revise a transferência</span></header>
+    <div class="muted small">Valor</div>
+    <div class="saldo nu" id="rev-valor">…</div>
+    <div class="rows">
+      <div class="row2"><span class="muted">Para</span><span>Marina Salles</span></div>
+      <div class="row2"><span class="muted">Instituição</span><span>Itaú Unibanco S.A. · Personnalité</span></div>
+      <div class="row2"><span class="muted">Tipo</span><span class="pixtag"><img src="/static/marcas/pix-simbolo.png" alt="" class="pixicon">Pix</span></div>
+      <div class="row2" id="rev-msg-row"><span class="muted">Mensagem</span><span id="rev-msg"></span></div>
+      <div class="row2"><span class="muted">Quando</span><span>Agora</span></div>
     </div>
-    <h2>Extrato</h2>
-    <div id="banco-movs" class="list"></div>
+    <div class="err" id="rev-err"></div>
+    <button class="primary nu" id="pix-confirmar">Confirmar</button>
   </section>
 
-  <section id="v-delivery" class="view" hidden>
-    <header class="top"><h1>Delivery</h1><p class="sub">Entregar em: apê dela, Botafogo</p></header>
-    <div id="delivery-pedido"></div>
-    <div id="delivery-lista" class="list"></div>
+  <section id="v-ifood" class="view" hidden>
+    <header class="brandbar ifood"><img src="/static/marcas/ifood.svg" alt="iFood" class="brandlogo white"></header>
+    <div class="endereco"><span class="muted small">Entregar em</span><span class="t">Casa da Ma</span></div>
+    <div id="ifood-andamento"></div>
+    <div id="ifood-lista" class="list"></div>
   </section>
 
-  <section id="v-item" class="view" hidden>
-    <header class="top"><h1 id="item-rest">…</h1><p class="sub" id="item-sub"></p></header>
-    <div id="item-lista" class="list"></div>
-    <div class="card" id="item-form" hidden>
-      <div class="big" id="item-escolhido"></div>
-      <textarea id="item-bilhete" rows="2" maxlength="200" placeholder="Bilhete pra ela (opcional)"></textarea>
-      <p class="muted small">Ela não fica sabendo antes: é surpresa. Se não estiver em casa, fica na portaria com o Seu Jorge.</p>
-      <div class="err" id="item-err"></div>
-      <button class="primary" id="item-pedir">Pedir pra ela</button>
+  <section id="v-loja" class="view" hidden>
+    <header class="top"><h1 id="loja-nome">…</h1><p class="sub" id="loja-sub"></p></header>
+    <div id="loja-itens" class="list"></div>
+    <div id="loja-resumo" hidden>
+      <h2>Resumo</h2>
+      <div class="card">
+        <div class="row2"><span id="res-item"></span><span id="res-preco"></span></div>
+        <div class="row2"><span class="muted">Taxa de entrega</span><span class="gratis">Grátis</span></div>
+        <div class="row2 total"><span>Total</span><span id="res-total"></span></div>
+      </div>
+      <textarea id="loja-obs" rows="2" maxlength="200" placeholder="Observações do pedido (opcional)"></textarea>
+      <div class="err" id="loja-err"></div>
+      <button class="primary ifood" id="loja-pedir">Fazer pedido</button>
     </div>
   </section>
 
@@ -65,6 +80,7 @@
     <h2>Humor</h2><div id="bast-humor" class="card"></div>
     <h2>Sentindo agora</h2><div id="bast-sentindo" class="card"></div>
     <h2>Com você</h2><div id="bast-vinculo" class="card"></div>
+    <h2>Dinheiro dela</h2><div id="bast-dinheiro" class="card"></div><div id="bast-movs" class="list"></div>
     <h2>Hoje</h2><div id="bast-hoje" class="list"></div>
     <h2>Mundo</h2><pre id="bast-mundo" class="card pre"></pre>
   </section>

@@ -173,23 +173,6 @@ def tick(db, now: datetime) -> Optional[str]:
     return "entregue"
 
 
-def app_view(db, now: datetime) -> Optional[dict]:
-    """Card "A Marina te mandou" do Mini App: a caminho, ou entregue há menos de 3 h."""
-    p = current(db)
-    if not p:
-        return None
-    view = {"what": p["what"], "short": p["short"], "restaurant": p["restaurant"], "status": p["status"],
-            "surprise": bool(p.get("surprise")), "note": p.get("note") or ""}
-    if p["status"] == "a_caminho":
-        view["detalhe"] = f"A caminho · chega por volta das {datetime.fromisoformat(p['eta_at']):%H:%M}"
-        return view
-    got = datetime.fromisoformat(p["delivered_at"])
-    if now - got > SHOW_AFTER_DELIVERY:
-        return None
-    view["detalhe"] = f"Entregue às {got:%H:%M}"
-    return view
-
-
 # -------------------------------------------------------------- surpresa --
 def surprise_reason(his_recent: list[tuple[datetime, str]], now: datetime) -> Optional[str]:
     """Motivo pra ela mandar algo sem avisar: ele doente ou num dia ruim, dito nas últimas horas."""

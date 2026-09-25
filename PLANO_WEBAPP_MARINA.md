@@ -76,6 +76,29 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 3. **Cardápio com nomes de lugares reais de Botafogo ou inventados?** Recomendação: inventados com cara de reais ("Açaí da Praia"), pra não ter que manter preço e horário de verdade.
 4. **Visual das telas:** esboço mostrado no chat em 25/09. Aprovar ou ajustar antes da Etapa 1.
 
+## 5b. Termos e realismo (decididos com o Patrick em 25/09, tarde)
+
+- **Marcas reais** (uso pessoal): o banco dele é o **Nubank**, o dela o **Itaú Personnalité** ("ela é rica"). O delivery é o **iFood**, com o símbolo do **Pix**. Logos do Wikimedia Commons, em domínio público, guardados em `webapp/marcas/`.
+- **Sem emoji** no que imita os apps (o iFood não usa); atalhos com os logos.
+- **Nubank:** tile e título "Nubank", subtítulo "Área Pix".
+  - Campo "Quanto você quer transferir para Marina Salles?", botão "Transferir".
+  - "Adicionar mensagem (opcional)".
+  - Tela de revisão ("Revise a transferência", com valor, para quem, banco, mensagem e "Confirmar").
+  - O dinheiro dela (saldo, movimentações, o que ela deve) sai daqui e vai pros **bastidores**.
+- **iFood:**
+  - Entrega em "Casa da Ma", sem bairro.
+  - Botão "Fazer pedido", com o resumo e o total acima dele.
+  - "Observações do pedido".
+  - Sem aviso explicativo de sistema.
+- **Status do pedido no estilo iFood completo:** Pedido confirmado → Em preparo → Saiu para entrega → Entregue, com a etapa atual destacada.
+  - Na portaria: "Entregue na portaria · 13:40", sem motivo.
+  - Recebido: "Pedido entregue · 13:40".
+- **Pedido dela pra ele:** "Presente da Ma", com cara de iFood.
+- **Em andamento:** "Você tem um pedido em andamento" + o card do pedido.
+- **Depois de confirmar:** o app fecha, e no chat aparece o **comprovante B**, uma imagem com cara de comprovante do Nubank ou de pedido do iFood.
+  - Vai como **mensagem do Patrick** ("via @bot", pelo `answerWebAppQuery`).
+  - A Marina ignora essa mensagem: ela reage ao que o sistema contou, e o recibo não entra no histórico dela, o que preserva a surpresa do delivery.
+
 ## 6. Status
 
 | Etapa | Status |

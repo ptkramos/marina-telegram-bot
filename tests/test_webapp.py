@@ -117,9 +117,15 @@ class DeliveryGiftTest(unittest.TestCase):
 
     def test_order_view(self):
         order = self._gift()
-        self.assertIn("A caminho", webapp_server.order_view(order, T)["detalhe"])
+        view = webapp_server.order_view(order, T + timedelta(minutes=20))
+        self.assertIn("Previsão de entrega", view["headline"])
+        self.assertEqual([s["label"] for s in view["steps"]],
+                         ["Pedido confirmado", "Em preparo", "Saiu para entrega", "Pedido entregue"])
+        self.assertEqual([s["label"] for s in view["steps"] if s["current"]], ["Saiu para entrega"])
         delivery.gift_tick(self.db, T + timedelta(minutes=31), can_receive=False, why_not="dormindo")
-        self.assertIn("dormindo", webapp_server.order_view(delivery._load(self.db), T)["detalhe"])
+        view = webapp_server.order_view(delivery._load(self.db), T + timedelta(minutes=40))
+        self.assertTrue(view["headline"].startswith("Entregue na portaria"))
+        self.assertNotIn("dormindo", json.dumps(view), "o iFood não sabe onde ela está")
         self.assertIsNone(webapp_server.order_view({"by": "marina"}, T), "o pedido dela não aparece")
 
 
@@ -128,10 +134,12 @@ class ApiTest(unittest.IsolatedAsyncioTestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.db = DatabaseManager(Path(self.temp.name) / "a.db")
         self.pix = AsyncMock(return_value={"kind": "presente", "saldo": 690})
+        self.receipt = AsyncMock(return_value=True)
         status = lambda now: {"now": now, "atividade": "tempo livre em casa", "local": "Apê (Botafogo)",
                               "disponivel": "Online"}
         hooks = webapp_server.Hooks(db=self.db, bot_token=TOKEN, allowed_user_id=PATRICK, status=status,
-                                    pix=self.pix, now=lambda: T)
+                                    pix=self.pix, now=lambda: T, post_receipt=self.receipt,
+                                    public_url="https://marina.test")
         self.client = TestClient(TestServer(webapp_server.make_app(hooks)))
         await self.client.start_server()
         self.h = {"X-Telegram-Init-Data": signed()}
@@ -141,30 +149,40 @@ class ApiTest(unittest.IsolatedAsyncioTestCase):
         self.temp.cleanup()
 
     async def test_sem_initdata_ou_outro_usuario_da_403(self):
-        self.assertEqual((await self.client.get("/api/banco")).status, 403)
+        self.assertEqual((await self.client.get("/api/dinheiro")).status, 403)
         other = {"X-Telegram-Init-Data": signed(user_id=42)}
-        self.assertEqual((await self.client.get("/api/banco", headers=other)).status, 403)
+        self.assertEqual((await self.client.get("/api/dinheiro", headers=other)).status, 403)
 
     async def test_index_abre_sem_login(self):
         r = await self.client.get("/")
         self.assertEqual(r.status, 200)
         self.assertIn("telegram-web-app.js", await r.text())
 
-    async def test_banco_e_pix(self):
-        r = await self.client.get("/api/banco", headers=self.h)
+    async def test_dinheiro_dela_e_pix_com_comprovante(self):
+        r = await self.client.get("/api/dinheiro", headers=self.h)
         self.assertEqual((await r.json())["saldo"], financas.START_BALANCE)
         bad = await self.client.post("/api/pix", headers=self.h, json={"valor": 0})
         self.assertEqual(bad.status, 400)
         ok = await self.client.post("/api/pix", headers=self.h, json={"valor": "50", "recado": "pro açaí"})
         self.assertEqual(ok.status, 200)
         self.pix.assert_awaited_once_with(50, "pro açaí")
+        self.assertTrue((await ok.json())["comprovante"])
+        query_id, url = self.receipt.await_args.args
+        self.assertEqual(query_id, "AAE", "o comprovante sai em nome dele, pela sessão do app")
+        img = await self.client.get(url.replace("https://marina.test", ""))
+        self.assertEqual(img.status, 200)
+        self.assertEqual(img.headers["Content-Type"], "image/jpeg")
+        self.assertEqual((await self.client.get("/recibo/inventado.jpg")).status, 404)
 
     async def test_delivery_pede_e_nao_deixa_pedir_em_dobro(self):
         d = await (await self.client.get("/api/delivery", headers=self.h)).json()
         rest = d["cardapio"]["restaurantes"][0]
         body = {"restaurante": rest["id"], "item": rest["itens"][0]["id"], "bilhete": "surpresa"}
         self.assertEqual((await self.client.post("/api/delivery", headers=self.h, json=body)).status, 200)
-        self.assertEqual((await self.client.post("/api/delivery", headers=self.h, json=body)).status, 409)
+        dobro = await self.client.post("/api/delivery", headers=self.h, json=body)
+        self.assertEqual(dobro.status, 409)
+        self.assertEqual((await dobro.json())["erro"], "Você tem um pedido em andamento")
+        self.assertEqual(self.receipt.await_count, 1, "comprovante do pedido")
         self.assertEqual((await self.client.post("/api/delivery", headers=self.h,
                                                  json={"restaurante": "x", "item": "y"})).status, 400)
         inicio = await (await self.client.get("/api/inicio", headers=self.h)).json()
@@ -174,6 +192,26 @@ class ApiTest(unittest.IsolatedAsyncioTestCase):
         d = await (await self.client.get("/api/bastidores", headers=self.h)).json()
         self.assertEqual([b["label"] for b in d["emocao"]["body"]], ["Energia", "Fome", "Tesão"])
         self.assertTrue(all(0 <= b["value"] <= 1 for b in d["emocao"]["bond"]))
+
+
+class ComprovanteTest(unittest.TestCase):
+    def test_imagens_sao_jpeg(self):
+        import recibo
+        for data in (recibo.pix(50, "pro açaí", T), recibo.pedido("Açaí 500 ml", "Açaí da Praia", 38, T, "", T)):
+            self.assertTrue(data.startswith(b"\xff\xd8"), "JPEG (o Telegram exige pra foto via inline)")
+            self.assertGreater(len(data), 5000)
+
+    def test_marina_ignora_o_comprovante_via_bot(self):
+        import asyncio
+        from types import SimpleNamespace
+        from telegram.ext import ApplicationHandlerStop
+        import bot
+        ctx = SimpleNamespace(bot=SimpleNamespace(id=999))
+        via = SimpleNamespace(effective_message=SimpleNamespace(via_bot=SimpleNamespace(id=999)))
+        with self.assertRaises(ApplicationHandlerStop):
+            asyncio.run(bot._ignore_own_via_bot(via, ctx))
+        normal = SimpleNamespace(effective_message=SimpleNamespace(via_bot=None))
+        self.assertIsNone(asyncio.run(bot._ignore_own_via_bot(normal, ctx)), "mensagem normal segue pra ela")
 
 
 class CardapioTest(unittest.TestCase):

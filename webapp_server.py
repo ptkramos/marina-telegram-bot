@@ -72,6 +72,46 @@ class Hooks:
     status: Callable[[datetime], dict]                        # _status_snapshot
     pix: Callable[[int, str], Awaitable[dict]]                # registra e faz ela reagir
     now: Callable[[], datetime] = datetime.now
+    # comprovante no chat como mensagem DELE (answerWebAppQuery): (query_id, url da imagem) -> ok
+    post_receipt: Optional[Callable[[str, str], Awaitable[bool]]] = None
+    public_url: str = ""
+
+
+# Comprovantes (opção B): a imagem fica aqui alguns minutos, num endereço impossível de adivinhar,
+# só pro Telegram buscar quando posta a mensagem dele.
+RECEIPT_TTL_S = 15 * 60
+_RECEIPTS: dict[str, tuple[bytes, float]] = {}
+
+
+def _store_receipt(jpeg: bytes) -> str:
+    import secrets
+    now = time.time()
+    for token in [t for t, (_, exp) in _RECEIPTS.items() if exp < now]:
+        _RECEIPTS.pop(token, None)
+    token = secrets.token_urlsafe(24)
+    _RECEIPTS[token] = (jpeg, now + RECEIPT_TTL_S)
+    return token
+
+
+async def _receipt_file(request: web.Request) -> web.StreamResponse:
+    item = _RECEIPTS.get(request.match_info["token"])
+    if not item or item[1] < time.time():
+        raise web.HTTPNotFound()
+    return web.Response(body=item[0], content_type="image/jpeg")
+
+
+async def _post_receipt(request: web.Request, jpeg: bytes) -> bool:
+    """Posta o comprovante no chat, em nome dele. Sem query_id (app aberto por fora) não dá."""
+    hooks: Hooks = request.app["hooks"]
+    query_id = request.get("query_id")
+    if not query_id or not hooks.post_receipt or not hooks.public_url:
+        return False
+    url = f"{hooks.public_url.rstrip('/')}/recibo/{_store_receipt(jpeg)}.jpg"
+    try:
+        return await hooks.post_receipt(query_id, url)
+    except Exception:
+        logger.exception("webapp.receipt.error")
+        return False
 
 
 def _json(data: Any, status: int = 200) -> web.Response:
@@ -91,10 +131,12 @@ async def _auth(request: web.Request, handler):
     if not request.path.startswith("/api/"):
         return await handler(request)
     hooks: Hooks = request.app["hooks"]
-    user = validate_init_data(request.headers.get("X-Telegram-Init-Data", ""), hooks.bot_token)
+    raw = request.headers.get("X-Telegram-Init-Data", "")
+    user = validate_init_data(raw, hooks.bot_token)
     if not user or int(user.get("id", 0)) != int(hooks.allowed_user_id):
         logger.warning("webapp.denied path=%s user=%s", request.path, (user or {}).get("id"))
         return _error("sem permissão", 403)
+    request["query_id"] = dict(parse_qsl(raw)).get("query_id")
     return await handler(request)
 
 
@@ -120,25 +162,52 @@ def _find_item(cardapio: dict, rest_id: str, item_id: str):
     return None, None
 
 
+def timeline(ordered: datetime, eta: datetime, now: datetime, *, delivered: bool,
+             final_label: str = "Pedido entregue") -> tuple[list[dict], str]:
+    """Etapas do iFood (decisão do Patrick, 25/09): confirmado → em preparo → saiu → entregue."""
+    total = max(eta - ordered, timedelta(minutes=5))
+    marks = [("Pedido confirmado", ordered), ("Em preparo", ordered + total * 0.1),
+             ("Saiu para entrega", ordered + total * 0.6), (final_label, eta)]
+    current = 3 if delivered else max(i for i, (_, at) in enumerate(marks[:3]) if at <= now or i == 0)
+    steps = [{"label": label, "at": at.strftime("%H:%M") if i <= current else None,
+              "done": i < current or (delivered and i == 3), "current": i == current}
+             for i, (label, at) in enumerate(marks)]
+    headline = f"{final_label} · {eta:%H:%M}" if delivered else f"Previsão de entrega: {eta:%H:%M}"
+    return steps, headline
+
+
 def order_view(order: Optional[dict], now: datetime) -> Optional[dict]:
     """O pedido do Patrick como ele vê no app (o dela não aparece: é a vida dela)."""
     if not order or order.get("by") != "patrick":
         return None
     status = order.get("status")
     eta = datetime.fromisoformat(order["eta_at"])
-    view = {"what": order["what"], "restaurant": order["restaurant"], "price": order["price"],
-            "note": order.get("note") or "", "status": status}
-    if status == "a_caminho":
-        view["detalhe"] = f"A caminho · chega por volta das {eta:%H:%M}"
-    elif status == "portaria":
-        why = {"dormindo": "ela tá dormindo", "banho": "ela tá no banho"}.get(order.get("waited"), "ela não tá em casa")
-        view["detalhe"] = f"Chegou às {eta:%H:%M} · ficou na portaria com o Seu Jorge ({why})"
-    else:
+    if status == "recebido":
         got = datetime.fromisoformat(order["received_at"]) if order.get("received_at") else eta
         if now - got > timedelta(hours=3):
             return None
-        view["detalhe"] = f"Entregue às {got:%H:%M}"
-    return view
+    delivered = status in ("portaria", "recebido")
+    # "Entregue na portaria" sem motivo: o iFood não sabe onde ela está (decisão do Patrick).
+    final = "Entregue na portaria" if order.get("waited") else "Pedido entregue"
+    steps, headline = timeline(datetime.fromisoformat(order["ordered_at"]), eta, now, delivered=delivered,
+                               final_label=final)
+    return {"what": order["what"], "restaurant": order["restaurant"], "price": order["price"],
+            "note": order.get("note") or "", "status": status, "steps": steps, "headline": headline}
+
+
+def gift_to_him_view(db, now: datetime) -> Optional[dict]:
+    """"Presente da Ma": o pedido que ELA mandou pro Patrick, no mesmo formato do iFood."""
+    import pedido_dela
+    p = pedido_dela.current(db)
+    if not p:
+        return None
+    eta = datetime.fromisoformat(p["eta_at"])
+    delivered = p["status"] == "entregue"
+    if delivered and now - eta > pedido_dela.SHOW_AFTER_DELIVERY:
+        return None
+    steps, headline = timeline(datetime.fromisoformat(p["ordered_at"]), eta, now, delivered=delivered)
+    return {"what": p["short"], "restaurant": p["restaurant"], "note": p.get("note") or "", "status": p["status"],
+            "steps": steps, "headline": headline}
 
 
 def _today_events(db, now: datetime, limit: int = 14) -> list[dict]:
@@ -161,7 +230,7 @@ async def api_inicio(request: web.Request) -> web.Response:
     import pedido_dela
     return _json({"agora": {k: snap.get(k) for k in ("now", "atividade", "local", "disponivel")},
                   "pedido": order_view(delivery._load(hooks.db), now),
-                  "pra_voce": pedido_dela.app_view(hooks.db, now)})
+                  "pra_voce": gift_to_him_view(hooks.db, now)})
 
 
 async def api_bastidores(request: web.Request) -> web.Response:
@@ -204,10 +273,12 @@ async def api_pix(request: web.Request) -> web.Response:
     except (ValueError, TypeError, json.JSONDecodeError):
         return _error("valor inválido", 400)
     if not 1 <= valor <= PIX_MAX:
-        return _error(f"o pix vai de R$ 1 a R$ {PIX_MAX}", 400)
+        return _error(f"Digite um valor entre R$ 1 e R$ {PIX_MAX}", 400)
     nota = str(body.get("recado") or "").strip()[:200]
     res = await hooks.pix(valor, nota)
-    return _json({"ok": True, **res})
+    import recibo
+    jpeg = await asyncio.to_thread(recibo.pix, valor, nota, hooks.now())
+    return _json({"ok": True, **res, "comprovante": await _post_receipt(request, jpeg)})
 
 
 async def api_delivery(request: web.Request) -> web.Response:
@@ -231,8 +302,11 @@ async def api_delivery_pedir(request: web.Request) -> web.Response:
                           eta_min=tuple(rest.get("eta", (30, 50))), note=str(body.get("bilhete") or ""),
                           now=now, eats=bool(item.get("come", True)))
     if not order:
-        return _error("já tem um pedido pra ela que ainda não foi entregue", 409)
-    return _json({"ok": True, "pedido": order_view(order, now)})
+        return _error("Você tem um pedido em andamento", 409)
+    import recibo
+    jpeg = await asyncio.to_thread(recibo.pedido, item["curto"], rest["nome"], item["preco"],
+                                   datetime.fromisoformat(order["eta_at"]), order.get("note") or "", now)
+    return _json({"ok": True, "pedido": order_view(order, now), "comprovante": await _post_receipt(request, jpeg)})
 
 
 def make_app(hooks: Hooks) -> web.Application:
@@ -241,8 +315,9 @@ def make_app(hooks: Hooks) -> web.Application:
     app.router.add_get("/", _index)
     app.router.add_get("/api/inicio", api_inicio)
     app.router.add_get("/api/bastidores", api_bastidores)
-    app.router.add_get("/api/banco", api_banco)
+    app.router.add_get("/api/dinheiro", api_banco)        # o dinheiro DELA, nos bastidores
     app.router.add_post("/api/pix", api_pix)
+    app.router.add_get("/recibo/{token}.jpg", _receipt_file)
     app.router.add_get("/api/delivery", api_delivery)
     app.router.add_post("/api/delivery", api_delivery_pedir)
     app.router.add_static("/static/", STATIC_DIR, show_index=False)

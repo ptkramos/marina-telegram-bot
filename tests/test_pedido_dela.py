@@ -60,13 +60,13 @@ class PedidoTest(unittest.TestCase):
                           "um por vez")
         a_caminho = pedido_dela.prompt_lines(self.db, T + timedelta(minutes=5))[0]
         self.assertIn("Não ofereça de novo", a_caminho)
-        self.assertIn("A caminho", pedido_dela.app_view(self.db, T)["detalhe"])
+        self.assertIn("Previsão de entrega", webapp_server.gift_to_him_view(self.db, T)["headline"])
         self.assertIsNone(pedido_dela.tick(self.db, T + timedelta(minutes=10)))
         self.assertEqual(pedido_dela.tick(self.db, T + timedelta(hours=1)), "entregue")
         self.assertIn("não precisa perguntar se chegou", pedido_dela.prompt_lines(self.db, T + timedelta(hours=1))[0])
-        self.assertIn("Entregue", pedido_dela.app_view(self.db, T + timedelta(hours=1))["detalhe"])
+        self.assertIn("Pedido entregue", webapp_server.gift_to_him_view(self.db, T + timedelta(hours=1))["headline"])
         self.assertEqual(pedido_dela.prompt_lines(self.db, T + timedelta(hours=5)), [])
-        self.assertIsNone(pedido_dela.app_view(self.db, T + timedelta(hours=5)))
+        self.assertIsNone(webapp_server.gift_to_him_view(self.db, T + timedelta(hours=5)))
 
     def test_sem_saldo_nao_pede(self):
         st = financas._init({}, T)

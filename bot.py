@@ -4847,6 +4847,17 @@ async def delivery_gift_routine(application: Application):
         logger.error('Erro no delivery do Patrick: %s', exc, exc_info=True)
 
 
+async def _ignore_own_via_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Mensagem dele postada pelo Mini App (comprovante, "via @bot"): fica no chat, mas a Marina
+    não lê nem responde — o pix e o pedido chegam pra ela pelo sistema."""
+    from telegram.ext import ApplicationHandlerStop
+    msg = update.effective_message
+    via = getattr(msg, "via_bot", None) if msg else None
+    if via is not None and via.id == context.bot.id:
+        logger.info("webapp.receipt.ignored_by_marina")
+        raise ApplicationHandlerStop
+
+
 async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/app — abre o Mini App (o botão de menu do chat faz o mesmo)."""
     if not is_authorized(update):
@@ -4861,10 +4872,22 @@ async def _start_webapp(application: Application):
         return
     try:
         import webapp_server
+        async def post_receipt(query_id: str, url: str) -> bool:
+            # Comprovante (opção B) como mensagem DO PATRICK no chat, "via @bot". A Marina ignora
+            # (_ignore_own_via_bot): ela reage ao que o sistema contou, não ao comprovante.
+            import uuid
+            from telegram import InlineQueryResultPhoto
+            await application.bot.answer_web_app_query(
+                web_app_query_id=query_id,
+                result=InlineQueryResultPhoto(id=uuid.uuid4().hex, photo_url=url, thumbnail_url=url))
+            logger.info("webapp.receipt.posted")
+            return True
+
         hooks = webapp_server.Hooks(
             db=memory_manager.db, bot_token=settings.TELEGRAM_BOT_TOKEN,
             allowed_user_id=settings.TARGET_CHAT_ID, status=_status_snapshot,
-            pix=lambda valor, nota: _webapp_pix(application, valor, nota))
+            pix=lambda valor, nota: _webapp_pix(application, valor, nota),
+            post_receipt=post_receipt, public_url=settings.WEBAPP_URL)
         application.bot_data["webapp_runner"] = await webapp_server.start(hooks, port=settings.WEBAPP_PORT)
     except OSError as exc:
         logger.warning("webapp.not_started: %s", exc)     # porta ocupada (ex.: outra instância): o bot segue
@@ -4993,6 +5016,9 @@ def main():
 
     tg_req = HTTPXRequest(read_timeout=60.0, write_timeout=60.0, connect_timeout=30.0)
     app = Application.builder().token(settings.TELEGRAM_BOT_TOKEN).request(tg_req).post_init(post_init).build()
+
+    # Mini App: comprovante postado em nome do Patrick não vira turno da Marina (antes de tudo).
+    app.add_handler(MessageHandler(filters.ALL, _ignore_own_via_bot), group=-1)
 
     # Comandos
     app.add_handler(CommandHandler("start", start_command))
