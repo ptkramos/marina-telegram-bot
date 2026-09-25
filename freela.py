@@ -347,7 +347,11 @@ class Freela:
         waiting = [st for st in data.values() if st["step"] == "esperando"]
         to_receive = [st for st in data.values() if st["step"] == "a_receber"]
         if not items and not waiting and not to_receive:
-            return []
+            # 25/09 13:18: sem job o bloco sumia, e "vem ensaio por aí?" virou "vem sim, tenho ensaio hj às
+            # 19h30 no Quartinho com o Theo e a Júlia" (era o rolê no bar). Sem nada marcado, ela sabe disso.
+            return ["[TRABALHO DE MODELO (agência da Lívia)] Nenhum casting, prova ou job marcado agora. Se ele "
+                    "perguntar de ensaio (sessão de fotos) ou job, a resposta é não: tá parada, esperando a Lívia. "
+                    "Rolê com amigos não é ensaio."]
         names = {"casting": "casting", "prova": "prova de roupa", "job": "JOB (sessão de fotos)"}
 
         def quando(dt: datetime) -> str:

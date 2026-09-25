@@ -38,6 +38,13 @@ class FreelaTest(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_sem_job_ela_sabe_que_nao_tem_ensaio(self):
+        """25/09 13:18: 'Vem ensaio por aí?' → 'Vem sim, tenho ensaio hj às 19h30 no Quartinho' (era o bar)."""
+        with patch.object(Freela, "upcoming", return_value=[]), patch.object(Freela, "_state", return_value={}):
+            lines = "\n".join(self.f.prompt_lines(START))
+        self.assertIn("Nenhum casting", lines)
+        self.assertIn("a resposta é não", lines)
+
     def _offer(self, after=date(2026, 9, 2)):
         for i in range(200):
             plan = self.f.offer_on(after + timedelta(days=i))
