@@ -8,7 +8,7 @@
    "tipo": "restaurante",
    "categoria": "Doces",
    "logo": "lojas/kopenhagen.png",
-   "capa": "fotos/kopenhagen/nha-benta-4-un.jpg",
+   "capa": "fotos/kopenhagen/lingua-de-gato-30-un.jpg",
    "km": 1.1,
    "eta": [
     22,
@@ -30,7 +30,7 @@
        "nome": "Língua de Gato 30 un",
        "desc": "Chocolate ao leite, o clássico da casa.",
        "preco": 69.9,
-       "foto": "",
+       "foto": "fotos/kopenhagen/lingua-de-gato-30-un.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -46,7 +46,7 @@
        "nome": "Lajotinha 8 un",
        "desc": "Chocolate ao leite em tabletes.",
        "preco": 44.9,
-       "foto": "",
+       "foto": "fotos/kopenhagen/lajotinha-8-un.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -67,7 +67,7 @@
        "nome": "Cappuccino",
        "desc": "Com canela.",
        "preco": 16.0,
-       "foto": "",
+       "foto": "fotos/kopenhagen/cappuccino.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -159,7 +159,7 @@
    "tipo": "restaurante",
    "categoria": "Japonesa",
    "logo": "lojas/go-sushi.png",
-   "capa": "fotos/go-sushi/combo-15-pecas.jpg",
+   "capa": "fotos/go-sushi/combo-go-30-pecas.jpg",
    "km": 0.3,
    "eta": [
     18,
@@ -181,7 +181,7 @@
        "nome": "Combo Go 30 peças",
        "desc": "Pra dois: sashimi, uramaki, hot e niguiri.",
        "preco": 129.0,
-       "foto": "",
+       "foto": "fotos/go-sushi/combo-go-30-pecas.jpg",
        "serve": "Serve até 2 pessoas"
       },
       {
@@ -202,7 +202,7 @@
        "nome": "Temaki salmão completo",
        "desc": "Salmão, cream cheese e cebolinha.",
        "preco": 34.0,
-       "foto": "",
+       "foto": "fotos/go-sushi/temaki-salmao-completo.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -210,7 +210,7 @@
        "nome": "Temaki hot",
        "desc": "Empanado, com tarê.",
        "preco": 36.0,
-       "foto": "",
+       "foto": "fotos/go-sushi/temaki-hot.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -224,7 +224,7 @@
    "tipo": "restaurante",
    "categoria": "Lanches",
    "logo": "lojas/bobs-bf.png",
-   "capa": "fotos/bobs/milkshake-ovomaltine-400-ml.jpg",
+   "capa": "fotos/bobs/big-bob-combo.jpg",
    "km": 0.3,
    "eta": [
     22,
@@ -246,7 +246,7 @@
        "nome": "Big Bob Combo",
        "desc": "Big Bob, batata média e refrigerante 500 ml.",
        "preco": 39.9,
-       "foto": "",
+       "foto": "fotos/bobs/big-bob-combo.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -302,7 +302,7 @@
    "tipo": "restaurante",
    "categoria": "Lanches",
    "logo": "lojas/mcdonalds-bf.png",
-   "capa": "fotos/mcdonalds/big-mac.jpg",
+   "capa": "fotos/mcdonalds/mcoferta-media-big-mac.jpg",
    "km": 0.5,
    "eta": [
     23,
@@ -324,7 +324,7 @@
        "nome": "McOferta Média Big Mac",
        "desc": "Big Mac, McFritas média e bebida média.",
        "preco": 45.9,
-       "foto": "",
+       "foto": "fotos/mcdonalds/mcoferta-media-big-mac.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -332,7 +332,7 @@
        "nome": "McOferta Média Quarterão",
        "desc": "Quarterão com queijo, McFritas média e bebida.",
        "preco": 45.9,
-       "foto": "",
+       "foto": "fotos/mcdonalds/mcoferta-media-quarterao.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -396,7 +396,7 @@
    "tipo": "restaurante",
    "categoria": "Lanches",
    "logo": "lojas/burger-king-bf.png",
-   "capa": "fotos/burger-king/combo-stacker-duplo.jpg",
+   "capa": "fotos/burger-king/combo-whopper.jpg",
    "km": 0.1,
    "eta": [
     16,
@@ -418,7 +418,7 @@
        "nome": "Combo Whopper",
        "desc": "Whopper, batata média e refrigerante.",
        "preco": 44.9,
-       "foto": "",
+       "foto": "fotos/burger-king/combo-whopper.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -590,7 +590,7 @@
        "nome": "Nhoque ao sugo",
        "desc": "Com parmesão.",
        "preco": 56.0,
-       "foto": "",
+       "foto": "fotos/mamma-jamma/nhoque-ao-sugo.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -604,7 +604,7 @@
    "tipo": "restaurante",
    "categoria": "Pizza",
    "logo": "lojas/dominos-bf.png",
-   "capa": "",
+   "capa": "fotos/dominos/pizza-grande-pepperoni.jpg",
    "km": 0.4,
    "eta": [
     22,
@@ -626,7 +626,7 @@
        "nome": "Pizza grande Pepperoni",
        "desc": "Muçarela e pepperoni.",
        "preco": 69.9,
-       "foto": "",
+       "foto": "fotos/dominos/pizza-grande-pepperoni.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -634,7 +634,7 @@
        "nome": "Combo 2 pizzas médias",
        "desc": "Escolha 2 sabores tradicionais.",
        "preco": 99.9,
-       "foto": "",
+       "foto": "fotos/dominos/combo-2-pizzas-medias.jpg",
        "serve": "Serve até 2 pessoas"
       }
      ]
@@ -647,7 +647,7 @@
        "nome": "Pizza média Frango com Catupiry",
        "desc": "Frango desfiado e catupiry.",
        "preco": 54.9,
-       "foto": "",
+       "foto": "fotos/dominos/pizza-media-frango-com-catupiry.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -655,7 +655,7 @@
        "nome": "Pizza média Margherita",
        "desc": "Muçarela, tomate e manjericão.",
        "preco": 49.9,
-       "foto": "",
+       "foto": "fotos/dominos/pizza-media-margherita.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -668,7 +668,7 @@
        "nome": "Petit Gâteau",
        "desc": "Com recheio de chocolate.",
        "preco": 19.9,
-       "foto": "",
+       "foto": "fotos/dominos/petit-gateau.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -682,7 +682,7 @@
    "tipo": "restaurante",
    "categoria": "Italiana",
    "logo": "lojas/spoleto-bf.png",
-   "capa": "",
+   "capa": "fotos/spoleto/monte-sua-massa.jpg",
    "km": 0.5,
    "eta": [
     19,
@@ -704,7 +704,7 @@
        "nome": "Monte sua massa",
        "desc": "Escolha massa, molho e até 4 ingredientes.",
        "preco": 42.9,
-       "foto": "",
+       "foto": "fotos/spoleto/monte-sua-massa.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -712,7 +712,7 @@
        "nome": "Penne ao molho branco com frango",
        "desc": "Frango, champignon e molho branco.",
        "preco": 44.9,
-       "foto": "",
+       "foto": "fotos/spoleto/penne-ao-molho-branco-com-frango.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -720,7 +720,7 @@
        "nome": "Espaguete à bolonhesa",
        "desc": "Molho de carne da casa.",
        "preco": 39.9,
-       "foto": "",
+       "foto": "fotos/spoleto/espaguete-a-bolonhesa.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -733,7 +733,7 @@
        "nome": "Lasanha à bolonhesa",
        "desc": "Individual.",
        "preco": 46.9,
-       "foto": "",
+       "foto": "fotos/spoleto/lasanha-a-bolonhesa.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -747,7 +747,7 @@
    "tipo": "restaurante",
    "categoria": "Italiana",
    "logo": "lojas/tutto-nhoque.png",
-   "capa": "",
+   "capa": "fotos/tutto-nhoque/nhoque-de-batata-ao-sugo.jpg",
    "km": 0.3,
    "eta": [
     21,
@@ -769,7 +769,7 @@
        "nome": "Nhoque de batata ao sugo",
        "desc": "Molho de tomate fresco e manjericão.",
        "preco": 49.0,
-       "foto": "",
+       "foto": "fotos/tutto-nhoque/nhoque-de-batata-ao-sugo.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -777,7 +777,7 @@
        "nome": "Nhoque de batata à bolonhesa",
        "desc": "Ragu de carne.",
        "preco": 56.0,
-       "foto": "",
+       "foto": "fotos/tutto-nhoque/nhoque-de-batata-a-bolonhesa.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -785,7 +785,7 @@
        "nome": "Nhoque recheado de queijo ao molho rosé",
        "desc": "O mais pedido da casa.",
        "preco": 62.0,
-       "foto": "",
+       "foto": "fotos/tutto-nhoque/nhoque-recheado-de-queijo-ao-molho-rose.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -798,7 +798,7 @@
        "nome": "Tiramisù",
        "desc": "Individual.",
        "preco": 24.0,
-       "foto": "",
+       "foto": "fotos/tutto-nhoque/tiramisu.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -812,7 +812,7 @@
    "tipo": "restaurante",
    "categoria": "Brasileira",
    "logo": "lojas/gula-gula.png",
-   "capa": "",
+   "capa": "fotos/gula-gula/salada-gula-gula.jpg",
    "km": 1.0,
    "eta": [
     22,
@@ -834,7 +834,7 @@
        "nome": "Salada Gula Gula",
        "desc": "Folhas, frango grelhado, manga, castanhas e molho de mostarda e mel.",
        "preco": 64.0,
-       "foto": "",
+       "foto": "fotos/gula-gula/salada-gula-gula.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -842,7 +842,7 @@
        "nome": "Filé com fritas",
        "desc": "Filé mignon grelhado com batatas fritas.",
        "preco": 89.0,
-       "foto": "",
+       "foto": "fotos/gula-gula/file-com-fritas.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -855,7 +855,7 @@
        "nome": "Frango grelhado com legumes",
        "desc": "Com arroz de ervas.",
        "preco": 62.0,
-       "foto": "",
+       "foto": "fotos/gula-gula/frango-grelhado-com-legumes.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -863,7 +863,7 @@
        "nome": "Risoto de cogumelos",
        "desc": "Shiitake, shimeji e parmesão.",
        "preco": 72.0,
-       "foto": "",
+       "foto": "fotos/gula-gula/risoto-de-cogumelos.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -876,7 +876,7 @@
        "nome": "Petit gâteau com sorvete",
        "desc": "Chocolate quente e sorvete de creme.",
        "preco": 34.0,
-       "foto": "",
+       "foto": "fotos/gula-gula/petit-gateau-com-sorvete.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -890,7 +890,7 @@
    "tipo": "restaurante",
    "categoria": "Brasileira",
    "logo": "lojas/joaquina.png",
-   "capa": "",
+   "capa": "fotos/joaquina/moqueca-de-peixe.jpg",
    "km": 1.3,
    "eta": [
     23,
@@ -912,7 +912,7 @@
        "nome": "Moqueca de peixe",
        "desc": "Com arroz e pirão. Serve 1 pessoa.",
        "preco": 79.0,
-       "foto": "",
+       "foto": "fotos/joaquina/moqueca-de-peixe.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -920,7 +920,7 @@
        "nome": "Escondidinho de carne-seca",
        "desc": "Com purê de aipim e queijo gratinado.",
        "preco": 58.0,
-       "foto": "",
+       "foto": "fotos/joaquina/escondidinho-de-carne-seca.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -928,7 +928,7 @@
        "nome": "Galinhada",
        "desc": "Arroz com frango, açafrão e cheiro-verde.",
        "preco": 52.0,
-       "foto": "",
+       "foto": "fotos/joaquina/galinhada.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -941,7 +941,7 @@
        "nome": "Bolinho de feijoada 6 un",
        "desc": "Com couve e torresmo.",
        "preco": 38.0,
-       "foto": "",
+       "foto": "fotos/joaquina/bolinho-de-feijoada-6-un.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -955,7 +955,7 @@
    "tipo": "restaurante",
    "categoria": "Cafés",
    "logo": "lojas/starbucks-bf.png",
-   "capa": "",
+   "capa": "fotos/starbucks/caramel-macchiato-grande.jpg",
    "km": 0.0,
    "eta": [
     18,
@@ -977,7 +977,7 @@
        "nome": "Caramel Macchiato Grande",
        "desc": "Espresso, leite vaporizado, baunilha e calda de caramelo.",
        "preco": 26.9,
-       "foto": "",
+       "foto": "fotos/starbucks/caramel-macchiato-grande.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -985,7 +985,7 @@
        "nome": "Frappuccino de Caramelo Grande",
        "desc": "Com chantilly.",
        "preco": 29.9,
-       "foto": "",
+       "foto": "fotos/starbucks/frappuccino-de-caramelo-grande.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -993,7 +993,7 @@
        "nome": "Latte Grande",
        "desc": "Espresso e leite vaporizado.",
        "preco": 21.9,
-       "foto": "",
+       "foto": "fotos/starbucks/latte-grande.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -1006,7 +1006,7 @@
        "nome": "Pão de queijo",
        "desc": "3 unidades.",
        "preco": 12.9,
-       "foto": "",
+       "foto": "fotos/starbucks/pao-de-queijo.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -1014,7 +1014,7 @@
        "nome": "Cookie com gotas de chocolate",
        "desc": "",
        "preco": 11.9,
-       "foto": "",
+       "foto": "fotos/starbucks/cookie-com-gotas-de-chocolate.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -1028,7 +1028,7 @@
    "tipo": "restaurante",
    "categoria": "Cafés",
    "logo": "lojas/rei-do-mate.png",
-   "capa": "",
+   "capa": "fotos/rei-do-mate/mate-gelado-com-limao-500-ml.jpg",
    "km": 0.2,
    "eta": [
     20,
@@ -1050,7 +1050,7 @@
        "nome": "Mate gelado com limão 500 ml",
        "desc": "O clássico.",
        "preco": 11.9,
-       "foto": "",
+       "foto": "fotos/rei-do-mate/mate-gelado-com-limao-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -1058,7 +1058,7 @@
        "nome": "Cappuccino",
        "desc": "Cremoso.",
        "preco": 13.9,
-       "foto": "",
+       "foto": "fotos/rei-do-mate/cappuccino.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -1071,7 +1071,7 @@
        "nome": "Pão de queijo 4 un",
        "desc": "Quentinho.",
        "preco": 12.9,
-       "foto": "",
+       "foto": "fotos/rei-do-mate/pao-de-queijo-4-un.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -1079,7 +1079,7 @@
        "nome": "Croissant de presunto e queijo",
        "desc": "",
        "preco": 15.9,
-       "foto": "",
+       "foto": "fotos/rei-do-mate/croissant-de-presunto-e-queijo.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -1093,7 +1093,7 @@
    "tipo": "farmacia",
    "categoria": "Farmácia",
    "logo": "lojas/pacheco-bf.png",
-   "capa": "",
+   "capa": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
    "km": 0.2,
    "eta": [
     13,
@@ -1115,7 +1115,7 @@
        "nome": "Dipirona 500 mg 10 comprimidos",
        "desc": "",
        "preco": 7.49,
-       "foto": "",
+       "foto": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -1123,7 +1123,7 @@
        "nome": "Paracetamol 750 mg 20 comprimidos",
        "desc": "",
        "preco": 13.49,
-       "foto": "",
+       "foto": "fotos/produtos/paracetamol-750-mg-20-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -1131,7 +1131,7 @@
        "nome": "Ibuprofeno 400 mg 10 cápsulas",
        "desc": "",
        "preco": 15.99,
-       "foto": "",
+       "foto": "fotos/produtos/ibuprofeno-400-mg-10-capsulas.jpg",
        "serve": ""
       },
       {
@@ -1139,7 +1139,7 @@
        "nome": "Neosaldina 20 drágeas",
        "desc": "",
        "preco": 25.99,
-       "foto": "",
+       "foto": "fotos/produtos/neosaldina-20-drageas.jpg",
        "serve": ""
       }
      ]
@@ -1152,7 +1152,7 @@
        "nome": "Pastilha Strepsils mel e limão 8 un",
        "desc": "",
        "preco": 20.99,
-       "foto": "",
+       "foto": "fotos/produtos/pastilha-strepsils-mel-e-limao-8-un.jpg",
        "serve": ""
       },
       {
@@ -1160,7 +1160,7 @@
        "nome": "Vitamina C Cewin 500 mg 30 comprimidos",
        "desc": "",
        "preco": 18.99,
-       "foto": "",
+       "foto": "fotos/produtos/vitamina-c-cewin-500-mg-30-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -1168,7 +1168,7 @@
        "nome": "Soro fisiológico 500 ml",
        "desc": "",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/soro-fisiologico-500-ml.jpg",
        "serve": ""
       },
       {
@@ -1176,7 +1176,7 @@
        "nome": "Benegrip 20 comprimidos",
        "desc": "",
        "preco": 20.99,
-       "foto": "",
+       "foto": "fotos/produtos/benegrip-20-comprimidos.jpg",
        "serve": ""
       }
      ]
@@ -1189,7 +1189,7 @@
        "nome": "Absorvente Always noturno 8 un",
        "desc": "",
        "preco": 12.49,
-       "foto": "",
+       "foto": "fotos/produtos/absorvente-always-noturno-8-un.jpg",
        "serve": ""
       },
       {
@@ -1197,7 +1197,7 @@
        "nome": "Protetor solar Neutrogena FPS 50",
        "desc": "200 ml.",
        "preco": 72.99,
-       "foto": "",
+       "foto": "fotos/produtos/protetor-solar-neutrogena-fps-50.jpg",
        "serve": ""
       },
       {
@@ -1205,7 +1205,7 @@
        "nome": "Hidratante Nivea 400 ml",
        "desc": "",
        "preco": 31.49,
-       "foto": "",
+       "foto": "fotos/produtos/hidratante-nivea-400-ml.jpg",
        "serve": ""
       },
       {
@@ -1213,7 +1213,7 @@
        "nome": "Demaquilante Bioderma 250 ml",
        "desc": "",
        "preco": 93.49,
-       "foto": "",
+       "foto": "fotos/produtos/demaquilante-bioderma-250-ml.jpg",
        "serve": ""
       }
      ]
@@ -1226,7 +1226,7 @@
        "nome": "Teste de gravidez Clear Blue",
        "desc": "",
        "preco": 41.49,
-       "foto": "",
+       "foto": "fotos/produtos/teste-de-gravidez-clear-blue.jpg",
        "serve": ""
       },
       {
@@ -1234,7 +1234,7 @@
        "nome": "Buscofem 10 cápsulas",
        "desc": "Pra cólica.",
        "preco": 23.99,
-       "foto": "",
+       "foto": "fotos/produtos/buscofem-10-capsulas.jpg",
        "serve": ""
       }
      ]
@@ -1248,7 +1248,7 @@
    "tipo": "farmacia",
    "categoria": "Farmácia",
    "logo": "lojas/venancio-bf.png",
-   "capa": "",
+   "capa": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
    "km": 0.2,
    "eta": [
     17,
@@ -1270,7 +1270,7 @@
        "nome": "Dipirona 500 mg 10 comprimidos",
        "desc": "",
        "preco": 6.99,
-       "foto": "",
+       "foto": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -1278,7 +1278,7 @@
        "nome": "Paracetamol 750 mg 20 comprimidos",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/paracetamol-750-mg-20-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -1286,7 +1286,7 @@
        "nome": "Ibuprofeno 400 mg 10 cápsulas",
        "desc": "",
        "preco": 14.49,
-       "foto": "",
+       "foto": "fotos/produtos/ibuprofeno-400-mg-10-capsulas.jpg",
        "serve": ""
       },
       {
@@ -1294,7 +1294,7 @@
        "nome": "Neosaldina 20 drágeas",
        "desc": "",
        "preco": 24.49,
-       "foto": "",
+       "foto": "fotos/produtos/neosaldina-20-drageas.jpg",
        "serve": ""
       }
      ]
@@ -1307,7 +1307,7 @@
        "nome": "Pastilha Strepsils mel e limão 8 un",
        "desc": "",
        "preco": 19.49,
-       "foto": "",
+       "foto": "fotos/produtos/pastilha-strepsils-mel-e-limao-8-un.jpg",
        "serve": ""
       },
       {
@@ -1315,7 +1315,7 @@
        "nome": "Vitamina C Cewin 500 mg 30 comprimidos",
        "desc": "",
        "preco": 17.49,
-       "foto": "",
+       "foto": "fotos/produtos/vitamina-c-cewin-500-mg-30-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -1323,7 +1323,7 @@
        "nome": "Soro fisiológico 500 ml",
        "desc": "",
        "preco": 7.99,
-       "foto": "",
+       "foto": "fotos/produtos/soro-fisiologico-500-ml.jpg",
        "serve": ""
       },
       {
@@ -1331,7 +1331,7 @@
        "nome": "Benegrip 20 comprimidos",
        "desc": "",
        "preco": 19.49,
-       "foto": "",
+       "foto": "fotos/produtos/benegrip-20-comprimidos.jpg",
        "serve": ""
       }
      ]
@@ -1344,7 +1344,7 @@
        "nome": "Absorvente Always noturno 8 un",
        "desc": "",
        "preco": 11.49,
-       "foto": "",
+       "foto": "fotos/produtos/absorvente-always-noturno-8-un.jpg",
        "serve": ""
       },
       {
@@ -1352,7 +1352,7 @@
        "nome": "Protetor solar Neutrogena FPS 50",
        "desc": "200 ml.",
        "preco": 67.49,
-       "foto": "",
+       "foto": "fotos/produtos/protetor-solar-neutrogena-fps-50.jpg",
        "serve": ""
       },
       {
@@ -1360,7 +1360,7 @@
        "nome": "Hidratante Nivea 400 ml",
        "desc": "",
        "preco": 28.99,
-       "foto": "",
+       "foto": "fotos/produtos/hidratante-nivea-400-ml.jpg",
        "serve": ""
       },
       {
@@ -1368,7 +1368,7 @@
        "nome": "Demaquilante Bioderma 250 ml",
        "desc": "",
        "preco": 86.99,
-       "foto": "",
+       "foto": "fotos/produtos/demaquilante-bioderma-250-ml.jpg",
        "serve": ""
       }
      ]
@@ -1381,7 +1381,7 @@
        "nome": "Teste de gravidez Clear Blue",
        "desc": "",
        "preco": 38.49,
-       "foto": "",
+       "foto": "fotos/produtos/teste-de-gravidez-clear-blue.jpg",
        "serve": ""
       },
       {
@@ -1389,7 +1389,7 @@
        "nome": "Buscofem 10 cápsulas",
        "desc": "Pra cólica.",
        "preco": 22.49,
-       "foto": "",
+       "foto": "fotos/produtos/buscofem-10-capsulas.jpg",
        "serve": ""
       }
      ]
@@ -1403,7 +1403,7 @@
    "tipo": "farmacia",
    "categoria": "Farmácia",
    "logo": "lojas/drogasmil-bf.png",
-   "capa": "",
+   "capa": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
    "km": 0.2,
    "eta": [
     17,
@@ -1425,7 +1425,7 @@
        "nome": "Dipirona 500 mg 10 comprimidos",
        "desc": "",
        "preco": 7.49,
-       "foto": "",
+       "foto": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -1433,7 +1433,7 @@
        "nome": "Paracetamol 750 mg 20 comprimidos",
        "desc": "",
        "preco": 13.49,
-       "foto": "",
+       "foto": "fotos/produtos/paracetamol-750-mg-20-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -1441,7 +1441,7 @@
        "nome": "Ibuprofeno 400 mg 10 cápsulas",
        "desc": "",
        "preco": 15.49,
-       "foto": "",
+       "foto": "fotos/produtos/ibuprofeno-400-mg-10-capsulas.jpg",
        "serve": ""
       },
       {
@@ -1449,7 +1449,7 @@
        "nome": "Neosaldina 20 drágeas",
        "desc": "",
        "preco": 25.49,
-       "foto": "",
+       "foto": "fotos/produtos/neosaldina-20-drageas.jpg",
        "serve": ""
       }
      ]
@@ -1462,7 +1462,7 @@
        "nome": "Pastilha Strepsils mel e limão 8 un",
        "desc": "",
        "preco": 20.49,
-       "foto": "",
+       "foto": "fotos/produtos/pastilha-strepsils-mel-e-limao-8-un.jpg",
        "serve": ""
       },
       {
@@ -1470,7 +1470,7 @@
        "nome": "Vitamina C Cewin 500 mg 30 comprimidos",
        "desc": "",
        "preco": 18.49,
-       "foto": "",
+       "foto": "fotos/produtos/vitamina-c-cewin-500-mg-30-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -1478,7 +1478,7 @@
        "nome": "Soro fisiológico 500 ml",
        "desc": "",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/soro-fisiologico-500-ml.jpg",
        "serve": ""
       },
       {
@@ -1486,7 +1486,7 @@
        "nome": "Benegrip 20 comprimidos",
        "desc": "",
        "preco": 20.49,
-       "foto": "",
+       "foto": "fotos/produtos/benegrip-20-comprimidos.jpg",
        "serve": ""
       }
      ]
@@ -1499,7 +1499,7 @@
        "nome": "Absorvente Always noturno 8 un",
        "desc": "",
        "preco": 12.49,
-       "foto": "",
+       "foto": "fotos/produtos/absorvente-always-noturno-8-un.jpg",
        "serve": ""
       },
       {
@@ -1507,7 +1507,7 @@
        "nome": "Protetor solar Neutrogena FPS 50",
        "desc": "200 ml.",
        "preco": 71.99,
-       "foto": "",
+       "foto": "fotos/produtos/protetor-solar-neutrogena-fps-50.jpg",
        "serve": ""
       },
       {
@@ -1515,7 +1515,7 @@
        "nome": "Hidratante Nivea 400 ml",
        "desc": "",
        "preco": 30.99,
-       "foto": "",
+       "foto": "fotos/produtos/hidratante-nivea-400-ml.jpg",
        "serve": ""
       },
       {
@@ -1523,7 +1523,7 @@
        "nome": "Demaquilante Bioderma 250 ml",
        "desc": "",
        "preco": 91.99,
-       "foto": "",
+       "foto": "fotos/produtos/demaquilante-bioderma-250-ml.jpg",
        "serve": ""
       }
      ]
@@ -1536,7 +1536,7 @@
        "nome": "Teste de gravidez Clear Blue",
        "desc": "",
        "preco": 40.99,
-       "foto": "",
+       "foto": "fotos/produtos/teste-de-gravidez-clear-blue.jpg",
        "serve": ""
       },
       {
@@ -1544,7 +1544,7 @@
        "nome": "Buscofem 10 cápsulas",
        "desc": "Pra cólica.",
        "preco": 23.49,
-       "foto": "",
+       "foto": "fotos/produtos/buscofem-10-capsulas.jpg",
        "serve": ""
       }
      ]
@@ -1558,7 +1558,7 @@
    "tipo": "farmacia",
    "categoria": "Farmácia",
    "logo": "lojas/cristal-bf.png",
-   "capa": "",
+   "capa": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
    "km": 0.4,
    "eta": [
     14,
@@ -1580,7 +1580,7 @@
        "nome": "Dipirona 500 mg 10 comprimidos",
        "desc": "",
        "preco": 6.99,
-       "foto": "",
+       "foto": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -1588,7 +1588,7 @@
        "nome": "Paracetamol 750 mg 20 comprimidos",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/paracetamol-750-mg-20-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -1596,7 +1596,7 @@
        "nome": "Ibuprofeno 400 mg 10 cápsulas",
        "desc": "",
        "preco": 14.99,
-       "foto": "",
+       "foto": "fotos/produtos/ibuprofeno-400-mg-10-capsulas.jpg",
        "serve": ""
       },
       {
@@ -1604,7 +1604,7 @@
        "nome": "Neosaldina 20 drágeas",
        "desc": "",
        "preco": 24.49,
-       "foto": "",
+       "foto": "fotos/produtos/neosaldina-20-drageas.jpg",
        "serve": ""
       }
      ]
@@ -1617,7 +1617,7 @@
        "nome": "Pastilha Strepsils mel e limão 8 un",
        "desc": "",
        "preco": 19.49,
-       "foto": "",
+       "foto": "fotos/produtos/pastilha-strepsils-mel-e-limao-8-un.jpg",
        "serve": ""
       },
       {
@@ -1625,7 +1625,7 @@
        "nome": "Vitamina C Cewin 500 mg 30 comprimidos",
        "desc": "",
        "preco": 17.99,
-       "foto": "",
+       "foto": "fotos/produtos/vitamina-c-cewin-500-mg-30-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -1633,7 +1633,7 @@
        "nome": "Soro fisiológico 500 ml",
        "desc": "",
        "preco": 7.99,
-       "foto": "",
+       "foto": "fotos/produtos/soro-fisiologico-500-ml.jpg",
        "serve": ""
       },
       {
@@ -1641,7 +1641,7 @@
        "nome": "Benegrip 20 comprimidos",
        "desc": "",
        "preco": 19.49,
-       "foto": "",
+       "foto": "fotos/produtos/benegrip-20-comprimidos.jpg",
        "serve": ""
       }
      ]
@@ -1654,7 +1654,7 @@
        "nome": "Absorvente Always noturno 8 un",
        "desc": "",
        "preco": 11.99,
-       "foto": "",
+       "foto": "fotos/produtos/absorvente-always-noturno-8-un.jpg",
        "serve": ""
       },
       {
@@ -1662,7 +1662,7 @@
        "nome": "Protetor solar Neutrogena FPS 50",
        "desc": "200 ml.",
        "preco": 68.49,
-       "foto": "",
+       "foto": "fotos/produtos/protetor-solar-neutrogena-fps-50.jpg",
        "serve": ""
       },
       {
@@ -1670,7 +1670,7 @@
        "nome": "Hidratante Nivea 400 ml",
        "desc": "",
        "preco": 29.49,
-       "foto": "",
+       "foto": "fotos/produtos/hidratante-nivea-400-ml.jpg",
        "serve": ""
       },
       {
@@ -1678,7 +1678,7 @@
        "nome": "Demaquilante Bioderma 250 ml",
        "desc": "",
        "preco": 88.49,
-       "foto": "",
+       "foto": "fotos/produtos/demaquilante-bioderma-250-ml.jpg",
        "serve": ""
       }
      ]
@@ -1691,7 +1691,7 @@
        "nome": "Teste de gravidez Clear Blue",
        "desc": "",
        "preco": 39.49,
-       "foto": "",
+       "foto": "fotos/produtos/teste-de-gravidez-clear-blue.jpg",
        "serve": ""
       },
       {
@@ -1699,7 +1699,7 @@
        "nome": "Buscofem 10 cápsulas",
        "desc": "Pra cólica.",
        "preco": 22.49,
-       "foto": "",
+       "foto": "fotos/produtos/buscofem-10-capsulas.jpg",
        "serve": ""
       }
      ]
@@ -1713,7 +1713,7 @@
    "tipo": "mercado",
    "categoria": "Mercado",
    "logo": "lojas/supermarket-bf.png",
-   "capa": "",
+   "capa": "fotos/produtos/banana-prata-1-kg.jpg",
    "km": 0.7,
    "eta": [
     33,
@@ -1735,7 +1735,7 @@
        "nome": "Banana prata 1 kg",
        "desc": "",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/banana-prata-1-kg.jpg",
        "serve": ""
       },
       {
@@ -1743,7 +1743,7 @@
        "nome": "Maçã gala 1 kg",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/maca-gala-1-kg.jpg",
        "serve": ""
       },
       {
@@ -1751,7 +1751,7 @@
        "nome": "Morango 250 g",
        "desc": "Bandeja.",
        "preco": 10.99,
-       "foto": "",
+       "foto": "fotos/produtos/morango-250-g.jpg",
        "serve": ""
       },
       {
@@ -1759,7 +1759,7 @@
        "nome": "Tomate 1 kg",
        "desc": "",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/tomate-1-kg.jpg",
        "serve": ""
       },
       {
@@ -1767,7 +1767,7 @@
        "nome": "Alface crespa",
        "desc": "Unidade.",
        "preco": 4.49,
-       "foto": "",
+       "foto": "fotos/produtos/alface-crespa.jpg",
        "serve": ""
       },
       {
@@ -1775,7 +1775,7 @@
        "nome": "Abacate 1 kg",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/abacate-1-kg.jpg",
        "serve": ""
       }
      ]
@@ -1788,7 +1788,7 @@
        "nome": "Arroz Tio João 1 kg",
        "desc": "",
        "preco": 7.99,
-       "foto": "",
+       "foto": "fotos/produtos/arroz-tio-joao-1-kg.jpg",
        "serve": ""
       },
       {
@@ -1796,7 +1796,7 @@
        "nome": "Feijão preto Camil 1 kg",
        "desc": "",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/feijao-preto-camil-1-kg.jpg",
        "serve": ""
       },
       {
@@ -1804,7 +1804,7 @@
        "nome": "Macarrão Barilla 500 g",
        "desc": "Espaguete n. 5.",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/macarrao-barilla-500-g.jpg",
        "serve": ""
       },
       {
@@ -1812,7 +1812,7 @@
        "nome": "Azeite Gallo 500 ml",
        "desc": "Extra virgem.",
        "preco": 39.49,
-       "foto": "",
+       "foto": "fotos/produtos/azeite-gallo-500-ml.jpg",
        "serve": ""
       },
       {
@@ -1820,7 +1820,7 @@
        "nome": "Café Melitta 500 g",
        "desc": "Tradicional.",
        "preco": 26.49,
-       "foto": "",
+       "foto": "fotos/produtos/cafe-melitta-500-g.jpg",
        "serve": ""
       },
       {
@@ -1828,7 +1828,7 @@
        "nome": "Granola 800 g",
        "desc": "",
        "preco": 24.49,
-       "foto": "",
+       "foto": "fotos/produtos/granola-800-g.jpg",
        "serve": ""
       }
      ]
@@ -1841,7 +1841,7 @@
        "nome": "Leite Italac integral 1 L",
        "desc": "",
        "preco": 5.99,
-       "foto": "",
+       "foto": "fotos/produtos/leite-italac-integral-1-l.jpg",
        "serve": ""
       },
       {
@@ -1849,7 +1849,7 @@
        "nome": "Iogurte grego Vigor",
        "desc": "Tradicional, 4 un.",
        "preco": 15.99,
-       "foto": "",
+       "foto": "fotos/produtos/iogurte-grego-vigor.jpg",
        "serve": ""
       },
       {
@@ -1857,7 +1857,7 @@
        "nome": "Queijo muçarela fatiado 200 g",
        "desc": "",
        "preco": 14.99,
-       "foto": "",
+       "foto": "fotos/produtos/queijo-mucarela-fatiado-200-g.jpg",
        "serve": ""
       },
       {
@@ -1865,7 +1865,7 @@
        "nome": "Ovos brancos 12 un",
        "desc": "",
        "preco": 14.99,
-       "foto": "",
+       "foto": "fotos/produtos/ovos-brancos-12-un.jpg",
        "serve": ""
       },
       {
@@ -1873,7 +1873,7 @@
        "nome": "Manteiga Aviação 200 g",
        "desc": "",
        "preco": 17.99,
-       "foto": "",
+       "foto": "fotos/produtos/manteiga-aviacao-200-g.jpg",
        "serve": ""
       }
      ]
@@ -1886,7 +1886,7 @@
        "nome": "Água Crystal 1,5 L",
        "desc": "Sem gás.",
        "preco": 3.99,
-       "foto": "",
+       "foto": "fotos/produtos/agua-crystal-1-5-l.jpg",
        "serve": ""
       },
       {
@@ -1894,7 +1894,7 @@
        "nome": "Coca-Cola 2 L",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/coca-cola-2-l.jpg",
        "serve": ""
       },
       {
@@ -1902,7 +1902,7 @@
        "nome": "Suco Del Valle uva 1 L",
        "desc": "",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/suco-del-valle-uva-1-l.jpg",
        "serve": ""
       },
       {
@@ -1910,7 +1910,7 @@
        "nome": "Água de coco Kero Coco 1 L",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/agua-de-coco-kero-coco-1-l.jpg",
        "serve": ""
       }
      ]
@@ -1923,7 +1923,7 @@
        "nome": "Detergente Ypê 500 ml",
        "desc": "",
        "preco": 3.49,
-       "foto": "",
+       "foto": "fotos/produtos/detergente-ype-500-ml.jpg",
        "serve": ""
       },
       {
@@ -1931,7 +1931,7 @@
        "nome": "Papel higiênico Neve 12 rolos",
        "desc": "Folha dupla.",
        "preco": 26.49,
-       "foto": "",
+       "foto": "fotos/produtos/papel-higienico-neve-12-rolos.jpg",
        "serve": ""
       },
       {
@@ -1939,7 +1939,7 @@
        "nome": "Sabão em pó Omo 1,6 kg",
        "desc": "",
        "preco": 34.99,
-       "foto": "",
+       "foto": "fotos/produtos/sabao-em-po-omo-1-6-kg.jpg",
        "serve": ""
       },
       {
@@ -1947,7 +1947,7 @@
        "nome": "Shampoo Seda 325 ml",
        "desc": "",
        "preco": 17.99,
-       "foto": "",
+       "foto": "fotos/produtos/shampoo-seda-325-ml.jpg",
        "serve": ""
       }
      ]
@@ -1960,7 +1960,7 @@
        "nome": "Ração Golden cães pequeno porte 3 kg",
        "desc": "Pro Milo.",
        "preco": 84.49,
-       "foto": "",
+       "foto": "fotos/produtos/racao-golden-caes-pequeno-porte-3-kg.jpg",
        "serve": ""
       },
       {
@@ -1968,7 +1968,7 @@
        "nome": "Petisco Dog Chow 60 g",
        "desc": "",
        "preco": 10.99,
-       "foto": "",
+       "foto": "fotos/produtos/petisco-dog-chow-60-g.jpg",
        "serve": ""
       }
      ]
@@ -1982,7 +1982,7 @@
    "tipo": "mercado",
    "categoria": "Mercado",
    "logo": "lojas/zona-sul.png",
-   "capa": "",
+   "capa": "fotos/produtos/banana-prata-1-kg.jpg",
    "km": 0.3,
    "eta": [
     31,
@@ -2004,7 +2004,7 @@
        "nome": "Banana prata 1 kg",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/banana-prata-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2012,7 +2012,7 @@
        "nome": "Maçã gala 1 kg",
        "desc": "",
        "preco": 13.49,
-       "foto": "",
+       "foto": "fotos/produtos/maca-gala-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2020,7 +2020,7 @@
        "nome": "Morango 250 g",
        "desc": "Bandeja.",
        "preco": 11.49,
-       "foto": "",
+       "foto": "fotos/produtos/morango-250-g.jpg",
        "serve": ""
       },
       {
@@ -2028,7 +2028,7 @@
        "nome": "Tomate 1 kg",
        "desc": "",
        "preco": 9.99,
-       "foto": "",
+       "foto": "fotos/produtos/tomate-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2036,7 +2036,7 @@
        "nome": "Alface crespa",
        "desc": "Unidade.",
        "preco": 4.49,
-       "foto": "",
+       "foto": "fotos/produtos/alface-crespa.jpg",
        "serve": ""
       },
       {
@@ -2044,7 +2044,7 @@
        "nome": "Abacate 1 kg",
        "desc": "",
        "preco": 14.49,
-       "foto": "",
+       "foto": "fotos/produtos/abacate-1-kg.jpg",
        "serve": ""
       }
      ]
@@ -2057,7 +2057,7 @@
        "nome": "Arroz Tio João 1 kg",
        "desc": "",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/arroz-tio-joao-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2065,7 +2065,7 @@
        "nome": "Feijão preto Camil 1 kg",
        "desc": "",
        "preco": 9.99,
-       "foto": "",
+       "foto": "fotos/produtos/feijao-preto-camil-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2073,7 +2073,7 @@
        "nome": "Macarrão Barilla 500 g",
        "desc": "Espaguete n. 5.",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/macarrao-barilla-500-g.jpg",
        "serve": ""
       },
       {
@@ -2081,7 +2081,7 @@
        "nome": "Azeite Gallo 500 ml",
        "desc": "Extra virgem.",
        "preco": 40.99,
-       "foto": "",
+       "foto": "fotos/produtos/azeite-gallo-500-ml.jpg",
        "serve": ""
       },
       {
@@ -2089,7 +2089,7 @@
        "nome": "Café Melitta 500 g",
        "desc": "Tradicional.",
        "preco": 27.99,
-       "foto": "",
+       "foto": "fotos/produtos/cafe-melitta-500-g.jpg",
        "serve": ""
       },
       {
@@ -2097,7 +2097,7 @@
        "nome": "Granola 800 g",
        "desc": "",
        "preco": 25.49,
-       "foto": "",
+       "foto": "fotos/produtos/granola-800-g.jpg",
        "serve": ""
       }
      ]
@@ -2110,7 +2110,7 @@
        "nome": "Leite Italac integral 1 L",
        "desc": "",
        "preco": 6.49,
-       "foto": "",
+       "foto": "fotos/produtos/leite-italac-integral-1-l.jpg",
        "serve": ""
       },
       {
@@ -2118,7 +2118,7 @@
        "nome": "Iogurte grego Vigor",
        "desc": "Tradicional, 4 un.",
        "preco": 16.99,
-       "foto": "",
+       "foto": "fotos/produtos/iogurte-grego-vigor.jpg",
        "serve": ""
       },
       {
@@ -2126,7 +2126,7 @@
        "nome": "Queijo muçarela fatiado 200 g",
        "desc": "",
        "preco": 15.49,
-       "foto": "",
+       "foto": "fotos/produtos/queijo-mucarela-fatiado-200-g.jpg",
        "serve": ""
       },
       {
@@ -2134,7 +2134,7 @@
        "nome": "Ovos brancos 12 un",
        "desc": "",
        "preco": 15.49,
-       "foto": "",
+       "foto": "fotos/produtos/ovos-brancos-12-un.jpg",
        "serve": ""
       },
       {
@@ -2142,7 +2142,7 @@
        "nome": "Manteiga Aviação 200 g",
        "desc": "",
        "preco": 18.99,
-       "foto": "",
+       "foto": "fotos/produtos/manteiga-aviacao-200-g.jpg",
        "serve": ""
       }
      ]
@@ -2155,7 +2155,7 @@
        "nome": "Água Crystal 1,5 L",
        "desc": "Sem gás.",
        "preco": 3.99,
-       "foto": "",
+       "foto": "fotos/produtos/agua-crystal-1-5-l.jpg",
        "serve": ""
       },
       {
@@ -2163,7 +2163,7 @@
        "nome": "Coca-Cola 2 L",
        "desc": "",
        "preco": 13.49,
-       "foto": "",
+       "foto": "fotos/produtos/coca-cola-2-l.jpg",
        "serve": ""
       },
       {
@@ -2171,7 +2171,7 @@
        "nome": "Suco Del Valle uva 1 L",
        "desc": "",
        "preco": 9.99,
-       "foto": "",
+       "foto": "fotos/produtos/suco-del-valle-uva-1-l.jpg",
        "serve": ""
       },
       {
@@ -2179,7 +2179,7 @@
        "nome": "Água de coco Kero Coco 1 L",
        "desc": "",
        "preco": 14.49,
-       "foto": "",
+       "foto": "fotos/produtos/agua-de-coco-kero-coco-1-l.jpg",
        "serve": ""
       }
      ]
@@ -2192,7 +2192,7 @@
        "nome": "Detergente Ypê 500 ml",
        "desc": "",
        "preco": 3.49,
-       "foto": "",
+       "foto": "fotos/produtos/detergente-ype-500-ml.jpg",
        "serve": ""
       },
       {
@@ -2200,7 +2200,7 @@
        "nome": "Papel higiênico Neve 12 rolos",
        "desc": "Folha dupla.",
        "preco": 27.99,
-       "foto": "",
+       "foto": "fotos/produtos/papel-higienico-neve-12-rolos.jpg",
        "serve": ""
       },
       {
@@ -2208,7 +2208,7 @@
        "nome": "Sabão em pó Omo 1,6 kg",
        "desc": "",
        "preco": 36.49,
-       "foto": "",
+       "foto": "fotos/produtos/sabao-em-po-omo-1-6-kg.jpg",
        "serve": ""
       },
       {
@@ -2216,7 +2216,7 @@
        "nome": "Shampoo Seda 325 ml",
        "desc": "",
        "preco": 18.99,
-       "foto": "",
+       "foto": "fotos/produtos/shampoo-seda-325-ml.jpg",
        "serve": ""
       }
      ]
@@ -2229,7 +2229,7 @@
        "nome": "Ração Golden cães pequeno porte 3 kg",
        "desc": "Pro Milo.",
        "preco": 88.49,
-       "foto": "",
+       "foto": "fotos/produtos/racao-golden-caes-pequeno-porte-3-kg.jpg",
        "serve": ""
       },
       {
@@ -2237,7 +2237,7 @@
        "nome": "Petisco Dog Chow 60 g",
        "desc": "",
        "preco": 11.49,
-       "foto": "",
+       "foto": "fotos/produtos/petisco-dog-chow-60-g.jpg",
        "serve": ""
       }
      ]
@@ -2251,7 +2251,7 @@
    "tipo": "mercado",
    "categoria": "Mercado",
    "logo": "lojas/hortifruti-bf.png",
-   "capa": "",
+   "capa": "fotos/produtos/banana-prata-1-kg.jpg",
    "km": 0.1,
    "eta": [
     31,
@@ -2273,7 +2273,7 @@
        "nome": "Banana prata 1 kg",
        "desc": "",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/banana-prata-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2281,7 +2281,7 @@
        "nome": "Maçã gala 1 kg",
        "desc": "",
        "preco": 12.49,
-       "foto": "",
+       "foto": "fotos/produtos/maca-gala-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2289,7 +2289,7 @@
        "nome": "Morango 250 g",
        "desc": "Bandeja.",
        "preco": 10.49,
-       "foto": "",
+       "foto": "fotos/produtos/morango-250-g.jpg",
        "serve": ""
       },
       {
@@ -2297,7 +2297,7 @@
        "nome": "Tomate 1 kg",
        "desc": "",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/tomate-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2305,7 +2305,7 @@
        "nome": "Alface crespa",
        "desc": "Unidade.",
        "preco": 4.49,
-       "foto": "",
+       "foto": "fotos/produtos/alface-crespa.jpg",
        "serve": ""
       },
       {
@@ -2313,7 +2313,7 @@
        "nome": "Abacate 1 kg",
        "desc": "",
        "preco": 13.49,
-       "foto": "",
+       "foto": "fotos/produtos/abacate-1-kg.jpg",
        "serve": ""
       }
      ]
@@ -2326,7 +2326,7 @@
        "nome": "Arroz Tio João 1 kg",
        "desc": "",
        "preco": 7.99,
-       "foto": "",
+       "foto": "fotos/produtos/arroz-tio-joao-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2334,7 +2334,7 @@
        "nome": "Feijão preto Camil 1 kg",
        "desc": "",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/feijao-preto-camil-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2342,7 +2342,7 @@
        "nome": "Macarrão Barilla 500 g",
        "desc": "Espaguete n. 5.",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/macarrao-barilla-500-g.jpg",
        "serve": ""
       },
       {
@@ -2350,7 +2350,7 @@
        "nome": "Azeite Gallo 500 ml",
        "desc": "Extra virgem.",
        "preco": 38.49,
-       "foto": "",
+       "foto": "fotos/produtos/azeite-gallo-500-ml.jpg",
        "serve": ""
       },
       {
@@ -2358,7 +2358,7 @@
        "nome": "Café Melitta 500 g",
        "desc": "Tradicional.",
        "preco": 25.99,
-       "foto": "",
+       "foto": "fotos/produtos/cafe-melitta-500-g.jpg",
        "serve": ""
       },
       {
@@ -2366,7 +2366,7 @@
        "nome": "Granola 800 g",
        "desc": "",
        "preco": 23.99,
-       "foto": "",
+       "foto": "fotos/produtos/granola-800-g.jpg",
        "serve": ""
       }
      ]
@@ -2379,7 +2379,7 @@
        "nome": "Leite Italac integral 1 L",
        "desc": "",
        "preco": 5.99,
-       "foto": "",
+       "foto": "fotos/produtos/leite-italac-integral-1-l.jpg",
        "serve": ""
       },
       {
@@ -2387,7 +2387,7 @@
        "nome": "Iogurte grego Vigor",
        "desc": "Tradicional, 4 un.",
        "preco": 15.49,
-       "foto": "",
+       "foto": "fotos/produtos/iogurte-grego-vigor.jpg",
        "serve": ""
       },
       {
@@ -2395,7 +2395,7 @@
        "nome": "Queijo muçarela fatiado 200 g",
        "desc": "",
        "preco": 14.49,
-       "foto": "",
+       "foto": "fotos/produtos/queijo-mucarela-fatiado-200-g.jpg",
        "serve": ""
       },
       {
@@ -2403,7 +2403,7 @@
        "nome": "Ovos brancos 12 un",
        "desc": "",
        "preco": 14.49,
-       "foto": "",
+       "foto": "fotos/produtos/ovos-brancos-12-un.jpg",
        "serve": ""
       },
       {
@@ -2411,7 +2411,7 @@
        "nome": "Manteiga Aviação 200 g",
        "desc": "",
        "preco": 17.99,
-       "foto": "",
+       "foto": "fotos/produtos/manteiga-aviacao-200-g.jpg",
        "serve": ""
       }
      ]
@@ -2424,7 +2424,7 @@
        "nome": "Água Crystal 1,5 L",
        "desc": "Sem gás.",
        "preco": 3.99,
-       "foto": "",
+       "foto": "fotos/produtos/agua-crystal-1-5-l.jpg",
        "serve": ""
       },
       {
@@ -2432,7 +2432,7 @@
        "nome": "Coca-Cola 2 L",
        "desc": "",
        "preco": 12.49,
-       "foto": "",
+       "foto": "fotos/produtos/coca-cola-2-l.jpg",
        "serve": ""
       },
       {
@@ -2440,7 +2440,7 @@
        "nome": "Suco Del Valle uva 1 L",
        "desc": "",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/suco-del-valle-uva-1-l.jpg",
        "serve": ""
       },
       {
@@ -2448,7 +2448,7 @@
        "nome": "Água de coco Kero Coco 1 L",
        "desc": "",
        "preco": 13.49,
-       "foto": "",
+       "foto": "fotos/produtos/agua-de-coco-kero-coco-1-l.jpg",
        "serve": ""
       }
      ]
@@ -2461,7 +2461,7 @@
        "nome": "Detergente Ypê 500 ml",
        "desc": "",
        "preco": 3.49,
-       "foto": "",
+       "foto": "fotos/produtos/detergente-ype-500-ml.jpg",
        "serve": ""
       },
       {
@@ -2469,7 +2469,7 @@
        "nome": "Papel higiênico Neve 12 rolos",
        "desc": "Folha dupla.",
        "preco": 25.99,
-       "foto": "",
+       "foto": "fotos/produtos/papel-higienico-neve-12-rolos.jpg",
        "serve": ""
       },
       {
@@ -2477,7 +2477,7 @@
        "nome": "Sabão em pó Omo 1,6 kg",
        "desc": "",
        "preco": 33.99,
-       "foto": "",
+       "foto": "fotos/produtos/sabao-em-po-omo-1-6-kg.jpg",
        "serve": ""
       },
       {
@@ -2485,7 +2485,7 @@
        "nome": "Shampoo Seda 325 ml",
        "desc": "",
        "preco": 17.49,
-       "foto": "",
+       "foto": "fotos/produtos/shampoo-seda-325-ml.jpg",
        "serve": ""
       }
      ]
@@ -2498,7 +2498,7 @@
        "nome": "Ração Golden cães pequeno porte 3 kg",
        "desc": "Pro Milo.",
        "preco": 82.49,
-       "foto": "",
+       "foto": "fotos/produtos/racao-golden-caes-pequeno-porte-3-kg.jpg",
        "serve": ""
       },
       {
@@ -2506,7 +2506,7 @@
        "nome": "Petisco Dog Chow 60 g",
        "desc": "",
        "preco": 10.49,
-       "foto": "",
+       "foto": "fotos/produtos/petisco-dog-chow-60-g.jpg",
        "serve": ""
       }
      ]
@@ -2520,7 +2520,7 @@
    "tipo": "mercado",
    "categoria": "Mercado",
    "logo": "lojas/pao-de-acucar-bf.png",
-   "capa": "",
+   "capa": "fotos/produtos/banana-prata-1-kg.jpg",
    "km": 0.5,
    "eta": [
     28,
@@ -2542,7 +2542,7 @@
        "nome": "Banana prata 1 kg",
        "desc": "",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/banana-prata-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2550,7 +2550,7 @@
        "nome": "Maçã gala 1 kg",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/maca-gala-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2558,7 +2558,7 @@
        "nome": "Morango 250 g",
        "desc": "Bandeja.",
        "preco": 10.49,
-       "foto": "",
+       "foto": "fotos/produtos/morango-250-g.jpg",
        "serve": ""
       },
       {
@@ -2566,7 +2566,7 @@
        "nome": "Tomate 1 kg",
        "desc": "",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/tomate-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2574,7 +2574,7 @@
        "nome": "Alface crespa",
        "desc": "Unidade.",
        "preco": 4.49,
-       "foto": "",
+       "foto": "fotos/produtos/alface-crespa.jpg",
        "serve": ""
       },
       {
@@ -2582,7 +2582,7 @@
        "nome": "Abacate 1 kg",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/abacate-1-kg.jpg",
        "serve": ""
       }
      ]
@@ -2595,7 +2595,7 @@
        "nome": "Arroz Tio João 1 kg",
        "desc": "",
        "preco": 7.99,
-       "foto": "",
+       "foto": "fotos/produtos/arroz-tio-joao-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2603,7 +2603,7 @@
        "nome": "Feijão preto Camil 1 kg",
        "desc": "",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/feijao-preto-camil-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2611,7 +2611,7 @@
        "nome": "Macarrão Barilla 500 g",
        "desc": "Espaguete n. 5.",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/macarrao-barilla-500-g.jpg",
        "serve": ""
       },
       {
@@ -2619,7 +2619,7 @@
        "nome": "Azeite Gallo 500 ml",
        "desc": "Extra virgem.",
        "preco": 38.49,
-       "foto": "",
+       "foto": "fotos/produtos/azeite-gallo-500-ml.jpg",
        "serve": ""
       },
       {
@@ -2627,7 +2627,7 @@
        "nome": "Café Melitta 500 g",
        "desc": "Tradicional.",
        "preco": 25.99,
-       "foto": "",
+       "foto": "fotos/produtos/cafe-melitta-500-g.jpg",
        "serve": ""
       },
       {
@@ -2635,7 +2635,7 @@
        "nome": "Granola 800 g",
        "desc": "",
        "preco": 23.99,
-       "foto": "",
+       "foto": "fotos/produtos/granola-800-g.jpg",
        "serve": ""
       }
      ]
@@ -2648,7 +2648,7 @@
        "nome": "Leite Italac integral 1 L",
        "desc": "",
        "preco": 5.99,
-       "foto": "",
+       "foto": "fotos/produtos/leite-italac-integral-1-l.jpg",
        "serve": ""
       },
       {
@@ -2656,7 +2656,7 @@
        "nome": "Iogurte grego Vigor",
        "desc": "Tradicional, 4 un.",
        "preco": 15.99,
-       "foto": "",
+       "foto": "fotos/produtos/iogurte-grego-vigor.jpg",
        "serve": ""
       },
       {
@@ -2664,7 +2664,7 @@
        "nome": "Queijo muçarela fatiado 200 g",
        "desc": "",
        "preco": 14.99,
-       "foto": "",
+       "foto": "fotos/produtos/queijo-mucarela-fatiado-200-g.jpg",
        "serve": ""
       },
       {
@@ -2672,7 +2672,7 @@
        "nome": "Ovos brancos 12 un",
        "desc": "",
        "preco": 14.99,
-       "foto": "",
+       "foto": "fotos/produtos/ovos-brancos-12-un.jpg",
        "serve": ""
       },
       {
@@ -2680,7 +2680,7 @@
        "nome": "Manteiga Aviação 200 g",
        "desc": "",
        "preco": 17.99,
-       "foto": "",
+       "foto": "fotos/produtos/manteiga-aviacao-200-g.jpg",
        "serve": ""
       }
      ]
@@ -2693,7 +2693,7 @@
        "nome": "Água Crystal 1,5 L",
        "desc": "Sem gás.",
        "preco": 3.99,
-       "foto": "",
+       "foto": "fotos/produtos/agua-crystal-1-5-l.jpg",
        "serve": ""
       },
       {
@@ -2701,7 +2701,7 @@
        "nome": "Coca-Cola 2 L",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/coca-cola-2-l.jpg",
        "serve": ""
       },
       {
@@ -2709,7 +2709,7 @@
        "nome": "Suco Del Valle uva 1 L",
        "desc": "",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/suco-del-valle-uva-1-l.jpg",
        "serve": ""
       },
       {
@@ -2717,7 +2717,7 @@
        "nome": "Água de coco Kero Coco 1 L",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/agua-de-coco-kero-coco-1-l.jpg",
        "serve": ""
       }
      ]
@@ -2730,7 +2730,7 @@
        "nome": "Detergente Ypê 500 ml",
        "desc": "",
        "preco": 3.49,
-       "foto": "",
+       "foto": "fotos/produtos/detergente-ype-500-ml.jpg",
        "serve": ""
       },
       {
@@ -2738,7 +2738,7 @@
        "nome": "Papel higiênico Neve 12 rolos",
        "desc": "Folha dupla.",
        "preco": 25.99,
-       "foto": "",
+       "foto": "fotos/produtos/papel-higienico-neve-12-rolos.jpg",
        "serve": ""
       },
       {
@@ -2746,7 +2746,7 @@
        "nome": "Sabão em pó Omo 1,6 kg",
        "desc": "",
        "preco": 34.49,
-       "foto": "",
+       "foto": "fotos/produtos/sabao-em-po-omo-1-6-kg.jpg",
        "serve": ""
       },
       {
@@ -2754,7 +2754,7 @@
        "nome": "Shampoo Seda 325 ml",
        "desc": "",
        "preco": 17.99,
-       "foto": "",
+       "foto": "fotos/produtos/shampoo-seda-325-ml.jpg",
        "serve": ""
       }
      ]
@@ -2767,7 +2767,7 @@
        "nome": "Ração Golden cães pequeno porte 3 kg",
        "desc": "Pro Milo.",
        "preco": 83.49,
-       "foto": "",
+       "foto": "fotos/produtos/racao-golden-caes-pequeno-porte-3-kg.jpg",
        "serve": ""
       },
       {
@@ -2775,7 +2775,7 @@
        "nome": "Petisco Dog Chow 60 g",
        "desc": "",
        "preco": 10.49,
-       "foto": "",
+       "foto": "fotos/produtos/petisco-dog-chow-60-g.jpg",
        "serve": ""
       }
      ]
@@ -2789,7 +2789,7 @@
    "tipo": "mercado",
    "categoria": "Mercado",
    "logo": "lojas/mundial-bf.png",
-   "capa": "",
+   "capa": "fotos/produtos/banana-prata-1-kg.jpg",
    "km": 0.3,
    "eta": [
     29,
@@ -2811,7 +2811,7 @@
        "nome": "Banana prata 1 kg",
        "desc": "",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/banana-prata-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2819,7 +2819,7 @@
        "nome": "Maçã gala 1 kg",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/maca-gala-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2827,7 +2827,7 @@
        "nome": "Morango 250 g",
        "desc": "Bandeja.",
        "preco": 10.99,
-       "foto": "",
+       "foto": "fotos/produtos/morango-250-g.jpg",
        "serve": ""
       },
       {
@@ -2835,7 +2835,7 @@
        "nome": "Tomate 1 kg",
        "desc": "",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/tomate-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2843,7 +2843,7 @@
        "nome": "Alface crespa",
        "desc": "Unidade.",
        "preco": 4.49,
-       "foto": "",
+       "foto": "fotos/produtos/alface-crespa.jpg",
        "serve": ""
       },
       {
@@ -2851,7 +2851,7 @@
        "nome": "Abacate 1 kg",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/abacate-1-kg.jpg",
        "serve": ""
       }
      ]
@@ -2864,7 +2864,7 @@
        "nome": "Arroz Tio João 1 kg",
        "desc": "",
        "preco": 7.99,
-       "foto": "",
+       "foto": "fotos/produtos/arroz-tio-joao-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2872,7 +2872,7 @@
        "nome": "Feijão preto Camil 1 kg",
        "desc": "",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/feijao-preto-camil-1-kg.jpg",
        "serve": ""
       },
       {
@@ -2880,7 +2880,7 @@
        "nome": "Macarrão Barilla 500 g",
        "desc": "Espaguete n. 5.",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/macarrao-barilla-500-g.jpg",
        "serve": ""
       },
       {
@@ -2888,7 +2888,7 @@
        "nome": "Azeite Gallo 500 ml",
        "desc": "Extra virgem.",
        "preco": 38.99,
-       "foto": "",
+       "foto": "fotos/produtos/azeite-gallo-500-ml.jpg",
        "serve": ""
       },
       {
@@ -2896,7 +2896,7 @@
        "nome": "Café Melitta 500 g",
        "desc": "Tradicional.",
        "preco": 26.49,
-       "foto": "",
+       "foto": "fotos/produtos/cafe-melitta-500-g.jpg",
        "serve": ""
       },
       {
@@ -2904,7 +2904,7 @@
        "nome": "Granola 800 g",
        "desc": "",
        "preco": 24.49,
-       "foto": "",
+       "foto": "fotos/produtos/granola-800-g.jpg",
        "serve": ""
       }
      ]
@@ -2917,7 +2917,7 @@
        "nome": "Leite Italac integral 1 L",
        "desc": "",
        "preco": 5.99,
-       "foto": "",
+       "foto": "fotos/produtos/leite-italac-integral-1-l.jpg",
        "serve": ""
       },
       {
@@ -2925,7 +2925,7 @@
        "nome": "Iogurte grego Vigor",
        "desc": "Tradicional, 4 un.",
        "preco": 15.99,
-       "foto": "",
+       "foto": "fotos/produtos/iogurte-grego-vigor.jpg",
        "serve": ""
       },
       {
@@ -2933,7 +2933,7 @@
        "nome": "Queijo muçarela fatiado 200 g",
        "desc": "",
        "preco": 14.99,
-       "foto": "",
+       "foto": "fotos/produtos/queijo-mucarela-fatiado-200-g.jpg",
        "serve": ""
       },
       {
@@ -2941,7 +2941,7 @@
        "nome": "Ovos brancos 12 un",
        "desc": "",
        "preco": 14.99,
-       "foto": "",
+       "foto": "fotos/produtos/ovos-brancos-12-un.jpg",
        "serve": ""
       },
       {
@@ -2949,7 +2949,7 @@
        "nome": "Manteiga Aviação 200 g",
        "desc": "",
        "preco": 17.99,
-       "foto": "",
+       "foto": "fotos/produtos/manteiga-aviacao-200-g.jpg",
        "serve": ""
       }
      ]
@@ -2962,7 +2962,7 @@
        "nome": "Água Crystal 1,5 L",
        "desc": "Sem gás.",
        "preco": 3.99,
-       "foto": "",
+       "foto": "fotos/produtos/agua-crystal-1-5-l.jpg",
        "serve": ""
       },
       {
@@ -2970,7 +2970,7 @@
        "nome": "Coca-Cola 2 L",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/coca-cola-2-l.jpg",
        "serve": ""
       },
       {
@@ -2978,7 +2978,7 @@
        "nome": "Suco Del Valle uva 1 L",
        "desc": "",
        "preco": 9.49,
-       "foto": "",
+       "foto": "fotos/produtos/suco-del-valle-uva-1-l.jpg",
        "serve": ""
       },
       {
@@ -2986,7 +2986,7 @@
        "nome": "Água de coco Kero Coco 1 L",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/agua-de-coco-kero-coco-1-l.jpg",
        "serve": ""
       }
      ]
@@ -2999,7 +2999,7 @@
        "nome": "Detergente Ypê 500 ml",
        "desc": "",
        "preco": 3.49,
-       "foto": "",
+       "foto": "fotos/produtos/detergente-ype-500-ml.jpg",
        "serve": ""
       },
       {
@@ -3007,7 +3007,7 @@
        "nome": "Papel higiênico Neve 12 rolos",
        "desc": "Folha dupla.",
        "preco": 26.49,
-       "foto": "",
+       "foto": "fotos/produtos/papel-higienico-neve-12-rolos.jpg",
        "serve": ""
       },
       {
@@ -3015,7 +3015,7 @@
        "nome": "Sabão em pó Omo 1,6 kg",
        "desc": "",
        "preco": 34.99,
-       "foto": "",
+       "foto": "fotos/produtos/sabao-em-po-omo-1-6-kg.jpg",
        "serve": ""
       },
       {
@@ -3023,7 +3023,7 @@
        "nome": "Shampoo Seda 325 ml",
        "desc": "",
        "preco": 17.99,
-       "foto": "",
+       "foto": "fotos/produtos/shampoo-seda-325-ml.jpg",
        "serve": ""
       }
      ]
@@ -3036,7 +3036,7 @@
        "nome": "Ração Golden cães pequeno porte 3 kg",
        "desc": "Pro Milo.",
        "preco": 84.49,
-       "foto": "",
+       "foto": "fotos/produtos/racao-golden-caes-pequeno-porte-3-kg.jpg",
        "serve": ""
       },
       {
@@ -3044,7 +3044,7 @@
        "nome": "Petisco Dog Chow 60 g",
        "desc": "",
        "preco": 10.99,
-       "foto": "",
+       "foto": "fotos/produtos/petisco-dog-chow-60-g.jpg",
        "serve": ""
       }
      ]
@@ -3058,7 +3058,7 @@
    "tipo": "farmacia",
    "categoria": "Farmácia",
    "logo": "lojas/droga-raia-bf.png",
-   "capa": "",
+   "capa": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
    "km": 0.3,
    "eta": [
     13,
@@ -3080,7 +3080,7 @@
        "nome": "Dipirona 500 mg 10 comprimidos",
        "desc": "",
        "preco": 7.49,
-       "foto": "",
+       "foto": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -3088,7 +3088,7 @@
        "nome": "Paracetamol 750 mg 20 comprimidos",
        "desc": "",
        "preco": 13.49,
-       "foto": "",
+       "foto": "fotos/produtos/paracetamol-750-mg-20-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -3096,7 +3096,7 @@
        "nome": "Ibuprofeno 400 mg 10 cápsulas",
        "desc": "",
        "preco": 15.49,
-       "foto": "",
+       "foto": "fotos/produtos/ibuprofeno-400-mg-10-capsulas.jpg",
        "serve": ""
       },
       {
@@ -3104,7 +3104,7 @@
        "nome": "Neosaldina 20 drágeas",
        "desc": "",
        "preco": 25.49,
-       "foto": "",
+       "foto": "fotos/produtos/neosaldina-20-drageas.jpg",
        "serve": ""
       }
      ]
@@ -3117,7 +3117,7 @@
        "nome": "Pastilha Strepsils mel e limão 8 un",
        "desc": "",
        "preco": 20.49,
-       "foto": "",
+       "foto": "fotos/produtos/pastilha-strepsils-mel-e-limao-8-un.jpg",
        "serve": ""
       },
       {
@@ -3125,7 +3125,7 @@
        "nome": "Vitamina C Cewin 500 mg 30 comprimidos",
        "desc": "",
        "preco": 18.49,
-       "foto": "",
+       "foto": "fotos/produtos/vitamina-c-cewin-500-mg-30-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -3133,7 +3133,7 @@
        "nome": "Soro fisiológico 500 ml",
        "desc": "",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/soro-fisiologico-500-ml.jpg",
        "serve": ""
       },
       {
@@ -3141,7 +3141,7 @@
        "nome": "Benegrip 20 comprimidos",
        "desc": "",
        "preco": 20.49,
-       "foto": "",
+       "foto": "fotos/produtos/benegrip-20-comprimidos.jpg",
        "serve": ""
       }
      ]
@@ -3154,7 +3154,7 @@
        "nome": "Absorvente Always noturno 8 un",
        "desc": "",
        "preco": 12.49,
-       "foto": "",
+       "foto": "fotos/produtos/absorvente-always-noturno-8-un.jpg",
        "serve": ""
       },
       {
@@ -3162,7 +3162,7 @@
        "nome": "Protetor solar Neutrogena FPS 50",
        "desc": "200 ml.",
        "preco": 71.49,
-       "foto": "",
+       "foto": "fotos/produtos/protetor-solar-neutrogena-fps-50.jpg",
        "serve": ""
       },
       {
@@ -3170,7 +3170,7 @@
        "nome": "Hidratante Nivea 400 ml",
        "desc": "",
        "preco": 30.49,
-       "foto": "",
+       "foto": "fotos/produtos/hidratante-nivea-400-ml.jpg",
        "serve": ""
       },
       {
@@ -3178,7 +3178,7 @@
        "nome": "Demaquilante Bioderma 250 ml",
        "desc": "",
        "preco": 91.49,
-       "foto": "",
+       "foto": "fotos/produtos/demaquilante-bioderma-250-ml.jpg",
        "serve": ""
       }
      ]
@@ -3191,7 +3191,7 @@
        "nome": "Teste de gravidez Clear Blue",
        "desc": "",
        "preco": 40.99,
-       "foto": "",
+       "foto": "fotos/produtos/teste-de-gravidez-clear-blue.jpg",
        "serve": ""
       },
       {
@@ -3199,7 +3199,7 @@
        "nome": "Buscofem 10 cápsulas",
        "desc": "Pra cólica.",
        "preco": 23.49,
-       "foto": "",
+       "foto": "fotos/produtos/buscofem-10-capsulas.jpg",
        "serve": ""
       }
      ]
@@ -3213,7 +3213,7 @@
    "tipo": "restaurante",
    "categoria": "Açaí",
    "logo": "lojas/estacao-acai.png",
-   "capa": "",
+   "capa": "fotos/estacao-acai/acai-300-ml.jpg",
    "km": 0.0,
    "eta": [
     17,
@@ -3235,7 +3235,7 @@
        "nome": "Açaí 300 ml",
        "desc": "Açaí puro batido na hora com 2 acompanhamentos.",
        "preco": 19.9,
-       "foto": "",
+       "foto": "fotos/estacao-acai/acai-300-ml.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3243,7 +3243,7 @@
        "nome": "Açaí 500 ml",
        "desc": "Açaí com banana, granola e leite em pó.",
        "preco": 27.9,
-       "foto": "",
+       "foto": "fotos/estacao-acai/acai-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3251,7 +3251,7 @@
        "nome": "Açaí 700 ml",
        "desc": "Açaí com morango, leite ninho e paçoca.",
        "preco": 35.9,
-       "foto": "",
+       "foto": "fotos/estacao-acai/acai-700-ml.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3264,7 +3264,7 @@
        "nome": "Tigela Fit",
        "desc": "Açaí sem açúcar, banana, granola sem açúcar e mel.",
        "preco": 32.9,
-       "foto": "",
+       "foto": "fotos/estacao-acai/tigela-fit.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3272,7 +3272,7 @@
        "nome": "Tigela Nutella",
        "desc": "Açaí, Nutella, morango e leite ninho.",
        "preco": 39.9,
-       "foto": "",
+       "foto": "fotos/estacao-acai/tigela-nutella.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3285,7 +3285,7 @@
        "nome": "Suco de laranja 500 ml",
        "desc": "Laranja espremida na hora.",
        "preco": 14.0,
-       "foto": "",
+       "foto": "fotos/estacao-acai/suco-de-laranja-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3293,7 +3293,7 @@
        "nome": "Água de coco 300 ml",
        "desc": "Gelada.",
        "preco": 9.0,
-       "foto": "",
+       "foto": "fotos/estacao-acai/agua-de-coco-300-ml.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3307,7 +3307,7 @@
    "tipo": "restaurante",
    "categoria": "Sorvetes",
    "logo": "lojas/bacio-di-latte.png",
-   "capa": "",
+   "capa": "fotos/bacio-di-latte/copo-2-sabores.jpg",
    "km": 0.5,
    "eta": [
     20,
@@ -3329,7 +3329,7 @@
        "nome": "Copo 2 sabores",
        "desc": "Escolha 2 sabores do dia. Pistache, doce de leite e chocolate belga são os mais pedidos.",
        "preco": 29.0,
-       "foto": "",
+       "foto": "fotos/bacio-di-latte/copo-2-sabores.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3337,7 +3337,7 @@
        "nome": "Copo 3 sabores",
        "desc": "Escolha 3 sabores do dia.",
        "preco": 36.0,
-       "foto": "",
+       "foto": "fotos/bacio-di-latte/copo-3-sabores.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3345,7 +3345,7 @@
        "nome": "Pote 500 ml",
        "desc": "Até 3 sabores pra levar pra casa.",
        "preco": 69.0,
-       "foto": "",
+       "foto": "fotos/bacio-di-latte/pote-500-ml.jpg",
        "serve": "Serve até 2 pessoas"
       }
      ]
@@ -3358,7 +3358,7 @@
        "nome": "Affogato",
        "desc": "Gelato de creme com um espresso por cima.",
        "preco": 24.0,
-       "foto": "",
+       "foto": "fotos/bacio-di-latte/affogato.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3366,7 +3366,7 @@
        "nome": "Milkshake de pistache",
        "desc": "Batido com gelato de pistache.",
        "preco": 34.0,
-       "foto": "",
+       "foto": "fotos/bacio-di-latte/milkshake-de-pistache.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3380,7 +3380,7 @@
    "tipo": "restaurante",
    "categoria": "Sorvetes",
    "logo": "lojas/officina-gelato.png",
-   "capa": "",
+   "capa": "fotos/officina-gelato/casquinha-1-sabor.jpg",
    "km": 0.3,
    "eta": [
     22,
@@ -3402,7 +3402,7 @@
        "nome": "Casquinha 1 sabor",
        "desc": "Gelato artesanal na casquinha.",
        "preco": 18.0,
-       "foto": "",
+       "foto": "fotos/officina-gelato/casquinha-1-sabor.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3410,7 +3410,7 @@
        "nome": "Copo 2 sabores",
        "desc": "Frutas vermelhas, maracujá, chocolate 70%…",
        "preco": 26.0,
-       "foto": "",
+       "foto": "fotos/officina-gelato/copo-2-sabores.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3418,7 +3418,7 @@
        "nome": "Pote 1 litro",
        "desc": "Até 4 sabores.",
        "preco": 98.0,
-       "foto": "",
+       "foto": "fotos/officina-gelato/pote-1-litro.jpg",
        "serve": "Serve até 2 pessoas"
       }
      ]
@@ -3431,7 +3431,7 @@
        "nome": "Picolé de morango com leite condensado",
        "desc": "Artesanal.",
        "preco": 14.0,
-       "foto": "",
+       "foto": "fotos/officina-gelato/picole-de-morango-com-leite-condensado.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3439,7 +3439,7 @@
        "nome": "Picolé de limão siciliano",
        "desc": "Artesanal, sem lactose.",
        "preco": 12.0,
-       "foto": "",
+       "foto": "fotos/officina-gelato/picole-de-limao-siciliano.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3453,7 +3453,7 @@
    "tipo": "restaurante",
    "categoria": "Doces",
    "logo": "lojas/milky-moo.png",
-   "capa": "",
+   "capa": "fotos/milky-moo/milkshake-ovomaltine-500-ml.jpg",
    "km": 0.5,
    "eta": [
     23,
@@ -3475,7 +3475,7 @@
        "nome": "Milkshake Ovomaltine 500 ml",
        "desc": "O clássico, com Ovomaltine crocante.",
        "preco": 26.9,
-       "foto": "",
+       "foto": "fotos/milky-moo/milkshake-ovomaltine-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3483,7 +3483,7 @@
        "nome": "Milkshake Nutella 500 ml",
        "desc": "Batido com Nutella e calda.",
        "preco": 29.9,
-       "foto": "",
+       "foto": "fotos/milky-moo/milkshake-nutella-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3491,7 +3491,7 @@
        "nome": "Milkshake Morango 500 ml",
        "desc": "Morango com chantilly.",
        "preco": 24.9,
-       "foto": "",
+       "foto": "fotos/milky-moo/milkshake-morango-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3504,7 +3504,7 @@
        "nome": "Casquinha mista",
        "desc": "Baunilha e chocolate.",
        "preco": 9.9,
-       "foto": "",
+       "foto": "fotos/milky-moo/casquinha-mista.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3518,7 +3518,7 @@
    "tipo": "restaurante",
    "categoria": "Doces",
    "logo": "lojas/cake-and-co.png",
-   "capa": "",
+   "capa": "fotos/cake-and-co/fatia-de-bolo-de-cenoura-com-brigadeiro.jpg",
    "km": 1.2,
    "eta": [
     25,
@@ -3540,7 +3540,7 @@
        "nome": "Fatia de bolo de cenoura com brigadeiro",
        "desc": "Cobertura generosa de brigadeiro.",
        "preco": 19.0,
-       "foto": "",
+       "foto": "fotos/cake-and-co/fatia-de-bolo-de-cenoura-com-brigadeiro.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3548,7 +3548,7 @@
        "nome": "Fatia de red velvet",
        "desc": "Com cream cheese.",
        "preco": 22.0,
-       "foto": "",
+       "foto": "fotos/cake-and-co/fatia-de-red-velvet.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3556,7 +3556,7 @@
        "nome": "Bolo de pote de ninho com Nutella",
        "desc": "Camadas de massa branca, creme de ninho e Nutella.",
        "preco": 18.0,
-       "foto": "",
+       "foto": "fotos/cake-and-co/bolo-de-pote-de-ninho-com-nutella.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3569,7 +3569,7 @@
        "nome": "Brownie",
        "desc": "Com castanhas.",
        "preco": 14.0,
-       "foto": "",
+       "foto": "fotos/cake-and-co/brownie.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3577,7 +3577,7 @@
        "nome": "Cookie gigante",
        "desc": "Gotas de chocolate.",
        "preco": 12.0,
-       "foto": "",
+       "foto": "fotos/cake-and-co/cookie-gigante.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3591,7 +3591,7 @@
    "tipo": "restaurante",
    "categoria": "Japonesa",
    "logo": "lojas/gurume.png",
-   "capa": "",
+   "capa": "fotos/gurume/combinado-gurume-20-pecas.jpg",
    "km": 1.0,
    "eta": [
     24,
@@ -3613,7 +3613,7 @@
        "nome": "Combinado Gurumê 20 peças",
        "desc": "Sashimis, uramakis e niguiris do dia.",
        "preco": 119.0,
-       "foto": "",
+       "foto": "fotos/gurume/combinado-gurume-20-pecas.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3621,7 +3621,7 @@
        "nome": "Poke de salmão",
        "desc": "Arroz, salmão, avocado, edamame, cebola roxa e molho da casa.",
        "preco": 64.0,
-       "foto": "",
+       "foto": "fotos/gurume/poke-de-salmao.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3634,7 +3634,7 @@
        "nome": "Guioza 6 un",
        "desc": "Recheado de carne suína, grelhado.",
        "preco": 42.0,
-       "foto": "",
+       "foto": "fotos/gurume/guioza-6-un.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3642,7 +3642,7 @@
        "nome": "Yakisoba de legumes",
        "desc": "Macarrão com legumes na chapa.",
        "preco": 58.0,
-       "foto": "",
+       "foto": "fotos/gurume/yakisoba-de-legumes.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3655,7 +3655,7 @@
        "nome": "Hot roll 10 un",
        "desc": "Salmão e cream cheese empanado.",
        "preco": 46.0,
-       "foto": "",
+       "foto": "fotos/gurume/hot-roll-10-un.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3663,7 +3663,7 @@
        "nome": "Uramaki filadélfia 8 un",
        "desc": "Salmão, cream cheese e cebolinha.",
        "preco": 44.0,
-       "foto": "",
+       "foto": "fotos/gurume/uramaki-filadelfia-8-un.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3677,7 +3677,7 @@
    "tipo": "restaurante",
    "categoria": "Japonesa",
    "logo": "lojas/mizu.png",
-   "capa": "",
+   "capa": "fotos/mizu/combinado-16-pecas.jpg",
    "km": 1.2,
    "eta": [
     27,
@@ -3699,7 +3699,7 @@
        "nome": "Combinado 16 peças",
        "desc": "Sashimi, uramaki e hossomaki.",
        "preco": 89.0,
-       "foto": "",
+       "foto": "fotos/mizu/combinado-16-pecas.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3707,7 +3707,7 @@
        "nome": "Temaki de salmão",
        "desc": "Salmão, cream cheese e cebolinha.",
        "preco": 36.0,
-       "foto": "",
+       "foto": "fotos/mizu/temaki-de-salmao.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3720,7 +3720,7 @@
        "nome": "Tacos de carne 3 un",
        "desc": "Tortilha de milho, carne, guacamole e pico de gallo.",
        "preco": 48.0,
-       "foto": "",
+       "foto": "fotos/mizu/tacos-de-carne-3-un.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3728,7 +3728,7 @@
        "nome": "Burrito de frango",
        "desc": "Frango, arroz, feijão, queijo e sour cream.",
        "preco": 46.0,
-       "foto": "",
+       "foto": "fotos/mizu/burrito-de-frango.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3736,7 +3736,7 @@
        "nome": "Nachos com guacamole",
        "desc": "Pra dividir.",
        "preco": 38.0,
-       "foto": "",
+       "foto": "fotos/mizu/nachos-com-guacamole.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3750,7 +3750,7 @@
    "tipo": "restaurante",
    "categoria": "Lanches",
    "logo": "lojas/hells-burguer.png",
-   "capa": "",
+   "capa": "fotos/hells-burguer/hell-s-burguer.jpg",
    "km": 0.3,
    "eta": [
     20,
@@ -3772,7 +3772,7 @@
        "nome": "Hell's Burguer",
        "desc": "Blend 180 g, cheddar inglês, bacon e cebola caramelizada no brioche.",
        "preco": 44.0,
-       "foto": "",
+       "foto": "fotos/hells-burguer/hell-s-burguer.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3780,7 +3780,7 @@
        "nome": "Smash duplo",
        "desc": "Dois smash de 90 g, queijo prato e molho da casa.",
        "preco": 36.0,
-       "foto": "",
+       "foto": "fotos/hells-burguer/smash-duplo.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3788,7 +3788,7 @@
        "nome": "Chicken Hell",
        "desc": "Frango crocante, picles e maionese de alho.",
        "preco": 38.0,
-       "foto": "",
+       "foto": "fotos/hells-burguer/chicken-hell.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3801,7 +3801,7 @@
        "nome": "Batata rústica",
        "desc": "Com páprica e maionese da casa.",
        "preco": 22.0,
-       "foto": "",
+       "foto": "fotos/hells-burguer/batata-rustica.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3809,7 +3809,7 @@
        "nome": "Onion rings",
        "desc": "Anéis de cebola empanados.",
        "preco": 24.0,
-       "foto": "",
+       "foto": "fotos/hells-burguer/onion-rings.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3823,7 +3823,7 @@
    "tipo": "restaurante",
    "categoria": "Lanches",
    "logo": "lojas/b-de-burguer.png",
-   "capa": "",
+   "capa": "fotos/b-de-burguer/b-classico.jpg",
    "km": 0.7,
    "eta": [
     24,
@@ -3845,7 +3845,7 @@
        "nome": "B Clássico",
        "desc": "Blend 160 g, queijo, alface, tomate e molho B.",
        "preco": 39.0,
-       "foto": "",
+       "foto": "fotos/b-de-burguer/b-classico.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3853,7 +3853,7 @@
        "nome": "B Bacon",
        "desc": "Blend 160 g, cheddar e bacon crocante.",
        "preco": 44.0,
-       "foto": "",
+       "foto": "fotos/b-de-burguer/b-bacon.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3861,7 +3861,7 @@
        "nome": "B Veggie",
        "desc": "Hambúrguer de grão-de-bico e maionese de ervas.",
        "preco": 38.0,
-       "foto": "",
+       "foto": "fotos/b-de-burguer/b-veggie.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3874,7 +3874,7 @@
        "nome": "Fritas da casa",
        "desc": "Batata com casca.",
        "preco": 19.0,
-       "foto": "",
+       "foto": "fotos/b-de-burguer/fritas-da-casa.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3882,7 +3882,7 @@
        "nome": "Milkshake de doce de leite",
        "desc": "400 ml.",
        "preco": 24.0,
-       "foto": "",
+       "foto": "fotos/b-de-burguer/milkshake-de-doce-de-leite.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3896,7 +3896,7 @@
    "tipo": "restaurante",
    "categoria": "Brasileira",
    "logo": "lojas/dois-irmaos-caldos.png",
-   "capa": "",
+   "capa": "fotos/dois-irmaos-caldos/canja-de-galinha-500-ml.jpg",
    "km": 0.3,
    "eta": [
     16,
@@ -3918,7 +3918,7 @@
        "nome": "Canja de galinha 500 ml",
        "desc": "Frango desfiado, arroz e legumes. Pra quem tá dodói.",
        "preco": 29.0,
-       "foto": "",
+       "foto": "fotos/dois-irmaos-caldos/canja-de-galinha-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3926,7 +3926,7 @@
        "nome": "Caldo verde 500 ml",
        "desc": "Batata, couve e calabresa.",
        "preco": 28.0,
-       "foto": "",
+       "foto": "fotos/dois-irmaos-caldos/caldo-verde-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3934,7 +3934,7 @@
        "nome": "Caldo de feijão 500 ml",
        "desc": "Com bacon e torradinhas.",
        "preco": 27.0,
-       "foto": "",
+       "foto": "fotos/dois-irmaos-caldos/caldo-de-feijao-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3942,7 +3942,7 @@
        "nome": "Sopa de legumes 500 ml",
        "desc": "Leve, sem carne.",
        "preco": 25.0,
-       "foto": "",
+       "foto": "fotos/dois-irmaos-caldos/sopa-de-legumes-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3955,7 +3955,7 @@
        "nome": "Torradas com alho",
        "desc": "Porção.",
        "preco": 9.0,
-       "foto": "",
+       "foto": "fotos/dois-irmaos-caldos/torradas-com-alho.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -3969,7 +3969,7 @@
    "tipo": "restaurante",
    "categoria": "Saudável",
    "logo": "lojas/refeitorio-organico.png",
-   "capa": "",
+   "capa": "fotos/refeitorio-organico/prato-organico-com-frango.jpg",
    "km": 0.3,
    "eta": [
     21,
@@ -3991,7 +3991,7 @@
        "nome": "Prato orgânico com frango",
        "desc": "Arroz integral, feijão, frango grelhado e salada da horta.",
        "preco": 54.0,
-       "foto": "",
+       "foto": "fotos/refeitorio-organico/prato-organico-com-frango.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -3999,7 +3999,7 @@
        "nome": "Prato vegetariano",
        "desc": "Arroz integral, lentilha, legumes assados e salada.",
        "preco": 48.0,
-       "foto": "",
+       "foto": "fotos/refeitorio-organico/prato-vegetariano.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4012,7 +4012,7 @@
        "nome": "Suco verde 400 ml",
        "desc": "Couve, limão, gengibre e maçã.",
        "preco": 16.0,
-       "foto": "",
+       "foto": "fotos/refeitorio-organico/suco-verde-400-ml.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4026,7 +4026,7 @@
    "tipo": "restaurante",
    "categoria": "Saudável",
    "logo": "lojas/uni-poke.png",
-   "capa": "",
+   "capa": "fotos/uni-poke/poke-de-salmao.jpg",
    "km": 0.2,
    "eta": [
     22,
@@ -4048,7 +4048,7 @@
        "nome": "Poke de salmão",
        "desc": "Arroz de sushi, salmão, manga, pepino, edamame e molho ponzu.",
        "preco": 59.0,
-       "foto": "",
+       "foto": "fotos/uni-poke/poke-de-salmao.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4056,7 +4056,7 @@
        "nome": "Poke de atum",
        "desc": "Atum, avocado, cebola roxa e shoyu.",
        "preco": 62.0,
-       "foto": "",
+       "foto": "fotos/uni-poke/poke-de-atum.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4064,7 +4064,7 @@
        "nome": "Poke vegano",
        "desc": "Tofu, cenoura, repolho roxo e molho de gergelim.",
        "preco": 49.0,
-       "foto": "",
+       "foto": "fotos/uni-poke/poke-vegano.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4077,7 +4077,7 @@
        "nome": "Kombucha",
        "desc": "300 ml.",
        "preco": 16.0,
-       "foto": "",
+       "foto": "fotos/uni-poke/kombucha.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4091,7 +4091,7 @@
    "tipo": "restaurante",
    "categoria": "Saudável",
    "logo": "lojas/vegan-vegan.png",
-   "capa": "",
+   "capa": "fotos/vegan-vegan/hamburguer-de-feijao.jpg",
    "km": 1.0,
    "eta": [
     27,
@@ -4113,7 +4113,7 @@
        "nome": "Hambúrguer de feijão",
        "desc": "Com batata-doce assada.",
        "preco": 46.0,
-       "foto": "",
+       "foto": "fotos/vegan-vegan/hamburguer-de-feijao.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4121,7 +4121,7 @@
        "nome": "Strogonoff de cogumelos",
        "desc": "Com arroz e batata palha.",
        "preco": 52.0,
-       "foto": "",
+       "foto": "fotos/vegan-vegan/strogonoff-de-cogumelos.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4134,7 +4134,7 @@
        "nome": "Brownie vegano",
        "desc": "Sem lactose e sem ovo.",
        "preco": 16.0,
-       "foto": "",
+       "foto": "fotos/vegan-vegan/brownie-vegano.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4148,7 +4148,7 @@
    "tipo": "restaurante",
    "categoria": "Saudável",
    "logo": "lojas/natural-e-sabor.png",
-   "capa": "",
+   "capa": "fotos/natural-e-sabor/file-de-frango-grelhado.jpg",
    "km": 0.8,
    "eta": [
     19,
@@ -4170,7 +4170,7 @@
        "nome": "Filé de frango grelhado",
        "desc": "Com arroz, feijão, salada e legumes.",
        "preco": 38.0,
-       "foto": "",
+       "foto": "fotos/natural-e-sabor/file-de-frango-grelhado.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4178,7 +4178,7 @@
        "nome": "Peixe grelhado",
        "desc": "Com arroz, purê e salada.",
        "preco": 44.0,
-       "foto": "",
+       "foto": "fotos/natural-e-sabor/peixe-grelhado.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4186,7 +4186,7 @@
        "nome": "Omelete de legumes",
        "desc": "Com salada.",
        "preco": 29.0,
-       "foto": "",
+       "foto": "fotos/natural-e-sabor/omelete-de-legumes.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4199,7 +4199,7 @@
        "nome": "Suco natural 500 ml",
        "desc": "Laranja, abacaxi com hortelã ou melancia.",
        "preco": 12.0,
-       "foto": "",
+       "foto": "fotos/natural-e-sabor/suco-natural-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4213,7 +4213,7 @@
    "tipo": "restaurante",
    "categoria": "Chinesa",
    "logo": "lojas/mr-wong.png",
-   "capa": "",
+   "capa": "fotos/mr-wong/frango-xadrez.jpg",
    "km": 0.2,
    "eta": [
     18,
@@ -4235,7 +4235,7 @@
        "nome": "Frango xadrez",
        "desc": "Frango, pimentão, amendoim e molho agridoce.",
        "preco": 42.0,
-       "foto": "",
+       "foto": "fotos/mr-wong/frango-xadrez.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4243,7 +4243,7 @@
        "nome": "Yakisoba de carne",
        "desc": "Macarrão, carne e legumes.",
        "preco": 44.0,
-       "foto": "",
+       "foto": "fotos/mr-wong/yakisoba-de-carne.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4251,7 +4251,7 @@
        "nome": "Rolinho primavera 4 un",
        "desc": "Recheado de legumes.",
        "preco": 22.0,
-       "foto": "",
+       "foto": "fotos/mr-wong/rolinho-primavera-4-un.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4265,7 +4265,7 @@
    "tipo": "restaurante",
    "categoria": "Chinesa",
    "logo": "lojas/china-in-box-bf.png",
-   "capa": "",
+   "capa": "fotos/china-in-box/yakissoba-tradicional.jpg",
    "km": 1.2,
    "eta": [
     25,
@@ -4287,7 +4287,7 @@
        "nome": "Yakissoba tradicional",
        "desc": "Macarrão, carne, frango e legumes na caixinha.",
        "preco": 49.9,
-       "foto": "",
+       "foto": "fotos/china-in-box/yakissoba-tradicional.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4295,7 +4295,7 @@
        "nome": "Frango xadrez",
        "desc": "Com arroz.",
        "preco": 46.9,
-       "foto": "",
+       "foto": "fotos/china-in-box/frango-xadrez.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4308,7 +4308,7 @@
        "nome": "Rolinho primavera 2 un",
        "desc": "Com molho agridoce.",
        "preco": 16.9,
-       "foto": "",
+       "foto": "fotos/china-in-box/rolinho-primavera-2-un.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4321,7 +4321,7 @@
        "nome": "Banana caramelada",
        "desc": "Com sorvete.",
        "preco": 18.9,
-       "foto": "",
+       "foto": "fotos/china-in-box/banana-caramelada.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4335,7 +4335,7 @@
    "tipo": "restaurante",
    "categoria": "Cafés",
    "logo": "lojas/the-slow-bakery.png",
-   "capa": "",
+   "capa": "fotos/the-slow-bakery/pao-de-fermentacao-natural.jpg",
    "km": 0.2,
    "eta": [
     21,
@@ -4357,7 +4357,7 @@
        "nome": "Pão de fermentação natural",
        "desc": "Inteiro, casca crocante.",
        "preco": 32.0,
-       "foto": "",
+       "foto": "fotos/the-slow-bakery/pao-de-fermentacao-natural.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4365,7 +4365,7 @@
        "nome": "Croissant de manteiga",
        "desc": "Folhado.",
        "preco": 16.0,
-       "foto": "",
+       "foto": "fotos/the-slow-bakery/croissant-de-manteiga.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4378,7 +4378,7 @@
        "nome": "Tostada de avocado",
        "desc": "Pão de fermentação natural, avocado, ovo e gergelim.",
        "preco": 38.0,
-       "foto": "",
+       "foto": "fotos/the-slow-bakery/tostada-de-avocado.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4386,7 +4386,7 @@
        "nome": "Cappuccino",
        "desc": "",
        "preco": 14.0,
-       "foto": "",
+       "foto": "fotos/the-slow-bakery/cappuccino.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4400,7 +4400,7 @@
    "tipo": "restaurante",
    "categoria": "Açaí e sucos",
    "logo": "lojas/praia-sucos.png",
-   "capa": "",
+   "capa": "fotos/praia-sucos/suco-de-laranja-500-ml.jpg",
    "km": 0.2,
    "eta": [
     17,
@@ -4422,7 +4422,7 @@
        "nome": "Suco de laranja 500 ml",
        "desc": "Espremido na hora.",
        "preco": 13.0,
-       "foto": "",
+       "foto": "fotos/praia-sucos/suco-de-laranja-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4430,7 +4430,7 @@
        "nome": "Vitamina de banana com aveia",
        "desc": "500 ml.",
        "preco": 16.0,
-       "foto": "",
+       "foto": "fotos/praia-sucos/vitamina-de-banana-com-aveia.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4438,7 +4438,7 @@
        "nome": "Suco detox",
        "desc": "Couve, abacaxi, gengibre e hortelã.",
        "preco": 15.0,
-       "foto": "",
+       "foto": "fotos/praia-sucos/suco-detox.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4451,7 +4451,7 @@
        "nome": "Misto quente",
        "desc": "Pão de forma, presunto e queijo.",
        "preco": 14.0,
-       "foto": "",
+       "foto": "fotos/praia-sucos/misto-quente.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4459,7 +4459,7 @@
        "nome": "Tapioca de queijo coalho",
        "desc": "Com orégano.",
        "preco": 16.0,
-       "foto": "",
+       "foto": "fotos/praia-sucos/tapioca-de-queijo-coalho.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4473,7 +4473,7 @@
    "tipo": "restaurante",
    "categoria": "Lanches",
    "logo": "lojas/mcdonalds-cg.png",
-   "capa": "fotos/mcdonalds/big-mac.jpg",
+   "capa": "fotos/mcdonalds/mcoferta-media-big-mac.jpg",
    "km": 0.2,
    "eta": [
     21,
@@ -4495,7 +4495,7 @@
        "nome": "McOferta Média Big Mac",
        "desc": "Big Mac, McFritas média e bebida média.",
        "preco": 45.9,
-       "foto": "",
+       "foto": "fotos/mcdonalds/mcoferta-media-big-mac.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4503,7 +4503,7 @@
        "nome": "McOferta Média Quarterão",
        "desc": "Quarterão com queijo, McFritas média e bebida.",
        "preco": 45.9,
-       "foto": "",
+       "foto": "fotos/mcdonalds/mcoferta-media-quarterao.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4567,7 +4567,7 @@
    "tipo": "restaurante",
    "categoria": "Lanches",
    "logo": "lojas/bobs-cg.png",
-   "capa": "fotos/bobs/milkshake-ovomaltine-400-ml.jpg",
+   "capa": "fotos/bobs/big-bob-combo.jpg",
    "km": 0.3,
    "eta": [
     21,
@@ -4589,7 +4589,7 @@
        "nome": "Big Bob Combo",
        "desc": "Big Bob, batata média e refrigerante 500 ml.",
        "preco": 39.9,
-       "foto": "",
+       "foto": "fotos/bobs/big-bob-combo.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4645,7 +4645,7 @@
    "tipo": "restaurante",
    "categoria": "Lanches",
    "logo": "lojas/burger-king-cg.png",
-   "capa": "fotos/burger-king/combo-stacker-duplo.jpg",
+   "capa": "fotos/burger-king/combo-whopper.jpg",
    "km": 1.2,
    "eta": [
     23,
@@ -4667,7 +4667,7 @@
        "nome": "Combo Whopper",
        "desc": "Whopper, batata média e refrigerante.",
        "preco": 44.9,
-       "foto": "",
+       "foto": "fotos/burger-king/combo-whopper.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4723,7 +4723,7 @@
    "tipo": "restaurante",
    "categoria": "Árabe",
    "logo": "lojas/habibs-cg.png",
-   "capa": "",
+   "capa": "fotos/habibs/esfiha-de-carne-10-un.jpg",
    "km": 1.6,
    "eta": [
     27,
@@ -4745,7 +4745,7 @@
        "nome": "Esfiha de carne 10 un",
        "desc": "A esfiha aberta do Habib's.",
        "preco": 29.9,
-       "foto": "",
+       "foto": "fotos/habibs/esfiha-de-carne-10-un.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4753,7 +4753,7 @@
        "nome": "Combo Bib's",
        "desc": "5 esfihas, 2 kibes e refrigerante.",
        "preco": 34.9,
-       "foto": "",
+       "foto": "fotos/habibs/combo-bib-s.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4766,7 +4766,7 @@
        "nome": "Kibe frito 4 un",
        "desc": "Com limão.",
        "preco": 19.9,
-       "foto": "",
+       "foto": "fotos/habibs/kibe-frito-4-un.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4774,7 +4774,7 @@
        "nome": "Beirute de frango",
        "desc": "Pão sírio, frango, queijo e salada.",
        "preco": 32.9,
-       "foto": "",
+       "foto": "fotos/habibs/beirute-de-frango.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4787,7 +4787,7 @@
        "nome": "Bibsfiha de chocolate",
        "desc": "Esfiha doce.",
        "preco": 9.9,
-       "foto": "",
+       "foto": "fotos/habibs/bibsfiha-de-chocolate.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4801,7 +4801,7 @@
    "tipo": "restaurante",
    "categoria": "Pizza",
    "logo": "lojas/dominos-cg.png",
-   "capa": "",
+   "capa": "fotos/dominos/pizza-grande-pepperoni.jpg",
    "km": 0.8,
    "eta": [
     19,
@@ -4823,7 +4823,7 @@
        "nome": "Pizza grande Pepperoni",
        "desc": "Muçarela e pepperoni.",
        "preco": 69.9,
-       "foto": "",
+       "foto": "fotos/dominos/pizza-grande-pepperoni.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4831,7 +4831,7 @@
        "nome": "Combo 2 pizzas médias",
        "desc": "Escolha 2 sabores tradicionais.",
        "preco": 99.9,
-       "foto": "",
+       "foto": "fotos/dominos/combo-2-pizzas-medias.jpg",
        "serve": "Serve até 2 pessoas"
       }
      ]
@@ -4844,7 +4844,7 @@
        "nome": "Pizza média Frango com Catupiry",
        "desc": "Frango desfiado e catupiry.",
        "preco": 54.9,
-       "foto": "",
+       "foto": "fotos/dominos/pizza-media-frango-com-catupiry.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4852,7 +4852,7 @@
        "nome": "Pizza média Margherita",
        "desc": "Muçarela, tomate e manjericão.",
        "preco": 49.9,
-       "foto": "",
+       "foto": "fotos/dominos/pizza-media-margherita.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4865,7 +4865,7 @@
        "nome": "Petit Gâteau",
        "desc": "Com recheio de chocolate.",
        "preco": 19.9,
-       "foto": "",
+       "foto": "fotos/dominos/petit-gateau.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4879,7 +4879,7 @@
    "tipo": "restaurante",
    "categoria": "Italiana",
    "logo": "lojas/spoleto-cg.png",
-   "capa": "",
+   "capa": "fotos/spoleto/monte-sua-massa.jpg",
    "km": 2.1,
    "eta": [
     27,
@@ -4901,7 +4901,7 @@
        "nome": "Monte sua massa",
        "desc": "Escolha massa, molho e até 4 ingredientes.",
        "preco": 42.9,
-       "foto": "",
+       "foto": "fotos/spoleto/monte-sua-massa.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4909,7 +4909,7 @@
        "nome": "Penne ao molho branco com frango",
        "desc": "Frango, champignon e molho branco.",
        "preco": 44.9,
-       "foto": "",
+       "foto": "fotos/spoleto/penne-ao-molho-branco-com-frango.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4917,7 +4917,7 @@
        "nome": "Espaguete à bolonhesa",
        "desc": "Molho de carne da casa.",
        "preco": 39.9,
-       "foto": "",
+       "foto": "fotos/spoleto/espaguete-a-bolonhesa.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4930,7 +4930,7 @@
        "nome": "Lasanha à bolonhesa",
        "desc": "Individual.",
        "preco": 46.9,
-       "foto": "",
+       "foto": "fotos/spoleto/lasanha-a-bolonhesa.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4944,7 +4944,7 @@
    "tipo": "restaurante",
    "categoria": "Brasileira",
    "logo": "lojas/giraffas-cg.png",
-   "capa": "",
+   "capa": "fotos/giraffas/brasileirinho-com-file-de-frango.jpg",
    "km": 2.2,
    "eta": [
     32,
@@ -4966,7 +4966,7 @@
        "nome": "Brasileirinho com filé de frango",
        "desc": "Arroz, feijão, batata frita, ovo e filé de frango.",
        "preco": 36.9,
-       "foto": "",
+       "foto": "fotos/giraffas/brasileirinho-com-file-de-frango.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -4974,7 +4974,7 @@
        "nome": "Picanha grelhada",
        "desc": "Arroz, feijão, farofa e vinagrete.",
        "preco": 54.9,
-       "foto": "",
+       "foto": "fotos/giraffas/picanha-grelhada.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -4987,7 +4987,7 @@
        "nome": "Giraffas Burger",
        "desc": "Hambúrguer, queijo e molho especial.",
        "preco": 26.9,
-       "foto": "",
+       "foto": "fotos/giraffas/giraffas-burger.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -5001,7 +5001,7 @@
    "tipo": "restaurante",
    "categoria": "Lanches",
    "logo": "lojas/fabuloso-burger.png",
-   "capa": "",
+   "capa": "fotos/fabuloso-burger/fabuloso-x-tudo.jpg",
    "km": 1.3,
    "eta": [
     22,
@@ -5023,7 +5023,7 @@
        "nome": "Fabuloso X-Tudo",
        "desc": "Pão, carne, ovo, bacon, presunto, queijo, alface, tomate e maionese da casa.",
        "preco": 29.9,
-       "foto": "",
+       "foto": "fotos/fabuloso-burger/fabuloso-x-tudo.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -5031,7 +5031,7 @@
        "nome": "Fabuloso Duplo",
        "desc": "Duas carnes, cheddar e bacon.",
        "preco": 34.9,
-       "foto": "",
+       "foto": "fotos/fabuloso-burger/fabuloso-duplo.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -5039,7 +5039,7 @@
        "nome": "X-Salada",
        "desc": "Carne, queijo, alface e tomate.",
        "preco": 22.9,
-       "foto": "",
+       "foto": "fotos/fabuloso-burger/x-salada.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -5052,7 +5052,7 @@
        "nome": "Batata frita com cheddar e bacon",
        "desc": "Pra dividir.",
        "preco": 29.9,
-       "foto": "",
+       "foto": "fotos/fabuloso-burger/batata-frita-com-cheddar-e-bacon.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -5066,7 +5066,7 @@
    "tipo": "restaurante",
    "categoria": "Italiana",
    "logo": "lojas/parme-cg.png",
-   "capa": "",
+   "capa": "fotos/parme-cg/parmegiana-de-frango.jpg",
    "km": 1.5,
    "eta": [
     29,
@@ -5088,7 +5088,7 @@
        "nome": "Parmegiana de frango",
        "desc": "Com arroz e fritas. Serve 1 pessoa.",
        "preco": 49.9,
-       "foto": "",
+       "foto": "fotos/parme-cg/parmegiana-de-frango.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -5096,7 +5096,7 @@
        "nome": "Parmegiana de filé",
        "desc": "Com arroz e fritas. Serve 1 pessoa.",
        "preco": 64.9,
-       "foto": "",
+       "foto": "fotos/parme-cg/parmegiana-de-file.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -5109,7 +5109,7 @@
        "nome": "Espaguete ao sugo",
        "desc": "Com parmesão.",
        "preco": 34.9,
-       "foto": "",
+       "foto": "fotos/parme-cg/espaguete-ao-sugo.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -5123,7 +5123,7 @@
    "tipo": "restaurante",
    "categoria": "Japonesa",
    "logo": "lojas/makimono-sushi.png",
-   "capa": "",
+   "capa": "fotos/makimono-sushi/combinado-20-pecas.jpg",
    "km": 0.8,
    "eta": [
     21,
@@ -5145,7 +5145,7 @@
        "nome": "Combinado 20 peças",
        "desc": "Uramaki, hot, niguiri e sashimi.",
        "preco": 79.9,
-       "foto": "",
+       "foto": "fotos/makimono-sushi/combinado-20-pecas.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -5153,7 +5153,7 @@
        "nome": "Combinado 40 peças",
        "desc": "Pra dois.",
        "preco": 139.9,
-       "foto": "",
+       "foto": "fotos/makimono-sushi/combinado-40-pecas.jpg",
        "serve": "Serve até 2 pessoas"
       }
      ]
@@ -5166,7 +5166,7 @@
        "nome": "Temaki de salmão",
        "desc": "Com cream cheese.",
        "preco": 32.9,
-       "foto": "",
+       "foto": "fotos/makimono-sushi/temaki-de-salmao.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -5180,7 +5180,7 @@
    "tipo": "restaurante",
    "categoria": "Brasileira",
    "logo": "lojas/casa-do-frango.png",
-   "capa": "",
+   "capa": "fotos/casa-do-frango/frango-assado-inteiro.jpg",
    "km": 1.9,
    "eta": [
     31,
@@ -5202,7 +5202,7 @@
        "nome": "Frango assado inteiro",
        "desc": "Com farofa.",
        "preco": 54.9,
-       "foto": "",
+       "foto": "fotos/casa-do-frango/frango-assado-inteiro.jpg",
        "serve": "Serve até 2 pessoas"
       },
       {
@@ -5210,7 +5210,7 @@
        "nome": "Meio frango assado",
        "desc": "Com farofa e maionese.",
        "preco": 32.9,
-       "foto": "",
+       "foto": "fotos/casa-do-frango/meio-frango-assado.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -5223,7 +5223,7 @@
        "nome": "Maionese de batata 500 g",
        "desc": "",
        "preco": 18.9,
-       "foto": "",
+       "foto": "fotos/casa-do-frango/maionese-de-batata-500-g.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -5231,7 +5231,7 @@
        "nome": "Arroz 500 g",
        "desc": "",
        "preco": 12.9,
-       "foto": "",
+       "foto": "fotos/casa-do-frango/arroz-500-g.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -5244,7 +5244,7 @@
        "nome": "Canja de galinha 500 ml",
        "desc": "Pra quem tá dodói.",
        "preco": 22.9,
-       "foto": "",
+       "foto": "fotos/casa-do-frango/canja-de-galinha-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -5258,7 +5258,7 @@
    "tipo": "restaurante",
    "categoria": "Brasileira",
    "logo": "lojas/rei-da-picanha.png",
-   "capa": "",
+   "capa": "fotos/rei-da-picanha/picanha-na-chapa.jpg",
    "km": 1.0,
    "eta": [
     27,
@@ -5280,7 +5280,7 @@
        "nome": "Picanha na chapa",
        "desc": "Arroz, feijão tropeiro, farofa e vinagrete. Serve 2.",
        "preco": 119.9,
-       "foto": "",
+       "foto": "fotos/rei-da-picanha/picanha-na-chapa.jpg",
        "serve": "Serve até 2 pessoas"
       },
       {
@@ -5288,7 +5288,7 @@
        "nome": "Prato executivo de picanha",
        "desc": "Serve 1.",
        "preco": 54.9,
-       "foto": "",
+       "foto": "fotos/rei-da-picanha/prato-executivo-de-picanha.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -5296,7 +5296,7 @@
        "nome": "Frango grelhado",
        "desc": "Com arroz, feijão e fritas.",
        "preco": 36.9,
-       "foto": "",
+       "foto": "fotos/rei-da-picanha/frango-grelhado.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -5310,7 +5310,7 @@
    "tipo": "restaurante",
    "categoria": "Açaí",
    "logo": "lojas/acai-grumari.png",
-   "capa": "",
+   "capa": "fotos/acai-grumari/acai-500-ml.jpg",
    "km": 1.0,
    "eta": [
     25,
@@ -5332,7 +5332,7 @@
        "nome": "Açaí 500 ml",
        "desc": "Com 3 acompanhamentos.",
        "preco": 22.9,
-       "foto": "",
+       "foto": "fotos/acai-grumari/acai-500-ml.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -5340,7 +5340,7 @@
        "nome": "Açaí 700 ml",
        "desc": "Com 4 acompanhamentos.",
        "preco": 29.9,
-       "foto": "",
+       "foto": "fotos/acai-grumari/acai-700-ml.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -5348,7 +5348,7 @@
        "nome": "Açaí 1 litro",
        "desc": "Pra dividir.",
        "preco": 39.9,
-       "foto": "",
+       "foto": "fotos/acai-grumari/acai-1-litro.jpg",
        "serve": "Serve até 2 pessoas"
       }
      ]
@@ -5362,7 +5362,7 @@
    "tipo": "restaurante",
    "categoria": "Cafés",
    "logo": "lojas/craque-do-pao.png",
-   "capa": "",
+   "capa": "fotos/craque-do-pao/pao-frances-10-un.jpg",
    "km": 2.0,
    "eta": [
     30,
@@ -5384,7 +5384,7 @@
        "nome": "Pão francês 10 un",
        "desc": "Quentinho.",
        "preco": 9.9,
-       "foto": "",
+       "foto": "fotos/craque-do-pao/pao-frances-10-un.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -5392,7 +5392,7 @@
        "nome": "Sonho de creme",
        "desc": "",
        "preco": 7.9,
-       "foto": "",
+       "foto": "fotos/craque-do-pao/sonho-de-creme.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -5400,7 +5400,7 @@
        "nome": "Bolo de cenoura com chocolate",
        "desc": "Fatia.",
        "preco": 9.9,
-       "foto": "",
+       "foto": "fotos/craque-do-pao/bolo-de-cenoura-com-chocolate.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -5413,7 +5413,7 @@
        "nome": "Misto quente na chapa",
        "desc": "",
        "preco": 11.9,
-       "foto": "",
+       "foto": "fotos/craque-do-pao/misto-quente-na-chapa.jpg",
        "serve": "Serve até 1 pessoa"
       },
       {
@@ -5421,7 +5421,7 @@
        "nome": "Café com leite",
        "desc": "",
        "preco": 6.9,
-       "foto": "",
+       "foto": "fotos/craque-do-pao/cafe-com-leite.jpg",
        "serve": "Serve até 1 pessoa"
       }
      ]
@@ -5435,7 +5435,7 @@
    "tipo": "farmacia",
    "categoria": "Farmácia",
    "logo": "lojas/pacheco-cg.png",
-   "capa": "",
+   "capa": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
    "km": 2.4,
    "eta": [
     30,
@@ -5457,7 +5457,7 @@
        "nome": "Dipirona 500 mg 10 comprimidos",
        "desc": "",
        "preco": 7.49,
-       "foto": "",
+       "foto": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -5465,7 +5465,7 @@
        "nome": "Paracetamol 750 mg 20 comprimidos",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/paracetamol-750-mg-20-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -5473,7 +5473,7 @@
        "nome": "Ibuprofeno 400 mg 10 cápsulas",
        "desc": "",
        "preco": 15.99,
-       "foto": "",
+       "foto": "fotos/produtos/ibuprofeno-400-mg-10-capsulas.jpg",
        "serve": ""
       },
       {
@@ -5481,7 +5481,7 @@
        "nome": "Neosaldina 20 drágeas",
        "desc": "",
        "preco": 26.49,
-       "foto": "",
+       "foto": "fotos/produtos/neosaldina-20-drageas.jpg",
        "serve": ""
       }
      ]
@@ -5494,7 +5494,7 @@
        "nome": "Pastilha Strepsils mel e limão 8 un",
        "desc": "",
        "preco": 21.49,
-       "foto": "",
+       "foto": "fotos/produtos/pastilha-strepsils-mel-e-limao-8-un.jpg",
        "serve": ""
       },
       {
@@ -5502,7 +5502,7 @@
        "nome": "Vitamina C Cewin 500 mg 30 comprimidos",
        "desc": "",
        "preco": 18.99,
-       "foto": "",
+       "foto": "fotos/produtos/vitamina-c-cewin-500-mg-30-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -5510,7 +5510,7 @@
        "nome": "Soro fisiológico 500 ml",
        "desc": "",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/soro-fisiologico-500-ml.jpg",
        "serve": ""
       },
       {
@@ -5518,7 +5518,7 @@
        "nome": "Benegrip 20 comprimidos",
        "desc": "",
        "preco": 21.49,
-       "foto": "",
+       "foto": "fotos/produtos/benegrip-20-comprimidos.jpg",
        "serve": ""
       }
      ]
@@ -5531,7 +5531,7 @@
        "nome": "Absorvente Always noturno 8 un",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/absorvente-always-noturno-8-un.jpg",
        "serve": ""
       },
       {
@@ -5539,7 +5539,7 @@
        "nome": "Protetor solar Neutrogena FPS 50",
        "desc": "200 ml.",
        "preco": 73.99,
-       "foto": "",
+       "foto": "fotos/produtos/protetor-solar-neutrogena-fps-50.jpg",
        "serve": ""
       },
       {
@@ -5547,7 +5547,7 @@
        "nome": "Hidratante Nivea 400 ml",
        "desc": "",
        "preco": 31.99,
-       "foto": "",
+       "foto": "fotos/produtos/hidratante-nivea-400-ml.jpg",
        "serve": ""
       },
       {
@@ -5555,7 +5555,7 @@
        "nome": "Demaquilante Bioderma 250 ml",
        "desc": "",
        "preco": 95.49,
-       "foto": "",
+       "foto": "fotos/produtos/demaquilante-bioderma-250-ml.jpg",
        "serve": ""
       }
      ]
@@ -5568,7 +5568,7 @@
        "nome": "Teste de gravidez Clear Blue",
        "desc": "",
        "preco": 42.49,
-       "foto": "",
+       "foto": "fotos/produtos/teste-de-gravidez-clear-blue.jpg",
        "serve": ""
       },
       {
@@ -5576,7 +5576,7 @@
        "nome": "Buscofem 10 cápsulas",
        "desc": "Pra cólica.",
        "preco": 24.49,
-       "foto": "",
+       "foto": "fotos/produtos/buscofem-10-capsulas.jpg",
        "serve": ""
       }
      ]
@@ -5590,7 +5590,7 @@
    "tipo": "farmacia",
    "categoria": "Farmácia",
    "logo": "lojas/venancio-cg.png",
-   "capa": "",
+   "capa": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
    "km": 2.3,
    "eta": [
     27,
@@ -5612,7 +5612,7 @@
        "nome": "Dipirona 500 mg 10 comprimidos",
        "desc": "",
        "preco": 7.49,
-       "foto": "",
+       "foto": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -5620,7 +5620,7 @@
        "nome": "Paracetamol 750 mg 20 comprimidos",
        "desc": "",
        "preco": 13.49,
-       "foto": "",
+       "foto": "fotos/produtos/paracetamol-750-mg-20-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -5628,7 +5628,7 @@
        "nome": "Ibuprofeno 400 mg 10 cápsulas",
        "desc": "",
        "preco": 15.49,
-       "foto": "",
+       "foto": "fotos/produtos/ibuprofeno-400-mg-10-capsulas.jpg",
        "serve": ""
       },
       {
@@ -5636,7 +5636,7 @@
        "nome": "Neosaldina 20 drágeas",
        "desc": "",
        "preco": 25.49,
-       "foto": "",
+       "foto": "fotos/produtos/neosaldina-20-drageas.jpg",
        "serve": ""
       }
      ]
@@ -5649,7 +5649,7 @@
        "nome": "Pastilha Strepsils mel e limão 8 un",
        "desc": "",
        "preco": 20.49,
-       "foto": "",
+       "foto": "fotos/produtos/pastilha-strepsils-mel-e-limao-8-un.jpg",
        "serve": ""
       },
       {
@@ -5657,7 +5657,7 @@
        "nome": "Vitamina C Cewin 500 mg 30 comprimidos",
        "desc": "",
        "preco": 18.49,
-       "foto": "",
+       "foto": "fotos/produtos/vitamina-c-cewin-500-mg-30-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -5665,7 +5665,7 @@
        "nome": "Soro fisiológico 500 ml",
        "desc": "",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/soro-fisiologico-500-ml.jpg",
        "serve": ""
       },
       {
@@ -5673,7 +5673,7 @@
        "nome": "Benegrip 20 comprimidos",
        "desc": "",
        "preco": 20.49,
-       "foto": "",
+       "foto": "fotos/produtos/benegrip-20-comprimidos.jpg",
        "serve": ""
       }
      ]
@@ -5686,7 +5686,7 @@
        "nome": "Absorvente Always noturno 8 un",
        "desc": "",
        "preco": 12.49,
-       "foto": "",
+       "foto": "fotos/produtos/absorvente-always-noturno-8-un.jpg",
        "serve": ""
       },
       {
@@ -5694,7 +5694,7 @@
        "nome": "Protetor solar Neutrogena FPS 50",
        "desc": "200 ml.",
        "preco": 70.99,
-       "foto": "",
+       "foto": "fotos/produtos/protetor-solar-neutrogena-fps-50.jpg",
        "serve": ""
       },
       {
@@ -5702,7 +5702,7 @@
        "nome": "Hidratante Nivea 400 ml",
        "desc": "",
        "preco": 30.49,
-       "foto": "",
+       "foto": "fotos/produtos/hidratante-nivea-400-ml.jpg",
        "serve": ""
       },
       {
@@ -5710,7 +5710,7 @@
        "nome": "Demaquilante Bioderma 250 ml",
        "desc": "",
        "preco": 90.99,
-       "foto": "",
+       "foto": "fotos/produtos/demaquilante-bioderma-250-ml.jpg",
        "serve": ""
       }
      ]
@@ -5723,7 +5723,7 @@
        "nome": "Teste de gravidez Clear Blue",
        "desc": "",
        "preco": 40.49,
-       "foto": "",
+       "foto": "fotos/produtos/teste-de-gravidez-clear-blue.jpg",
        "serve": ""
       },
       {
@@ -5731,7 +5731,7 @@
        "nome": "Buscofem 10 cápsulas",
        "desc": "Pra cólica.",
        "preco": 23.49,
-       "foto": "",
+       "foto": "fotos/produtos/buscofem-10-capsulas.jpg",
        "serve": ""
       }
      ]
@@ -5745,7 +5745,7 @@
    "tipo": "farmacia",
    "categoria": "Farmácia",
    "logo": "lojas/max-cg.png",
-   "capa": "",
+   "capa": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
    "km": 0.5,
    "eta": [
     13,
@@ -5767,7 +5767,7 @@
        "nome": "Dipirona 500 mg 10 comprimidos",
        "desc": "",
        "preco": 6.99,
-       "foto": "",
+       "foto": "fotos/produtos/dipirona-500-mg-10-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -5775,7 +5775,7 @@
        "nome": "Paracetamol 750 mg 20 comprimidos",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/paracetamol-750-mg-20-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -5783,7 +5783,7 @@
        "nome": "Ibuprofeno 400 mg 10 cápsulas",
        "desc": "",
        "preco": 14.99,
-       "foto": "",
+       "foto": "fotos/produtos/ibuprofeno-400-mg-10-capsulas.jpg",
        "serve": ""
       },
       {
@@ -5791,7 +5791,7 @@
        "nome": "Neosaldina 20 drágeas",
        "desc": "",
        "preco": 24.49,
-       "foto": "",
+       "foto": "fotos/produtos/neosaldina-20-drageas.jpg",
        "serve": ""
       }
      ]
@@ -5804,7 +5804,7 @@
        "nome": "Pastilha Strepsils mel e limão 8 un",
        "desc": "",
        "preco": 19.49,
-       "foto": "",
+       "foto": "fotos/produtos/pastilha-strepsils-mel-e-limao-8-un.jpg",
        "serve": ""
       },
       {
@@ -5812,7 +5812,7 @@
        "nome": "Vitamina C Cewin 500 mg 30 comprimidos",
        "desc": "",
        "preco": 17.99,
-       "foto": "",
+       "foto": "fotos/produtos/vitamina-c-cewin-500-mg-30-comprimidos.jpg",
        "serve": ""
       },
       {
@@ -5820,7 +5820,7 @@
        "nome": "Soro fisiológico 500 ml",
        "desc": "",
        "preco": 7.99,
-       "foto": "",
+       "foto": "fotos/produtos/soro-fisiologico-500-ml.jpg",
        "serve": ""
       },
       {
@@ -5828,7 +5828,7 @@
        "nome": "Benegrip 20 comprimidos",
        "desc": "",
        "preco": 19.49,
-       "foto": "",
+       "foto": "fotos/produtos/benegrip-20-comprimidos.jpg",
        "serve": ""
       }
      ]
@@ -5841,7 +5841,7 @@
        "nome": "Absorvente Always noturno 8 un",
        "desc": "",
        "preco": 11.99,
-       "foto": "",
+       "foto": "fotos/produtos/absorvente-always-noturno-8-un.jpg",
        "serve": ""
       },
       {
@@ -5849,7 +5849,7 @@
        "nome": "Protetor solar Neutrogena FPS 50",
        "desc": "200 ml.",
        "preco": 68.49,
-       "foto": "",
+       "foto": "fotos/produtos/protetor-solar-neutrogena-fps-50.jpg",
        "serve": ""
       },
       {
@@ -5857,7 +5857,7 @@
        "nome": "Hidratante Nivea 400 ml",
        "desc": "",
        "preco": 29.49,
-       "foto": "",
+       "foto": "fotos/produtos/hidratante-nivea-400-ml.jpg",
        "serve": ""
       },
       {
@@ -5865,7 +5865,7 @@
        "nome": "Demaquilante Bioderma 250 ml",
        "desc": "",
        "preco": 88.49,
-       "foto": "",
+       "foto": "fotos/produtos/demaquilante-bioderma-250-ml.jpg",
        "serve": ""
       }
      ]
@@ -5878,7 +5878,7 @@
        "nome": "Teste de gravidez Clear Blue",
        "desc": "",
        "preco": 39.49,
-       "foto": "",
+       "foto": "fotos/produtos/teste-de-gravidez-clear-blue.jpg",
        "serve": ""
       },
       {
@@ -5886,7 +5886,7 @@
        "nome": "Buscofem 10 cápsulas",
        "desc": "Pra cólica.",
        "preco": 22.49,
-       "foto": "",
+       "foto": "fotos/produtos/buscofem-10-capsulas.jpg",
        "serve": ""
       }
      ]
@@ -5900,7 +5900,7 @@
    "tipo": "mercado",
    "categoria": "Mercado",
    "logo": "lojas/guanabara-cg.png",
-   "capa": "",
+   "capa": "fotos/produtos/banana-prata-1-kg.jpg",
    "km": 0.9,
    "eta": [
     30,
@@ -5922,7 +5922,7 @@
        "nome": "Banana prata 1 kg",
        "desc": "",
        "preco": 7.99,
-       "foto": "",
+       "foto": "fotos/produtos/banana-prata-1-kg.jpg",
        "serve": ""
       },
       {
@@ -5930,7 +5930,7 @@
        "nome": "Maçã gala 1 kg",
        "desc": "",
        "preco": 11.49,
-       "foto": "",
+       "foto": "fotos/produtos/maca-gala-1-kg.jpg",
        "serve": ""
       },
       {
@@ -5938,7 +5938,7 @@
        "nome": "Morango 250 g",
        "desc": "Bandeja.",
        "preco": 9.99,
-       "foto": "",
+       "foto": "fotos/produtos/morango-250-g.jpg",
        "serve": ""
       },
       {
@@ -5946,7 +5946,7 @@
        "nome": "Tomate 1 kg",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/tomate-1-kg.jpg",
        "serve": ""
       },
       {
@@ -5954,7 +5954,7 @@
        "nome": "Alface crespa",
        "desc": "Unidade.",
        "preco": 3.99,
-       "foto": "",
+       "foto": "fotos/produtos/alface-crespa.jpg",
        "serve": ""
       },
       {
@@ -5962,7 +5962,7 @@
        "nome": "Abacate 1 kg",
        "desc": "",
        "preco": 12.49,
-       "foto": "",
+       "foto": "fotos/produtos/abacate-1-kg.jpg",
        "serve": ""
       }
      ]
@@ -5975,7 +5975,7 @@
        "nome": "Arroz Tio João 1 kg",
        "desc": "",
        "preco": 7.49,
-       "foto": "",
+       "foto": "fotos/produtos/arroz-tio-joao-1-kg.jpg",
        "serve": ""
       },
       {
@@ -5983,7 +5983,7 @@
        "nome": "Feijão preto Camil 1 kg",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/feijao-preto-camil-1-kg.jpg",
        "serve": ""
       },
       {
@@ -5991,7 +5991,7 @@
        "nome": "Macarrão Barilla 500 g",
        "desc": "Espaguete n. 5.",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/macarrao-barilla-500-g.jpg",
        "serve": ""
       },
       {
@@ -5999,7 +5999,7 @@
        "nome": "Azeite Gallo 500 ml",
        "desc": "Extra virgem.",
        "preco": 35.49,
-       "foto": "",
+       "foto": "fotos/produtos/azeite-gallo-500-ml.jpg",
        "serve": ""
       },
       {
@@ -6007,7 +6007,7 @@
        "nome": "Café Melitta 500 g",
        "desc": "Tradicional.",
        "preco": 23.99,
-       "foto": "",
+       "foto": "fotos/produtos/cafe-melitta-500-g.jpg",
        "serve": ""
       },
       {
@@ -6015,7 +6015,7 @@
        "nome": "Granola 800 g",
        "desc": "",
        "preco": 21.99,
-       "foto": "",
+       "foto": "fotos/produtos/granola-800-g.jpg",
        "serve": ""
       }
      ]
@@ -6028,7 +6028,7 @@
        "nome": "Leite Italac integral 1 L",
        "desc": "",
        "preco": 5.49,
-       "foto": "",
+       "foto": "fotos/produtos/leite-italac-integral-1-l.jpg",
        "serve": ""
       },
       {
@@ -6036,7 +6036,7 @@
        "nome": "Iogurte grego Vigor",
        "desc": "Tradicional, 4 un.",
        "preco": 14.49,
-       "foto": "",
+       "foto": "fotos/produtos/iogurte-grego-vigor.jpg",
        "serve": ""
       },
       {
@@ -6044,7 +6044,7 @@
        "nome": "Queijo muçarela fatiado 200 g",
        "desc": "",
        "preco": 13.49,
-       "foto": "",
+       "foto": "fotos/produtos/queijo-mucarela-fatiado-200-g.jpg",
        "serve": ""
       },
       {
@@ -6052,7 +6052,7 @@
        "nome": "Ovos brancos 12 un",
        "desc": "",
        "preco": 13.49,
-       "foto": "",
+       "foto": "fotos/produtos/ovos-brancos-12-un.jpg",
        "serve": ""
       },
       {
@@ -6060,7 +6060,7 @@
        "nome": "Manteiga Aviação 200 g",
        "desc": "",
        "preco": 16.49,
-       "foto": "",
+       "foto": "fotos/produtos/manteiga-aviacao-200-g.jpg",
        "serve": ""
       }
      ]
@@ -6073,7 +6073,7 @@
        "nome": "Água Crystal 1,5 L",
        "desc": "Sem gás.",
        "preco": 3.49,
-       "foto": "",
+       "foto": "fotos/produtos/agua-crystal-1-5-l.jpg",
        "serve": ""
       },
       {
@@ -6081,7 +6081,7 @@
        "nome": "Coca-Cola 2 L",
        "desc": "",
        "preco": 11.49,
-       "foto": "",
+       "foto": "fotos/produtos/coca-cola-2-l.jpg",
        "serve": ""
       },
       {
@@ -6089,7 +6089,7 @@
        "nome": "Suco Del Valle uva 1 L",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/suco-del-valle-uva-1-l.jpg",
        "serve": ""
       },
       {
@@ -6097,7 +6097,7 @@
        "nome": "Água de coco Kero Coco 1 L",
        "desc": "",
        "preco": 12.49,
-       "foto": "",
+       "foto": "fotos/produtos/agua-de-coco-kero-coco-1-l.jpg",
        "serve": ""
       }
      ]
@@ -6110,7 +6110,7 @@
        "nome": "Detergente Ypê 500 ml",
        "desc": "",
        "preco": 2.99,
-       "foto": "",
+       "foto": "fotos/produtos/detergente-ype-500-ml.jpg",
        "serve": ""
       },
       {
@@ -6118,7 +6118,7 @@
        "nome": "Papel higiênico Neve 12 rolos",
        "desc": "Folha dupla.",
        "preco": 23.99,
-       "foto": "",
+       "foto": "fotos/produtos/papel-higienico-neve-12-rolos.jpg",
        "serve": ""
       },
       {
@@ -6126,7 +6126,7 @@
        "nome": "Sabão em pó Omo 1,6 kg",
        "desc": "",
        "preco": 31.49,
-       "foto": "",
+       "foto": "fotos/produtos/sabao-em-po-omo-1-6-kg.jpg",
        "serve": ""
       },
       {
@@ -6134,7 +6134,7 @@
        "nome": "Shampoo Seda 325 ml",
        "desc": "",
        "preco": 16.49,
-       "foto": "",
+       "foto": "fotos/produtos/shampoo-seda-325-ml.jpg",
        "serve": ""
       }
      ]
@@ -6147,7 +6147,7 @@
        "nome": "Ração Golden cães pequeno porte 3 kg",
        "desc": "Pro Milo.",
        "preco": 76.49,
-       "foto": "",
+       "foto": "fotos/produtos/racao-golden-caes-pequeno-porte-3-kg.jpg",
        "serve": ""
       },
       {
@@ -6155,7 +6155,7 @@
        "nome": "Petisco Dog Chow 60 g",
        "desc": "",
        "preco": 9.99,
-       "foto": "",
+       "foto": "fotos/produtos/petisco-dog-chow-60-g.jpg",
        "serve": ""
       }
      ]
@@ -6169,7 +6169,7 @@
    "tipo": "mercado",
    "categoria": "Mercado",
    "logo": "lojas/assai-cg.png",
-   "capa": "",
+   "capa": "fotos/produtos/banana-prata-1-kg.jpg",
    "km": 0.5,
    "eta": [
     32,
@@ -6191,7 +6191,7 @@
        "nome": "Banana prata 1 kg",
        "desc": "",
        "preco": 7.99,
-       "foto": "",
+       "foto": "fotos/produtos/banana-prata-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6199,7 +6199,7 @@
        "nome": "Maçã gala 1 kg",
        "desc": "",
        "preco": 11.99,
-       "foto": "",
+       "foto": "fotos/produtos/maca-gala-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6207,7 +6207,7 @@
        "nome": "Morango 250 g",
        "desc": "Bandeja.",
        "preco": 9.99,
-       "foto": "",
+       "foto": "fotos/produtos/morango-250-g.jpg",
        "serve": ""
       },
       {
@@ -6215,7 +6215,7 @@
        "nome": "Tomate 1 kg",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/tomate-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6223,7 +6223,7 @@
        "nome": "Alface crespa",
        "desc": "Unidade.",
        "preco": 3.99,
-       "foto": "",
+       "foto": "fotos/produtos/alface-crespa.jpg",
        "serve": ""
       },
       {
@@ -6231,7 +6231,7 @@
        "nome": "Abacate 1 kg",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/abacate-1-kg.jpg",
        "serve": ""
       }
      ]
@@ -6244,7 +6244,7 @@
        "nome": "Arroz Tio João 1 kg",
        "desc": "",
        "preco": 7.49,
-       "foto": "",
+       "foto": "fotos/produtos/arroz-tio-joao-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6252,7 +6252,7 @@
        "nome": "Feijão preto Camil 1 kg",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/feijao-preto-camil-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6260,7 +6260,7 @@
        "nome": "Macarrão Barilla 500 g",
        "desc": "Espaguete n. 5.",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/macarrao-barilla-500-g.jpg",
        "serve": ""
       },
       {
@@ -6268,7 +6268,7 @@
        "nome": "Azeite Gallo 500 ml",
        "desc": "Extra virgem.",
        "preco": 35.99,
-       "foto": "",
+       "foto": "fotos/produtos/azeite-gallo-500-ml.jpg",
        "serve": ""
       },
       {
@@ -6276,7 +6276,7 @@
        "nome": "Café Melitta 500 g",
        "desc": "Tradicional.",
        "preco": 24.49,
-       "foto": "",
+       "foto": "fotos/produtos/cafe-melitta-500-g.jpg",
        "serve": ""
       },
       {
@@ -6284,7 +6284,7 @@
        "nome": "Granola 800 g",
        "desc": "",
        "preco": 22.49,
-       "foto": "",
+       "foto": "fotos/produtos/granola-800-g.jpg",
        "serve": ""
       }
      ]
@@ -6297,7 +6297,7 @@
        "nome": "Leite Italac integral 1 L",
        "desc": "",
        "preco": 5.49,
-       "foto": "",
+       "foto": "fotos/produtos/leite-italac-integral-1-l.jpg",
        "serve": ""
       },
       {
@@ -6305,7 +6305,7 @@
        "nome": "Iogurte grego Vigor",
        "desc": "Tradicional, 4 un.",
        "preco": 14.99,
-       "foto": "",
+       "foto": "fotos/produtos/iogurte-grego-vigor.jpg",
        "serve": ""
       },
       {
@@ -6313,7 +6313,7 @@
        "nome": "Queijo muçarela fatiado 200 g",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/queijo-mucarela-fatiado-200-g.jpg",
        "serve": ""
       },
       {
@@ -6321,7 +6321,7 @@
        "nome": "Ovos brancos 12 un",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/ovos-brancos-12-un.jpg",
        "serve": ""
       },
       {
@@ -6329,7 +6329,7 @@
        "nome": "Manteiga Aviação 200 g",
        "desc": "",
        "preco": 16.99,
-       "foto": "",
+       "foto": "fotos/produtos/manteiga-aviacao-200-g.jpg",
        "serve": ""
       }
      ]
@@ -6342,7 +6342,7 @@
        "nome": "Água Crystal 1,5 L",
        "desc": "Sem gás.",
        "preco": 3.49,
-       "foto": "",
+       "foto": "fotos/produtos/agua-crystal-1-5-l.jpg",
        "serve": ""
       },
       {
@@ -6350,7 +6350,7 @@
        "nome": "Coca-Cola 2 L",
        "desc": "",
        "preco": 11.99,
-       "foto": "",
+       "foto": "fotos/produtos/coca-cola-2-l.jpg",
        "serve": ""
       },
       {
@@ -6358,7 +6358,7 @@
        "nome": "Suco Del Valle uva 1 L",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/suco-del-valle-uva-1-l.jpg",
        "serve": ""
       },
       {
@@ -6366,7 +6366,7 @@
        "nome": "Água de coco Kero Coco 1 L",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/agua-de-coco-kero-coco-1-l.jpg",
        "serve": ""
       }
      ]
@@ -6379,7 +6379,7 @@
        "nome": "Detergente Ypê 500 ml",
        "desc": "",
        "preco": 2.99,
-       "foto": "",
+       "foto": "fotos/produtos/detergente-ype-500-ml.jpg",
        "serve": ""
       },
       {
@@ -6387,7 +6387,7 @@
        "nome": "Papel higiênico Neve 12 rolos",
        "desc": "Folha dupla.",
        "preco": 24.49,
-       "foto": "",
+       "foto": "fotos/produtos/papel-higienico-neve-12-rolos.jpg",
        "serve": ""
       },
       {
@@ -6395,7 +6395,7 @@
        "nome": "Sabão em pó Omo 1,6 kg",
        "desc": "",
        "preco": 32.49,
-       "foto": "",
+       "foto": "fotos/produtos/sabao-em-po-omo-1-6-kg.jpg",
        "serve": ""
       },
       {
@@ -6403,7 +6403,7 @@
        "nome": "Shampoo Seda 325 ml",
        "desc": "",
        "preco": 16.49,
-       "foto": "",
+       "foto": "fotos/produtos/shampoo-seda-325-ml.jpg",
        "serve": ""
       }
      ]
@@ -6416,7 +6416,7 @@
        "nome": "Ração Golden cães pequeno porte 3 kg",
        "desc": "Pro Milo.",
        "preco": 77.99,
-       "foto": "",
+       "foto": "fotos/produtos/racao-golden-caes-pequeno-porte-3-kg.jpg",
        "serve": ""
       },
       {
@@ -6424,7 +6424,7 @@
        "nome": "Petisco Dog Chow 60 g",
        "desc": "",
        "preco": 9.99,
-       "foto": "",
+       "foto": "fotos/produtos/petisco-dog-chow-60-g.jpg",
        "serve": ""
       }
      ]
@@ -6438,7 +6438,7 @@
    "tipo": "mercado",
    "categoria": "Mercado",
    "logo": "lojas/carrefour-cg.png",
-   "capa": "",
+   "capa": "fotos/produtos/banana-prata-1-kg.jpg",
    "km": 1.2,
    "eta": [
     32,
@@ -6460,7 +6460,7 @@
        "nome": "Banana prata 1 kg",
        "desc": "",
        "preco": 7.99,
-       "foto": "",
+       "foto": "fotos/produtos/banana-prata-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6468,7 +6468,7 @@
        "nome": "Maçã gala 1 kg",
        "desc": "",
        "preco": 11.99,
-       "foto": "",
+       "foto": "fotos/produtos/maca-gala-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6476,7 +6476,7 @@
        "nome": "Morango 250 g",
        "desc": "Bandeja.",
        "preco": 9.99,
-       "foto": "",
+       "foto": "fotos/produtos/morango-250-g.jpg",
        "serve": ""
       },
       {
@@ -6484,7 +6484,7 @@
        "nome": "Tomate 1 kg",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/tomate-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6492,7 +6492,7 @@
        "nome": "Alface crespa",
        "desc": "Unidade.",
        "preco": 3.99,
-       "foto": "",
+       "foto": "fotos/produtos/alface-crespa.jpg",
        "serve": ""
       },
       {
@@ -6500,7 +6500,7 @@
        "nome": "Abacate 1 kg",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/abacate-1-kg.jpg",
        "serve": ""
       }
      ]
@@ -6513,7 +6513,7 @@
        "nome": "Arroz Tio João 1 kg",
        "desc": "",
        "preco": 7.49,
-       "foto": "",
+       "foto": "fotos/produtos/arroz-tio-joao-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6521,7 +6521,7 @@
        "nome": "Feijão preto Camil 1 kg",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/feijao-preto-camil-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6529,7 +6529,7 @@
        "nome": "Macarrão Barilla 500 g",
        "desc": "Espaguete n. 5.",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/macarrao-barilla-500-g.jpg",
        "serve": ""
       },
       {
@@ -6537,7 +6537,7 @@
        "nome": "Azeite Gallo 500 ml",
        "desc": "Extra virgem.",
        "preco": 36.49,
-       "foto": "",
+       "foto": "fotos/produtos/azeite-gallo-500-ml.jpg",
        "serve": ""
       },
       {
@@ -6545,7 +6545,7 @@
        "nome": "Café Melitta 500 g",
        "desc": "Tradicional.",
        "preco": 24.99,
-       "foto": "",
+       "foto": "fotos/produtos/cafe-melitta-500-g.jpg",
        "serve": ""
       },
       {
@@ -6553,7 +6553,7 @@
        "nome": "Granola 800 g",
        "desc": "",
        "preco": 22.99,
-       "foto": "",
+       "foto": "fotos/produtos/granola-800-g.jpg",
        "serve": ""
       }
      ]
@@ -6566,7 +6566,7 @@
        "nome": "Leite Italac integral 1 L",
        "desc": "",
        "preco": 5.49,
-       "foto": "",
+       "foto": "fotos/produtos/leite-italac-integral-1-l.jpg",
        "serve": ""
       },
       {
@@ -6574,7 +6574,7 @@
        "nome": "Iogurte grego Vigor",
        "desc": "Tradicional, 4 un.",
        "preco": 14.99,
-       "foto": "",
+       "foto": "fotos/produtos/iogurte-grego-vigor.jpg",
        "serve": ""
       },
       {
@@ -6582,7 +6582,7 @@
        "nome": "Queijo muçarela fatiado 200 g",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/queijo-mucarela-fatiado-200-g.jpg",
        "serve": ""
       },
       {
@@ -6590,7 +6590,7 @@
        "nome": "Ovos brancos 12 un",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/ovos-brancos-12-un.jpg",
        "serve": ""
       },
       {
@@ -6598,7 +6598,7 @@
        "nome": "Manteiga Aviação 200 g",
        "desc": "",
        "preco": 16.99,
-       "foto": "",
+       "foto": "fotos/produtos/manteiga-aviacao-200-g.jpg",
        "serve": ""
       }
      ]
@@ -6611,7 +6611,7 @@
        "nome": "Água Crystal 1,5 L",
        "desc": "Sem gás.",
        "preco": 3.49,
-       "foto": "",
+       "foto": "fotos/produtos/agua-crystal-1-5-l.jpg",
        "serve": ""
       },
       {
@@ -6619,7 +6619,7 @@
        "nome": "Coca-Cola 2 L",
        "desc": "",
        "preco": 11.99,
-       "foto": "",
+       "foto": "fotos/produtos/coca-cola-2-l.jpg",
        "serve": ""
       },
       {
@@ -6627,7 +6627,7 @@
        "nome": "Suco Del Valle uva 1 L",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/suco-del-valle-uva-1-l.jpg",
        "serve": ""
       },
       {
@@ -6635,7 +6635,7 @@
        "nome": "Água de coco Kero Coco 1 L",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/agua-de-coco-kero-coco-1-l.jpg",
        "serve": ""
       }
      ]
@@ -6648,7 +6648,7 @@
        "nome": "Detergente Ypê 500 ml",
        "desc": "",
        "preco": 2.99,
-       "foto": "",
+       "foto": "fotos/produtos/detergente-ype-500-ml.jpg",
        "serve": ""
       },
       {
@@ -6656,7 +6656,7 @@
        "nome": "Papel higiênico Neve 12 rolos",
        "desc": "Folha dupla.",
        "preco": 24.99,
-       "foto": "",
+       "foto": "fotos/produtos/papel-higienico-neve-12-rolos.jpg",
        "serve": ""
       },
       {
@@ -6664,7 +6664,7 @@
        "nome": "Sabão em pó Omo 1,6 kg",
        "desc": "",
        "preco": 32.49,
-       "foto": "",
+       "foto": "fotos/produtos/sabao-em-po-omo-1-6-kg.jpg",
        "serve": ""
       },
       {
@@ -6672,7 +6672,7 @@
        "nome": "Shampoo Seda 325 ml",
        "desc": "",
        "preco": 16.99,
-       "foto": "",
+       "foto": "fotos/produtos/shampoo-seda-325-ml.jpg",
        "serve": ""
       }
      ]
@@ -6685,7 +6685,7 @@
        "nome": "Ração Golden cães pequeno porte 3 kg",
        "desc": "Pro Milo.",
        "preco": 78.99,
-       "foto": "",
+       "foto": "fotos/produtos/racao-golden-caes-pequeno-porte-3-kg.jpg",
        "serve": ""
       },
       {
@@ -6693,7 +6693,7 @@
        "nome": "Petisco Dog Chow 60 g",
        "desc": "",
        "preco": 9.99,
-       "foto": "",
+       "foto": "fotos/produtos/petisco-dog-chow-60-g.jpg",
        "serve": ""
       }
      ]
@@ -6707,7 +6707,7 @@
    "tipo": "mercado",
    "categoria": "Mercado",
    "logo": "lojas/supermarket-cg.png",
-   "capa": "",
+   "capa": "fotos/produtos/banana-prata-1-kg.jpg",
    "km": 1.1,
    "eta": [
     37,
@@ -6729,7 +6729,7 @@
        "nome": "Banana prata 1 kg",
        "desc": "",
        "preco": 7.99,
-       "foto": "",
+       "foto": "fotos/produtos/banana-prata-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6737,7 +6737,7 @@
        "nome": "Maçã gala 1 kg",
        "desc": "",
        "preco": 11.99,
-       "foto": "",
+       "foto": "fotos/produtos/maca-gala-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6745,7 +6745,7 @@
        "nome": "Morango 250 g",
        "desc": "Bandeja.",
        "preco": 9.99,
-       "foto": "",
+       "foto": "fotos/produtos/morango-250-g.jpg",
        "serve": ""
       },
       {
@@ -6753,7 +6753,7 @@
        "nome": "Tomate 1 kg",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/tomate-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6761,7 +6761,7 @@
        "nome": "Alface crespa",
        "desc": "Unidade.",
        "preco": 3.99,
-       "foto": "",
+       "foto": "fotos/produtos/alface-crespa.jpg",
        "serve": ""
       },
       {
@@ -6769,7 +6769,7 @@
        "nome": "Abacate 1 kg",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/abacate-1-kg.jpg",
        "serve": ""
       }
      ]
@@ -6782,7 +6782,7 @@
        "nome": "Arroz Tio João 1 kg",
        "desc": "",
        "preco": 7.49,
-       "foto": "",
+       "foto": "fotos/produtos/arroz-tio-joao-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6790,7 +6790,7 @@
        "nome": "Feijão preto Camil 1 kg",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/feijao-preto-camil-1-kg.jpg",
        "serve": ""
       },
       {
@@ -6798,7 +6798,7 @@
        "nome": "Macarrão Barilla 500 g",
        "desc": "Espaguete n. 5.",
        "preco": 8.49,
-       "foto": "",
+       "foto": "fotos/produtos/macarrao-barilla-500-g.jpg",
        "serve": ""
       },
       {
@@ -6806,7 +6806,7 @@
        "nome": "Azeite Gallo 500 ml",
        "desc": "Extra virgem.",
        "preco": 35.99,
-       "foto": "",
+       "foto": "fotos/produtos/azeite-gallo-500-ml.jpg",
        "serve": ""
       },
       {
@@ -6814,7 +6814,7 @@
        "nome": "Café Melitta 500 g",
        "desc": "Tradicional.",
        "preco": 24.49,
-       "foto": "",
+       "foto": "fotos/produtos/cafe-melitta-500-g.jpg",
        "serve": ""
       },
       {
@@ -6822,7 +6822,7 @@
        "nome": "Granola 800 g",
        "desc": "",
        "preco": 22.49,
-       "foto": "",
+       "foto": "fotos/produtos/granola-800-g.jpg",
        "serve": ""
       }
      ]
@@ -6835,7 +6835,7 @@
        "nome": "Leite Italac integral 1 L",
        "desc": "",
        "preco": 5.49,
-       "foto": "",
+       "foto": "fotos/produtos/leite-italac-integral-1-l.jpg",
        "serve": ""
       },
       {
@@ -6843,7 +6843,7 @@
        "nome": "Iogurte grego Vigor",
        "desc": "Tradicional, 4 un.",
        "preco": 14.49,
-       "foto": "",
+       "foto": "fotos/produtos/iogurte-grego-vigor.jpg",
        "serve": ""
       },
       {
@@ -6851,7 +6851,7 @@
        "nome": "Queijo muçarela fatiado 200 g",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/queijo-mucarela-fatiado-200-g.jpg",
        "serve": ""
       },
       {
@@ -6859,7 +6859,7 @@
        "nome": "Ovos brancos 12 un",
        "desc": "",
        "preco": 13.99,
-       "foto": "",
+       "foto": "fotos/produtos/ovos-brancos-12-un.jpg",
        "serve": ""
       },
       {
@@ -6867,7 +6867,7 @@
        "nome": "Manteiga Aviação 200 g",
        "desc": "",
        "preco": 16.49,
-       "foto": "",
+       "foto": "fotos/produtos/manteiga-aviacao-200-g.jpg",
        "serve": ""
       }
      ]
@@ -6880,7 +6880,7 @@
        "nome": "Água Crystal 1,5 L",
        "desc": "Sem gás.",
        "preco": 3.49,
-       "foto": "",
+       "foto": "fotos/produtos/agua-crystal-1-5-l.jpg",
        "serve": ""
       },
       {
@@ -6888,7 +6888,7 @@
        "nome": "Coca-Cola 2 L",
        "desc": "",
        "preco": 11.99,
-       "foto": "",
+       "foto": "fotos/produtos/coca-cola-2-l.jpg",
        "serve": ""
       },
       {
@@ -6896,7 +6896,7 @@
        "nome": "Suco Del Valle uva 1 L",
        "desc": "",
        "preco": 8.99,
-       "foto": "",
+       "foto": "fotos/produtos/suco-del-valle-uva-1-l.jpg",
        "serve": ""
       },
       {
@@ -6904,7 +6904,7 @@
        "nome": "Água de coco Kero Coco 1 L",
        "desc": "",
        "preco": 12.99,
-       "foto": "",
+       "foto": "fotos/produtos/agua-de-coco-kero-coco-1-l.jpg",
        "serve": ""
       }
      ]
@@ -6917,7 +6917,7 @@
        "nome": "Detergente Ypê 500 ml",
        "desc": "",
        "preco": 2.99,
-       "foto": "",
+       "foto": "fotos/produtos/detergente-ype-500-ml.jpg",
        "serve": ""
       },
       {
@@ -6925,7 +6925,7 @@
        "nome": "Papel higiênico Neve 12 rolos",
        "desc": "Folha dupla.",
        "preco": 24.49,
-       "foto": "",
+       "foto": "fotos/produtos/papel-higienico-neve-12-rolos.jpg",
        "serve": ""
       },
       {
@@ -6933,7 +6933,7 @@
        "nome": "Sabão em pó Omo 1,6 kg",
        "desc": "",
        "preco": 31.99,
-       "foto": "",
+       "foto": "fotos/produtos/sabao-em-po-omo-1-6-kg.jpg",
        "serve": ""
       },
       {
@@ -6941,7 +6941,7 @@
        "nome": "Shampoo Seda 325 ml",
        "desc": "",
        "preco": 16.49,
-       "foto": "",
+       "foto": "fotos/produtos/shampoo-seda-325-ml.jpg",
        "serve": ""
       }
      ]
@@ -6954,7 +6954,7 @@
        "nome": "Ração Golden cães pequeno porte 3 kg",
        "desc": "Pro Milo.",
        "preco": 77.49,
-       "foto": "",
+       "foto": "fotos/produtos/racao-golden-caes-pequeno-porte-3-kg.jpg",
        "serve": ""
       },
       {
@@ -6962,7 +6962,7 @@
        "nome": "Petisco Dog Chow 60 g",
        "desc": "",
        "preco": 9.99,
-       "foto": "",
+       "foto": "fotos/produtos/petisco-dog-chow-60-g.jpg",
        "serve": ""
       }
      ]
