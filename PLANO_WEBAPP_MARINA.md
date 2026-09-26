@@ -254,6 +254,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 - Testes: `tests/test_tempo_livre.py` (6) e card em casa em `tests/test_agenda.py` (3).
 
 **Tudo pode ser interrompido, se houver motivo (Patrick, 26/09 — próxima frente do mundo):** a agenda não é engessada. Ela pode sair mais cedo da academia e emendar outra coisa; sair no meio da aula (passando mal, emergência de banheiro); largar um rolê chato ou por emergência — **tesão é emergência**: às vezes ela precisa se aliviar e vai correndo pra casa ou pra um lugar reservado, sozinha ou com ele. Cada interrupção é mais história (acontecimento, motivo, efeito no resto do dia, card e trajeto se ajustam).
+- **E a conversa mexe na agenda (Patrick, 26/09):** "parece que tudo na vida dela é premeditado e segue o fluxo até o final". Ex.: ele tenta convencê-la a ir pra academia — mesmo que ela aceite, hoje isso não aconteceria. O que ela topa/anuncia na conversa ("vou pra academia", "vou descer com o Milo") tem que virar compromisso de verdade, com preparação, trajeto e tudo (junta com a pendência 17 do PLANO_VOZ, "promessa de ação vira evento").
 
 **Cuidados (status novo):** **unha** tem estado (cor, feita quando, gastando). Ela faz em casa **só se estiver entediada e com a unha gasta**; manicure (saída) antes de evento/job; **luxos saem do saldo dela**. A cor atual **manda nas fotos geradas**, e ela pode **pedir a opinião do Patrick** sobre a cor quando quiser. Depois: cabelo e outros cuidados (ideias do Patrick).
 
