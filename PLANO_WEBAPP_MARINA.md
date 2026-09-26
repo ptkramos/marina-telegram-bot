@@ -209,6 +209,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 - **Celular** em todo o app no padrão "Olha …" (também fora das etapas, pelo tipo de atividade).
 - **Conferido** na pré-visualização com o backup de antes do reset (`scripts/webapp_preview.py --db … --agora …`, rota `/dev/agora` só local): se arrumando pro bar, a caminho de carona, no bar com os pedidos, dia de aula com o imprevisto do açaí, se arrumando pra dormir.
 - Testes: `tests/test_agenda.py` (7).
+- **Convite de antes do reset (26/09):** o reset tinha apagado o fim de semana (convites "chegados" antes da vida registrada eram descartados). Agora rolê futuro conta o convite como recebido no reset; o bar de sábado com a Bia voltou na produção (convite gravado 12:17, decisão dela às 19h).
 - **Pendências:** (a) conflito antigo do mundo — café às 15:30 em dia de aula até 15:00: a volta da PUC e a ida pro Starbucks se sobrepõem (o trajeto precisa decidir "direto da PUC"); (b) academia não tem preparação (é rotina sorteada, não compromisso com trajeto); (c) fora de uma etapa o card ainda é o antigo — é a etapa 3 (atividades em casa).
 
 ### Consumo no rolê (26/09, `consumo.py`) ✅
