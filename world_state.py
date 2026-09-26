@@ -769,7 +769,8 @@ class WorldStateManager:
             reason = "getting_ready"
 
         previous = self.states.latest()
-        if chosen is None and previous and not force:
+        # 26/09: o retrato genérico ("tempo livre em casa") não é reaproveitado: vira bloco concreto
+        if chosen is None and previous and not force and previous.get("activity") not in GENERICO_LIVRE:
             observed = datetime.fromisoformat(previous["observed_at"])
             age = now - observed
             prev_weather = json.loads(previous["weather_context_json"] or "null")
