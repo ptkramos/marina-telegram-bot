@@ -221,7 +221,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
   - Uber: R$ 6 + R$ 1,30/min (dividido = metade).
 - **Cada pedido vira:** acontecimento do dia (`life_events` tipo `consumo`/`transporte`, "Pediu um gin tônica no Quartinho Bar (R$ 34)."), gasto no saldo (extrato "Quartinho Bar · Gin tônica"), e — se for comida no horário de uma refeição — **a refeição do horário** (`meal:{dia}:{tipo}:fora`), pra ela não jantar de novo em casa. Ela fica sabendo pelo `since_last` (o que aconteceu desde a última fala dela).
 - **Só o que já aconteceu** e só em rolê confirmado e não cancelado; idempotente. Roda no `WorldStateManager.resolve`, depois do trajeto e antes das refeições.
-- **Cânone:** "Starbucks do Shopping da Gávea" → **"Starbucks da Gávea"** (seed + migração `026_starbucks_da_gavea.sql`, que também corrige os eventos já marcados).
+- **Cânone:** "Starbucks do Shopping da Gávea" → **"Starbucks da Gávea"** (seed + migração `027_starbucks_da_gavea.sql` (o 26 já estava usado direto no banco da produção), que também corrige os eventos já marcados).
 - Testes: `tests/test_consumo.py` (10).
 - **Ainda não:** pedido limitado pelo saldo (hoje ela pede igual com pouco dinheiro; o aperto cai no pedido de ajuda pra você, que já existe) e consumo em outros lugares (PUC, academia, shopping sem cinema).
 
