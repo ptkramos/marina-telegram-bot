@@ -13,7 +13,7 @@ detalhado de cada entrega, na ordem em que aconteceram.
 
 ## 0. Painel de status — atualizado em 2026-09-26 (manhã)
 
-Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 1.033 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
+Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 1.034 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
 
 Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
@@ -1143,6 +1143,7 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
 - **Ela manda delivery pra ele** (`pedido_dela.py`): quando oferece ("vou te mandar um suquinho pelo app") e, às vezes, de surpresa (ele doente, dia ruim); nunca no meio do sexting. Ele acompanha pelo botão "🛵 Acompanhar entrega" na fala dela.
 - **Freela vazio** diz que não tem job: rolê não vira ensaio.
 - **Banho:** as falas de ida pro box começam o banho, "já tô saindo do chuveiro" encerra (`end_shower`), e o que foi adiado pelo banho sai quando ele acaba (`release_after_shower`).
+- **Convite de antes do reset (26/09):** rolê que ainda vai acontecer não some mais por causa do reset; o convite conta como recebido no início da vida registrada.
 - **Se arrumando (26/09, `agenda.py`):** antes de sair ela se arruma (banho, cabelo, make, roupa, esperando carona) e, depois de um rolê, se arruma pra dormir. Nesse tempo ela "olha de vez em quando" (disponibilidade GETTING_READY) e o banho acontece de verdade.
 - **Consumo no rolê (26/09, `consumo.py`):** o que ela pede no bar, no café, no cinema e na praia, e o uber, viram acontecimento do dia e gasto no saldo dela; comida fora é a refeição do horário. Ela sabe pelo `since_last`.
 - **Sono manda na iniciativa:** deitada (mesmo num micro-despertar) ela não puxa assunto (`SleepPlan.in_bed`); acordada de verdade (freela de madrugada) pode.

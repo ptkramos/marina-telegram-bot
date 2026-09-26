@@ -542,7 +542,13 @@ class SocialDay:
                 if inv["key"] in data or datetime.fromisoformat(inv["invite_at"]) > now:
                     continue
                 if datetime.fromisoformat(inv["invite_at"]) < floor:
-                    continue
+                    # 26/09: o reset do soak apagou o fim de semana (o convite "chegou" dias antes).
+                    # Rolê que ainda vai acontecer: o convite conta como recebido no início da vida
+                    # registrada (ela vê ao acordar); o que já passou continua não existindo.
+                    if datetime.fromisoformat(inv["start"]) <= now + timedelta(hours=1):
+                        continue
+                    inv = {**inv, "invite_at": floor.isoformat(),
+                           "decide_at": max(inv["decide_at"], floor.isoformat())}
                 data[inv["key"]] = inv
                 who = inv["friends"][0]
                 nome = short_name(who)

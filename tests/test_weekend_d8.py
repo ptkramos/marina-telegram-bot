@@ -102,3 +102,33 @@ class WeekendInvitesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ConviteAntesDoResetTest(unittest.TestCase):
+    """26/09: o reset do soak (04:19) apagou o bar de sábado e o cinema de domingo — os convites
+    tinham "chegado" dias antes, antes do início da vida registrada, e eram descartados."""
+
+    def test_role_futuro_com_convite_antigo_ainda_chega(self):
+        import tempfile
+        from pathlib import Path
+        from db import DatabaseManager
+        from social_day import SocialDay
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        db = DatabaseManager(Path(temp.name) / "r.db")
+        reset = datetime(2026, 9, 26, 4, 19)
+        with db.get_connection() as conn:
+            conn.execute("INSERT INTO world_bootstrap (key, value, updated_at) VALUES "
+                         "('clean_canonical_start_done','1','2026-09-01'), ('social_day_start', ?, ?)",
+                         (reset.isoformat(), reset.isoformat()))
+            conn.commit()
+        day = SocialDay(db)
+        plano = day._invite_plan(reset.date())
+        antigos = [i for i in plano if datetime.fromisoformat(i["invite_at"]) < reset
+                   and datetime.fromisoformat(i["start"]) > reset + timedelta(hours=1)]
+        if not antigos:
+            self.skipTest("sem convite antigo nesse sábado")
+        day.process_invites(reset + timedelta(minutes=5))
+        guardados = day._invites()
+        self.assertIn(antigos[0]["key"], guardados)
+        self.assertEqual(guardados[antigos[0]["key"]]["invite_at"], reset.isoformat())
