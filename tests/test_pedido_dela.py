@@ -64,7 +64,8 @@ class PedidoTest(unittest.TestCase):
         self.assertIsNone(pedido_dela.tick(self.db, T + timedelta(minutes=10)))
         self.assertEqual(pedido_dela.tick(self.db, T + timedelta(hours=1)), "entregue")
         self.assertIn("não precisa perguntar se chegou", pedido_dela.prompt_lines(self.db, T + timedelta(hours=1))[0])
-        self.assertIn("Pedido entregue", webapp_server.gift_to_him_view(self.db, T + timedelta(hours=1))["headline"])
+        self.assertIsNone(webapp_server.gift_to_him_view(self.db, T + timedelta(hours=1)),
+                          "26/09: na tela inicial só até ser entregue")
         self.assertEqual(pedido_dela.prompt_lines(self.db, T + timedelta(hours=5)), [])
         self.assertIsNone(webapp_server.gift_to_him_view(self.db, T + timedelta(hours=5)))
 

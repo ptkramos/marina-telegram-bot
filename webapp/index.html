@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Marina</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="stylesheet" href="/static/app.css?v=__V__">
@@ -13,15 +13,14 @@
 
   <section id="v-inicio" class="view">
     <header class="top"><h1>Marina</h1><p class="sub" id="inicio-sub">…</p></header>
-    <div id="inicio-presente"></div>
     <div class="card agora"><div class="muted small">Agora</div><div id="inicio-agora" class="big">…</div><div id="inicio-disp" class="muted small"></div></div>
-    <div id="inicio-pedido"></div>
     <div class="tiles">
       <button class="tile" data-go="nubank"><img src="/static/marcas/nubank.svg" alt="" class="logo"><span>Nubank</span></button>
       <button class="tile" data-go="ifood"><img src="/static/marcas/ifood.svg" alt="" class="logo"><span>iFood</span></button>
       <button class="tile off" disabled><span>Presentes</span><span class="soon">em breve</span></button>
       <button class="tile off" disabled><span>Datas</span><span class="soon">em breve</span></button>
     </div>
+    <div id="inicio-presente"></div>
     <button class="link" data-go="bastidores">Bastidores</button>
   </section>
 
@@ -55,6 +54,7 @@
     <div class="endereco"><span class="muted small">Entregar em</span><span class="t">Casa da Ma</span></div>
     <div id="ifood-andamento"></div>
     <div id="ifood-lista" class="list"></div>
+    <div id="ifood-pedidos"></div>
   </section>
 
   <section id="v-loja" class="view" hidden>

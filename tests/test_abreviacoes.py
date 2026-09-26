@@ -47,3 +47,12 @@ class AbreviacoesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AudioSemAbreviacaoTest(unittest.TestCase):
+    def test_audio_fala_por_extenso(self):
+        """25/09 (/feedback): ela falou "aga jota" num áudio."""
+        from chat_naturalness import expand_for_speech
+        self.assertEqual(expand_for_speech("mas hj meu corpo pede pausa, vc vem cmg? n sei"),
+                         "mas hoje meu corpo pede pausa, você vem comigo? não sei")
+        self.assertEqual(expand_for_speech("HJ não"), "HOJE não")

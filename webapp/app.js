@@ -5,6 +5,8 @@ const tg = window.Telegram && window.Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 // Telegram antigo (ou fora dele) não tem BackButton (6.1) nem showConfirm (6.2): cai no da página.
 const tgAt = (v) => !!(tg && tg.isVersionAtLeast && tg.isVersionAtLeast(v));
+// 26/09 (Patrick): sem zoom por pinça (o WebKit do iOS ignora user-scalable=no)
+["gesturestart", "gesturechange"].forEach((ev) => document.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
 const nativeBack = tgAt("6.1");
 const insideTelegram = !!(tg && tg.initData);
 
@@ -77,7 +79,6 @@ const loaders = {
       $("inicio-agora").textContent = cap(a.atividade);
       $("inicio-disp").textContent = a.disponivel;
       $("inicio-presente").innerHTML = pedidoCard(d.pra_voce, "Presente da Ma");
-      $("inicio-pedido").innerHTML = pedidoCard(d.pedido, "Seu pedido pra Ma");
     } catch (e) { failIn($("inicio-agora"), e); }
   },
 
@@ -105,6 +106,9 @@ const loaders = {
         return `<button class="item" data-loja="${esc(r.id)}"><div><div class="t">${esc(r.nome)}</div>
           <div class="d">${esc(r.tipo)} · ${r.eta[0]}–${r.eta[1]} min · Entrega grátis</div></div><span class="d">a partir de ${brl0(Math.min(...precos))}</span></button>`;
       }).join("");
+      $("ifood-pedidos").innerHTML = d.pedidos.length ? `<h2>Pedidos</h2><div class="list">${d.pedidos.map((p) =>
+        `<div class="item"><div><div class="t">${esc(p.restaurant)}</div><div class="d">1x ${esc(p.what)}</div>
+          <div class="d">${esc(p.when)} · ${brl(p.price)}</div></div><span class="d">${esc(p.status)}</span></div>`).join("")}</div>` : "";
     } catch (e) { failIn($("ifood-lista"), e); }
   },
 

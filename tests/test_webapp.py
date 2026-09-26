@@ -191,7 +191,10 @@ class ApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await self.client.post("/api/delivery", headers=self.h,
                                                  json={"restaurante": "x", "item": "y"})).status, 400)
         inicio = await (await self.client.get("/api/inicio", headers=self.h)).json()
-        self.assertEqual(inicio["pedido"]["status"], "a_caminho")
+        self.assertNotIn("pedido", inicio, "26/09: pedido dele só no iFood")
+        d = await (await self.client.get("/api/delivery", headers=self.h)).json()
+        self.assertEqual(d["pedido"]["status"], "a_caminho")
+        self.assertEqual([(p["restaurant"], p["status"]) for p in d["pedidos"]], [(rest["nome"], "Em andamento")])
 
     async def test_bastidores_traz_as_barrinhas(self):
         d = await (await self.client.get("/api/bastidores", headers=self.h)).json()

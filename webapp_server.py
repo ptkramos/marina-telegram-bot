@@ -198,6 +198,17 @@ def order_view(order: Optional[dict], now: datetime) -> Optional[dict]:
             "note": order.get("note") or "", "status": status, "steps": steps, "headline": headline}
 
 
+def history_view(hist: list[dict], now: datetime) -> list[dict]:
+    """Aba Pedidos do iFood: data, loja, item, total e situação."""
+    out = []
+    for h in hist:
+        eta = datetime.fromisoformat(h["eta_at"])
+        out.append({"what": h["what"], "restaurant": h["restaurant"], "price": h["price"],
+                    "when": datetime.fromisoformat(h["ordered_at"]).strftime("%d/%m"),
+                    "status": "Pedido concluído" if eta <= now else "Em andamento"})
+    return out
+
+
 def gift_to_him_view(db, now: datetime) -> Optional[dict]:
     """"Presente da Ma": o pedido que ELA mandou pro Patrick, no mesmo formato do iFood."""
     import pedido_dela
@@ -205,10 +216,9 @@ def gift_to_him_view(db, now: datetime) -> Optional[dict]:
     if not p:
         return None
     eta = datetime.fromisoformat(p["eta_at"])
-    delivered = p["status"] == "entregue"
-    if delivered and now - eta > SHOW_DELIVERED:
-        return None
-    steps, headline = timeline(datetime.fromisoformat(p["ordered_at"]), eta, now, delivered=delivered)
+    if p["status"] == "entregue":
+        return None          # 26/09 (Patrick): na tela inicial só até ser entregue
+    steps, headline = timeline(datetime.fromisoformat(p["ordered_at"]), eta, now, delivered=False)
     return {"what": p["short"], "restaurant": p["restaurant"], "note": p.get("note") or "", "status": p["status"],
             "steps": steps, "headline": headline}
 
@@ -231,8 +241,8 @@ async def api_inicio(request: web.Request) -> web.Response:
     snap = await asyncio.to_thread(hooks.status, now)
     import delivery
     import pedido_dela
+    # 26/09 (Patrick): o pedido dele não aparece na tela inicial, só no iFood (Pedidos).
     return _json({"agora": {k: snap.get(k) for k in ("now", "atividade", "local", "disponivel")},
-                  "pedido": order_view(delivery._load(hooks.db), now),
                   "pra_voce": gift_to_him_view(hooks.db, now)})
 
 
@@ -287,7 +297,9 @@ async def api_pix(request: web.Request) -> web.Response:
 async def api_delivery(request: web.Request) -> web.Response:
     hooks: Hooks = request.app["hooks"]
     import delivery
-    return _json({"cardapio": load_cardapio(), "pedido": order_view(delivery._load(hooks.db), hooks.now())})
+    now = hooks.now()
+    return _json({"cardapio": load_cardapio(), "pedido": order_view(delivery._load(hooks.db), now),
+                  "pedidos": history_view(delivery.history(hooks.db), now)})
 
 
 async def api_delivery_pedir(request: web.Request) -> web.Response:
@@ -307,7 +319,7 @@ async def api_delivery_pedir(request: web.Request) -> web.Response:
     if not order:
         return _error("Você tem um pedido em andamento", 409)
     import recibo
-    jpeg = await asyncio.to_thread(recibo.pedido, item["curto"], rest["nome"], item["preco"],
+    jpeg = await asyncio.to_thread(recibo.pedido, item["nome"], rest["nome"], item["preco"],
                                    datetime.fromisoformat(order["eta_at"]), order.get("note") or "", now)
     return _json({"ok": True, "pedido": order_view(order, now), "comprovante": await _post_receipt(request, jpeg)})
 

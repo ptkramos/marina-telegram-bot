@@ -89,7 +89,9 @@ h2 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 20px 0 8px;
 .minus { white-space: nowrap; }
 
 input, textarea { width: 100%; background: var(--bg); color: var(--fg); border: 1px solid var(--line);
-  border-radius: 10px; padding: 10px 12px; font: inherit; margin: 6px 0; }
+  border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 16px; margin: 6px 0; }
+/* 26/09 (Patrick): sem zoom (pinça, duplo toque, foco em campo — o iOS amplia campo < 16px) */
+html, body { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; }
 button.primary { width: 100%; background: var(--accent); color: var(--on-accent); border: 0; border-radius: 999px;
   padding: 13px; font: inherit; font-weight: 600; margin-top: 10px; cursor: pointer; }
 button.primary.nu { background: var(--nu); color: #fff; }

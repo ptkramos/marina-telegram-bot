@@ -41,6 +41,24 @@ def _save(db, data: dict) -> None:
     db.set_estado_relacional(KEY, json.dumps(data, ensure_ascii=False))
 
 
+HIST_KEY = "ifood_pedidos_json"
+HIST_MAX = 30
+
+
+def history(db) -> list[dict]:
+    """Pedidos do Patrick pro app (aba Pedidos do iFood), do mais novo pro mais velho."""
+    try:
+        raw = db.get_estado_relacional(HIST_KEY)
+        return json.loads(raw) if raw else []
+    except Exception:
+        return []
+
+
+def _remember(db, data: dict) -> None:
+    hist = [{k: data.get(k) for k in ("what", "restaurant", "price", "note", "ordered_at", "eta_at")}] + history(db)
+    db.set_estado_relacional(HIST_KEY, json.dumps(hist[:HIST_MAX], ensure_ascii=False))
+
+
 def _what(text: str, fallback: str = "o pedido") -> str:
     m = FOOD_RE.search(text or "")
     return m.group(1).lower() if m else fallback
@@ -134,6 +152,7 @@ def gift(db, *, what: str, restaurant: str, price: int, eta_min: tuple, note: st
             "eta_at": eta.isoformat(), "arrived_at": None, "status": "a_caminho",
             "received_at": None, "waited": None, "ate_recently": False, "announced": False}
     _save(db, data)
+    _remember(db, data)
     logger.info("delivery.gift what=%s eta=%s", what, eta.isoformat(timespec="minutes"))
     return data
 

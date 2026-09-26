@@ -361,6 +361,9 @@ class VoiceEngine:
             clean_text = self._clean_text_for_speech(text)
         if not clean_text:
             return None
+        # 25/09 (Patrick, /feedback): ela falou "aga jota" num áudio. Abreviação é de texto.
+        from chat_naturalness import expand_for_speech
+        clean_text = expand_for_speech(clean_text)
 
         # 1. Determina o perfil vocal da Marina
         selected_profile: VoiceProfile

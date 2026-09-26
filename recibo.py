@@ -89,7 +89,7 @@ class _Canvas:
             self.img.paste(icon, (PAD, self.y + 2), icon)
             x = PAD + icon.width + 10
         for i, line in enumerate(textwrap.wrap(value, 38) or [""]):
-            self.text(line, 28, bold=(i == 0 and not extra), gap=4, x=x)
+            self.text(line, 28, bold=not extra, gap=4, x=x)      # 26/09: a 2ª linha saía sem negrito
         if extra:
             self.text(extra, 22, color=GRAY, gap=4)
         self.y += 18
@@ -127,7 +127,8 @@ def pedido(item: str, restaurante: str, total: float, previsao: datetime, observ
     c.text("Pedido confirmado", 34, bold=True, gap=8)
     c.text(f"{restaurante} · {_data(when)}", 22, color=GRAY)
     c.rule(20)
-    c.text(f"1x {item}", 28, bold=True, gap=4)
+    for line in textwrap.wrap(f"1x {item}", 34):
+        c.text(line, 28, bold=True, gap=4)
     c.rule()
     c.field("Entrega em", endereco)
     c.field("Previsão de entrega", f"{previsao:%H:%M}")

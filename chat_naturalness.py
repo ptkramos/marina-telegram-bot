@@ -82,6 +82,18 @@ _ABBR_RES = [(re.compile(rf"(?<![\w\[])(?:{pat})(?![\w\]])", re.IGNORECASE), ab,
              for pat, ab, rate in ABBREVIATIONS]
 
 
+_SPOKEN_RE = re.compile(r"(?<![\w\[])(vcs|vc|tbm|tb|pq|mto|mt|hj|dps|cmg|q|n)(?![\w\]])", re.IGNORECASE)
+_SPOKEN_EXTRA = {"tbm": "também", "mto": "muito"}
+
+
+def expand_for_speech(text: str) -> str:
+    """"hj" → "hoje" antes da voz: no áudio ninguém fala abreviação."""
+    def full(m):
+        word = m.group(0)
+        return _match_case(word, _SPOKEN_EXTRA.get(word.casefold()) or _FULL[word.casefold()])
+    return _SPOKEN_RE.sub(full, text or "")
+
+
 def _match_case(model: str, word: str) -> str:
     if model.isupper() and len(model) > 1:
         return word.upper()
