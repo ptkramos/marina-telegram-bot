@@ -538,7 +538,8 @@ class DatabaseManager:
             "life_events",
             "story_threads",
             "world_state",
-            "feedbacks",
+            # 26/09: "feedbacks" fica — é anotação do Patrick pra gente (/feedback), ela não lê.
+            "emotion_episodes",
             "estilo_linguagem",
             "gostos_marina",
             "resumos_conversa",
@@ -580,7 +581,8 @@ class DatabaseManager:
                 counts["world_bootstrap:mundo_vivo"] = conn.execute(
                     """DELETE FROM world_bootstrap WHERE key='social_day_start'
                        OR key LIKE 'skip:%' OR key LIKE 'story_day:%' OR key LIKE 'canonized:%'
-                       OR key LIKE 'ritual%' OR key LIKE 'commute:%'"""
+                       OR key LIKE 'ritual%' OR key LIKE 'commute:%'
+                       OR key LIKE 'facul:%' OR key LIKE 'sono:%'"""
                 ).rowcount
                 counts["social_relationships:npc"] = conn.execute(
                     "DELETE FROM social_relationships WHERE character_key LIKE 'npc!_%' ESCAPE '!'"

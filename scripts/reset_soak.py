@@ -2,7 +2,7 @@
 
 Chama `DatabaseManager.reset_soak_learning()`, que deleta em transação única:
     - conversas, resumos, momentos, estilo, gostos, fatos_patrick
-    - eventos_pendentes, reminders, open_loops, feedbacks
+    - eventos_pendentes, reminders, open_loops, emotion_episodes
     - pending_batches, availability_events
     - relationship_culture(_evidence), knowledge_shares/subjects/items
     - preference_evidence, social_evidence/place_state
@@ -13,6 +13,7 @@ Chama `DatabaseManager.reset_soak_learning()`, que deleta em transação única:
       canônico volta ao ponto de partida
 
 E preserva (deixados intactos):
+    - Feedbacks do Patrick (/feedback: anotação pra gente, ela não lê)
     - Persona canônica (world_characters, world_places, world_bootstrap)
     - Grade da PUC (academic_profile, academic_courses, academic_schedule_blocks)
     - Perfil da Marina (perfil, ciclo_biologico); avatar e DNA visual ficam no código
@@ -48,7 +49,7 @@ def _snapshot_counts() -> dict[str, int]:
     tables = (
         "conversas", "fatos_patrick", "momentos_marcantes", "resumos_conversa",
         "estilo_linguagem", "gostos_marina", "eventos_pendentes", "reminders",
-        "open_loops", "feedbacks", "response_pending_batches",
+        "open_loops", "emotion_episodes", "response_pending_batches",
         "response_availability_events", "world_state", "estado_relacional",
         "story_threads", "life_events", "knowledge_subjects", "knowledge_items",
         "relationship_culture", "preference_evidence", "social_evidence",
