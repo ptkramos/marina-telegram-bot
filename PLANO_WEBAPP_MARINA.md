@@ -145,5 +145,15 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 - **O iFood do Patrick mostra só os pedidos dele.** O que ela pede pra ela fica nos **Bastidores** ("iFood da Ma"), junto com o **banco dela** (extrato). Os Bastidores vão crescer e passar por muitas melhorias.
 - O Patrick vai mandar prints do app real (página da loja, prato aberto, sacola, mercado/farmácia) pro layout.
 
+**Layout do iFood — tirado dos prints do app real (26/09, 05:48–06:06; ficam em `references/Nova pasta`, fora do git porque mostram o endereço dele):**
+1. **Lista de lojas** (Farmácias/Mercados/Restaurantes): busca "Buscar em …", filtros em pílula (Ordenar, Entrega grátis, Distância, Cupom), "Mais pedidos"; cada linha com logo redondo, selo "Mais Pedido", nome, ★ nota (avaliações) • tempo ou "Agendar" • taxa, etiquetas "Grátis" / "R$ X off"; coração à direita. Mercado mostra "A partir de 8h • Grátis" e "Melhor avaliado".
+2. **Página da loja:** capa (foto) com voltar/♥/busca; logo redondo sobre o cartão; nome; "Entrega rastreável • 4.0 km • Min R$ 10,00"; ★ 4,8 (1.3 mil avaliações) ›; "Padrão • 70-85 min • R$ 21,99" (ou faixa "Loja fechada • Abre às 09:00"); cupom; **Destaques** em grade de 3 (foto, preço, riscado e -%); abas de seção fixas no topo (☰ Preferidos, Burguer + Bebida, Molhos…); **seções** com linhas: nome, descrição em 2 linhas, preço, foto à direita.
+3. **Prato aberto:** foto grande; cartão da loja sobre a foto; nome, descrição, "Serve até 1 pessoa", preço; complementos ("Turbine seu Combo — escolha até 8": nome, + preço, foto, +); "Alguma observação? 0/140"; rodapé com – 1 + e botão vermelho "Adicionar R$ 16,19".
+4. **Sacola:** logo e nome da loja, "Adicionar mais itens"; aviso de pedido mínimo; itens (foto, nome, descrição, preço, lixeira – 1 +); "Peça também" (carrossel); rodapé "R$ 39,17 • com entrega" + "Continuar".
+5. **Entrega:** "Entregar no portão do endereço" (endereço, Trocar); "Opções de entrega": Padrão, Hoje 70–85 min, taxa.
+6. **Pagamento:** "Pagamento pelo app" (iFood Pago → Pix); cupons; **Resumo de valores**: subtotal, taxa de entrega, taxa de serviço R$ 0,99, descontos, total; botão "Revisar pedido • R$ 44,07".
+7. **Revise o seu pedido** (folha de baixo): Entrega hoje 70–85 min, endereço, cupons, pagamento Pix + total; "Fazer pedido" / "Alterar pedido".
+- Barra de abas: Início, Busca, Pedidos, Perfil. Clube (roxo) e cupons ficam de fora por enquanto.
+
 **Etapa 5 — Redes sociais (Instagram e X).** Um perfil dela em cada: no Instagram as fotos que ela posta (as mesmas que já existem no mundo: rolê, look, Milo, vista), stories do dia e comentários; no X o que ela pensa em voz alta. Ele curte, comenta e responde, e ela vê. **O que é novo:** as pessoas do mundo dela (Bia, Theo, Júlia, Lívia, o pai) também aparecem — comentando nas fotos dela, com perfis próprios — e o Patrick pode interagir com elas. Pontos pra desenhar antes: o que ela posta sozinha e com que frequência; o que ela sente com comentário dele (e de outros) e como isso chega na conversa (sem notificação de sistema no chat); o que os amigos postam; custo de foto por post; privacidade (o que ela não posta).
 
