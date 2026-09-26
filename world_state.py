@@ -604,6 +604,14 @@ class WorldStateManager:
                 return None
         return {"phase": "active", "data": data, "transition_at": when}
 
+    def _getting_ready(self, now: datetime) -> Optional[dict]:
+        try:
+            from agenda import Agenda
+            return Agenda(self.db).prep_activity(now)
+        except Exception:
+            logger.exception("agenda.prep.error")
+            return None
+
     def resolve(
         self, now: datetime, *, confirmed_commitment: Optional[Mapping] = None,
         explicit_plan: Optional[Mapping] = None,
@@ -750,6 +758,11 @@ class WorldStateManager:
         elif self._active_plan(active_consequence, now):
             chosen = active_consequence
             reason = "active_consequence"
+        elif (prep := self._getting_ready(now)) is not None:
+            # 26/09 (Patrick): antes de sair ela se arruma (banho, make, roupa…); antes só
+            # existia pra faculdade de manhã e ela pulava do "tempo livre" pro trajeto.
+            chosen = prep
+            reason = "getting_ready"
 
         previous = self.states.latest()
         if chosen is None and previous and not force:

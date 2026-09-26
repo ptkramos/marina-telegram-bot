@@ -1605,6 +1605,7 @@ def _status_snapshot(now_local: datetime) -> dict:
     ciclo_info = memory_manager.cycle_mgr.get_cycle_info()
 
     disp_str = "Disponível pra conversar"
+    act_code = "UNKNOWN"
     try:
         act_code, _source, _weight, _fresh, _ = availability_service.policy._resolve_activity(now_local)
         profile = availability_service.policy.profiles.get(act_code, {})
@@ -1620,7 +1621,7 @@ def _status_snapshot(now_local: datetime) -> dict:
     except Exception as e:
         logger.warning(f"Erro ao calcular disponibilidade no status: {e}")
 
-    snap = {"now": now_local, "atividade": atividade, "local": local_str, "disponivel": disp_str,
+    snap = {"now": now_local, "atividade": atividade, "local": local_str, "disponivel": disp_str, "act_code": act_code,
             "humor": None, "energia": None,
             "ciclo_dia": ciclo_info["day"], "ciclo_fase": ciclo_info["name"].split(" (")[0].lower(),
             "saude": [], "proximo": None, "planos": []}
@@ -3066,7 +3067,7 @@ async def process_incoming_batch(
                     ).total_seconds()
                     activity_type = getattr(avail_decision, 'activity_type', 'UNKNOWN')
                     if (activity_type in ('GYM', 'CLASS', 'WORK', 'COMMUTE', 'CASTING',
-                                          'SOCIAL', 'PET_WALK', 'WAKING', 'SHOWER')
+                                          'SOCIAL', 'PET_WALK', 'WAKING', 'SHOWER', 'GETTING_READY')
                             and 0 < remaining <= 25):
                         logger.info(
                             'AVAILABILITY_SOFT_DELAY activity=%s delay_s=%.1f',

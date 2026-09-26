@@ -311,3 +311,28 @@ button.primary:disabled { opacity: .5; }
 .dois-lados > .d { flex: none; }
 .ps-txt .d, .ps-txt .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ps-dir .d { white-space: nowrap; }
+
+/* ============================================ 26/09: card da aba Agora (layout D) */
+.ag-t { font-size: 20px; font-weight: 700; }
+.ag-s { font-size: 14px; color: var(--muted); margin-top: 2px; }
+.ag-bar { height: 6px; border-radius: 99px; background: var(--line); margin: 12px 0 5px; overflow: hidden; }
+.ag-bar > i { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+.ag-bar-l { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted);
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ag-sep { border-top: 1px solid var(--line); margin: 11px 0; }
+.ag-grade { display: grid; grid-template-columns: 22px max-content minmax(0, 1fr); gap: 7px 10px; align-items: baseline; font-size: 14px; }
+.ag-rot { color: var(--muted); white-space: nowrap; }
+.ag-val { min-width: 0; }
+.ag-st { display: grid; grid-template-columns: 12px minmax(0, 1fr) 48px 44px; gap: 8px; align-items: center; font-size: 14px; padding: 3px 0; }
+.ag-tx { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-vl, .ag-hr { font-size: 12px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ag-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); box-sizing: border-box; }
+.ag-st.feito .ag-dot { background: var(--accent); border-color: var(--accent); }
+.ag-st.agora .ag-dot { border-color: var(--accent); }
+.ag-st.feito .ag-tx, .ag-st.depois .ag-tx { color: var(--muted); }
+.ag-st.agora .ag-tx { font-weight: 600; }
+.ag-st.aviso .ag-dot { background: #d99a06; border-color: #d99a06; }
+.ag-st.aviso .ag-tx { color: #b07d00; font-weight: 600; }
+.ag-sub { margin: 1px 0 3px 5px; padding-left: 14px; border-left: 1.5px solid var(--line); }
+.ag-sub .ag-st { font-size: 13px; grid-template-columns: 8px minmax(0, 1fr) 48px 44px; }
+.ag-sub .ag-dot { width: 8px; height: 8px; }

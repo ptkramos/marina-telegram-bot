@@ -150,7 +150,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 - **Seu Jorge (26/09):** pegar o delivery na portaria agora conta como contato com ele (`delivery._contato_portaria`); antes o Mundo mostrava "Sem contato ainda" logo depois de ela pegar o presente.
 - **Visto nos dados reais (26/09, 08:48):** depois do reset, todo mundo ainda "sem contato" e "Hoje" vazio — ela estava dormindo (sábado). Conferir de tarde se o pai e as amigas aparecem com contato.
 
-### Aba Agora — decisões com o Patrick, linha a linha (26/09, em andamento, ainda não implementado)
+### Aba Agora — decisões com o Patrick, linha a linha (26/09; saída de casa implementada, atividades em casa a decidir)
 **Por quê:** o status só mostrava onde ela está e o que faz; não existia preparação nem "indo fazer" (fora a faculdade de manhã) — do "tempo livre em casa" ela pulava pro trajeto.
 
 **Mundo (comportamento):**
@@ -199,7 +199,17 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 
 **Falta decidir:** as atividades em casa (tempo livre, comendo, banho, vendo série, Milo, dormindo) e os textos de academia/praia.
 
-**Ordem combinada com o Patrick:** (1) consumo canônico ✅ → (2) implementar a sequência no mundo + o card novo → (3) atividades em casa.
+**Ordem combinada com o Patrick:** (1) consumo canônico ✅ → (2) implementar a sequência no mundo + o card novo ✅ → (3) atividades em casa.
+
+### Sequência da saída e card da aba Agora (26/09, `agenda.py`) ✅
+- **`agenda.py`** organiza o dia em etapas a partir do que o mundo já decide (saídas, freelas, aulas, trajetos com modo/carona/imprevisto, consumo, plano de sono): Se arrumando → A caminho → Lá → Voltando; depois de rolê com make, Se arrumando pra dormir. Não inventa nada.
+- **No mundo:** o `WorldStateManager` põe ela "se arrumando pra sair pro Quartinho Bar (fazendo maquiagem)" durante a preparação (antes: "tempo livre em casa" até o trajeto). Disponibilidade nova **GETTING_READY** ("olha de vez em quando": responde entre um passo e outro, 45 s a 10 min); "se arrumando pra dormir" não é lido como dormindo. O **banho do passo "Tomando banho" acontece de verdade** (qualquer preparação, com a duração do passo; o da faculdade continua marcando o bom dia).
+- **Durações:** rolê à noite 60–90 min, encontro de dia 30–45, freela 40–55, praia 15–20, faculdade do acordar até sair (máx. 90), pra dormir 30–45. O último passo segue o transporte (Esperando carona / Chamando uber / Saindo). Faculdade tem "Secando cabelo" em 40% dos dias.
+- **Card (layout D):** título, linha 2 com hora aproximada, barra (início · "há 1h 10min · faltam ~15min" · fim; no Lá só "há"), grade (Onde/Como/Com/Celular), linha do tempo do compromisso inteiro + a próxima etapa, com os passos da etapa atual recuados; consumo só aparece depois de pedido, com valor e hora em colunas; etapa concluída mostra o total; imprevisto em amarelo, com texto curto ("Motorista errou o caminho", "Pararam pra um açaí").
+- **Celular** em todo o app no padrão "Olha …" (também fora das etapas, pelo tipo de atividade).
+- **Conferido** na pré-visualização com o backup de antes do reset (`scripts/webapp_preview.py --db … --agora …`, rota `/dev/agora` só local): se arrumando pro bar, a caminho de carona, no bar com os pedidos, dia de aula com o imprevisto do açaí, se arrumando pra dormir.
+- Testes: `tests/test_agenda.py` (7).
+- **Pendências:** (a) conflito antigo do mundo — café às 15:30 em dia de aula até 15:00: a volta da PUC e a ida pro Starbucks se sobrepõem (o trajeto precisa decidir "direto da PUC"); (b) academia não tem preparação (é rotina sorteada, não compromisso com trajeto); (c) fora de uma etapa o card ainda é o antigo — é a etapa 3 (atividades em casa).
 
 ### Consumo no rolê (26/09, `consumo.py`) ✅
 - **Quem paga (decisão do Patrick):** lazer e uber saem do **saldo dela**; ônibus e metrô são do Riocard que o pai carrega (fora do saldo e fora do extrato). O que o pai paga não aparece no extrato.

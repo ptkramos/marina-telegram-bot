@@ -59,6 +59,13 @@ DEFAULT_PROFILES = {
         'soft_delay_min_s': 10, 'soft_delay_max_s': 180, 'guardrail_s': 600,
         'brief_likelihood': 0.40, 'prefer': 'REPLY_NOW',
     },
+    # 26/09 (Patrick): se arrumando ela não larga tudo pelo celular — dá olhadinhas pra ver
+    # se precisa responder ou pedir opinião. Nem some, nem responde na hora.
+    'GETTING_READY': {
+        'phone_access': 'MEDIUM', 'attention': 'MEDIUM', 'interruptibility': 'MEDIUM',
+        'soft_delay_min_s': 45, 'soft_delay_max_s': 600, 'guardrail_s': 1200,
+        'brief_likelihood': 0.45, 'prefer': 'MIXED',
+    },
     # Fase C.3: "vou tomar banho, já volto" — ela some de verdade uns minutos.
     'SHOWER': {
         'phone_access': 'LOW', 'attention': 'LOW', 'interruptibility': 'LOW',
@@ -431,6 +438,9 @@ class ResponseAvailabilityPolicy:
         # Priority: explicit activity keywords override place heuristic
         if 'acordou de madrugada' in act:
             return 'MICRO_WAKE'
+        # 26/09: antes do 'dorm' — "se arrumando pra dormir" não é dormindo.
+        if act.startswith('se arrumando'):
+            return 'GETTING_READY'
         if any(x in act for x in ('dorm', 'sleep', 'sono')):
             return 'SLEEPING'
         # Patch 030: 'acordando' tem de vir ANTES da heurística de 'tomando

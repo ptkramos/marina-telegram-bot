@@ -32,6 +32,7 @@ RATE_PER_HOUR = {
     "SLEEPING": +0.09,   # uma noite de sono recarrega quase tudo
     "HOME": +0.04,
     "WAKING": +0.04,
+    "GETTING_READY": +0.02,
     "PET_WALK": +0.04,   # sozinha com o Milo também é recarga
     "GYM": 0.0,
     "CLASS": -0.08,      # 7h–15h na PUC: cheia → ~0,36 ao chegar em casa

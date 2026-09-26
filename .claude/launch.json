@@ -1,6 +1,7 @@
 {
   "version": "0.0.1",
   "configurations": [
-    {"name": "miniapp", "runtimeExecutable": "venv/Scripts/python.exe", "runtimeArgs": ["scripts/webapp_preview.py", "8799"], "port": 8799}
+    {"name": "miniapp", "runtimeExecutable": "venv/Scripts/python.exe", "runtimeArgs": ["scripts/webapp_preview.py", "8799"], "port": 8799},
+    {"name": "miniapp-real", "runtimeExecutable": "venv/Scripts/python.exe", "runtimeArgs": ["scripts/webapp_preview.py", "8798", "--db", "C:/Users/conta/AppData/Local/Temp/claude/C--Arquivos-GitHub-marin-telegram-bot/03b484b8-2d35-45e0-b6af-1702ba1d1100/scratchpad/pre_reset.db", "--agora", "2026-09-25T18:40"], "port": 8798}
   ]
 }

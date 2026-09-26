@@ -282,8 +282,16 @@ async def api_inicio(request: web.Request) -> web.Response:
 
 # --------------------------------------------- Bastidores: textos (Patrick, 26/09) --
 # Voz híbrida: rótulos e dados falam como painel ("você"); sentimento fala do jeito dela.
-TELEFONE = (("Dormindo", "Responde quando acordar"), ("Ocupada", "Ocupada, responde com calma"),
-            ("Concentrada", "Respostas mais espaçadas"), ("Online", "Responde rápido"))
+# 26/09 (Patrick): o celular sempre como "Olha …"
+TELEFONE = (("Dormindo", "Olha quando acordar"), ("Ocupada", "Olha nos intervalos"),
+            ("Concentrada", "Olha nos intervalos"), ("Online", "Olha com frequência"))
+CELULAR_POR_ATIVIDADE = {
+    "SLEEPING": "Olha quando acordar", "SHOWER": "Olha depois do banho",
+    "CLASS": "Olha nos intervalos", "WORK": "Olha nos intervalos", "CASTING": "Olha nos intervalos",
+    "GYM": "Olha nos intervalos",
+    "MEAL": "Olha de vez em quando", "SOCIAL": "Olha de vez em quando", "GETTING_READY": "Olha de vez em quando",
+    "WAKING": "Olha de vez em quando", "PET_WALK": "Olha de vez em quando", "MICRO_WAKE": "Olha de vez em quando",
+    "COMMUTE": "Olha com frequência", "HOME_RELAXING": "Olha com frequência", "UNKNOWN": "Olha com frequência"}
 FASES = {"fase menstrual": "Menstruada", "fase folicular": "Fase folicular",       # nomes do cycle.py, em minúscula
          "fase ovulatória / período fértil": "Período fértil", "fase lútea inicial": "Fase lútea",
          "fase pré-menstrual / tpm": "TPM"}
@@ -314,7 +322,8 @@ def status_view(snap: dict) -> dict:
     else:
         local = local.replace(" (", " · ").rstrip(")")
     disp = snap.get("disponivel") or ""
-    celular = next((txt for key, txt in TELEFONE if disp.startswith(key)), disp)
+    celular = CELULAR_POR_ATIVIDADE.get(snap.get("act_code") or "") or next(
+        (txt for key, txt in TELEFONE if disp.startswith(key)), disp)
     fase = snap.get("ciclo_fase") or ""
     return {"atividade": cap(snap.get("atividade") or ""), "local": local, "celular": celular,
             "dormindo": disp.startswith("Dormindo"),
@@ -353,6 +362,7 @@ def voz_painel(txt: str) -> str:
     txt = re.sub(r"\bno Patrick\b", "em você", txt)
     txt = re.sub(r"\b(?:pro|para o) Patrick\b", "pra você", txt)
     txt = _PATRICK_RE.sub("você", txt)
+    txt = re.sub(r"\bPatrick\b", "você", txt)                   # "(Patrick ficou de enviar…)"
     return cap(txt.replace("pix", "Pix"))
 
 
@@ -421,6 +431,12 @@ async def api_bastidores(request: web.Request) -> web.Response:
         from emotion import EmotionEngine
         from social_day import SocialDay
         status = status_view(hooks.status(now))
+        try:
+            from agenda import Agenda
+            status["card"] = Agenda(hooks.db).card(now)      # 26/09: layout D (etapa atual)
+        except Exception:
+            logger.exception("webapp.agenda.error")
+            status["card"] = None
         out = {"status": status, "emocao": emocao_view(EmotionEngine(hooks.db).panel(now), status["dormindo"]),
                "hoje": _today_events(hooks.db, now)}
         try:

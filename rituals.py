@@ -231,9 +231,36 @@ class Rituals:
         ritual = self._bom_dia(now, kind, activity) or self._boa_noite(now, kind)
         if ritual:
             return ritual
-        if kind == "WAKING" and "se arrumando" in activity:
-            self._banho_manha(now, day)
+        if "se arrumando" in activity:
+            self._banho_prep(now, day, kind)
         return self._cotidiano(now, day, previous, kind, activity)
+
+    def _banho_prep(self, now: datetime, day, kind: str) -> None:
+        """26/09: o banho do "Se arrumando" acontece quando o passo "Tomando banho" chega
+        (faculdade, rolê, encontro, freela, pra dormir), com a duração do passo."""
+        try:
+            from agenda import Agenda
+            agenda = Agenda(self.db)
+            etapa = agenda.agora(now)
+        except Exception:
+            etapa = None
+        if not etapa or etapa.tipo != "arrumando":
+            if kind in ("WAKING", "GETTING_READY"):
+                self._banho_manha(now, day)                # sem etapa na agenda: como antes
+            return
+        passo = agenda.passo_atual(etapa, now)
+        if not passo or passo.texto != "Tomando banho":
+            return
+        seguinte = next((p.inicio for p in etapa.passos if p.inicio > passo.inicio), etapa.fim)
+        minutos = max(8, min(30, int((seguinte - now).total_seconds() // 60) - 2))
+        if etapa.prep_tipo == "faculdade":
+            key = f"{PREFIX}{day.isoformat()}:cotidiano:banho_manha"     # o bom dia lê essa marca
+        else:
+            key = f"{PREFIX}{day.isoformat()}:prep:{etapa.chave}:banho"
+        if self._get(key) or self._transition_busy(now):
+            return
+        self._set(key, "quiet", now)
+        self.start_shower(now, minutos, told_patrick=False)
 
     def _banho_manha(self, now: datetime, day) -> None:
         """Fase D13/D4: se arrumando pra sair, ela toma banho (sem aviso: é rotina)."""

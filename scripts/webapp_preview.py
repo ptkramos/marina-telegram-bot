@@ -1,6 +1,8 @@
 """Pré-visualização local do Mini App (26/09): banco temporário, token de teste, sem o bot.
 
-Uso: python scripts/webapp_preview.py [porta]   → http://127.0.0.1:8799
+Uso: python scripts/webapp_preview.py [porta] [--db cópia.db] [--agora 2026-09-25T18:40]
+     → http://127.0.0.1:8799. Com --db, abre uma CÓPIA de um banco real (ex.: backup) sem semear nada;
+     com --agora, o app vê esse horário (pra conferir o card da aba Agora em cada etapa).
 A página recebe um initData assinado com o token de teste (window.__DEV_INIT), e só esta
 pré-visualização injeta isso: em produção o app só aceita o initData do Telegram.
 """
@@ -38,9 +40,16 @@ def signed_init() -> str:
     return urlencode(pairs)
 
 
-async def main(port: int) -> None:
-    db = DatabaseManager(Path(tempfile.mkdtemp()) / "preview.db")
-    seed_world_bible(db)
+async def main(port: int, banco: str = "", agora: str = "") -> None:
+    fixo = datetime.fromisoformat(agora) if agora else None
+    if banco:
+        import shutil
+        copia = Path(tempfile.mkdtemp()) / "preview.db"
+        shutil.copy(banco, copia)
+        db = DatabaseManager(copia)
+    else:
+        db = DatabaseManager(Path(tempfile.mkdtemp()) / "preview.db")
+        seed_world_bible(db)
 
     def status(now: datetime) -> dict:
         # mesmo formato do bot._status_snapshot (valores de exemplo)
@@ -48,6 +57,8 @@ async def main(port: int) -> None:
                 "disponivel": "Online, respondendo rápido", "ciclo_dia": 24, "ciclo_fase": "fase pré-menstrual / tpm",
                 "saude": [], "proximo": ("aula de Projeto", "segunda 14:00"), "planos": [("bar com o Theo e a Júlia", "sábado 20:30")]}
 
+    if banco:
+        return await _serve(db, port, status, fixo)
     # um sentimento e movimentações de exemplo pros Bastidores
     import financas
     from emotion import EmotionEngine
@@ -62,6 +73,10 @@ async def main(port: int) -> None:
         conn.execute("UPDATE social_relationships SET last_interaction_at=?, contact_frequency=4 WHERE character_key='bia_andrade'",
                      (agora.replace(hour=8, minute=15).isoformat(),))
 
+    await _serve(db, port, status, fixo)
+
+
+async def _serve(db, port: int, status, fixo) -> None:
     async def pix(valor: int, recado: str) -> dict:
         return {"ok": True}
 
@@ -69,8 +84,23 @@ async def main(port: int) -> None:
         print("comprovante:", url)
         return True
 
+    relogio = {"t": fixo}                      # /dev/agora?t=2026-09-25T21:20 troca o horário sem reiniciar
     hooks = webapp_server.Hooks(db=db, bot_token=TOKEN, allowed_user_id=USER, status=status, pix=pix,
-                                post_receipt=post_receipt, public_url=f"http://127.0.0.1:{port}")
+                                post_receipt=post_receipt, public_url=f"http://127.0.0.1:{port}",
+                                now=lambda: relogio["t"] or datetime.now())
+    original_make = webapp_server.make_app
+
+    async def dev_agora(request):
+        t = request.query.get("t", "")
+        relogio["t"] = datetime.fromisoformat(t) if t else None
+        return web.json_response({"agora": relogio["t"].isoformat() if relogio["t"] else "real"})
+
+    def make_app(h):
+        app = original_make(h)
+        app.router.add_get("/dev/agora", dev_agora)
+        return app
+
+    webapp_server.make_app = make_app
     original_index = webapp_server._index
 
     async def index(request):
@@ -90,4 +120,10 @@ async def main(port: int) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main(int(sys.argv[1]) if len(sys.argv) > 1 else 8799))
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("porta", nargs="?", type=int, default=8799)
+    ap.add_argument("--db", default="")
+    ap.add_argument("--agora", default="")
+    a = ap.parse_args()
+    asyncio.run(main(a.porta, a.db, a.agora))

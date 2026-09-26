@@ -246,12 +246,28 @@ const loaders = {
       const bar = (label, v, word, warm) => `<div class="bar-row"><span>${esc(label)}</span>
         <div class="bar${warm ? " warm" : ""}"><i style="width:${pct(v)}%"></i></div><span class="w">${esc(word || pct(v) + "%")}</span></div>`;
 
-      // Agora
-      $("ag-atividade").textContent = s.atividade;
-      $("ag-local").textContent = s.local;
-      $("ag-linhas").innerHTML = [linha("phone", "Celular", s.celular), s.ciclo && linha("droplet", "Ciclo", s.ciclo),
-        ...s.saude.map((x) => linha("thermometer-half", "Saúde", x)), s.proximo && linha("calendar-event", "Próximo", s.proximo),
-        ...s.planos.map((x) => linha("calendar3", "Plano", x))].filter(Boolean).join("");
+      // Agora — 26/09: layout D aprovado com o Patrick linha a linha (agenda.card no servidor)
+      const grade = (rows) => `<div class="ag-grade">${rows.map(([i, r, v]) =>
+        `<span class="li-ic">${ic(i)}</span><span class="ag-rot">${esc(r)}</span><span class="ag-val">${esc(v)}</span>`).join("")}</div>`;
+      const c = s.card;
+      if (c) {
+        const passos = (ps) => ps.length ? `<div class="ag-sub">${ps.map((p) => `<div class="ag-st ${p.estado}">
+          <span class="ag-dot"></span><span class="ag-tx">${esc(p.texto)}</span><span class="ag-vl">${p.valor ? brl0(p.valor) : ""}</span>
+          <span class="ag-hr">${esc(p.hora)}</span></div>`).join("")}</div>` : "";
+        $("ag-card").innerHTML = `<div class="ag-t">${esc(c.titulo)}</div><div class="ag-s">${esc(c.linha2)}</div>
+          <div class="ag-bar"><i style="width:${c.barra.pct}%"></i></div>
+          <div class="ag-bar-l"><span>${esc(c.barra.inicio)}</span><span>${esc(c.barra.meio)}</span><span>${esc(c.barra.fim)}</span></div>
+          <div class="ag-sep"></div>${grade(c.grade)}<div class="ag-sep"></div>
+          <div class="ag-linha">${c.linha.map((e) => `<div class="ag-st ${e.estado}"><span class="ag-dot"></span>
+            <span class="ag-tx">${esc(e.texto)}</span><span class="ag-vl">${e.valor ? brl0(e.valor) : ""}</span>
+            <span class="ag-hr">${esc(e.hora)}</span></div>${passos(e.passos)}`).join("")}</div>`;
+      } else {
+        // fora de uma etapa (em casa, dormindo…): a revisar com o Patrick (atividades em casa)
+        $("ag-card").innerHTML = `<div class="ag-t">${esc(s.atividade)}</div><div class="ag-s">${esc(s.local)}</div>
+          <div class="ag-sep"></div>${grade([["phone", "Celular", s.celular], s.ciclo && ["droplet", "Ciclo", s.ciclo],
+            ...s.saude.map((x) => ["thermometer-half", "Saúde", x]), s.proximo && ["calendar-event", "Próximo", s.proximo],
+            ...s.planos.map((x) => ["calendar3", "Plano", x])].filter(Boolean))}`;
+      }
       $("ag-hoje").innerHTML = d.hoje.length ? `<ol class="linha-tempo">${d.hoje.map((h) =>
         `<li><span class="lt-hora">${esc(h.at)}</span><span class="lt-ponto"></span><span class="lt-txt">${esc(cap(h.texto.replace(/\.$/, "")))}</span></li>`).join("")}</ol>`
         : vazio(s.dormindo ? "Ela ainda não acordou." : "Nada registrado hoje ainda.");
@@ -292,7 +308,7 @@ const loaders = {
         bloco("Rolando agora", m.rolando.map((r) => `<div class="item-m"><div>${esc(cap(r.titulo))}</div>${r.com.length ? `<div class="d">Com ${esc(r.com.join(", "))}</div>` : ""}</div>`))
         + bloco("Planos", m.planos.map((p) => `<div class="item-m dois-lados"><span>${esc(cap(p.descricao))}</span><span class="d">${esc(p.quando)}</span></div>`))
         + bloco("Lugares", m.lugares.map((l) => `<div class="item-m dois-lados"><span>${esc(l.nome)}</span><span class="d">${esc(l.quanto)}</span></div>`));
-    } catch (err) { failIn($("ag-linhas"), err); }
+    } catch (err) { failIn($("ag-card"), err); }
   },
 };
 
