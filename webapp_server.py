@@ -27,7 +27,9 @@ from aiohttp import web
 logger = logging.getLogger("WebApp")
 
 STATIC_DIR = Path(__file__).parent / "webapp"
-CARDAPIO_PATH = STATIC_DIR / "cardapio.json"
+CARDAPIO_PATH = STATIC_DIR / "cardapio.json"      # o de antes: ainda usado pelos pedidos dela (pedido_dela)
+CATALOGO_PATH = STATIC_DIR / "catalogo.json"     # 26/09: lojas reais (scripts/ifood_build.py)
+TAXA_SERVICO = 0.99                               # como no iFood de verdade (print do Patrick)
 INIT_DATA_MAX_AGE = 24 * 3600
 PIX_MAX = 5000
 
@@ -151,6 +153,30 @@ async def _index(request: web.Request) -> web.StreamResponse:
 # --------------------------------------------------------------------- dados --
 def load_cardapio() -> dict:
     return json.loads(CARDAPIO_PATH.read_text(encoding="utf-8"))
+
+
+_CATALOGO: dict = {}
+
+
+def load_catalogo() -> dict:
+    """Catálogo das lojas reais; recarrega se o arquivo mudou (deploy sem reiniciar)."""
+    mtime = CATALOGO_PATH.stat().st_mtime
+    if _CATALOGO.get("mtime") != mtime:
+        _CATALOGO.update(mtime=mtime, data=json.loads(CATALOGO_PATH.read_text(encoding="utf-8")))
+    return _CATALOGO["data"]
+
+
+def loja_aberta(loja: dict, now: datetime) -> bool:
+    abre, fecha = loja.get("abre", 0), loja.get("fecha", 24)
+    return abre <= now.hour < fecha
+
+
+def loja_resumo(loja: dict, now: datetime) -> dict:
+    """A linha da loja na lista do iFood (sem o cardápio)."""
+    out = {k: loja[k] for k in ("id", "nome", "tipo", "categoria", "logo", "capa", "km", "eta", "taxa", "nota",
+                                "avaliacoes", "minimo", "abre", "mais_pedido")}
+    out["aberta"] = loja_aberta(loja, now)
+    return out
 
 
 def _find_item(cardapio: dict, rest_id: str, item_id: str):
@@ -302,6 +328,74 @@ async def api_delivery(request: web.Request) -> web.Response:
                   "pedidos": history_view(delivery.history(hooks.db), now)})
 
 
+async def api_ifood(request: web.Request) -> web.Response:
+    """iFood do Patrick: lojas de Botafogo (entrega na Casa da Ma), pedido em andamento e histórico."""
+    hooks: Hooks = request.app["hooks"]
+    import delivery
+    now = hooks.now()
+    lojas = [loja_resumo(l, now) for l in load_catalogo()["lojas"] if l["area"] == "bf"]
+    return _json({"lojas": lojas, "pedido": order_view(delivery._load(hooks.db), now),
+                  "pedidos": history_view(delivery.history(hooks.db), now)})
+
+
+async def api_ifood_loja(request: web.Request) -> web.Response:
+    hooks: Hooks = request.app["hooks"]
+    loja = next((l for l in load_catalogo()["lojas"] if l["id"] == request.match_info["id"] and l["area"] == "bf"), None)
+    if not loja:
+        return _error("loja não encontrada", 404)
+    return _json(dict(loja, aberta=loja_aberta(loja, hooks.now())))
+
+
+def _sacola(loja: dict, itens: list) -> tuple[list[dict], float]:
+    """Itens da sacola conferidos com o catálogo: [(item, qtd, obs)], subtotal."""
+    por_id = {i["id"]: i for s in loja["secoes"] for i in s["itens"]}
+    linhas, subtotal = [], 0.0
+    for it in itens[:30]:
+        item = por_id.get(str(it.get("id", "")))
+        qtd = int(it.get("qtd") or 0)
+        if not item or not 1 <= qtd <= 20:
+            raise ValueError("item inválido")
+        linhas.append({"item": item, "qtd": qtd, "obs": str(it.get("obs") or "").strip()[:140]})
+        subtotal += item["preco"] * qtd
+    if not linhas:
+        raise ValueError("sacola vazia")
+    return linhas, round(subtotal, 2)
+
+
+async def _pedir_sacola(request: web.Request, hooks: "Hooks", body: dict) -> web.Response:
+    """26/09: pedido do iFood novo (loja real, sacola com vários itens)."""
+    import delivery
+    import recibo
+    now = hooks.now()
+    loja = next((l for l in load_catalogo()["lojas"] if l["id"] == str(body.get("loja")) and l["area"] == "bf"), None)
+    if not loja:
+        return _error("loja não encontrada", 400)
+    try:
+        linhas, subtotal = _sacola(loja, body.get("itens") or [])
+    except (ValueError, TypeError):
+        return _error("item não encontrado no cardápio", 400)
+    if not loja_aberta(loja, now):
+        return _error(f"Loja fechada • Abre às {loja['abre']:02d}:00", 409)
+    if subtotal < loja["minimo"]:
+        return _error(f"O pedido mínimo dessa loja é {_brl(loja['minimo'])}", 409)
+    total = round(subtotal + loja["taxa"] + TAXA_SERVICO, 2)
+    nomes = [f"{l['qtd']}x {l['item']['nome']}" if l["qtd"] > 1 else l["item"]["nome"] for l in linhas]
+    what = nomes[0] if len(nomes) == 1 else ", ".join(nomes[:-1]) + " e " + nomes[-1]
+    nota = " / ".join(l["obs"] for l in linhas if l["obs"])
+    come = loja["tipo"] == "restaurante" and loja["categoria"] not in ("Doces", "Sorvetes")
+    order = delivery.gift(hooks.db, what=what, restaurant=loja["nome"], price=round(total), eta_min=tuple(loja["eta"]),
+                          note=nota, now=now, eats=come)
+    if not order:
+        return _error("Você tem um pedido em andamento", 409)
+    jpeg = await asyncio.to_thread(recibo.pedido, [f"{l['qtd']}x {l['item']['nome']}" for l in linhas], loja["nome"],
+                                   total, datetime.fromisoformat(order["eta_at"]), nota, now)
+    return _json({"ok": True, "pedido": order_view(order, now), "comprovante": await _post_receipt(request, jpeg)})
+
+
+def _brl(v: float) -> str:
+    return "R$ " + f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
 async def api_delivery_pedir(request: web.Request) -> web.Response:
     hooks: Hooks = request.app["hooks"]
     import delivery
@@ -309,6 +403,8 @@ async def api_delivery_pedir(request: web.Request) -> web.Response:
         body = await request.json()
     except json.JSONDecodeError:
         return _error("pedido inválido", 400)
+    if body.get("loja"):
+        return await _pedir_sacola(request, hooks, body)
     rest, item = _find_item(load_cardapio(), str(body.get("restaurante", "")), str(body.get("item", "")))
     if not item:
         return _error("item não encontrado no cardápio", 400)
@@ -334,6 +430,8 @@ def make_app(hooks: Hooks) -> web.Application:
     app.router.add_post("/api/pix", api_pix)
     app.router.add_get("/recibo/{token}.jpg", _receipt_file)
     app.router.add_get("/api/delivery", api_delivery)
+    app.router.add_get("/api/ifood", api_ifood)
+    app.router.add_get("/api/ifood/loja/{id}", api_ifood_loja)
     app.router.add_post("/api/delivery", api_delivery_pedir)
     app.router.add_static("/static/", STATIC_DIR, show_index=False)
     return app

@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {"name": "miniapp", "runtimeExecutable": "venv/Scripts/python.exe", "runtimeArgs": ["scripts/webapp_preview.py", "8799"], "port": 8799}
+  ]
+}

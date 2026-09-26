@@ -179,6 +179,32 @@ class ApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(img.headers["Content-Type"], "image/jpeg")
         self.assertEqual((await self.client.get("/recibo/inventado.jpg")).status, 404)
 
+    async def test_ifood_lojas_reais_e_sacola(self):
+        """26/09: lojas reais de Botafogo, sacola com vários itens, mínimo e taxa de serviço."""
+        d = await (await self.client.get("/api/ifood", headers=self.h)).json()
+        self.assertGreater(len(d["lojas"]), 30)
+        self.assertNotIn("mcdonalds-cg", {l["id"] for l in d["lojas"]}, "Campo Grande é pro presente dela")
+        loja = await (await self.client.get("/api/ifood/loja/starbucks-bf", headers=self.h)).json()
+        latte = next(i for s in loja["secoes"] for i in s["itens"] if i["nome"] == "Latte Grande")
+        self.assertTrue(latte["foto"])
+        pouco = {"loja": "starbucks-bf", "itens": [{"id": "pao-de-queijo", "qtd": 1}]}
+        r = await self.client.post("/api/delivery", headers=self.h, json=pouco)
+        self.assertEqual(r.status, 409, "abaixo do pedido mínimo")
+        pedido = {"loja": "starbucks-bf", "itens": [{"id": latte["id"], "qtd": 2, "obs": "pra minha gatinha"},
+                                                    {"id": "pao-de-queijo", "qtd": 1}]}
+        r = await self.client.post("/api/delivery", headers=self.h, json=pedido)
+        self.assertEqual(r.status, 200)
+        order = delivery._load(self.db)
+        self.assertEqual(order["what"], "2x Latte Grande e Pão de queijo")
+        self.assertEqual(order["note"], "pra minha gatinha")
+        self.assertEqual(self.receipt.await_count, 1)
+        self.assertEqual((await self.client.get("/api/ifood/loja/mcdonalds-cg", headers=self.h)).status, 404)
+
+    def test_loja_fechada(self):
+        loja = {"abre": 11, "fecha": 23}
+        self.assertFalse(webapp_server.loja_aberta(loja, datetime(2026, 9, 26, 7, 30)))
+        self.assertTrue(webapp_server.loja_aberta(loja, datetime(2026, 9, 26, 12, 0)))
+
     async def test_delivery_pede_e_nao_deixa_pedir_em_dobro(self):
         d = await (await self.client.get("/api/delivery", headers=self.h)).json()
         rest = d["cardapio"]["restaurantes"][0]

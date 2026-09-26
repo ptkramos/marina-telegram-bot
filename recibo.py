@@ -127,8 +127,10 @@ def pedido(item: str, restaurante: str, total: float, previsao: datetime, observ
     c.text("Pedido confirmado", 34, bold=True, gap=8)
     c.text(f"{restaurante} · {_data(when)}", 22, color=GRAY)
     c.rule(20)
-    for line in textwrap.wrap(f"1x {item}", 34):
-        c.text(line, 28, bold=True, gap=4)
+    # 26/09: sacola com vários itens — item vira lista de linhas ("2x X-Tudo", "1x Guaravita")
+    for entry in ([f"1x {item}"] if isinstance(item, str) else item):
+        for line in textwrap.wrap(entry, 34):
+            c.text(line, 28, bold=True, gap=4)
     c.rule()
     c.field("Entrega em", endereco)
     c.field("Previsão de entrega", f"{previsao:%H:%M}")

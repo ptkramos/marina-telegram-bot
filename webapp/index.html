@@ -49,29 +49,93 @@
     <button class="primary nu" id="pix-confirmar">Confirmar</button>
   </section>
 
-  <section id="v-ifood" class="view" hidden>
-    <header class="brandbar ifood"><img src="/static/marcas/ifood.svg" alt="iFood" class="brandlogo white"></header>
-    <div class="endereco"><span class="muted small">Entregar em</span><span class="t">Casa da Ma</span></div>
-    <div id="ifood-andamento"></div>
-    <div id="ifood-lista" class="list"></div>
-    <div id="ifood-pedidos"></div>
+  <!-- 26/09: iFood com lojas reais, desenhado a partir dos prints do app real do Patrick -->
+  <section id="v-ifood" class="view if" hidden>
+    <div class="if-top">
+      <div class="if-end"><span class="muted small">Entregar em</span><span class="t">Casa da Ma</span></div>
+      <div class="if-busca"><input id="if-busca" type="search" placeholder="Buscar lojas e pratos"></div>
+      <div class="chips" id="if-chips"></div>
+    </div>
+    <div id="if-andamento"></div>
+    <h3 class="if-h" id="if-titulo">Lojas</h3>
+    <div id="if-lojas"></div>
+    <div id="if-pedidos"></div>
   </section>
 
-  <section id="v-loja" class="view" hidden>
-    <header class="top"><h1 id="loja-nome">…</h1><p class="sub" id="loja-sub"></p></header>
-    <div id="loja-itens" class="list"></div>
-    <div id="loja-resumo" hidden>
-      <h2>Resumo</h2>
-      <div class="card">
-        <div class="row2"><span id="res-item"></span><span id="res-preco"></span></div>
-        <div class="row2"><span class="muted">Taxa de entrega</span><span class="gratis">Grátis</span></div>
-        <div class="row2 total"><span>Total</span><span id="res-total"></span></div>
-      </div>
-      <textarea id="loja-obs" rows="2" maxlength="200" placeholder="Observações do pedido (opcional)"></textarea>
-      <div class="err" id="loja-err"></div>
-      <button class="primary ifood" id="loja-pedir">Fazer pedido</button>
+  <section id="v-loja" class="view if" hidden>
+    <div class="loja-capa" id="lj-capa"></div>
+    <div class="loja-card">
+      <img class="loja-logo" id="lj-logo" alt="">
+      <div class="loja-nome" id="lj-nome"></div>
+      <div class="d" id="lj-info"></div>
+      <div class="loja-linha" id="lj-nota"></div>
+      <div class="loja-linha" id="lj-entrega"></div>
+    </div>
+    <div class="secoes-tabs" id="lj-tabs"></div>
+    <div id="lj-destaques"></div>
+    <div id="lj-secoes"></div>
+    <div class="barra-sacola" id="lj-barra" hidden></div>
+  </section>
+
+  <section id="v-prato" class="view if" hidden>
+    <div class="prato-foto" id="pr-foto"></div>
+    <div class="prato-corpo">
+      <div class="prato-nome" id="pr-nome"></div>
+      <div class="d prato-desc" id="pr-desc"></div>
+      <div class="small" id="pr-serve"></div>
+      <div class="prato-preco" id="pr-preco"></div>
+      <div class="obs-head"><span>Alguma observação?</span><span class="d" id="pr-cont">0/140</span></div>
+      <textarea id="pr-obs" rows="2" maxlength="140" placeholder="Ex: tirar a cebola, maionese à parte etc."></textarea>
+    </div>
+    <div class="rodape-add">
+      <div class="stepper"><button id="pr-menos">−</button><span id="pr-qtd">1</span><button id="pr-mais">+</button></div>
+      <button class="btn-vermelho" id="pr-add"><span>Adicionar</span><span id="pr-total"></span></button>
     </div>
   </section>
+
+  <section id="v-sacola" class="view if" hidden>
+    <div class="folha-top"><span></span><b>SACOLA</b><button class="link-vermelho" id="sc-limpar">Limpar</button></div>
+    <div class="sc-loja"><img id="sc-logo" alt=""><div><div class="t" id="sc-nome"></div><button class="link-vermelho" data-go-back>Adicionar mais itens</button></div></div>
+    <div class="aviso-min" id="sc-min" hidden></div>
+    <h3 class="if-h">Itens adicionados</h3>
+    <div id="sc-itens"></div>
+    <h3 class="if-h">Peça também</h3>
+    <div class="carrossel" id="sc-tambem"></div>
+    <div class="rodape-total"><div><b id="sc-total"></b> <span class="small">• com entrega</span></div><button class="btn-vermelho" id="sc-continuar">Continuar</button></div>
+  </section>
+
+  <section id="v-entrega" class="view if" hidden>
+    <div class="folha-top"><span></span><b>SACOLA</b><span></span></div>
+    <h3 class="if-h">Entregar no portão do endereço</h3>
+    <div class="linha-end"><span class="pin"></span><div><div class="t">Casa da Ma</div><div class="d">Portaria · Seu Jorge recebe se ela não estiver</div></div></div>
+    <h3 class="if-h">Opções de entrega</h3>
+    <div class="opcao-entrega"><div><div class="t">Padrão</div><div class="d" id="en-eta"></div></div><div class="opcao-dir"><span id="en-taxa"></span><span class="radio on"></span></div></div>
+    <div class="rodape-total"><div><b id="en-total"></b> <span class="small">• com entrega</span></div><button class="btn-vermelho" data-go="pagamento">Continuar</button></div>
+  </section>
+
+  <section id="v-pagamento" class="view if" hidden>
+    <div class="folha-top"><span></span><b>SACOLA</b><span></span></div>
+    <h3 class="if-h">Pagamento pelo app</h3>
+    <div class="ifood-pago"><img src="/static/marcas/ifood.svg" alt="" class="mini-if"><span class="pago">Pago</span>
+      <div class="pix-linha"><img src="/static/marcas/pix-simbolo.png" alt="" class="pixicon"><span>Pix</span><span class="muted">›</span></div></div>
+    <h3 class="if-h">Resumo de valores</h3>
+    <div class="resumo" id="pg-resumo"></div>
+    <div class="err" id="pg-err"></div>
+    <div class="rodape-total so-botao"><button class="btn-vermelho largo" id="pg-revisar"></button></div>
+  </section>
+
+  <div class="sheet-fundo" id="rv-fundo" hidden>
+    <div class="sheet">
+      <div class="sheet-alca"></div>
+      <div class="sheet-titulo">Revise o seu pedido</div>
+      <div class="rv-linha"><span class="ic-moto"></span><div><div class="t">Entrega hoje</div><div class="d" id="rv-eta"></div></div></div>
+      <div class="rv-linha"><span class="pin"></span><div><div class="t">No portão: Casa da Ma</div><div class="d">Portaria</div></div></div>
+      <div class="rv-linha"><img src="/static/marcas/pix-simbolo.png" alt="" class="pixicon grande"><div class="rv-flex"><div><div class="t">Pagamento pelo app</div><div class="d">Pix</div></div><span class="d" id="rv-total"></span></div></div>
+      <div class="err" id="rv-err"></div>
+      <button class="btn-vermelho largo" id="rv-fazer">Fazer pedido</button>
+      <button class="link-vermelho centro" id="rv-alterar">Alterar pedido</button>
+    </div>
+  </div>
 
   <section id="v-bastidores" class="view" hidden>
     <header class="top"><h1>Bastidores</h1><p class="sub">Só você vê isso</p></header>
