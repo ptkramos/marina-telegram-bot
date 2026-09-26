@@ -57,8 +57,8 @@ class CasualTwoBeatsTests(unittest.TestCase):
         baloes = segment(fala, self.policy)
         self.assertGreater(len(baloes), 1)
         self.assertTrue(all(not b.endswith(",") and len(b) >= 10 for b in baloes), baloes)
-        junto = " ".join(baloes).replace(",", "").split()
-        self.assertEqual(junto, fala.replace(",", "").split())
+        tira = lambda t: t.replace(",", "").replace(".", "")      # 26/09: ponto entre frases vira corte
+        self.assertEqual(tira(" ".join(baloes)).split(), tira(fala).split())
 
     def test_fala_curta_continua_num_balao(self):
         self.assertEqual(segment("Oi amor! Tudo bem?", self.policy), ["Oi amor! Tudo bem?"])
@@ -132,3 +132,27 @@ class TrailingGibberishTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PontoNoMeioTests(unittest.TestCase):
+    """26/09 (Patrick): "Meu dia começou perfeito, seu lindo. Te amo demais" saiu num balão só."""
+
+    def setUp(self):
+        self.policy = select_policy("oi amor")
+
+    def test_ponto_entre_frases_vira_balao(self):
+        self.assertEqual(segment("Meu dia começou perfeito, seu lindo. Te amo demais", self.policy),
+                         ["Meu dia começou perfeito, seu lindo", "Te amo demais"])
+
+    def test_pedaco_curto_vira_virgula(self):
+        self.assertEqual(segment("Ah. Tá bom então", self.policy), ["Ah, tá bom então"])
+
+    def test_nao_mexe_no_que_nao_e_fim_de_frase(self):
+        for fala in ("Falei com o Dr. Paulo hoje", "Hmm... sei lá", "Custou R$ 1.500 viu", "Oi amor! Tudo bem?"):
+            with self.subTest(fala=fala):
+                self.assertEqual(segment(fala, self.policy), [fala])
+
+    def test_nenhum_balao_com_ponto_no_meio(self):
+        fala = "Aaaaah amor 😭\nTô comendo agora e vc me mandou cappuccino de surpresa???\nMeu dia começou perfeito. Te amo demais"
+        for b in segment(fala, self.policy):
+            self.assertNotRegex(b, r"\w\.\s+\w", b)

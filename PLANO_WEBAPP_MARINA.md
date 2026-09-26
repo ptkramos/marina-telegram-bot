@@ -147,6 +147,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 - **Dinheiro:** saldo grande, "Deve a você", "Precisa de R$ X"; extrato em voz de painel ("Seu Pix · pro açaí", "Seu presente: …", "Delivery pra você: …", "Celular e streamings"). Aqui entram o banco dela e o iFood da Ma.
 - **Mundo:** o texto colado do `/mundo` ("Henrique Salles — último contato sem contato ainda; 0 nos últimos 30 dias") virou cartões: iniciais, nome ("Bia Andrade"), quem é, curto (`social_day.QUEM`: pai, melhor amiga, porteiro…), "hoje, 08:15" / "Sem contato ainda" e "4 vezes no mês" (o `weekly` do cânone não é contagem e não aparece). Rolando agora, Planos e Lugares em listas.
 - **Código:** `webapp_server.status_view`, `emocao_view`, `voz_painel`, `voz_dela`, `mov_desc`; `SocialDay.world_panel`. O `/status`, `/emocao` e `/mundo` do chat não mudaram. Testes: `tests/test_bastidores_textos.py` (11).
+- **Seu Jorge (26/09):** pegar o delivery na portaria agora conta como contato com ele (`delivery._contato_portaria`); antes o Mundo mostrava "Sem contato ainda" logo depois de ela pegar o presente.
 - **Visto nos dados reais (26/09, 08:48):** depois do reset, todo mundo ainda "sem contato" e "Hoje" vazio — ela estava dormindo (sábado). Conferir de tarde se o pai e as amigas aparecem com contato.
 
 ## 7. Próximas ideias (Patrick, 26/09)

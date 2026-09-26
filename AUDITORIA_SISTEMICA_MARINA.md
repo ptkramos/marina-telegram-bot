@@ -1433,6 +1433,8 @@ Conversa de verdade com o Patrick doente, o Mini App novo e uma cena de sexting 
 | 25/09 17:06 | Ela ficou quieta 12 min | Retrato do mundo "tomando banho" seguiu valendo e adiou pra 17:36 | Retrato de banho sem banho = desconhecido; adiadas pelo banho saem quando ele acaba (`6ae9bfa`) |
 | 25/09 17:2x | "Chuva de mensagens" depois de já ter respondido | 3–5 ideias por turno em conversa casual | Turno curtinho (65% casual, 40% normal) + corte depois do 1º balão com conteúdo (`484d03e`) |
 | 26/09 02:45 | "Teve alguma novidade sobre sexta?" depois do boa-noite das 00:40 | Iniciativa só olhava a janela fixa 03h30–08h | Plano de sono manda: deitada não puxa assunto (`621e847`) |
+| 26/09 09:04 | "Meu dia começou perfeito, seu lindo. Te amo demais": ponto no meio do balão | O corte de balão só separava frases quando o balão passava do alvo (32–60 caracteres); esse tinha 50 | Ponto entre frases sempre vira corte; pedaço curto demais vira vírgula ("Ah, tá bom"); "!" e "?" no meio continuam; o resto do teto de 10 balões junta com quebra de linha |
+| 26/09 09:04 | Ela pegou o presente com o Seu Jorge, mas o Mundo dizia "sem contato" | A retirada na portaria gravava o evento com ele como participante, mas não chamava `SocialWorld.record` | `delivery._contato_portaria`: presente dele e delivery dela contam como contato com o Seu Jorge |
 
 **Reset do soak (26/09, 04:10, pedido do Patrick).** As mensagens da madrugada deixaram lixo na memória. Antes do reset:
 - o `reset_soak_learning` apagava a tabela `feedbacks` (anotação dele pra nós, ela não lê) e deixava `emotion_episodes` (116) e as marcas `facul:`/`sono:` do `world_bootstrap`. Corrigido (`7a28c14`, `tests/test_reset_soak.py`);
@@ -1452,6 +1454,8 @@ Conversa de verdade com o Patrick doente, o Mini App novo e uma cena de sexting 
 - comprovante do iFood em colunas (quantidade, nome recuado, preço à direita, subtotal e taxas); Pix com valores todos em negrito.
 
 Detalhes no PLANO_WEBAPP ("Abas do iFood e padrão visual").
+
+**Conversa e logs de 26/09 (manhã), revisados a pedido do Patrick:** 16 mensagens; nenhum erro no log. Só avisos de robôs procurando `.env` no endereço do Mini App (barrados) e um ciclo de 15 s pulado enquanto ela gerava. Fluxo certo: as mensagens das 07:21 esperaram ela acordar, às 09:04 ela pegou o presente na portaria e reagiu, e o bom-dia foi respondido junto. Dois achados, na tabela acima.
 
 **Bastidores revisados (26/09, manhã, pendência 14).** Tirei os textos reais da VPS (só leitura) e listei o que estava ruim: nome interno do lugar e código da atividade, emoji herdado do `/status`, "exausta" enquanto ela dormia, a frase "dormiu 8,7 h · TPM · última vez há 30 h" sem rótulo, "saudade com Patrick" (preposição errada e ele em 3ª pessoa) e o `/mundo` colado ("último contato sem contato ainda; 0 nos últimos 30 dias", com o `weekly` do cânone aparecendo como número). O Patrick escolheu abas e voz híbrida. Tudo refeito na camada do Mini App, sem mexer nos comandos; detalhes no PLANO_WEBAPP ("Bastidores em abas").
 

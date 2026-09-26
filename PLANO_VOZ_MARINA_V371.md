@@ -13,7 +13,7 @@ detalhado de cada entrega, na ordem em que aconteceram.
 
 ## 0. Painel de status — atualizado em 2026-09-26 (manhã)
 
-Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 1.011 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
+Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 1.016 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
 
 Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
@@ -1136,6 +1136,7 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
 - **Planos informais** (`soften_times`): "hj à noite com a galera", não "às 19h30 no Quartinho com o Theo e a Júlia". Hora só se ele perguntar, e nunca em confirmação de lembrete.
 - **Turno curtinho** (`short_turn`/`keep_short`): 65% dos turnos casuais e 40% dos normais são reação + uma frase de 2–6 palavras; o resto do texto sai. Nunca quando ele pede conteúdo ("me conta", "por quê") ou manda várias coisas, nem no sexting, foto, áudio ou lembrete. "Chuva de mensagens" é conteúdo a mais, não número de balões.
 - **Áudio** (`expand_for_speech` no `voice_engine.synthesize`): "hj" volta a "hoje" antes da voz.
+- **Ponto no meio do balão (26/09)** (`response_rhythm._split_periods`): ponto entre frases sempre vira corte de balão, mesmo em balão curto; pedaço menor que 4 letras vira vírgula; "Dr.", "..." e "1.500" ficam.
 
 **Mundo**
 - **Pix prometido** (`financas.promised_pix_loop`): o Pix do combinado é pagamento e fecha o open loop.

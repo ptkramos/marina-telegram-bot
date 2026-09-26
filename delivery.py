@@ -60,6 +60,16 @@ def _remember(db, data: dict) -> None:
     db.set_estado_relacional(HIST_KEY, json.dumps(hist[:HIST_MAX], ensure_ascii=False))
 
 
+def _contato_portaria(db, key: str, at: datetime) -> None:
+    """26/09 (Patrick): pegar com o Seu Jorge é contato com ele — o Mundo mostrava 'sem contato'."""
+    try:
+        from social_world import SocialWorld
+        SocialWorld(db).record(f"portaria:{key}", occurred_at=at.isoformat(), character_key="jorge_almeida",
+                               valence=0.2, meaningful=True)
+    except Exception:
+        logger.warning("delivery.portaria.contato_falhou key=%s", key, exc_info=True)
+
+
 def _what(text: str, fallback: str = "o pedido") -> str:
     m = FOOD_RE.search(text or "")
     return m.group(1).lower() if m else fallback
@@ -106,6 +116,7 @@ def materialize(db, now: datetime) -> bool:
              f"O {what} do delivery chegou (o Seu Jorge interfonou) e ela foi comer.",
              json.dumps(["marina", "jorge_almeida"]), now.isoformat()))
         conn.commit()
+    _contato_portaria(db, f"delivery:{cur['ordered_at']}", eta)
     end = eta + timedelta(minutes=random.Random(cur["ordered_at"]).randint(*EAT_MIN))
     if end > now:
         raw = db.get_estado_relacional().get("pending_transition_json")
@@ -201,6 +212,7 @@ def gift_tick(db, now: datetime, *, can_receive: bool, why_not: str = "", ate_re
             (key, at.isoformat(), "meal" if eats_now else "gift", summary,
              json.dumps(["marina", "patrick", "jorge_almeida"]), now.isoformat()))
         conn.commit()
+    _contato_portaria(db, f"presente:{cur['ordered_at']}", at)
     end = at + timedelta(minutes=random.Random(cur["ordered_at"]).randint(*EAT_MIN))
     if eats_now and end > now and not transition_busy:
         db.set_estado_relacional("pending_transition_json", json.dumps({

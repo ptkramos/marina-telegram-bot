@@ -29,7 +29,8 @@ class TestResponseRhythm(unittest.TestCase):
         parts = segment(text,select_policy('oi'))
         self.assertGreater(len(parts), 2)
         self.assertLessEqual(len(parts), 10)
-        self.assertEqual(' '.join(parts), text.strip())
+        self.assertEqual(' '.join(parts).replace('.', '').split(), text.replace('.', '').split())
+        self.assertFalse(any('frase Uma' in p for p in parts), '26/09: frases nunca coladas sem ponto')
         # Short merged line stays single bubble.
         self.assertEqual(segment('amor\nkkkk',select_policy('oi')),['amor\nkkkk'])
         self.assertEqual(segment('kkkk',select_policy('oi')),['kkkk'])

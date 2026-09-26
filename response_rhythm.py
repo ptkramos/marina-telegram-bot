@@ -542,11 +542,33 @@ def _clause_cut(bubble, target):
     return best
 
 
+# 26/09 (Patrick): ponto final no meio do balão não existe no chat de gente — "Meu dia começou
+# perfeito, seu lindo. Te amo demais" (50 caracteres, abaixo do alvo) saiu inteiro. O ponto entre
+# frases vira corte de balão; "!" e "?" no meio continuam ("Oi amor! Tudo bem?").
+_MID_PERIOD_RE = re.compile(r"(?<![.\s])(?<!\b[Ss]r)(?<!\b[Ss]ra)(?<!\b[Dd]r)(?<!\b[Dd]ra)(?<!\bex)\.\s+(?=\S)")
+_SHORT_LEAD = 4          # "Ah. Tá" → "Ah, tá" (pedaço curto demais pra ser balão)
+
+
+def _split_periods(bubble):
+    pieces, rest = [], bubble
+    while True:
+        m = _MID_PERIOD_RE.search(rest)
+        if not m:
+            break
+        head, tail = rest[:m.start()].strip(), rest[m.end():]
+        if len(head) < _SHORT_LEAD or not any(c.isalpha() for c in tail):
+            rest = f"{head}, {tail[:1].lower()}{tail[1:]}" if any(c.isalpha() for c in tail) else rest[:m.start()] + ' ' + tail
+            continue
+        pieces.append(head)
+        rest = tail
+    return pieces + [rest.strip()]
+
+
 def _split_clauses(bubbles, policy):
     """Quebra cada balão comprido em pedaços de pensamento, como gente no chat."""
     lo, hi = CLAUSE_TARGET.get(getattr(policy, 'mode', ''), CLAUSE_TARGET_DEFAULT)
     out = []
-    for bubble in bubbles:
+    for bubble in [p for b in bubbles for p in _split_periods(b)]:
         m = _LAUGH_LEAD_RE.match(bubble)
         if m and len(bubble) - m.end() >= CLAUSE_MIN:
             out.append(m.group(1))                 # "kkkk" sai sozinho, como nos prints
@@ -594,14 +616,14 @@ def segment(text, policy):
         bubbles, reason = _semantic_split(paragraphs[0], policy)
 
     clauses = _split_clauses(bubbles, policy)
-    if len(clauses) > len(bubbles):
+    if clauses != bubbles:
         bubbles, reason = clauses, f'{reason}+clauses'
 
     # Anti-runaway sanity ceiling. Fold the tail into the last kept bubble so
     # nothing is lost.
     if len(bubbles) > _SANITY_CEILING:
         head = bubbles[: _SANITY_CEILING - 1]
-        tail = ' '.join(bubbles[_SANITY_CEILING - 1:])
+        tail = '\n'.join(bubbles[_SANITY_CEILING - 1:])     # 26/09: sem ponto, espaço colava as frases
         bubbles = head + [tail]
         reason = f'{reason}+sanity_fold'
 
