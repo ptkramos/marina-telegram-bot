@@ -11,81 +11,45 @@ Uso: python scripts/ifood_lojas.py  →  webapp/lojas.json + webapp/lojas/<id>.p
 """
 from __future__ import annotations
 
+# 26/09 (Patrick): loja de bairro sem logo fácil sai. Ficaram só as com logo real.
+# logo: "wd:" Wikimedia · "site:" ícone do site · "print:" recortado dos prints do iFood do Patrick
 LOJAS = [
     # ------------------------------------------------------------ Botafogo (ela)
-    # açaí, sorvete, doces
-    ("estacao-acai", "Estação do Açaí", "Estação do Açaí", "bf", "restaurante", "Açaí", ""),
-    ("bacio-di-latte", "Bacio di Latte", "Bacio di Latte", "bf", "restaurante", "Sorvetes", "site:https://baciodilatte.com.br/"),
-    ("officina-gelato", "Officina del Gelato", "Officina del Gelato", "bf", "restaurante", "Sorvetes", "site:https://www.officinagelato.com/"),
-    ("milky-moo", "Milky Moo", "Milky Moo", "bf", "restaurante", "Doces", "site:https://www.milkymoo.com.br"),
     ("kopenhagen", "Kopenhagen", "Kopenhagen", "bf", "restaurante", "Doces", "wd:Logotipo da Kopenhagen.svg"),
-    ("cake-and-co", "Cake & Co.", "Cake & Co.", "bf", "restaurante", "Doces", ""),
-    # japonesa
-    ("gurume", "Gurumê", "Gurumê", "bf", "restaurante", "Japonesa", ""),
-    ("go-sushi", "Go Sushi", "Go Sushi", "bf", "restaurante", "Japonesa", ""),
-    ("mizu", "Mizu", "Mizu", "bf", "restaurante", "Japonesa", "site:http://www.restaurantemizu.com.br/"),
-    # lanches
-    ("hells-burguer", "Hell's Burguer", "Hell's Burguer", "bf", "restaurante", "Lanches", "site:http://www.hellsburguer82.com.br/"),
-    ("b-de-burguer", "B de Burguer", "B de Burguer", "bf", "restaurante", "Lanches", ""),
+    ("megamatte-bf", "Megamatte", "Megamatte", "bf", "restaurante", "Açaí e sucos", "site:https://megamatte.com.br/"),
+    ("go-sushi", "Go Sushi", "Go Sushi", "bf", "restaurante", "Japonesa", "site:https://gosushi.com.br/"),
     ("bobs-bf", "Bob's", "Bob's", "bf", "restaurante", "Lanches", "wd:Logotipo do Bob's.svg"),
     ("mcdonalds-bf", "McDonald's", "McDonald's", "bf", "restaurante", "Lanches", "wd:McDonald's Golden Arches.svg"),
     ("burger-king-bf", "Burger King", "Burger King", "bf", "restaurante", "Lanches", "wd:Burger King 2020.svg"),
-    # pizza e italiana
-    ("ferro-e-farinha", "Ferro e Farinha", "Ferro e Farinha", "bf", "restaurante", "Pizza", ""),
-    ("mamma-jamma", "Mamma Jamma", "Mamma Jamma", "bf", "restaurante", "Pizza", ""),
+    ("ferro-e-farinha", "Ferro e Farinha", "Ferro e Farinha", "bf", "restaurante", "Pizza", "site:https://ferroefarinha.com.br/"),
+    ("mamma-jamma", "Mamma Jamma", "Mamma Jamma", "bf", "restaurante", "Pizza", "site:https://mammajamma.com.br/"),
     ("dominos-bf", "Domino's Pizza", "Domino's", "bf", "restaurante", "Pizza", "wd:Domino's 2025.svg"),
     ("spoleto-bf", "Spoleto", "Spoleto", "bf", "restaurante", "Italiana", "wd:Logotipo do Spoleto.svg"),
-    ("tutto-nhoque", "Tutto Nhoque", "Tutto Nhoque", "bf", "restaurante", "Italiana", ""),
-    # brasileira
-    ("gula-gula", "Gula Gula", "Gula Gula", "bf", "restaurante", "Brasileira", "site:https://gulaguladelivery.com.br/restaurantes"),
-    ("joaquina", "Joaquina", "Joaquina", "bf", "restaurante", "Brasileira", ""),
-    ("dois-irmaos-caldos", "Dois Irmãos Caldos e Sopas", "Dois Irmãos Caldos e Sopas", "bf", "restaurante", "Brasileira", ""),
-    ("galeteria-botafogo", "Galeteria Botafogo", "Galeteria e Restaurante Botafogo", "bf", "restaurante", "Brasileira", ""),
-    # saudável
-    ("refeitorio-organico", "Refeitório Orgânico", "Refeitório Orgânico", "bf", "restaurante", "Saudável", "site:http://refeitorioorganico.com.br/"),
-    ("uni-poke", "Uni", "Uni", "bf", "restaurante", "Saudável", ""),
-    ("vegan-vegan", "Vegan Vegan", "Vegan Vegan", "bf", "restaurante", "Saudável", "site:https://veganvegan.com.br/"),
-    ("natural-e-sabor", "Natural & Sabor", "Natural & Sabor", "bf", "restaurante", "Saudável", ""),
-    # outras cozinhas
-    ("ben-ali", "Ben Ali", "Ben Ali", "bf", "restaurante", "Árabe", ""),
-    ("tacos-e-wraps", "Tacos & Wraps", "Tacos & Wraps", "bf", "restaurante", "Mexicana", ""),
-    ("mr-wong", "Mr. Wong", "Mr. Wong", "bf", "restaurante", "Chinesa", ""),
-    ("china-in-box-bf", "China in Box", "China in Box", "bf", "restaurante", "Chinesa", "site:https://www.chinainbox.com.br/"),
-    # cafés e sucos
-    ("starbucks-bf", "Starbucks", "Starbucks", "bf", "restaurante", "Cafés", "wd:Starbucks Corporation Logo 2011.svg"),
-    ("the-slow-bakery", "The Slow Bakery", "The Slow Bakery", "bf", "restaurante", "Cafés", ""),
+    ("tutto-nhoque", "Tutto Nhoque", "Tutto Nhoque", "bf", "restaurante", "Italiana", "site:https://tuttonhoque.com.br/"),
+    ("gula-gula", "Gula Gula", "Gula Gula", "bf", "restaurante", "Brasileira", "site:https://gulagula.com.br/"),
+    ("joaquina", "Joaquina", "Joaquina", "bf", "restaurante", "Brasileira", "site:https://joaquinarestaurante.com.br/"),
+    ("starbucks-bf", "Starbucks", "Starbucks", "bf", "restaurante", "Cafés", "site:https://www.starbucks.com/"),
     ("rei-do-mate", "Rei do Mate", "Rei do Mate", "bf", "restaurante", "Cafés", "wd:Logotipo da Rei do Mate.svg"),
-    ("praia-sucos", "Praia Sucos", "Praia Sucos", "bf", "restaurante", "Sucos", ""),
-    ("megamatte-bf", "Megamatte", "Megamatte", "bf", "restaurante", "Sucos", "site:https://megamatte.com.br/"),
-    # farmácias
-    ("droga-raia-bf", "Droga Raia", "Droga Raia", "bf", "farmacia", "Farmácia", "site:https://www.drogaraia.com.br/"),
     ("pacheco-bf", "Drogarias Pacheco", "Pacheco", "bf", "farmacia", "Farmácia", "wd:Logotipo da Drogarias Pacheco.svg"),
-    ("venancio-bf", "Drogaria Venâncio", "Venâncio", "bf", "farmacia", "Farmácia", ""),
-    ("drogasmil-bf", "Drogasmil", "Drogasmil", "bf", "farmacia", "Farmácia", ""),
-    # mercados
-    ("zona-sul", "Zona Sul", "Zona Sul", "bf", "mercado", "Mercado", "site:https://www.zonasul.com.br/"),
-    ("hortifruti-bf", "Hortifruti", "Hortifruti", "bf", "mercado", "Mercado", "site:https://www.hortifruti.com.br/"),
-    ("pao-de-acucar-bf", "Pão de Açúcar", "Pão de Açúcar", "bf", "mercado", "Mercado", "site:https://www.paodeacucar.com/"),
-    ("mundial-bf", "Supermercados Mundial", "Mundial", "bf", "mercado", "Mercado", ""),
+    ("venancio-bf", "Drogaria Venâncio", "Venâncio", "bf", "farmacia", "Farmácia", "print:"),
+    ("drogasmil-bf", "Drogasmil", "Drogasmil", "bf", "farmacia", "Farmácia", "print:"),
+    ("cristal-bf", "Drogaria Cristal", "Cristal", "bf", "farmacia", "Farmácia", "print:"),
+    ("supermarket-bf", "Supermarket", "Supermarket Botafogo", "bf", "mercado", "Mercado", "print:"),
     # ------------------------------------------------------- Campo Grande (Patrick)
     ("mcdonalds-cg", "McDonald's", "McDonald's", "cg", "restaurante", "Lanches", "wd:McDonald's Golden Arches.svg"),
     ("bobs-cg", "Bob's", "Bob's", "cg", "restaurante", "Lanches", "wd:Logotipo do Bob's.svg"),
     ("burger-king-cg", "Burger King", "Burger King", "cg", "restaurante", "Lanches", "wd:Burger King 2020.svg"),
-    ("fabuloso-burger", "Fabuloso Burger", "Fabuloso Burger", "cg", "restaurante", "Lanches", ""),
     ("habibs-cg", "Habib's", "Habib's", "cg", "restaurante", "Árabe", "wd:Logotipo do Habib's.svg"),
     ("dominos-cg", "Domino's Pizza", "Domino's", "cg", "restaurante", "Pizza", "wd:Domino's 2025.svg"),
-    ("parme-cg", "Parmê", "Parmê", "cg", "restaurante", "Italiana", ""),
     ("spoleto-cg", "Spoleto", "Spoleto", "cg", "restaurante", "Italiana", "wd:Logotipo do Spoleto.svg"),
-    ("makimono-sushi", "Makimono Sushi", "Makimono Sushi", "cg", "restaurante", "Japonesa", ""),
     ("giraffas-cg", "Giraffas", "Giraffa's", "cg", "restaurante", "Brasileira", "site:https://www.giraffas.com.br/"),
-    ("casa-do-frango", "Casa do Frango", "Casa do Frango", "cg", "restaurante", "Brasileira", ""),
-    ("rei-da-picanha", "Rei da Picanha", "Rei da Picanha", "cg", "restaurante", "Brasileira", ""),
-    ("acai-grumari", "Açaí Grumari", "Açaí Grumari", "cg", "restaurante", "Açaí", ""),
-    ("craque-do-pao", "Craque do Pão", "Craque do Pão", "cg", "restaurante", "Cafés", "site:https://craquedopao.com.br/"),
     ("pacheco-cg", "Drogarias Pacheco", "Pacheco", "cg", "farmacia", "Farmácia", "wd:Logotipo da Drogarias Pacheco.svg"),
-    ("venancio-cg", "Drogaria Venâncio", "Drogaria Venâncio", "cg", "farmacia", "Farmácia", ""),
+    ("venancio-cg", "Drogaria Venâncio", "Drogaria Venâncio", "cg", "farmacia", "Farmácia", "print:"),
+    ("max-cg", "Drogarias Max", "Drogarias Max", "cg", "farmacia", "Farmácia", "print:"),
     ("guanabara-cg", "Supermercados Guanabara", "Supermercado Guanabara", "cg", "mercado", "Mercado", "site:https://www.supermercadosguanabara.com.br/"),
     ("assai-cg", "Assaí Atacadista", "Assaí Atacadista", "cg", "mercado", "Mercado", "wd:Assaí Atacadista logo 2024.svg"),
+    ("carrefour-cg", "Carrefour", "Carrefour", "cg", "mercado", "Mercado", "print:"),
+    ("supermarket-cg", "Supermarket", "Supermarket", "cg", "mercado", "Mercado", "print:"),
 ]
 
 

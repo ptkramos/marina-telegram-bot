@@ -107,7 +107,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 | 2 Banco | ✅ 25/09 |
 | 3 Delivery pra ela | ✅ 25/09 |
 | 4 Presentes, datas, aposentar comandos | ⬜ |
-| iFood realista (layout do app real + cardápio com lojas reais) | 🟡 26/09: 62 lojas reais escolhidas (`scripts/ifood_lojas.py`), 27 logos; faltam logos de bairro, cardápios, fotos, layout, Bastidores |
+| iFood realista (layout do app real + cardápio com lojas reais) | 🟡 26/09: **34 lojas reais, todas com logo real** (20 Botafogo, 14 Campo Grande; loja de bairro sem logo fácil saiu, decisão do Patrick). Logos do Wikimedia, dos sites e recortados dos prints dele. Faltam cardápios, fotos, layout, Bastidores |
 | 5 Redes sociais (Instagram e X) | 💡 ideia 26/09 |
 
 ### Como ficou (25/09)
