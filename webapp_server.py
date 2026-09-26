@@ -292,7 +292,7 @@ CELULAR_POR_ATIVIDADE = {
     "MEAL": "Olha de vez em quando", "SOCIAL": "Olha de vez em quando", "GETTING_READY": "Olha de vez em quando",
     "WAKING": "Olha de vez em quando", "PET_WALK": "Olha de vez em quando", "MICRO_WAKE": "Olha de vez em quando",
     "COMMUTE": "Olha com frequência", "HOME_RELAXING": "Olha com frequência", "UNKNOWN": "Olha com frequência",
-    "HOME_BUSY": "Olha de vez em quando", "SOLO": "Olha depois"}
+    "HOME_BUSY": "Olha de vez em quando", "SOLO": "Olha depois", "OUT_SOLO": "Olha com frequência"}
 FASES = {"fase menstrual": "Menstruada", "fase folicular": "Fase folicular",       # nomes do cycle.py, em minúscula
          "fase ovulatória / período fértil": "Período fértil", "fase lútea inicial": "Fase lútea",
          "fase pré-menstrual / tpm": "TPM"}

@@ -23,6 +23,7 @@ class AcademiaTest(unittest.TestCase):
         seed_world_bible(self.db)
         for alvo, kw in (("academia.Academia.plano", {"side_effect": lambda day, now=None: TREINO if day == DIA.date() else None}),
                          ("academic_life.AcademicLife.blocks_on", {"return_value": []}),
+                         ("academia.PasseioMilo.plano", {"return_value": None}),
                          ("meals.Meals.day_plan", {"return_value": []})):
             p = patch(alvo, **kw)
             p.start()

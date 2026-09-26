@@ -23,8 +23,11 @@ Decisões do Patrick (24/09, revisão da tarde):
 from __future__ import annotations
 
 import json
+import logging
 import random
 from datetime import date, datetime, time, timedelta
+
+logger = logging.getLogger(__name__)
 
 LAUNDRY_DAYS_PER_WEEK = 2
 LAUNDRY_FORGOT_CHANCE = 0.15
@@ -153,6 +156,13 @@ class Casa:
         if floor is None:
             return 0
         created = 0
+        for item in self.day_plan(now.date()):             # 26/09: mercado é item da agenda (preparo, ida, volta)
+            if item.get("state") and item["at"] >= max(now, floor) and item["at"] - now <= timedelta(hours=3):
+                try:
+                    from vontade import Vontade
+                    Vontade(self.db).mercado_semana(item["at"], item.get("minutes", 50), now)
+                except Exception:
+                    logger.exception("casa.mercado.agenda")
         for day in (now.date() - timedelta(days=1), now.date()):
             for item in self.day_plan(day):
                 if item["at"] > now or item["at"] < floor:
@@ -168,10 +178,4 @@ class Casa:
                     conn.commit()
                     fresh = bool(cur.rowcount)
                 created += int(fresh)
-                end = item["at"] + timedelta(minutes=item.get("minutes", 0))
-                if fresh and item.get("state") and now < end and not meals._transition_busy(now):
-                    payload = {"routine_type": "errand", "activity": "no mercado fazendo as compras da semana",
-                               "place_key": self._market(now), "announced_at": now.isoformat(),
-                               "transition_at": item["at"].isoformat(), "end_at": end.isoformat()}
-                    self.db.set_estado_relacional("pending_transition_json", json.dumps(payload, ensure_ascii=False))
         return created

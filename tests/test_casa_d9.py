@@ -85,10 +85,17 @@ class CasaTest(unittest.TestCase):
         monday = self.weeks[1]
         item = next(p for i in range(7) for p in self.casa.day_plan(monday + timedelta(days=i))
                     if p["key"].endswith(":mercado"))
+        # 26/09: o mercado é item da agenda única (preparo, ida a pé, lá, volta), agendado antes.
+        self.casa.materialize(item["at"] - timedelta(hours=2))
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT description, event_at FROM eventos_pendentes WHERE source_key=?",
+                               (f"mercado:{item['at'].date().isoformat()}",)).fetchone()
+        self.assertEqual(row["description"], "Fazendo as compras da semana no Zona Sul")
+        from agenda import Agenda
+        titulos = [e.titulo for e in Agenda(self.db).etapas(item["at"].date(), item["at"])]
+        self.assertIn("No Zona Sul", titulos)
         now = item["at"] + timedelta(minutes=5)
         self.assertGreaterEqual(self.casa.materialize(now), 1)
-        payload = json.loads(self.db.get_estado_relacional()["pending_transition_json"])
-        self.assertEqual(payload["activity"], "no mercado fazendo as compras da semana")
         self.assertEqual(self.casa.materialize(now), 0, "idempotente")
 
     def test_nothing_before_recorded_life(self):

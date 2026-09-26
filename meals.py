@@ -364,6 +364,9 @@ class Meals:
             return True
         activity = (state.get("activity") or "").casefold()
         region = (state.get("location_region") or "").casefold()
+        source = json.loads(state.get("source_json") or "{}") if isinstance(state.get("source_json"), str) else {}
+        if (source or {}).get("reason") == "confirmed_commitment":
+            return False                                  # num compromisso (rolê, café, passeio): não está em casa
         away = ("dorm", "a caminho", "uber", "ônibus", "metrô", "carona", "academia", "trein",
                 "faculdade", "aula", "com amig", "bar", "praia", "saindo com")
         return not any(t in activity for t in away) and "a caminho" not in region

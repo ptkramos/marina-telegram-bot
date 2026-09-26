@@ -254,6 +254,12 @@ class Health:
     def materialize(self, now: datetime) -> int:
         """A consulta que já aconteceu vira acontecimento do dia (idempotente)."""
         visit = self.doctor(now)
+        if visit and now < visit[0] <= now + timedelta(hours=4):
+            try:                                          # 26/09: a consulta é item da agenda (uber, clínica)
+                from vontade import Vontade
+                Vontade(self.db).medico(visit[0], visit[1], now)
+            except Exception:
+                pass
         if not visit or visit[0] > now:
             return 0
         at, who = visit

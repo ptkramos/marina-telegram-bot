@@ -3075,7 +3075,8 @@ async def process_incoming_batch(
                     ).total_seconds()
                     activity_type = getattr(avail_decision, 'activity_type', 'UNKNOWN')
                     if (activity_type in ('GYM', 'CLASS', 'WORK', 'COMMUTE', 'CASTING',
-                                          'SOCIAL', 'PET_WALK', 'WAKING', 'SHOWER', 'GETTING_READY')
+                                          'SOCIAL', 'PET_WALK', 'WAKING', 'SHOWER', 'GETTING_READY',
+                                          'OUT_SOLO')
                             and 0 < remaining <= 25):
                         logger.info(
                             'AVAILABILITY_SOFT_DELAY activity=%s delay_s=%.1f',

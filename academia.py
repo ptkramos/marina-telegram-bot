@@ -1,10 +1,10 @@
-"""Academia como compromisso do dia (Patrick, 26/09: "ela foi treinar e não teve preparação?").
+"""Rotinas que viram compromisso do dia (Patrick, 26/09: "ela foi treinar e não teve preparação?").
 
-Antes a academia era rotina sorteada na hora: ela pulava do closet pra Bodytech, sem se arrumar,
-sem caminho e sem hora de voltar no card — e a conversa ativa podia cancelar o treino no meio.
-Agora o treino do dia é decidido uma vez (de manhã, pela cota da semana, pelo horário livre e pela
-energia prevista pra hora do treino) e fica guardado: tem preparo, ida a pé, treino e volta, como
-as saídas. Chuva forte na hora da decisão: academia do prédio (sem trajeto).
+Antes academia e passeio do Milo eram rotinas sorteadas na hora: ela pulava de casa pra Bodytech
+ou pra Enseada, sem se arrumar, sem caminho e sem hora de voltar no card — e a conversa ativa
+cancelava no meio. Agora cada uma é decidida uma vez por dia (cota da semana, primeiro horário
+livre, energia prevista pra hora) e fica guardada: tem preparo, ida, lá e volta, como as saídas.
+É o "planejado" da agenda única; o que ela decide na hora por vontade está em `vontade.py`.
 """
 from __future__ import annotations
 
@@ -18,20 +18,29 @@ LUGAR = "bodytech_sao_clemente"
 IDA_MIN = 12                       # Botafogo a pé (commute.ROUTES)
 REF_ENERGIA = 0.7                  # com disposição normal ela vai nos dias da cota
 
+# tipo → (rotina canônica, tipo da rotina, lugar, minutos a pé, chave guardada)
+ROTINAS = {
+    "academia": ("gym_weekly", "gym", LUGAR, IDA_MIN, KEY),
+    "milo": ("milo_morning_walk", "pet_walk", "enseada_botafogo", 4, "passeio_milo_json"),
+}
 
-class Academia:
+
+class Planejada:
+    tipo = "academia"
+
     def __init__(self, db):
         self.db = db
+        self.rotina, self.routine_type, self.lugar, self.ida_min, self.key = ROTINAS[self.tipo]
 
     def _load(self) -> dict:
-        raw = self.db.get_estado_relacional(KEY)
+        raw = self.db.get_estado_relacional(self.key)
         try:
             return json.loads(raw) if raw else {}
         except (TypeError, ValueError):
             return {}
 
     def plano(self, day: date, now: Optional[datetime] = None) -> Optional[dict]:
-        """O treino do dia ({inicio, fim, onde}) ou None. Hoje fica guardado na primeira consulta."""
+        """O compromisso do dia ({inicio, fim, onde}) ou None. Hoje fica guardado na primeira consulta."""
         st = self._load()
         if day.isoformat() in st:
             p = st[day.isoformat()]
@@ -42,29 +51,35 @@ class Academia:
             keep = {(today - timedelta(days=d)).isoformat() for d in range(3)}
             st = {k: v for k, v in st.items() if k in keep}
             st[day.isoformat()] = ({**p, "inicio": p["inicio"].isoformat(), "fim": p["fim"].isoformat()} if p else None)
-            self.db.set_estado_relacional(KEY, json.dumps(st))
+            self.db.set_estado_relacional(self.key, json.dumps(st))
         return p
 
     def _decide(self, day: date) -> Optional[dict]:
         from world_state import RoutineEngine, _within_opening_hours
         engine = RoutineEngine(self.db)
-        row = engine._routine_row("gym_weekly")
+        row = engine._routine_row(self.rotina)
         if not row:
             return None
-        slot = engine._placement(day, row, "gym", None)
+        slot = engine._placement(day, row, self.routine_type, None)
         if not slot:
             return None
+        chuva = self._chuva_forte()
+        roll = random.Random(f"marina-agenda:{day.isoformat()}:{row['canonical_key']}:vontade").random()
+        if self.tipo == "milo":
+            if chuva and roll >= 0.25:
+                return None                               # chuva forte: só o xixi rapidinho
+            return {"inicio": slot[0], "fim": slot[1], "onde": "rua"}
         try:
             from emotion import EmotionEngine
             energia = EmotionEngine(self.db).energy(slot[0])
         except Exception:
             energia = REF_ENERGIA
-        roll = random.Random(f"marina-agenda:{day.isoformat()}:{row['canonical_key']}:vontade").random()
         if roll >= min(1.0, max(0.2, energia) / REF_ENERGIA):
             return None                                   # cansada: hoje não vai
-        horas = engine._place_opening_hours(LUGAR)
-        onde = "predio" if self._chuva_forte() else "rua"
-        if onde == "rua" and not (_within_opening_hours(slot[0], horas) and _within_opening_hours(slot[1] - timedelta(minutes=1), horas)):
+        horas = engine._place_opening_hours(self.lugar)
+        onde = "predio" if chuva else "rua"
+        if onde == "rua" and not (_within_opening_hours(slot[0], horas)
+                                  and _within_opening_hours(slot[1] - timedelta(minutes=1), horas)):
             onde = "predio"
         return {"inicio": slot[0], "fim": slot[1], "onde": onde}
 
@@ -76,3 +91,15 @@ class Academia:
             return bool(w and w.get("heavy_rain"))
         except Exception:
             return False
+
+
+class Academia(Planejada):
+    tipo = "academia"
+
+
+class PasseioMilo(Planejada):
+    tipo = "milo"
+
+
+def planejada(routine_type: str, db) -> Optional[Planejada]:
+    return {"gym": Academia, "gym_indoor": Academia, "pet_walk": PasseioMilo}.get(routine_type, lambda _db: None)(db)

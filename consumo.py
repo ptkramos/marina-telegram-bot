@@ -73,6 +73,14 @@ def _starbucks() -> dict:
         return STARBUCKS_FALLBACK
 
 
+def _secoes(loja_id: str) -> list:
+    try:
+        cat = json.loads(CATALOGO.read_text(encoding="utf-8"))
+        return next(l for l in cat["lojas"] if l["id"] == loja_id)["secoes"]
+    except Exception:
+        return []
+
+
 def _parte(preco: float, pessoas: int, dividido: bool) -> int:
     return int(math.ceil(preco / pessoas)) if dividido else int(round(preco))
 
@@ -115,6 +123,18 @@ def plan(outing: dict) -> list[Item]:
             at += timedelta(minutes=rng.randint(30, 50))
         if rng.random() < 0.5:
             add(start + timedelta(minutes=rng.randint(10, 30)), ESTADIO["lanche"], comida=True)
+    elif place.startswith("loja_"):                     # 26/09: saída por vontade numa loja do catálogo
+        meta = json.loads(outing.get("metadata_json") or "{}") or {}
+        if meta.get("pago_por") == "pai":
+            return []
+        secoes = _secoes(meta.get("loja", ""))
+        itens = [i for s in secoes for i in s["itens"]]
+        if itens:
+            at = start + timedelta(minutes=rng.randint(2, 6))
+            escolhidos = rng.sample(itens, k=1 if rng.random() < 0.6 or len(itens) < 2 else 2)
+            for n, i in enumerate(escolhidos):
+                add(at + timedelta(minutes=n), (i["nome"], i["nome"][:1].lower() + i["nome"][1:], i["preco"]),
+                    comida=meta.get("tipo") in ("cafe", "acai"))
     elif place == "starbucks_shopping_gavea":
         menu = _starbucks()
         at = start + timedelta(minutes=rng.randint(3, 8))
@@ -151,8 +171,8 @@ class Consumo:
         with self.db.get_connection() as conn:
             return [dict(r) for r in conn.execute(
                 """SELECT source_key, event_at, end_at, location_key, metadata_json FROM eventos_pendentes
-                   WHERE source_key LIKE ? AND confirmed=1 AND status != 'cancelled' AND end_at IS NOT NULL
-                   ORDER BY event_at""", (f"outing:{day.isoformat()}:%",))]
+                   WHERE (source_key LIKE ? OR source_key LIKE ?) AND confirmed=1 AND status != 'cancelled'
+                   AND end_at IS NOT NULL ORDER BY event_at""", (f"outing:{day.isoformat()}:%", f"vontade:{day.isoformat()}:%"))]
 
     def _place_name(self, key: str) -> str:
         with self.db.get_connection() as conn:

@@ -265,7 +265,7 @@ class RoutineEngine:
 
             # Filtro B: cooldown pós-compromisso — rotina externa fica de fora
             # durante os primeiros minutos após um compromisso terminar.
-            if is_external and post_event_cooldown and routine_type != "gym":   # treino marcado
+            if is_external and post_event_cooldown and routine_type not in ("gym", "pet_walk"):   # marcado
                 logger.info(
                     "routine.filtered reason=post_event_cooldown type=%s", routine_type,
                 )
@@ -273,7 +273,7 @@ class RoutineEngine:
 
             # Filtro C: conversa ativa — Marina anuncia antes de sair via
             # proactivity_service. Enquanto isso ela fica em casa.
-            if is_external and conversation_active and routine_type != "gym":   # treino marcado: ela vai
+            if is_external and conversation_active and routine_type not in ("gym", "pet_walk"):   # marcado: ela vai
                 logger.info(
                     "routine.filtered reason=conversation_active type=%s", routine_type,
                 )
@@ -301,7 +301,7 @@ class RoutineEngine:
                         "treinando na academia do prédio", "marina_apartment", score,
                         row["canonical_key"] + ":rain_fallback", routine_type="gym_indoor"))
             elif routine_type == "pet_walk" and heavy_rain:
-                score *= 0.25
+                score *= 0.25                             # (a decisão é do plano do dia: academia.py)
 
             result.append(RoutineCandidate(
                 activity, place_key, score, row["canonical_key"],
@@ -470,11 +470,11 @@ class RoutineEngine:
         if not row:
             return None
         day = now.date()
-        if candidate.routine_type in ("gym", "gym_indoor"):
-            # 26/09 (Patrick): o treino do dia é compromisso decidido uma vez (academia.py), com
-            # preparo e trajeto; não é mais sorteado a cada resolve.
-            from academia import Academia
-            plano = Academia(self.db).plano(day, now)
+        if candidate.routine_type in ("gym", "gym_indoor", "pet_walk"):
+            # 26/09 (Patrick): academia e passeio do Milo são compromisso decidido uma vez por dia
+            # (academia.py), com preparo e trajeto; não são mais sorteados a cada resolve.
+            from academia import planejada
+            plano = planejada(candidate.routine_type, self.db).plano(day, now)
             if not plano or (plano["onde"] == "predio") != (candidate.routine_type == "gym_indoor"):
                 return None
             return plano["inicio"], plano["fim"]
@@ -782,6 +782,16 @@ class WorldStateManager:
         elif self._active_plan(active_consequence, now):
             chosen = active_consequence
             reason = "active_consequence"
+        if chosen is None and not force:
+            # 26/09 (Patrick): livre em casa, às vezes dá vontade de sair — vira item da agenda
+            # única, e o "se arrumando" abaixo já pega o preparo.
+            try:
+                from vontade import Vontade
+                Vontade(self.db).talvez(now)
+            except Exception:
+                logger.exception("vontade.error")
+        if chosen is not None:
+            pass
         elif (prep := self._getting_ready(now)) is not None:
             # 26/09 (Patrick): antes de sair ela se arruma (banho, make, roupa…); antes só
             # existia pra faculdade de manhã e ela pulava do "tempo livre" pro trajeto.

@@ -46,6 +46,12 @@ DEFAULT_PROFILES = {
     # Patch 030: a rotina canônica pet_walk ("passeando com Milo", 07:00-10:30)
     # não tinha profile nem mapeamento — caía em UNKNOWN e o prompt perdia o
     # estado concreto, levando o LLM a inventar paradeiro ("tô no meu quarto").
+    # 26/09: saiu sozinha por vontade (café, açaí, farmácia, mercado, shopping): celular na mão.
+    'OUT_SOLO': {
+        'phone_access': 'HIGH', 'attention': 'MEDIUM', 'interruptibility': 'HIGH',
+        'soft_delay_min_s': 20, 'soft_delay_max_s': 300, 'guardrail_s': 900,
+        'brief_likelihood': 0.3, 'prefer': 'REPLY_NOW',
+    },
     'PET_WALK': {
         'phone_access': 'HIGH', 'attention': 'MEDIUM', 'interruptibility': 'HIGH',
         'soft_delay_min_s': 20, 'soft_delay_max_s': 240, 'guardrail_s': 900,
@@ -475,6 +481,12 @@ class ResponseAvailabilityPolicy:
             return 'SHOWER'
         if any(x in act for x in ('jantando', 'almoçando', 'almocando', 'lanchando', 'beliscando', 'comendo')):
             return 'MEAL'
+        # 26/09: agenda única — consulta médica e saídas sozinha por vontade.
+        if 'consulta' in act:
+            return 'CLASS'
+        if ((place_key or '').startswith('loja_') or 'compras da semana' in act or act.startswith('passando n')
+                or 'praia shopping' in act or 'tomando um' in act):
+            return 'OUT_SOLO'
         # Patch 030: passeio com o Milo — sem isso o estado ia pra UNKNOWN.
         if any(x in act for x in ('passeando', 'passeio', 'caminhando')):
             return 'PET_WALK'

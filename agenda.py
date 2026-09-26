@@ -29,7 +29,8 @@ logger = logging.getLogger(__name__)
 CURTO = {"quartinho_bar": "no Quartinho", "starbucks_shopping_gavea": "no Starbucks", "puc_rio": "na PUC",
          "shopping_gavea": "no Shopping da Gávea", "copacabana_beach": "na praia", "ipanema_beach": "na praia",
          "leblon_beach": "na praia", "boutique_agency": "na agência", "bodytech_sao_clemente": "na academia",
-         "estadio_nilton_santos": "no Nilton Santos"}
+         "estadio_nilton_santos": "no Nilton Santos", "enseada_botafogo": "na Enseada",
+         "botafogo_praia_shopping": "no shopping", "clinica_botafogo": "na clínica"}
 COMO = {"onibus": "Ônibus", "metro": "Metrô", "metro_onibus": "Metrô e ônibus", "uber": "Uber", "a_pe": "A pé"}
 
 # passos do Se arrumando: (texto, peso). O último passo depende do transporte.
@@ -40,10 +41,30 @@ PREP = {
     "faculdade": (("Tomando café", 25), ("Tomando banho", 35), ("Escolhendo roupa", 25)),
     "praia": (("Colocando biquíni", 50), ("Passando protetor", 40)),
     "academia": (("Colocando roupa de treino", 60), ("Enchendo a garrafinha", 20)),
+    # 26/09 — agenda única: passeio do Milo, saídas por vontade, mercado e médico
+    "milo": (("Colocando a coleira", 60), ("Pegando os saquinhos", 40)),
+    "cafe": (("Trocando de roupa", 70), ("Pegando a bolsa", 30)),
+    "acai": (("Trocando de roupa", 70), ("Pegando a bolsa", 30)),
+    "farmacia": (("Trocando de roupa", 70), ("Pegando a bolsa", 30)),
+    "mercado": (("Trocando de roupa", 70), ("Pegando a bolsa", 30)),
+    "orla": (("Colocando tênis", 60), ("Passando protetor", 40)),
+    "shopping": (("Escolhendo roupa", 50), ("Fazendo maquiagem leve", 50)),
+    "mercado_semana": (("Fazendo a lista", 60), ("Pegando as sacolas", 40)),
+    "medico": (("Trocando de roupa", 60), ("Separando a carteirinha do plano", 40)),
     "jogo": (("Tomando banho", 40), ("Vestindo a camisa do Botafogo", 25), ("Fazendo maquiagem", 25)),
     "dormir": (("Tirando maquiagem", 25), ("Tomando banho", 50), ("Colocando pijama", 25)),
 }
-PREP_MIN = {"academia": (10, 15), "noite": (60, 90), "encontro": (30, 45), "jogo": (40, 55), "freela": (40, 55), "praia": (15, 20), "dormir": (30, 45)}
+PREP_MIN = {"milo": (3, 5), "cafe": (8, 12), "acai": (6, 10), "farmacia": (5, 8), "mercado": (6, 10),
+            "orla": (8, 12), "shopping": (20, 30), "mercado_semana": (8, 12), "medico": (12, 18),
+            "academia": (10, 15), "noite": (60, 90), "encontro": (30, 45), "jogo": (40, 55), "freela": (40, 55), "praia": (15, 20), "dormir": (30, 45)}
+# o que acontece lá (quando não é consumo nem aula)
+LA_PASSOS = {
+    "milo": (("Passeando", 70), ("Xixi do Milo", 30)),
+    "orla": (("Caminhando na orla", 80), ("Olhando o Pão de Açúcar", 20)),
+    "shopping": (("Olhando vitrines", 60), ("Provando roupa", 40)),
+    "mercado_semana": (("Pegando frutas e verduras", 35), ("Enchendo o carrinho", 45), ("No caixa", 20)),
+    "medico": (("Na recepção", 25), ("Na consulta", 55), ("Pegando a receita", 20)),
+}
 FACULDADE_CABELO_CHANCE = 0.4          # "às vezes" (nem todo dia ela lava o cabelo)
 
 # imprevisto numa linha só (card): o texto do mundo é longo demais
@@ -172,6 +193,29 @@ class Agenda:
                         "inicio": treino["inicio"], "fim": treino["fim"], "friends": [],
                         "ida": legs.get(f"commute:{day.isoformat()}:gym:ida"),
                         "volta": legs.get(f"commute:{day.isoformat()}:gym:volta")})
+        try:
+            from academia import PasseioMilo
+            passeio = PasseioMilo(self.db).plano(day)
+        except Exception:
+            passeio = None
+        if passeio:
+            out.append({"tipo": "milo", "key": f"milo:{day.isoformat()}", "place": "enseada_botafogo",
+                        "inicio": passeio["inicio"], "fim": passeio["fim"], "friends": [],
+                        "ida": legs.get(f"commute:{day.isoformat()}:milo:ida"),
+                        "volta": legs.get(f"commute:{day.isoformat()}:milo:volta")})
+        with self.db.get_connection() as conn:              # 26/09: agenda única (vontade, mercado, médico)
+            vivos = [dict(r) for r in conn.execute(
+                """SELECT source_key, event_at, end_at, location_key, metadata_json, description FROM eventos_pendentes
+                   WHERE (source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ?) AND confirmed=1
+                   AND status != 'cancelled' AND end_at IS NOT NULL ORDER BY event_at""",
+                (f"vontade:{day.isoformat()}:%", f"mercado:{day.isoformat()}%", f"medico:{day.isoformat()}%"))]
+        for r in vivos:
+            meta = json.loads(r["metadata_json"] or "{}") or {}
+            out.append({"tipo": meta.get("tipo", "cafe"), "key": r["source_key"], "place": r["location_key"],
+                        "inicio": datetime.fromisoformat(r["event_at"]), "fim": datetime.fromisoformat(r["end_at"]),
+                        "friends": [], "outing": r, "decidido_em": meta.get("decidido_em"),
+                        "ida": legs.get(f"commute:{r['source_key']}:ida"),
+                        "volta": legs.get(f"commute:{r['source_key']}:volta")})
         with self.db.get_connection() as conn:
             rows = [dict(r) for r in conn.execute(
                 """SELECT source_key, event_at, end_at, location_key, metadata_json, description FROM eventos_pendentes
@@ -215,14 +259,16 @@ class Agenda:
             if c["tipo"] == "faculdade":
                 inicio = max(wake or ida.start - timedelta(minutes=60), ida.start - timedelta(minutes=90))
             else:
-                inicio = ida.start - timedelta(minutes=rng.randint(*PREP_MIN[c["tipo"]]))
+                inicio = ida.start - timedelta(minutes=rng.randint(*PREP_MIN.get(c["tipo"], (8, 12))))
             inicio = max(inicio, fim_anterior)
+            if c.get("decidido_em"):                     # decidiu na hora: se arruma a partir dali
+                inicio = max(inicio, datetime.fromisoformat(c["decidido_em"]))
             # refeição em casa que cai na janela: ela come primeiro e se arruma depois
             for s in self._refeicoes_em_casa(day):
                 if s.at < ida.start and s.end > inicio:
                     inicio = max(inicio, s.end)
             if inicio < ida.start:
-                passos = list(PREP[c["tipo"]])
+                passos = list(PREP.get(c["tipo"], PREP["cafe"]))
                 if c["tipo"] == "faculdade" and rng.random() < FACULDADE_CABELO_CHANCE:
                     passos.insert(2, ("Secando cabelo", 15))
                 final = ("Esperando carona" if ida.mode == "carona" else
@@ -291,7 +337,8 @@ class Agenda:
 
     def _trajeto(self, leg, tipo: str, titulo: str, linha2: str, place: dict, c: dict) -> Etapa:
         bairro = place["region"] or leg.region
-        no = CURTO.get(c["place"], f"no {place['name']}")          # "no Quartinho", "na PUC"
+        from vontade import no as _no
+        no = CURTO.get(c["place"], _no(place["name"]))          # "no Quartinho", "na PUC"
         o = ("a " if no.startswith("na ") else "o ") + no.split(" ", 1)[1]
         casa = leg.direction == "volta"
         chegando = "Chegando em casa" if casa else f"Chegando {no}"
@@ -331,7 +378,8 @@ class Agenda:
                      passos=lista, chave=leg.key)
 
     def _la(self, c: dict, place: dict, com: list, now: datetime, volta) -> Etapa:
-        curto = CURTO.get(c["place"], f"no {place['name']}")
+        from vontade import no
+        curto = CURTO.get(c["place"], no(place["name"]))
         titulo = curto[:1].upper() + curto[1:]
         passos: list[Passo] = []
         if c["tipo"] == "faculdade":
@@ -344,6 +392,9 @@ class Agenda:
                 passos.append(Passo(nome, ini))
                 anterior = fim
             cel = CELULAR["aula"]
+        elif c["tipo"] in LA_PASSOS:
+            passos = self._distribui(list(LA_PASSOS[c["tipo"]]), c["inicio"], c["fim"])
+            cel = CELULAR["aula"] if c["tipo"] in ("medico", "mercado_semana") else CELULAR["role"]
         elif c["tipo"] == "academia":
             rng = _rng(c["inicio"].date(), "treino")
             meio = rng.choice((("Musculação · pernas", 55), ("Musculação · superiores", 55), ("Funcional", 55)))

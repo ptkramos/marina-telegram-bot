@@ -294,16 +294,19 @@ class Commute:
                                            last + timedelta(minutes=mins), mode, "volta", _de("PUC"), "Gávea",
                                            driver if mode == "carona" else "")))
         try:
-            from academia import Academia, IDA_MIN, LUGAR
-            treino = Academia(self.db).plano(day)
+            from academia import Academia, PasseioMilo
+            planos = [("gym", Academia(self.db).plano(day), "pra Bodytech", "da Bodytech", 12),
+                      ("milo", PasseioMilo(self.db).plano(day), "pra Enseada", "da Enseada", 4)]
         except Exception:
-            treino = None
-        if treino and treino["onde"] == "rua":             # 26/09: academia com ida e volta a pé
-            ini, fim = treino["inicio"], treino["fim"]
-            legs.append(Leg(f"commute:{day.isoformat()}:gym:ida", ini - timedelta(minutes=IDA_MIN), ini, "a_pe",
-                            "ida", "pra Bodytech", "Botafogo"))
-            legs.append(Leg(f"commute:{day.isoformat()}:gym:volta", fim, fim + timedelta(minutes=IDA_MIN), "a_pe",
-                            "volta", "da Bodytech", "Botafogo"))
+            planos = []
+        for tag, p, pra, de, mins in planos:               # 26/09: academia e Milo com ida e volta a pé
+            if p and p["onde"] == "rua":
+                ini, fim = p["inicio"], p["fim"]
+                legs.append(Leg(f"commute:{day.isoformat()}:{tag}:ida", ini - timedelta(minutes=mins), ini, "a_pe",
+                                "ida", pra, "Botafogo"))
+                legs.append(Leg(f"commute:{day.isoformat()}:{tag}:volta", fim, fim + timedelta(minutes=mins), "a_pe",
+                                "volta", de, "Botafogo"))
+        legs += self._legs_agenda_viva(day)
         with self.db.get_connection() as conn:
             outings = [dict(r) for r in conn.execute(
                 """SELECT source_key, event_at, end_at, location_key, metadata_json FROM eventos_pendentes
@@ -335,6 +338,28 @@ class Commute:
                                            mode, "volta", _de(place["name"]), region,
                                            driver if mode == "carona" else companion)))
         return legs
+
+    def _legs_agenda_viva(self, day: date) -> list[Leg]:
+        """Itens da agenda única decididos na hora (vontade), mercado e médico: o jeito de ir foi
+        decidido junto com o item e está no metadata (modo, minutos)."""
+        out = []
+        with self.db.get_connection() as conn:
+            rows = [dict(r) for r in conn.execute(
+                """SELECT source_key, event_at, end_at, location_key, metadata_json FROM eventos_pendentes
+                   WHERE (source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ?) AND confirmed=1
+                   AND status != 'cancelled' AND end_at IS NOT NULL ORDER BY event_at""",
+                (f"vontade:{day.isoformat()}:%", f"mercado:{day.isoformat()}%", f"medico:{day.isoformat()}%"))]
+        for r in rows:
+            meta = json.loads(r["metadata_json"] or "{}") or {}
+            place = self._place(r["location_key"]) or {"name": r["location_key"], "region": "Botafogo"}
+            ini, fim = datetime.fromisoformat(r["event_at"]), datetime.fromisoformat(r["end_at"])
+            modo, mins = meta.get("modo", "a_pe"), int(meta.get("ida_min", 10))
+            volta_min = int(meta.get("volta_min", mins))
+            out.append(Leg(f"commute:{r['source_key']}:ida", ini - timedelta(minutes=mins), ini, modo, "ida",
+                           _pra(place["name"]), place.get("region") or "Botafogo"))
+            out.append(Leg(f"commute:{r['source_key']}:volta", fim, fim + timedelta(minutes=volta_min),
+                           meta.get("modo_volta", modo), "volta", _de(place["name"]), place.get("region") or "Botafogo"))
+        return out
 
     def leg_at(self, now: datetime) -> Optional[Leg]:
         for day in (now.date(), now.date() - timedelta(days=1)):   # volta que passa da meia-noite
