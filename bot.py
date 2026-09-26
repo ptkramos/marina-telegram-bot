@@ -4777,6 +4777,8 @@ async def midia_real_routine(application: Application):
         now = datetime.now()
         await asyncio.to_thread(Musica(memory_manager.db).aquecer, now)
         await asyncio.to_thread(Futebol(memory_manager.db).atualizar, now)
+        from lastfm import LastFm
+        await asyncio.to_thread(LastFm(memory_manager.db).atualizar, now)
     except Exception as e:
         logger.error(f"Erro no job de midia_real_routine: {e}", exc_info=True)
 

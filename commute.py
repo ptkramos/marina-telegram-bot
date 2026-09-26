@@ -293,6 +293,17 @@ class Commute:
             legs.append(self._incident(Leg(f"commute:{day.isoformat()}:puc:volta", last,
                                            last + timedelta(minutes=mins), mode, "volta", _de("PUC"), "Gávea",
                                            driver if mode == "carona" else "")))
+        try:
+            from academia import Academia, IDA_MIN, LUGAR
+            treino = Academia(self.db).plano(day)
+        except Exception:
+            treino = None
+        if treino and treino["onde"] == "rua":             # 26/09: academia com ida e volta a pé
+            ini, fim = treino["inicio"], treino["fim"]
+            legs.append(Leg(f"commute:{day.isoformat()}:gym:ida", ini - timedelta(minutes=IDA_MIN), ini, "a_pe",
+                            "ida", "pra Bodytech", "Botafogo"))
+            legs.append(Leg(f"commute:{day.isoformat()}:gym:volta", fim, fim + timedelta(minutes=IDA_MIN), "a_pe",
+                            "volta", "da Bodytech", "Botafogo"))
         with self.db.get_connection() as conn:
             outings = [dict(r) for r in conn.execute(
                 """SELECT source_key, event_at, end_at, location_key, metadata_json FROM eventos_pendentes

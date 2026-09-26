@@ -203,3 +203,21 @@ class FutebolTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LastFmTest(unittest.TestCase):
+    def test_o_que_ele_esta_ouvindo(self):
+        import io
+        import os
+        from lastfm import LastFm
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        db = _db(temp.name)
+        resp = {"recenttracks": {"track": [{"name": "Espresso", "artist": {"#text": "Sabrina Carpenter"},
+                                            "@attr": {"nowplaying": "true"}}]}}
+        with patch.dict(os.environ, {"LASTFM_USER": "u", "LASTFM_API_KEY": "k"}), \
+                patch("lastfm.urllib.request.urlopen", return_value=io.BytesIO(json.dumps(resp).encode())):
+            self.assertTrue(LastFm(db).atualizar(T))
+        linha = "\n".join(LastFm(db).prompt_lines(T + timedelta(minutes=2)))
+        self.assertIn("está ouvindo agora \"Espresso\" (Sabrina Carpenter)", linha)
+        self.assertEqual(LastFm(db).prompt_lines(T + timedelta(hours=1)), [], "dado velho não vale")

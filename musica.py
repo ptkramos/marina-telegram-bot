@@ -260,4 +260,9 @@ class Musica:
         if dela["adotadas"]:
             nomes = ", ".join(f"\"{a['nome']}\" ({a['artista']})" for a in dela["adotadas"][-5:])
             lines.append(f"- Na sua playlist tem músicas que vieram dele: {nomes}.")
+        try:
+            from lastfm import LastFm
+            lines += LastFm(self.db).prompt_lines(now)
+        except Exception:
+            pass
         return (["[MÚSICA — real; não invente faixa que não esteja aqui ou no seu dia]"] + lines) if lines else []

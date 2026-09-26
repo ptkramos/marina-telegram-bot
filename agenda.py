@@ -39,10 +39,11 @@ PREP = {
     "freela": (("Tomando banho", 50), ("Escolhendo roupa", 35)),        # sem make: é feita lá
     "faculdade": (("Tomando café", 25), ("Tomando banho", 35), ("Escolhendo roupa", 25)),
     "praia": (("Colocando biquíni", 50), ("Passando protetor", 40)),
+    "academia": (("Colocando roupa de treino", 60), ("Enchendo a garrafinha", 20)),
     "jogo": (("Tomando banho", 40), ("Vestindo a camisa do Botafogo", 25), ("Fazendo maquiagem", 25)),
     "dormir": (("Tirando maquiagem", 25), ("Tomando banho", 50), ("Colocando pijama", 25)),
 }
-PREP_MIN = {"noite": (60, 90), "encontro": (30, 45), "jogo": (40, 55), "freela": (40, 55), "praia": (15, 20), "dormir": (30, 45)}
+PREP_MIN = {"academia": (10, 15), "noite": (60, 90), "encontro": (30, 45), "jogo": (40, 55), "freela": (40, 55), "praia": (15, 20), "dormir": (30, 45)}
 FACULDADE_CABELO_CHANCE = 0.4          # "às vezes" (nem todo dia ela lava o cabelo)
 
 # imprevisto numa linha só (card): o texto do mundo é longo demais
@@ -161,6 +162,16 @@ class Agenda:
                         "fim": datetime.fromisoformat(blocks[-1]["end_at"]), "friends": [], "blocks": blocks,
                         "ida": legs.get(f"commute:{day.isoformat()}:puc:ida"),
                         "volta": legs.get(f"commute:{day.isoformat()}:puc:volta")})
+        try:
+            from academia import Academia, LUGAR
+            treino = Academia(self.db).plano(day)
+        except Exception:
+            treino = None
+        if treino and treino["onde"] == "rua":
+            out.append({"tipo": "academia", "key": f"gym:{day.isoformat()}", "place": LUGAR,
+                        "inicio": treino["inicio"], "fim": treino["fim"], "friends": [],
+                        "ida": legs.get(f"commute:{day.isoformat()}:gym:ida"),
+                        "volta": legs.get(f"commute:{day.isoformat()}:gym:volta")})
         with self.db.get_connection() as conn:
             rows = [dict(r) for r in conn.execute(
                 """SELECT source_key, event_at, end_at, location_key, metadata_json, description FROM eventos_pendentes
@@ -332,6 +343,12 @@ class Agenda:
                 nome = (b.get("display_name") or "Aula").split(":")[0].strip()
                 passos.append(Passo(nome, ini))
                 anterior = fim
+            cel = CELULAR["aula"]
+        elif c["tipo"] == "academia":
+            rng = _rng(c["inicio"].date(), "treino")
+            meio = rng.choice((("Musculação · pernas", 55), ("Musculação · superiores", 55), ("Funcional", 55)))
+            passos = self._distribui([("Aquecendo na esteira", 15), meio, ("Abdominais", 15), ("Alongando", 15)],
+                                     c["inicio"], c["fim"])
             cel = CELULAR["aula"]
         else:
             from consumo import plan
@@ -585,6 +602,8 @@ class Agenda:
             grade.append(["door-open", "Cômodo", comodo])
         grade += grade_extra
         grade.append(["phone", "Celular", celular])
+        if fim and not inicio and fim > now:              # 26/09: tinha fim e não tinha início → sem barra
+            inicio = datetime.fromisoformat(snap["observed_at"])
         if inicio and fim and fim > now:
             pos = (now - inicio).total_seconds() / max(1, (fim - inicio).total_seconds())
             barra = {"inicio": hora(inicio), "fim": aprox(fim), "pct": round(max(0, min(1, pos)) * 100),

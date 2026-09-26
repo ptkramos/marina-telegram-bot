@@ -206,17 +206,21 @@ class AgendaConditionsTests(unittest.TestCase):
                     self.assertTrue(walk[1] <= gym[0] or walk[0] >= gym[1])
 
     def test_cansada_vai_menos_a_academia(self):
+        # 26/09: o treino é decidido uma vez por dia (academia.py) pela energia prevista pra hora dele.
+        from unittest.mock import patch
+        from academia import Academia
+
         def dias_de_academia(energy):
-            total = 0
-            for offset in range(56):
-                t = datetime(2026, 9, 21, 15, 30) + timedelta(days=offset)
-                gym = next(c for c in self.engine.candidates(t, has_class=False, energy=energy)
-                           if c.routine_type == "gym")
-                total += self.engine.slot_for(t, gym, has_class=False) is not None
-            return total
+            with patch("emotion.EmotionEngine.energy", return_value=energy):
+                return sum(Academia(self.db)._decide(date(2026, 9, 21) + timedelta(days=d)) is not None
+                           for d in range(56))
         self.assertLess(dias_de_academia(0.25), dias_de_academia(0.7))
 
     def test_chuva_forte_troca_academia_de_rua_pela_do_predio(self):
+        from unittest.mock import patch
+        p = patch("academia.Academia._chuva_forte", return_value=True)   # chuva forte quando ela decide
+        p.start()
+        self.addCleanup(p.stop)
         for offset in range(14):
             day = date(2026, 9, 21) + timedelta(days=offset)
             _, found = self._slots(day, {"gym", "gym_indoor"}, heavy_rain=True)

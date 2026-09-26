@@ -83,9 +83,10 @@ class SocialDayTests(unittest.TestCase):
         else:
             self.fail("nenhum encontro com a Carol em 4 semanas")
         contato = carol[0]
-        # Patrick conversando bem na hora: ela não saiu pra academia.
-        self.db.adicionar_mensagem("user", "oi amor", timestamp=(contato.at - timedelta(minutes=5)).isoformat())
-        self.day.materialize(contato.at + timedelta(minutes=1))
+        # 26/09: conversar não cancela mais o treino marcado; o que decide é o plano do dia (academia.py).
+        from unittest.mock import patch
+        with patch("academia.Academia.plano", return_value=None):
+            self.day.materialize(contato.at + timedelta(minutes=1))
         self.assertFalse(any("carol_menezes" in c["participants_json"] for c in self._contacts()))
 
     def test_passeio_do_milo_nunca_cai_dentro_do_sono(self):

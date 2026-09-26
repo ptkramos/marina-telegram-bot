@@ -166,6 +166,14 @@ class RoutineEngine:
             return now.weekday() < 5
         return scope in (None, "daily", "3_to_5_days_per_week")
 
+    def _gym_indoor_today(self, now: datetime) -> bool:
+        try:
+            from academia import Academia
+            plano = Academia(self.db).plano(now.date(), now)
+            return bool(plano and plano["onde"] == "predio")
+        except Exception:
+            return False
+
     def _place_opening_hours(self, place_key: str) -> Optional[Mapping]:
         """Consulta `world_places.usage_rules_json['opening_hours']` do local."""
         if not place_key:
@@ -257,7 +265,7 @@ class RoutineEngine:
 
             # Filtro B: cooldown pós-compromisso — rotina externa fica de fora
             # durante os primeiros minutos após um compromisso terminar.
-            if is_external and post_event_cooldown:
+            if is_external and post_event_cooldown and routine_type != "gym":   # treino marcado
                 logger.info(
                     "routine.filtered reason=post_event_cooldown type=%s", routine_type,
                 )
@@ -265,7 +273,7 @@ class RoutineEngine:
 
             # Filtro C: conversa ativa — Marina anuncia antes de sair via
             # proactivity_service. Enquanto isso ela fica em casa.
-            if is_external and conversation_active:
+            if is_external and conversation_active and routine_type != "gym":   # treino marcado: ela vai
                 logger.info(
                     "routine.filtered reason=conversation_active type=%s", routine_type,
                 )
@@ -288,6 +296,10 @@ class RoutineEngine:
                         routine_type="gym_indoor",
                     ))
                     score *= 0.1
+                elif self._gym_indoor_today(now):
+                    result.append(RoutineCandidate(
+                        "treinando na academia do prédio", "marina_apartment", score,
+                        row["canonical_key"] + ":rain_fallback", routine_type="gym_indoor"))
             elif routine_type == "pet_walk" and heavy_rain:
                 score *= 0.25
 
@@ -458,6 +470,14 @@ class RoutineEngine:
         if not row:
             return None
         day = now.date()
+        if candidate.routine_type in ("gym", "gym_indoor"):
+            # 26/09 (Patrick): o treino do dia é compromisso decidido uma vez (academia.py), com
+            # preparo e trajeto; não é mais sorteado a cada resolve.
+            from academia import Academia
+            plano = Academia(self.db).plano(day, now)
+            if not plano or (plano["onde"] == "predio") != (candidate.routine_type == "gym_indoor"):
+                return None
+            return plano["inicio"], plano["fim"]
         slot = self._placement(day, row, candidate.routine_type, has_class)
         if not slot or not self._willing(day, row, candidate):
             return None
