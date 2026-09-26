@@ -12,7 +12,7 @@ Uso: python scripts/ifood_lojas.py  →  webapp/lojas.json + webapp/lojas/<id>.p
 from __future__ import annotations
 
 # 26/09 (Patrick): loja de bairro sem logo fácil sai. Ficaram só as com logo real.
-# logo: "wd:" Wikimedia · "site:" ícone do site · "print:" recortado dos prints do iFood do Patrick
+# logo: "wd:" Wikimedia · "site:" ícone do site · "print:" recortado dos prints do iFood do Patrick · "google:" Google Imagens
 LOJAS = [
     # ------------------------------------------------------------ Botafogo (ela)
     ("kopenhagen", "Kopenhagen", "Kopenhagen", "bf", "restaurante", "Doces", "wd:Logotipo da Kopenhagen.svg"),
@@ -35,6 +35,12 @@ LOJAS = [
     ("drogasmil-bf", "Drogasmil", "Drogasmil", "bf", "farmacia", "Farmácia", "print:"),
     ("cristal-bf", "Drogaria Cristal", "Cristal", "bf", "farmacia", "Farmácia", "print:"),
     ("supermarket-bf", "Supermarket", "Supermarket Botafogo", "bf", "mercado", "Mercado", "print:"),
+    # 26/09: mercados e farmácias são importantes pra ela — logos pelo Google Imagens (ícone de app)
+    ("zona-sul", "Zona Sul", "Zona Sul", "bf", "mercado", "Mercado", "google:"),
+    ("hortifruti-bf", "Hortifruti", "Hortifruti", "bf", "mercado", "Mercado", "google:"),
+    ("pao-de-acucar-bf", "Pão de Açúcar", "Pão de Açúcar", "bf", "mercado", "Mercado", "google:"),
+    ("mundial-bf", "Supermercados Mundial", "Mundial", "bf", "mercado", "Mercado", "google:"),
+    ("droga-raia-bf", "Droga Raia", "Droga Raia", "bf", "farmacia", "Farmácia", "google:"),
     # ------------------------------------------------------- Campo Grande (Patrick)
     ("mcdonalds-cg", "McDonald's", "McDonald's", "cg", "restaurante", "Lanches", "wd:McDonald's Golden Arches.svg"),
     ("bobs-cg", "Bob's", "Bob's", "cg", "restaurante", "Lanches", "wd:Logotipo do Bob's.svg"),
