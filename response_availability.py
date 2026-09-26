@@ -66,6 +66,19 @@ DEFAULT_PROFILES = {
         'soft_delay_min_s': 45, 'soft_delay_max_s': 600, 'guardrail_s': 1200,
         'brief_likelihood': 0.45, 'prefer': 'MIXED',
     },
+    # 26/09 (Patrick): em casa mas entretida (vídeo pelo celular, lendo, jogando, mexendo no closet):
+    # vê a notificação e responde quando dá uma pausa — mais devagar que o normal.
+    'HOME_BUSY': {
+        'phone_access': 'HIGH', 'attention': 'MEDIUM', 'interruptibility': 'MEDIUM',
+        'soft_delay_min_s': 30, 'soft_delay_max_s': 420, 'guardrail_s': 900,
+        'brief_likelihood': 0.3, 'prefer': 'MIXED',
+    },
+    # Sozinha, se tocando: não pega o celular até terminar.
+    'SOLO': {
+        'phone_access': 'LOW', 'attention': 'LOW', 'interruptibility': 'LOW',
+        'soft_delay_min_s': 300, 'soft_delay_max_s': 1200, 'guardrail_s': 1800,
+        'brief_likelihood': 0.3, 'prefer': 'DEFER',
+    },
     # Fase C.3: "vou tomar banho, já volto" — ela some de verdade uns minutos.
     'SHOWER': {
         'phone_access': 'LOW', 'attention': 'LOW', 'interruptibility': 'LOW',
@@ -441,6 +454,14 @@ class ResponseAvailabilityPolicy:
         # 26/09: antes do 'dorm' — "se arrumando pra dormir" não é dormindo.
         if act.startswith('se arrumando'):
             return 'GETTING_READY'
+        # 26/09: tempo livre concreto ("em casa, olhando o tiktok (quarto)")
+        if act.startswith('em casa, '):
+            if 'se tocando' in act:
+                return 'SOLO'
+            if any(x in act for x in ('pelo celular', 'lendo', 'jogando', 'desenhando', 'montando looks',
+                                      'organizando o closet', 'arrumando o quarto')):
+                return 'HOME_BUSY'
+            return 'HOME_RELAXING'
         if any(x in act for x in ('dorm', 'sleep', 'sono')):
             return 'SLEEPING'
         # Patch 030: 'acordando' tem de vir ANTES da heurística de 'tomando

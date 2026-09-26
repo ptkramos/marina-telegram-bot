@@ -60,6 +60,10 @@ CLASS_COMMUTE_BACK_MINUTES = 45  # voltar da Gávea pra Botafogo
 
 
 
+GENERICO_LIVRE = ("tempo livre em casa", "curtindo a noite em casa",
+                  "em casa, ainda relaxando depois do compromisso anterior")
+
+
 def current_energy(db: DatabaseManager, now: Optional[datetime] = None) -> float:
     """Energia atual da Marina. Fonte única para todo leitor de rotina.
 
@@ -796,8 +800,10 @@ class WorldStateManager:
                 # Auditoria #4: saiu pra um slot, fica nele até o fim — mesmo que
                 # o Patrick comece a conversar no meio. Antes, o re-sorteio com
                 # `conversation_active` a teletransportava de volta pra casa.
+                livre = (previous.get("activity") or "").startswith("em casa, ")
                 if (timedelta(0) <= age and now < datetime.fromisoformat(slot_end_raw)
-                        and not plan_expired and not (sleep_now and not previous_sleeping)):
+                        and not plan_expired and not (sleep_now and not previous_sleeping)
+                        and not (livre and weather_changed)):          # 26/09: choveu no meio do sol
                     return previous
             elif (timedelta(0) <= age < timedelta(minutes=self.stale_minutes)
                     and not weather_changed and not plan_expired
@@ -841,6 +847,17 @@ class WorldStateManager:
                 chosen = {"activity": selected.activity, "place_key": selected.place_key}
                 reason = selected.source_key
 
+        if chosen.get("activity") in GENERICO_LIVRE and chosen.get("place_key") in (None, "marina_apartment"):
+            # 26/09 (Patrick): "tempo livre" vira o que ela faz de verdade (e vira acontecimento).
+            try:
+                from tempo_livre import TempoLivre
+                bloco = TempoLivre(self.db).agora(now)
+            except Exception:
+                logger.exception("tempo_livre.error")
+                bloco = None
+            if bloco:
+                chosen = {**chosen, "activity": bloco.atividade, "place_key": "marina_apartment"}
+                slot_end = bloco.fim
         place_key = chosen.get("place_key") if isinstance(chosen, Mapping) else None
         place = self.bible.get_place(place_key) if place_key else None
         return self.states.add_snapshot({

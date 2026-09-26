@@ -33,6 +33,8 @@ RATE_PER_HOUR = {
     "HOME": +0.04,
     "WAKING": +0.04,
     "GETTING_READY": +0.02,
+    "HOME_BUSY": +0.05,
+    "SOLO": +0.05,
     "PET_WALK": +0.04,   # sozinha com o Milo também é recarga
     "GYM": 0.0,
     "CLASS": -0.08,      # 7h–15h na PUC: cheia → ~0,36 ao chegar em casa

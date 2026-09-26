@@ -119,7 +119,7 @@ def short_name(character_key: str) -> str:
     npc = NPC_INDEX.get(character_key)
     if not npc:
         return character_key
-    first = npc[1].split(" (")[1].rstrip(")") if " (" in npc[1] else npc[1].split()[0]
+    first = npc[1].split(" (")[1].split(")")[0] if " (" in npc[1] else npc[1].split()[0]   # "Gabriela (Gabi) Freitas"
     if first.startswith("Seu ") or npc[1].startswith("Seu "):
         return "o " + npc[1]
     return ("o " if npc[2] == "m" else "a ") + first

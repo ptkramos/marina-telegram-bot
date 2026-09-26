@@ -203,6 +203,10 @@ class Agenda:
             else:
                 inicio = ida.start - timedelta(minutes=rng.randint(*PREP_MIN[c["tipo"]]))
             inicio = max(inicio, fim_anterior)
+            # refeição em casa que cai na janela: ela come primeiro e se arruma depois
+            for s in self._refeicoes_em_casa(day):
+                if s.at < ida.start and s.end > inicio:
+                    inicio = max(inicio, s.end)
             if inicio < ida.start:
                 passos = list(PREP[c["tipo"]])
                 if c["tipo"] == "faculdade" and rng.random() < FACULDADE_CABELO_CHANCE:
@@ -243,6 +247,13 @@ class Agenda:
                                  passos=self._distribui(list(passos), inicio, bed), chave=f"prep:dormir:{day}",
                                  prep_tipo="dormir"))
         return out
+
+    def _refeicoes_em_casa(self, day: date) -> list:
+        try:
+            from meals import Meals
+            return [s for s in Meals(self.db).day_plan(day) if s.where == "casa" and not s.skipped]
+        except Exception:
+            return []
 
     @staticmethod
     def _distribui(passos: list, inicio: datetime, fim: datetime) -> list[Passo]:
@@ -402,3 +413,148 @@ class Agenda:
                 "barra": {"inicio": hora(atual.inicio), "fim": aprox(atual.fim), "pct": round(max(0, min(1, pos)) * 100),
                           "meio": f"há {duracao(now - atual.inicio)}" + ("" if atual.tipo == "la" else f" · faltam ~{duracao(atual.fim - now)}")},
                 "grade": grade, "linha": linha}
+
+    # ------------------------------------------------------ card em casa --
+    REFEICAO = {"cafe": "Tomando café", "almoco": "Almoçando", "lanche": "Lanchando", "jantar": "Jantando"}
+
+    def _snapshot(self) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT * FROM world_state ORDER BY id DESC LIMIT 1").fetchone()
+        return dict(row) if row else None
+
+    def _marcos(self, now: datetime) -> list[tuple[datetime, str]]:
+        """O que acontece no dia, em ordem (pra linha do tempo em casa)."""
+        dia = now.date() if now.hour >= 4 else now.date() - timedelta(days=1)
+        out: list[tuple[datetime, str]] = []
+        try:
+            from meals import Meals
+            for s in Meals(self.db).day_plan(dia):
+                if not s.skipped:
+                    out.append((s.at, self.REFEICAO.get(s.kind, "Comendo")))
+        except Exception:
+            pass
+        try:
+            from tempo_livre import TempoLivre
+            out += [(b.inicio, b.texto) for b in TempoLivre(self.db).do_dia(now)]
+        except Exception:
+            pass
+        try:
+            for e in self.etapas(dia, now):
+                out.append((e.inicio, e.titulo))
+        except Exception:
+            pass
+        try:
+            from watch import Watching
+            plano = Watching(self.db).night_plan(dia)
+            if plano:
+                out.append((plano["start"], "Vendo série"))
+        except Exception:
+            pass
+        try:
+            from sleep_plan import SleepPlan
+            out.append((SleepPlan(self.db).bed(dia), "Dormindo"))
+        except Exception:
+            pass
+        return sorted(out, key=lambda m: m[0])
+
+    def card_casa(self, now: datetime, celular: str) -> Optional[dict]:
+        """Fora de uma saída: "Em casa" (ou "Se alimentando", ou o passeio do Milo)."""
+        snap = self._snapshot()
+        if not snap:
+            return None
+        act = (snap.get("activity") or "").strip()
+        low = act.casefold()
+        plano = json.loads(snap.get("current_plan_json") or "null") or {}
+        fonte = json.loads(snap.get("source_json") or "{}") or {}
+        inicio = datetime.fromisoformat(plano["start_at"]) if plano.get("start_at") else None
+        fim = datetime.fromisoformat(plano["end_at"]) if plano.get("end_at") else None
+        if not fim and fonte.get("slot_end"):
+            fim = datetime.fromisoformat(fonte["slot_end"])
+        titulo, linha2, comodo, passos = "Em casa", act[:1].upper() + act[1:], None, []
+        grade_extra = []
+        from tempo_livre import TempoLivre
+        bloco = TempoLivre(self.db).atual(now) if low.startswith("em casa, ") else None
+        if bloco:
+            linha2, comodo, inicio, fim = bloco.texto, bloco.comodo_nome, bloco.inicio, bloco.fim
+        elif any(x in low for x in ("jantando", "almoçando", "almocando", "lanchando", "café da manhã", "comendo")):
+            from meals import meal_kind, Meals
+            titulo, comodo = "Se alimentando", "Sala"
+            kind = meal_kind(inicio or now)
+            linha2 = self.REFEICAO.get(kind, "Comendo")
+            slot = next((s for s in Meals(self.db).day_plan(now.date()) if s.at <= now <= s.end), None)
+            prato = slot.dish if slot else (low.split("comendo o ", 1)[1].split(" que ")[0].split(" em casa")[0]
+                                             if "comendo o " in low else "")
+            if prato:
+                cozinhou = slot is not None and prato in _jantar_cozinha()
+                t0 = inicio or (slot.at if slot else now)
+                if cozinhou:
+                    passos.append(Passo(f"Preparando o {linha2.split()[-1].lower()}"
+                                        if kind in ("jantar", "almoco") else "Preparando", t0 - timedelta(minutes=25)))
+                passos.append(Passo(prato[:1].upper() + prato[1:], t0))
+                if slot and not inicio:
+                    inicio, fim = slot.at, slot.end
+        elif "tomando banho" in low:
+            linha2, comodo = "Tomando banho", "Banheiro"
+        elif low.startswith("vendo "):
+            linha2, comodo = "Vendo " + act[6:].replace(" no sofá", ""), "Sala"
+        elif "trabalho de" in low:
+            linha2, comodo = act[:1].upper() + act[1:].replace(" em casa", ""), "Closet"
+        elif low.startswith("dormindo") or "acordou de madrugada" in low:
+            linha2, comodo = "Dormindo", "Quarto"
+        elif low.startswith("acordando"):
+            linha2, comodo = "Acordando", "Quarto"
+        elif "academia do prédio" in low:
+            linha2, comodo = "Treinando", "Academia do prédio"
+        elif "milo" in low:
+            rapidinho = "rapidinho" in low
+            titulo = "Na calçada" if rapidinho else "Na Enseada"
+            t0 = inicio or datetime.fromisoformat(snap["observed_at"])
+            t1 = fim or t0 + timedelta(minutes=12 if rapidinho else 30)
+            inicio, fim = t0, t1
+            linha2 = f"Volta pra casa às {aprox(t1)}"
+            passos = self._distribui([("Colocando a coleira", 10), ("Descendo", 10),
+                                      ("Xixi do Milo" if rapidinho else "Passeando", 70), ("Subindo", 10)], t0, t1)
+            grade_extra = [["people", "Com", "Milo"]]
+        elif "academia" in low:
+            titulo, linha2 = "Na academia", "Treinando"
+        elif "mercado" in low:
+            titulo, linha2 = "No mercado", "Fazendo as compras da semana"
+        grade = [["geo-alt", "Onde", "Botafogo"]]
+        if comodo:
+            grade.append(["door-open", "Cômodo", comodo])
+        grade += grade_extra
+        grade.append(["phone", "Celular", celular])
+        if inicio and fim and fim > now:
+            pos = (now - inicio).total_seconds() / max(1, (fim - inicio).total_seconds())
+            barra = {"inicio": hora(inicio), "fim": aprox(fim), "pct": round(max(0, min(1, pos)) * 100),
+                     "meio": f"há {duracao(now - inicio)} · faltam ~{duracao(fim - now)}"}
+        else:
+            t0 = inicio or datetime.fromisoformat(snap["observed_at"])
+            barra = {"inicio": "", "fim": "", "pct": None, "meio": "", "desde": hora(t0), "duracao": duracao(now - t0)}
+        # linha do tempo: o que veio antes e o que vem
+        atual_txt = "Se alimentando" if titulo == "Se alimentando" else linha2 if titulo == "Em casa" else titulo
+        marcos = [m for m in self._marcos(now) if abs((m[0] - (inicio or now)).total_seconds()) > 60 or m[1] != atual_txt]
+        antes = [m for m in marcos if m[0] < (inicio or now)][-1:]
+        depois = [m for m in marcos if m[0] > now][:2]
+        linha = [{"texto": t, "hora": hora(a), "estado": "feito", "valor": None, "passos": []} for a, t in antes]
+        item = {"texto": atual_txt, "hora": hora(inicio or datetime.fromisoformat(snap["observed_at"])),
+                "estado": "agora", "valor": None, "passos": []}
+        for p in passos:
+            feito = p.inicio <= now
+            item["passos"].append({"texto": p.texto, "estado": "feito" if feito else "depois",
+                                   "valor": None, "hora": hora(p.inicio) if feito else ""})
+        if item["passos"]:
+            atuais = [x for x in item["passos"] if x["estado"] == "feito"]
+            if atuais:
+                atuais[-1]["estado"] = "agora"
+        linha.append(item)
+        linha += [{"texto": t, "hora": aprox(a), "estado": "depois", "valor": None, "passos": []} for a, t in depois]
+        return {"titulo": titulo, "linha2": linha2, "barra": barra, "grade": grade, "linha": linha}
+
+
+def _jantar_cozinha() -> set:
+    try:
+        from meals import MENU
+        return set(MENU.get("jantar_cozinha", ())) | set(MENU.get("almoco_casa", ()))
+    except Exception:
+        return set()

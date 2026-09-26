@@ -291,7 +291,8 @@ CELULAR_POR_ATIVIDADE = {
     "GYM": "Olha nos intervalos",
     "MEAL": "Olha de vez em quando", "SOCIAL": "Olha de vez em quando", "GETTING_READY": "Olha de vez em quando",
     "WAKING": "Olha de vez em quando", "PET_WALK": "Olha de vez em quando", "MICRO_WAKE": "Olha de vez em quando",
-    "COMMUTE": "Olha com frequência", "HOME_RELAXING": "Olha com frequência", "UNKNOWN": "Olha com frequência"}
+    "COMMUTE": "Olha com frequência", "HOME_RELAXING": "Olha com frequência", "UNKNOWN": "Olha com frequência",
+    "HOME_BUSY": "Olha de vez em quando", "SOLO": "Olha depois"}
 FASES = {"fase menstrual": "Menstruada", "fase folicular": "Fase folicular",       # nomes do cycle.py, em minúscula
          "fase ovulatória / período fértil": "Período fértil", "fase lútea inicial": "Fase lútea",
          "fase pré-menstrual / tpm": "TPM"}
@@ -433,7 +434,8 @@ async def api_bastidores(request: web.Request) -> web.Response:
         status = status_view(hooks.status(now))
         try:
             from agenda import Agenda
-            status["card"] = Agenda(hooks.db).card(now)      # 26/09: layout D (etapa atual)
+            ag = Agenda(hooks.db)
+            status["card"] = ag.card(now) or ag.card_casa(now, status["celular"])   # 26/09: layout D
         except Exception:
             logger.exception("webapp.agenda.error")
             status["card"] = None

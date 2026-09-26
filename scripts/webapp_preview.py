@@ -93,7 +93,13 @@ async def _serve(db, port: int, status, fixo) -> None:
     async def dev_agora(request):
         t = request.query.get("t", "")
         relogio["t"] = datetime.fromisoformat(t) if t else None
-        return web.json_response({"agora": relogio["t"].isoformat() if relogio["t"] else "real"})
+        info = {"agora": relogio["t"].isoformat() if relogio["t"] else "real"}
+        if relogio["t"] and request.query.get("mundo"):
+            # roda o mundo nesse horário (só na cópia do banco): o card em casa lê o retrato dele
+            from world_state import WorldStateManager
+            snap = await asyncio.to_thread(WorldStateManager(db).resolve, relogio["t"], force=True)
+            info["atividade"] = snap.get("activity")
+        return web.json_response(info)
 
     def make_app(h):
         app = original_make(h)

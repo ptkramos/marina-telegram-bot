@@ -254,9 +254,14 @@ const loaders = {
         const passos = (ps) => ps.length ? `<div class="ag-sub">${ps.map((p) => `<div class="ag-st ${p.estado}">
           <span class="ag-dot"></span><span class="ag-tx">${esc(p.texto)}</span><span class="ag-vl">${p.valor ? brl0(p.valor) : ""}</span>
           <span class="ag-hr">${esc(p.hora)}</span></div>`).join("")}</div>` : "";
-        $("ag-card").innerHTML = `<div class="ag-t">${esc(c.titulo)}</div><div class="ag-s">${esc(c.linha2)}</div>
-          <div class="ag-bar"><i style="width:${c.barra.pct}%"></i></div>
-          <div class="ag-bar-l"><span>${esc(c.barra.inicio)}</span><span>${esc(c.barra.meio)}</span><span>${esc(c.barra.fim)}</span></div>
+        const b = c.barra;
+        // sem hora de fim: duração e "desde" à direita do título (decisão do Patrick)
+        const topo = b.pct == null
+          ? `<div class="ag-topo"><div class="ag-t">${esc(c.titulo)}</div><div class="ag-dur"><b>${esc(b.duracao)}</b><span>desde ${esc(b.desde)}</span></div></div>`
+          : `<div class="ag-t">${esc(c.titulo)}</div>`;
+        $("ag-card").innerHTML = `${topo}${c.linha2 ? `<div class="ag-s">${esc(c.linha2)}</div>` : ""}
+          ${b.pct == null ? "" : `<div class="ag-bar"><i style="width:${b.pct}%"></i></div>
+          <div class="ag-bar-l"><span>${esc(b.inicio)}</span><span>${esc(b.meio)}</span><span>${esc(b.fim)}</span></div>`}
           <div class="ag-sep"></div>${grade(c.grade)}<div class="ag-sep"></div>
           <div class="ag-linha">${c.linha.map((e) => `<div class="ag-st ${e.estado}"><span class="ag-dot"></span>
             <span class="ag-tx">${esc(e.texto)}</span><span class="ag-vl">${e.valor ? brl0(e.valor) : ""}</span>

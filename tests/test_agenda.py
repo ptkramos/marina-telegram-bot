@@ -116,3 +116,56 @@ class AgendaTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CardCasaTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = DatabaseManager(Path(self.temp.name) / "c.db")
+        seed_world_bible(self.db)
+        with self.db.get_connection() as conn:
+            conn.execute("INSERT INTO world_bootstrap (key, value, updated_at) VALUES ('clean_canonical_start_done','1','2026-09-01')")
+            conn.commit()
+        for alvo in ("commute.Commute.legs_on",):
+            p = patch(alvo, return_value=[])
+            p.start()
+            self.addCleanup(p.stop)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def _snap(self, activity, now, plano=None):
+        from world_state import WorldStateManager
+        WorldStateManager(self.db).states.add_snapshot({
+            "state_date": now.date().isoformat(), "observed_at": now.isoformat(), "location_place_id": 1,
+            "location_region": "Botafogo", "activity": activity, "energy_level": 0.6, "weather_context_json": None,
+            "current_plan_json": plano, "source_json": {"truth_type": "system", "reason": "x"}})
+
+    def test_tempo_livre(self):
+        from tempo_livre import TempoLivre
+        now = DIA.replace(hour=14, minute=10)
+        with patch.object(TempoLivre, "_quer_se_tocar", return_value=False):
+            b = TempoLivre(self.db).agora(now)
+        self._snap(b.atividade, now)
+        c = Agenda(self.db).card_casa(now + timedelta(minutes=2), "Olha com frequência")
+        self.assertEqual((c["titulo"], c["linha2"]), ("Em casa", b.texto))
+        self.assertIn(["door-open", "Cômodo", b.comodo_nome], c["grade"])
+        self.assertEqual(c["grade"][0], ["geo-alt", "Onde", "Botafogo"])
+        self.assertEqual(next(x for x in c["linha"] if x["estado"] == "agora")["texto"], b.texto)
+
+    def test_refeicao_se_alimentando(self):
+        now = DIA.replace(hour=20, minute=10)
+        self._snap("jantando em casa", now, {"activity": "jantando em casa", "start_at": now.isoformat(),
+                                              "end_at": (now + timedelta(minutes=30)).isoformat()})
+        c = Agenda(self.db).card_casa(now + timedelta(minutes=5), "Olha de vez em quando")
+        self.assertEqual((c["titulo"], c["linha2"]), ("Se alimentando", "Jantando"))
+        self.assertEqual(c["barra"]["meio"], "há 5min · faltam ~25min")
+
+    def test_passeio_do_milo_e_saida(self):
+        now = DIA.replace(hour=9, minute=0)
+        self._snap("passeando com Milo", now, {"activity": "passeando com Milo", "start_at": now.isoformat(),
+                                                "end_at": (now + timedelta(minutes=30)).isoformat()})
+        c = Agenda(self.db).card_casa(now + timedelta(minutes=10), "Olha de vez em quando")
+        self.assertEqual(c["titulo"], "Na Enseada")
+        self.assertEqual(c["linha2"], "Volta pra casa às ~09:30")
+        self.assertIn(["people", "Com", "Milo"], c["grade"])

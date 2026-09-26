@@ -226,6 +226,37 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 - Testes: `tests/test_consumo.py` (10).
 - **Ainda não:** pedido limitado pelo saldo (hoje ela pede igual com pouco dinheiro; o aperto cai no pedido de ajuda pra você, que já existe) e consumo em outros lugares (PUC, academia, shopping sem cinema).
 
+### Etapa 1 — Em casa: decisões do Patrick (26/09, tarde; **base construída** — mídia real, cuidados e música sugerida a seguir)
+**Regra de ouro:** tudo o que ela faz acontece de verdade no mundo e vira história (acontecimento do dia, efeito no corpo/dinheiro/estado, ela lembra e pode contar). Nada é só texto de painel.
+
+**Card em casa:** título sempre **"Em casa"**; **linha 2 = o que ela está fazendo**, no padrão **gerúndio + o que é, de verdade** ("Ouvindo Sabrina Carpenter", "Lendo Sono Bisque Doll, vol. 5", "Vendo o desfile da Chanel", "Jogando Stardew Valley"). Grade: **Onde** = bairro, linha nova **Cômodo**, Celular. Linha do tempo: o que veio antes e o que vem. **Prédio é casa** (academia e piscina do prédio: "Em casa", cômodo "Academia do prédio"/"Piscina do prédio").
+- **Refeição:** título **"Se alimentando"**; linha 2 só a refeição ("Jantando"); o prato vai pros passos.
+- **Passeio com o Milo é saída:** título ligado à Enseada (como "No Quartinho"), linha 2 no padrão das saídas ("Vai passear com o Milo"/"Passeando com o Milo" — a decidir), passos iguais às saídas + o que o Milo apronta (o mundo já gera).
+- **Cômodo não é travado, só precisa fazer sentido:** desfile/série na TV (quarto, sala, closet) ou no celular em qualquer lugar — **pelo celular ela demora mais pra responder** que o normal.
+
+**Tempo livre concreto (aprovado, textos no padrão acima):** celular (Instagram, TikTok, X, Pinterest — placeholders até as redes do app existirem); moda (organizando o closet, montando looks, vendo desfile, desenhando croqui); casa e Milo (arrumando o quarto, brincando com o Milo, regando as plantas, ouvindo música); descanso (lendo, cochilando, tomando sol, deitada à toa); íntimo (**se tocando — vale no corpo dela: registra o orgasmo, o tesão cai, o "Último orgasmo" atualiza**); falando com o pai/amigas (nas ligações que o mundo já tem); fazendo as unhas; preparando o jantar (passo antes de comer); estudando (trabalho da facul); **jogando** (It Takes Two, Stardew Valley, The Sims).
+
+**Mídia real (nada inventado):**
+- **Música:** pop internacional, pop/MPB brasileiro, J-pop/anime, K-pop. **Músicas que o Patrick sugerir na conversa ela ouve e adota se curtir** (por letra etc.) — vira gosto dela.
+- **Leitura:** mangás dos animes dela, romance/young adult, moda e design, livros da facul — com progresso (volume/capítulo continua de um dia pro outro).
+- **Séries/filmes/jogos** já canônicos (023 + TMDB). **Futebol do Botafogo:** ela acompanha os **jogos reais** do Botafogo.
+
+**Base construída (26/09, `tempo_livre.py` + `Agenda.card_casa`):**
+- O "tempo livre em casa"/"curtindo a noite em casa" do mundo vira **blocos concretos** de 10–90 min (17 tipos aprovados + "se tocando"), escolhidos pelo horário, pelo tempo lá fora e pelo corpo; o cômodo é sorteado entre os que fazem sentido; desfile/jogo às vezes pelo celular. O bloco é decidido quando ela está livre e fica guardado; cada um vira **acontecimento do dia** ("Ficou olhando o TikTok no quarto.").
+- **Se tocando vale no corpo:** só com tesão alto, sem estar no clima com ele, 8 h depois do último orgasmo e uma vez por dia (divide a marca com o "se resolver sozinha" de antes de dormir); registra o orgasmo (o tesão cai, "Último orgasmo" atualiza), alívio, e às vezes ela pode contar pra ele.
+- **Disponibilidade:** vídeo pelo celular, lendo, jogando, desenhando, mexendo no closet → **HOME_BUSY** (responde mais devagar); se tocando → **SOLO** (só pega o celular depois). Chuva no meio de um bloco refaz o bloco.
+- **Card em casa:** "Em casa" + o que ela faz (ou "Se alimentando" com a refeição e o prato nos passos; "Preparando o jantar" quando ela cozinhou), Onde/Cômodo/Celular, barra quando tem fim (sem fim: duração e "desde" à direita do título), linha do tempo com o que veio antes e o que vem (refeições, blocos, saídas, série, dormir). Passeio do Milo: "Na Enseada" com passos. Banho, série, trabalho da facul, dormindo, academia do prédio com cômodo.
+- **Se arrumando respeita a refeição em casa:** se o jantar cai na janela, ela come primeiro.
+- Mídia desta base: artistas reais dos gêneros dele, mangás/livros reais, jogos do cânone, marcas reais. A etapa 2 amplia (progresso de leitura, músicas, busca, Botafogo).
+- Conferido na pré-visualização com a cópia da produção de hoje (sábado): Instagram no quarto às 13:25, convite da Bia aceito, se arrumando às 19:33 depois do jantar.
+- **Textos que decidi sem perguntar (pra ele revisar):** celular "Olha depois" (se tocando); "Na calçada" (xixi da noite do Milo); passos do Milo "Colocando a coleira · Descendo · Passeando/Xixi do Milo · Subindo"; linha 2 "Acordando", "Treinando"; "Na academia", "No mercado · Fazendo as compras da semana"; na linha do tempo as refeições como "Tomando café/Almoçando/Lanchando/Jantando".
+- Corrigido de passagem: "Conheceu a Gabi) Freitas" (apelido com sobrenome no `short_name`).
+- Testes: `tests/test_tempo_livre.py` (6) e card em casa em `tests/test_agenda.py` (3).
+
+**Tudo pode ser interrompido, se houver motivo (Patrick, 26/09 — próxima frente do mundo):** a agenda não é engessada. Ela pode sair mais cedo da academia e emendar outra coisa; sair no meio da aula (passando mal, emergência de banheiro); largar um rolê chato ou por emergência — **tesão é emergência**: às vezes ela precisa se aliviar e vai correndo pra casa ou pra um lugar reservado, sozinha ou com ele. Cada interrupção é mais história (acontecimento, motivo, efeito no resto do dia, card e trajeto se ajustam).
+
+**Cuidados (status novo):** **unha** tem estado (cor, feita quando, gastando). Ela faz em casa **só se estiver entediada e com a unha gasta**; manicure (saída) antes de evento/job; **luxos saem do saldo dela**. A cor atual **manda nas fotos geradas**, e ela pode **pedir a opinião do Patrick** sobre a cor quando quiser. Depois: cabelo e outros cuidados (ideias do Patrick).
+
 ## 7. Próximas ideias (Patrick, 26/09)
 
 **iFood realista.** Base: o print do iFood real do Patrick (saudação "Boa tarde, Patrick", endereço, categorias, lojas com logo, nota e avaliações, tempo e taxa de entrega, cupons, abas Início/Busca/Pedidos/Perfil). Povoar o cardápio com lojas e pratos reais de Botafogo como base do cânone do que ela come. O Patrick pediu dicas de outra IA sobre como povoar — aguardando ele colar.
