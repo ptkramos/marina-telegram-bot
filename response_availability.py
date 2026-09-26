@@ -482,7 +482,7 @@ class ResponseAvailabilityPolicy:
         if any(x in act for x in ('jantando', 'almoçando', 'almocando', 'lanchando', 'beliscando', 'comendo')):
             return 'MEAL'
         # 26/09: agenda única — consulta médica e saídas sozinha por vontade.
-        if 'consulta' in act:
+        if 'consulta' in act or 'pronto-atendimento' in act:
             return 'CLASS'
         if ((place_key or '').startswith('loja_') or 'compras da semana' in act or act.startswith('passando n')
                 or 'praia shopping' in act or 'tomando um' in act):

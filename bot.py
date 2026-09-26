@@ -363,6 +363,33 @@ async def send_registered_privacy_replies(chat_id: int, bot, replies, *, reply_t
 
 # Lock de concorrência global para consolidação de memória
 MEMORY_CONSOLIDATION_LOCK = asyncio.Lock()
+# 26/09 (Patrick: "mensagens fora de ordem ao receber um delivery de surpresa"): a entrega e uma
+# saudade saíram no mesmo segundo, geradas sem saber uma da outra, e os balões se intercalaram.
+# 1) cada sequência de balões sai inteira antes da próxima (por chat);
+# 2) iniciativas dela passam uma de cada vez; a opcional (saudade, carinho…) desiste se outra
+#    acabou de sair — as de evento (entrega, pedido, ritual) saem sabendo o que foi antes.
+OUTBOUND_LOCKS: dict = {}
+INITIATIVE_LOCK = asyncio.Lock()
+INITIATIVE_GAP_MIN = 10
+
+
+def _outbound_lock(chat_id) -> asyncio.Lock:
+    lock = OUTBOUND_LOCKS.get(chat_id)
+    if lock is None:
+        lock = OUTBOUND_LOCKS[chat_id] = asyncio.Lock()
+    return lock
+
+
+def _minutos_desde_iniciativa(now=None) -> float:
+    try:
+        with memory_manager.db.get_connection() as conn:
+            row = conn.execute("SELECT timestamp FROM conversas WHERE role='assistant' AND is_initiative=1 "
+                               "ORDER BY id DESC LIMIT 1").fetchone()
+        if not row:
+            return 1e9
+        return ((now or datetime.now()) - datetime.fromisoformat(row["timestamp"])).total_seconds() / 60
+    except Exception:
+        return 1e9
 _IS_CONSOLIDATING = False
 
 
@@ -612,7 +639,13 @@ async def _typing(bot, chat_id: int) -> None:
 
 
 async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_message_id: int = None, response_policy=None):
-    """Envia a mensagem em balões curtos sucessivos com animação realista de digitação e rastreia IDs."""
+    """Envia a mensagem em balões curtos sucessivos com animação realista de digitação e rastreia IDs.
+    Uma sequência de balões por vez no chat (26/09: nada de intercalar duas mensagens)."""
+    async with _outbound_lock(chat_id):
+        return await _send_human_messages(chat_id, bot, full_text, reply_to_message_id, response_policy)
+
+
+async def _send_human_messages(chat_id: int, bot, full_text: str, reply_to_message_id: int = None, response_policy=None):
     if settings.VOICE_PROSODY_ENABLED:
         from voice_prosody import sanitize_display_text
         full_text = sanitize_display_text(full_text)
@@ -4459,6 +4492,11 @@ async def autonomous_routine(application: Application):
 
 async def autonomous_routine_v36(application: Application):
     """Grounded initiative; commit follow-ups and disclosure only after delivery."""
+    async with INITIATIVE_LOCK:
+        await _autonomous_routine_v36(application)
+
+
+async def _autonomous_routine_v36(application: Application):
     if not settings.TARGET_CHAT_ID:
         return
     try:
@@ -4468,6 +4506,10 @@ async def autonomous_routine_v36(application: Application):
             return
         should_run, why = proactivity_service.should_trigger(now)
         if not should_run:
+            return
+        gap = _minutos_desde_iniciativa(now)
+        if gap < INITIATIVE_GAP_MIN:
+            logger.info("proactivity.skip_recent_initiative why=%s gap_min=%.1f", why, gap)
             return
         candidate = proactivity_service.determine_living_world_candidate(now)
         if why == 'tesao':
@@ -4562,6 +4604,11 @@ async def autonomous_routine_v36(application: Application):
         logger.error('Erro na proatividade Living World: %s', exc, exc_info=True)
 
 async def ritual_routine(application: Application):
+    async with INITIATIVE_LOCK:
+        await _ritual_routine(application)
+
+
+async def _ritual_routine(application: Application):
     """Fase C.3 — bom dia, boa noite e momentos do cotidiano, pela agenda dela.
 
     Não passa pelo sorteio da proatividade e não gasta a cota dela; o texto sai
@@ -4988,6 +5035,11 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
 
 
 async def delivery_gift_routine(application: Application):
+    async with INITIATIVE_LOCK:
+        await _delivery_gift_routine(application)
+
+
+async def _delivery_gift_routine(application: Application):
     """O delivery surpresa que o Patrick mandou pelo app chega, e ela reage quando pega."""
     if not settings.TARGET_CHAT_ID:
         return
@@ -5018,6 +5070,7 @@ async def delivery_gift_routine(application: Application):
             # almoço às 12:38. "Acabou de comer" pro presente é até 1h30.
             last = meals._recent_meal(now)
             ate_recently = bool(last) and now - datetime.fromisoformat(last["event_at"]) <= timedelta(minutes=90)
+            ate_recently = ate_recently or meals.hunger(now) < 0.25   # 26/09: sem fome (lanche conta), guarda
             delivery.gift_tick(memory_manager.db, now, can_receive=home and not asleep and not shower, why_not=why,
                                ate_recently=ate_recently, transition_busy=meals._transition_busy(now))
         gift = delivery.gift_to_announce(memory_manager.db)

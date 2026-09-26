@@ -105,19 +105,22 @@ def materialize(db, now: datetime) -> bool:
     _save(db, cur)
     what = cur["what"]
     from meals import meal_kind
+    key = f"meal:{eta.date().isoformat()}:{meal_kind(eta)}:delivery"
+    end = eta + timedelta(minutes=random.Random(cur["ordered_at"]).randint(*EAT_MIN))
+    meta, end = _saciedade(db, key, eta, end, what)
     # Vira A refeição do horário (o açaí das 19:55 é o jantar): a fome zera e o jantar
     # planejado do dia não sai em dobro (Meals pula tipo já registrado).
     with db.get_connection() as conn:
         conn.execute(
-            """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
-               autonomy_level,importance,participants_json,share_worthy,created_at)
-               VALUES (?,?,'meal','delivery',?,'simulated',1,0.2,?,0.5,?)""",
-            (f"meal:{eta.date().isoformat()}:{meal_kind(eta)}:delivery", eta.isoformat(),
+            """INSERT OR IGNORE INTO life_events(event_key,event_at,end_at,event_type,title,summary,source_type,
+               autonomy_level,importance,participants_json,share_worthy,metadata_json,created_at)
+               VALUES (?,?,?,'meal','delivery',?,'simulated',1,0.2,?,0.5,?,?)""",
+            (key, eta.isoformat(), end.isoformat(),
              f"O {what} do delivery chegou (o Seu Jorge interfonou) e ela foi comer.",
-             json.dumps(["marina", "jorge_almeida"]), now.isoformat()))
+             json.dumps(["marina", "jorge_almeida"]), json.dumps(meta, ensure_ascii=False) if meta else None,
+             now.isoformat()))
         conn.commit()
     _contato_portaria(db, f"delivery:{cur['ordered_at']}", eta)
-    end = eta + timedelta(minutes=random.Random(cur["ordered_at"]).randint(*EAT_MIN))
     if end > now:
         raw = db.get_estado_relacional().get("pending_transition_json")
         busy = False
@@ -132,6 +135,21 @@ def materialize(db, now: datetime) -> bool:
                 "dish": what}, ensure_ascii=False))
     logger.info("delivery.arrived what=%s at=%s", what, eta.isoformat(timespec="minutes"))
     return True
+
+
+def _saciedade(db, key: str, at: datetime, end: datetime, what: str) -> tuple[Optional[dict], datetime]:
+    """26/09: o presente/pedido é refeição de verdade — a fome cai enquanto ela come, e satisfeita
+    ela guarda o resto (mesma regra do Meals)."""
+    try:
+        from meals import MealSlot, Meals, meal_kind
+        kind = meal_kind(at)
+        slot = MealSlot(kind, key, at, max(5, int((end - at).total_seconds() // 60)), "casa", what)
+        sac = Meals(db).saciedade(slot)
+        sac["prato"] = what
+        return sac, at + timedelta(minutes=sac["minutos"])
+    except Exception:
+        logger.exception("delivery.saciedade")
+        return None, end
 
 
 # ------------------------------------------------- presente do Patrick (Mini App, 25/09) --
@@ -204,16 +222,23 @@ def gift_tick(db, now: datetime, *, can_receive: bool, why_not: str = "", ate_re
     from meals import meal_kind
     key = (f"meal:{at.date().isoformat()}:{meal_kind(at)}:presente" if eats_now
            else f"presente:{at.isoformat(timespec='minutes')}")
+    end = at + timedelta(minutes=random.Random(cur["ordered_at"]).randint(*EAT_MIN))
+    meta, end = _saciedade(db, key, at, end, what) if eats_now else (None, end)
+    if meta and meta.get("larga"):
+        summary += " Comeu até ficar satisfeita e guardou o resto."
+    elif meta and meta.get("excesso"):
+        summary += " Comeu tudo, além da conta, e ficou estufada."
+
     with db.get_connection() as conn:
         conn.execute(
-            """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
-               autonomy_level,importance,participants_json,share_worthy,created_at)
-               VALUES (?,?,?,'presente do Patrick',?,'simulated',1,0.6,?,0.9,?)""",
-            (key, at.isoformat(), "meal" if eats_now else "gift", summary,
-             json.dumps(["marina", "patrick", "jorge_almeida"]), now.isoformat()))
+            """INSERT OR IGNORE INTO life_events(event_key,event_at,end_at,event_type,title,summary,source_type,
+               autonomy_level,importance,participants_json,share_worthy,metadata_json,created_at)
+               VALUES (?,?,?,?,'presente do Patrick',?,'simulated',1,0.6,?,0.9,?,?)""",
+            (key, at.isoformat(), end.isoformat() if eats_now else None, "meal" if eats_now else "gift", summary,
+             json.dumps(["marina", "patrick", "jorge_almeida"]), json.dumps(meta, ensure_ascii=False) if meta else None,
+             now.isoformat()))
         conn.commit()
     _contato_portaria(db, f"presente:{cur['ordered_at']}", at)
-    end = at + timedelta(minutes=random.Random(cur["ordered_at"]).randint(*EAT_MIN))
     if eats_now and end > now and not transition_busy:
         db.set_estado_relacional("pending_transition_json", json.dumps({
             "routine_type": "meal", "activity": f"comendo o {what} que o Patrick mandou", "place_key": "marina_apartment",

@@ -56,10 +56,11 @@ SAIDAS = {
                  "horas": ((8, 22),), "peso": 0.05, "motivo": "precisava de um remédio"},
 }
 COISA = {"Açaí": "um açaí", "Sorvetes": "um sorvete"}
-FEMININO = ("estação", "drogaria", "drogarias", "officina", "kopenhagen", "enseada", "praia", "clínica", "orla")
+FEMININO = ("estação", "drogaria", "drogarias", "officina", "kopenhagen", "enseada", "praia", "clínica", "orla",
+            "novamed")
 PREP_MIN = {"milo": (3, 5), "cafe": (8, 12), "acai": (6, 10), "orla": (8, 12), "shopping": (20, 30),
             "praia": (15, 20), "mercado": (6, 10), "farmacia": (5, 8), "academia": (10, 15),
-            "mercado_semana": (8, 12), "medico": (12, 18)}
+            "mercado_semana": (8, 12), "medico": (12, 18), "pronto_atendimento": (8, 12)}
 
 
 def no(nome: str) -> str:
@@ -93,16 +94,6 @@ class Vontade:
                                     "usage_rules_json": {"catalogo": l["id"], "abre": l.get("abre"), "fecha": l.get("fecha")},
                                     "canon_locked": 0})
         return key
-
-    def _lugar_clinica(self) -> str:
-        from world_repository import WorldBibleRepository
-        repo = WorldBibleRepository(self.db)
-        if not repo.get_place("clinica_botafogo"):
-            repo.upsert_place("clinica_botafogo", {"name": "Clínica do plano em Botafogo", "region": "Botafogo",
-                                                   "place_type": "clinic", "truth_type": "simulated",
-                                                   "familiarity": "known", "distance_class": "near_home",
-                                                   "usage_rules_json": {}, "canon_locked": 0})
-        return "clinica_botafogo"
 
     # --------------------------------------------------------------- agendar --
     def agendar(self, tipo: str, lugar: str, inicio: datetime, fim: datetime, texto: str, *, origem: str,
@@ -317,8 +308,14 @@ class Vontade:
                             "Fazendo as compras da semana no Zona Sul", origem="planejado", decidido_em=now,
                             chave=chave, ida_min=6, extra={"pago_por": "pai"})
 
-    def medico(self, at: datetime, quem: str, now: datetime) -> Optional[int]:
+    def medico(self, at: datetime, quem: str, now: datetime, *, kind: str = "resfriado") -> Optional[int]:
+        """Consulta pelo Bradesco Saúde (cânone): virose → pronto-atendimento do Samaritano Botafogo;
+        o resto → consulta marcada na Novamed Botafogo. Doente, vai de uber."""
+        urgente = kind == "virose"
+        lugar = "hospital_samaritano_botafogo" if urgente else "novamed_botafogo"
+        texto = "No pronto-atendimento do Samaritano" if urgente else "Na consulta na Novamed"
         chave = f"medico:{at.date().isoformat()}"
-        return self.agendar("medico", self._lugar_clinica(), at, at + timedelta(minutes=50),
-                            "Na consulta médica", origem="planejado", decidido_em=now, chave=chave,
-                            modo="uber", ida_min=10, extra={"mandou": quem})
+        return self.agendar("pronto_atendimento" if urgente else "medico", lugar, at,
+                            at + timedelta(minutes=90 if urgente else 50), texto, origem="planejado",
+                            decidido_em=now, chave=chave, modo="uber", ida_min=8,
+                            extra={"mandou": quem, "plano": "Bradesco Saúde Top Nacional"})

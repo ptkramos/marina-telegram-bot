@@ -145,3 +145,52 @@ class PessoasNovasTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EntregaDe26Test(unittest.TestCase):
+    """26/09 16:39–16:41: chocolate registrado com ela voltando da academia a pé; o sanduíche que o
+    Patrick mandou ficou sem saciedade."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.db = DatabaseManager(Path(self.temp.name) / "e.db")
+        seed_world_bible(self.db)
+
+    def _snap(self, at, activity, reason):
+        from world_state import WorldStateManager
+        WorldStateManager(self.db).states.add_snapshot({
+            "state_date": at.date().isoformat(), "observed_at": at.isoformat(), "location_place_id": None,
+            "location_region": "a caminho (Botafogo)" if reason == "commute" else "Botafogo", "activity": activity,
+            "energy_level": 0.6, "weather_context_json": None, "current_plan_json": None,
+            "source_json": {"reason": reason}})
+
+    def test_lanche_com_ela_na_rua_acontece_quando_chega(self):
+        dia = datetime(2026, 9, 26)
+        lanche = MealSlot("lanche", "meal:2026-09-26:lanche:1", dia.replace(hour=16, minute=39), 6, "casa", "um chocolate")
+        self._snap(dia.replace(hour=16, minute=30), "voltando da Bodytech pra casa a pé", "commute")
+        self._snap(dia.replace(hour=16, minute=41), "em casa, olhando o Instagram (quarto)", "free_time")
+        m = Meals(self.db)
+        with patch.object(Meals, "day_plan", return_value=[lanche]), patch.object(Meals, "_floor",
+                                                                                 return_value=dia), \
+                patch.object(Meals, "_belisca", return_value=0), patch.object(Meals, "_weigh_in"):
+            m.materialize(dia.replace(hour=16, minute=42))
+        with self.db.get_connection() as conn:
+            at = conn.execute("SELECT event_at FROM life_events WHERE event_key=?", (lanche.key,)).fetchone()[0]
+        self.assertEqual(at[11:16], "16:42", "não foi às 16:39, na rua")
+
+    def test_voltando_a_pe_e_fora_de_casa(self):
+        self.assertTrue(Meals._fora({"activity": "voltando da Bodytech pra casa a pé", "source_json": {"reason": "commute"}}))
+        self.assertFalse(Meals._fora({"activity": "em casa, olhando o Instagram (quarto)", "source_json": {}}))
+
+    def test_presente_vira_refeicao_com_saciedade(self):
+        import delivery
+        t = datetime(2026, 9, 26, 16, 20)
+        delivery.gift(self.db, what="Sanduíche natural de frango", restaurant="Megamatte", price=40,
+                      eta_min=(20, 20), note="", now=t)
+        with patch.object(Meals, "hunger", return_value=0.9):
+            delivery.gift_tick(self.db, t + timedelta(minutes=21), can_receive=True)
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT end_at, metadata_json FROM life_events WHERE event_key LIKE 'meal:%:presente'").fetchone()
+        self.assertIsNotNone(row["end_at"])
+        self.assertEqual(json.loads(row["metadata_json"])["prato"], "Sanduíche natural de frango")

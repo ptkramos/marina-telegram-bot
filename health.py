@@ -27,12 +27,25 @@ catalogar pra ele revisar — PLANO_VOZ, seção D11):
 Revisão do Patrick (24/09): 1, 2 e 4 aprovados. No 3: quando está mal de
 verdade (virose ou resfriado forte — cólica NÃO), se o pai ou o Patrick mandar
 ir ao médico, ela vai (tem plano de saúde bom) e melhora mais rápido do que
-se automedicando. O pai manda sozinho em DAD_SENDS_CHANCE das vezes; o
+se automedicando.
+
+Cânone (Patrick, 26/09): plano Bradesco Saúde Top Nacional, dependente no plano da empresa do
+pai. Urgente (virose): pronto-atendimento do Hospital Samaritano Botafogo; dá pra esperar
+(resfriado forte): consulta marcada na Novamed Botafogo. Vai de uber (é item da agenda). O pai manda sozinho em DAD_SENDS_CHANCE das vezes; o
 Patrick manda pela conversa (observe_patrick).
 """
 from __future__ import annotations
 
 import json
+
+PLANO = "Bradesco Saúde Top Nacional (dependente no plano da empresa do pai)"
+
+
+def onde_consulta(kind: str) -> tuple[str, str]:
+    """(lugar, como ela diz): virose é urgente (pronto-atendimento); o resto, consulta marcada."""
+    if kind == "virose":
+        return "hospital_samaritano_botafogo", "no pronto-atendimento do Samaritano"
+    return "novamed_botafogo", "numa consulta na Novamed"
 import random
 import re
 from dataclasses import dataclass
@@ -255,9 +268,10 @@ class Health:
         """A consulta que já aconteceu vira acontecimento do dia (idempotente)."""
         visit = self.doctor(now)
         if visit and now < visit[0] <= now + timedelta(hours=4):
-            try:                                          # 26/09: a consulta é item da agenda (uber, clínica)
+            try:                                          # 26/09: a consulta é item da agenda (uber, lugar real)
                 from vontade import Vontade
-                Vontade(self.db).medico(visit[0], visit[1], now)
+                sick = self.illness(now.date())
+                Vontade(self.db).medico(visit[0], visit[1], now, kind=sick[0] if sick else "resfriado")
             except Exception:
                 pass
         if not visit or visit[0] > now:
@@ -269,7 +283,8 @@ class Health:
                    autonomy_level,importance,participants_json,share_worthy,created_at)
                    VALUES (?,?,'routine','médico',?,'simulated',1,0.4,?,0.6,?)""",
                 (f"medico:{at.date().isoformat()}", at.isoformat(),
-                 f"Foi ao médico pelo plano de saúde ({who} mandou); saiu com receita e já tomou o remédio.",
+                 f"Foi ao médico {onde_consulta((self.illness(at.date()) or ('resfriado',))[0])[1]} pelo "
+                 f"Bradesco Saúde ({who} mandou); saiu com receita e já tomou o remédio.",
                  json.dumps(["marina"]), now.isoformat()))
             conn.commit()
             return cur.rowcount or 0
@@ -422,10 +437,11 @@ class Health:
             lines.append("  Tá mal de verdade: com o Patrick fica manhosa, curtinha, aceita dengo e cuidado.")
             visit = self.doctor(now) if any(c.kind in ("virose", "resfriado") for c in conds) else None
             if visit and visit[0] > now:
+                onde = onde_consulta(next(c.kind for c in conds if c.kind in ("virose", "resfriado")))[1]
                 lines.append(f"  {visit[1][0].upper()}{visit[1][1:]} mandou você ir ao médico: você vai hoje às "
-                             f"{visit[0]:%H:%M}, pelo plano de saúde.")
+                             f"{visit[0]:%H:%M}, {onde}, pelo {PLANO}.")
             elif not visit:
-                lines.append("  Se o pai ou o Patrick mandar ir ao médico, você vai (tem plano de saúde bom).")
+                lines.append(f"  Se o pai ou o Patrick mandar ir ao médico, você vai (plano {PLANO}).")
         else:
             lines.append("  Coisa pequena: você minimiza e segue a vida (\"é só uma dorzinha\"). "
                          "Só fala disso se vier ao caso ou se ele perguntar.")

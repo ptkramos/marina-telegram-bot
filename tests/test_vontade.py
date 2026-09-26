@@ -105,7 +105,8 @@ class VontadeTest(unittest.TestCase):
         from response_availability import ResponseAvailabilityPolicy
         m = ResponseAvailabilityPolicy(self.db)._map_place_activity
         self.assertEqual(m("loja_starbucks_bf", "Tomando um café no Starbucks"), "OUT_SOLO")
-        self.assertEqual(m("clinica_botafogo", "Na consulta médica"), "CLASS")
+        self.assertEqual(m("novamed_botafogo", "Na consulta na Novamed"), "CLASS")
+        self.assertEqual(m("hospital_samaritano_botafogo", "No pronto-atendimento do Samaritano"), "CLASS")
         self.assertEqual(m("enseada_botafogo", "Passeando com o Milo na Enseada"), "PET_WALK")
 
 
@@ -121,7 +122,7 @@ class MedicoTest(unittest.TestCase):
                 patch("academia.PasseioMilo.plano", return_value=None), \
                 patch("meals.Meals.day_plan", return_value=[]):
             etapas = Agenda(db).etapas(T.date(), T)
-        self.assertEqual([e.titulo for e in etapas], ["Se arrumando", "A caminho", "Na clínica", "Voltando pra casa"])
+        self.assertEqual([e.titulo for e in etapas], ["Se arrumando", "A caminho", "Na Novamed", "Voltando pra casa"])
         self.assertEqual(etapas[1].como, "Uber")
         self.assertEqual([p.texto for p in etapas[2].passos], ["Na recepção", "Na consulta", "Pegando a receita"])
 
@@ -145,3 +146,22 @@ class MiloPlanejadoTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ProntoAtendimentoTest(unittest.TestCase):
+    def test_virose_vai_pro_samaritano(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        db = DatabaseManager(Path(temp.name) / "s.db")
+        seed_world_bible(db)
+        at = T.replace(hour=15)
+        Vontade(db).medico(at, "o pai", T.replace(hour=13), kind="virose")
+        with patch("academia.Academia.plano", return_value=None), \
+                patch("academia.PasseioMilo.plano", return_value=None), \
+                patch("meals.Meals.day_plan", return_value=[]):
+            la = next(e for e in Agenda(db).etapas(T.date(), T) if e.tipo == "la")
+        self.assertEqual(la.titulo, "No Samaritano")
+        self.assertEqual(la.passos[0].texto, "Na triagem")
+        from health import onde_consulta, PLANO
+        self.assertEqual(onde_consulta("virose")[0], "hospital_samaritano_botafogo")
+        self.assertIn("Bradesco Saúde Top Nacional", PLANO)

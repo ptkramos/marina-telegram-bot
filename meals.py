@@ -359,17 +359,28 @@ class Meals:
             return False
 
     def _at_home(self) -> bool:
-        state = WorldStateRepository(self.db).latest()
+        return not self._fora(WorldStateRepository(self.db).latest())
+
+    def _away_at(self, t: datetime) -> bool:
+        """Ela estava fora de casa às `t`? (o retrato do mundo que valia naquela hora)"""
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT * FROM world_state WHERE observed_at<=? ORDER BY observed_at DESC, id DESC LIMIT 1",
+                               (t.isoformat(),)).fetchone()
+        return self._fora(dict(row)) if row else False
+
+    @staticmethod
+    def _fora(state: Optional[dict]) -> bool:
         if not state:
-            return True
+            return False
         activity = (state.get("activity") or "").casefold()
         region = (state.get("location_region") or "").casefold()
-        source = json.loads(state.get("source_json") or "{}") if isinstance(state.get("source_json"), str) else {}
-        if (source or {}).get("reason") == "confirmed_commitment":
-            return False                                  # num compromisso (rolê, café, passeio): não está em casa
+        source = state.get("source_json")
+        source = json.loads(source or "{}") if isinstance(source, str) else (source or {})
+        if source.get("reason") in ("confirmed_commitment", "commute"):
+            return True                                   # num compromisso ou no caminho: não está em casa
         away = ("dorm", "a caminho", "uber", "ônibus", "metrô", "carona", "academia", "trein",
-                "faculdade", "aula", "com amig", "bar", "praia", "saindo com")
-        return not any(t in activity for t in away) and "a caminho" not in region
+                "faculdade", "aula", "com amig", "bar", "praia", "saindo com", "voltando", "a pé", "passeando")
+        return any(t in activity for t in away) or "a caminho" in region
 
     def _start_eating(self, slot: MealSlot, start: datetime, end: datetime, now: datetime) -> None:
         _, gerund = KIND_NAME[slot.kind]
@@ -408,6 +419,13 @@ class Meals:
                 continue      # já comeu (promessa antecipou)
             if slot.where == "casa" and not slot.skipped and not self._at_home() and now < slot.end:
                 continue      # fora de casa na hora: espera ela voltar (a janela ainda está aberta)
+            if slot.where == "casa" and not slot.skipped and self._away_at(slot.at):
+                # 26/09: o chocolate das 16:39 foi registrado com ela voltando da academia a pé.
+                # Chegou em casa: come agora (lanche que passou de 1 h da hora não acontece mais).
+                if slot.kind == "lanche" and now - slot.at > timedelta(hours=1):
+                    continue
+                from dataclasses import replace
+                slot = replace(slot, at=now)
             sac = self._record(slot, now)
             if sac is not None:
                 created += 1

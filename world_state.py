@@ -15,6 +15,7 @@ Nenhuma dessas regras adiciona chamadas externas ou dependência de LLM.
 import json
 import logging
 import random
+import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta, time
 from typing import Mapping, Optional
@@ -523,6 +524,9 @@ class RoutineEngine:
         return self.rng.choices(options, weights=[item.score for item in options], k=1)[0]
 
 
+_RESOLVE_LOCK = threading.RLock()
+
+
 class WorldStateManager:
     """Compromisso > plano explícito > pending_transition > consequência > rotina."""
 
@@ -636,7 +640,13 @@ class WorldStateManager:
             logger.exception("agenda.prep.error")
             return None
 
-    def resolve(
+    def resolve(self, now: datetime, **kw):
+        """Um resolve por vez no processo (26/09: a entrega pôs ela "comendo o sanduíche" e um resolve
+        paralelo, da saudade, gravou "olhando o Instagram" por cima no mesmo segundo)."""
+        with _RESOLVE_LOCK:
+            return self._resolve(now, **kw)
+
+    def _resolve(
         self, now: datetime, *, confirmed_commitment: Optional[Mapping] = None,
         explicit_plan: Optional[Mapping] = None,
         active_consequence: Optional[Mapping] = None,
