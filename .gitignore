@@ -65,3 +65,6 @@ Desktop.ini
 # Arena de modelos (Auditoria #9): cópias do banco e transcrições locais
 /data/model_arena/
 /data/model_arena_*.out
+
+# Referências pessoais do Patrick (prints com endereço, dataset do LoRA): nunca vão pro git
+references/
