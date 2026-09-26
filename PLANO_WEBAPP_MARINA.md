@@ -138,5 +138,12 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 
 **iFood realista.** Base: o print do iFood real do Patrick (saudação "Boa tarde, Patrick", endereço, categorias, lojas com logo, nota e avaliações, tempo e taxa de entrega, cupons, abas Início/Busca/Pedidos/Perfil). Povoar o cardápio com lojas e pratos reais de Botafogo como base do cânone do que ela come. O Patrick pediu dicas de outra IA sobre como povoar — aguardando ele colar.
 
+**iFood realista — decisões do Patrick (26/09, manhã):**
+- **Base real, legítima:** lojas do OpenStreetMap (nada de raspar a API do iFood, que exigiria contornar as proteções deles). Botafogo pra ela; **Campo Grande pro Patrick** (o presente que ela manda sai de loja perto dele).
+- **Logos reais** (Wikimedia pras redes, site/perfil da loja pras de bairro; iniciais só em último caso) e **fotos reais dos pratos** (Unsplash/Pexels, escolhidas prato a prato).
+- **Farmácia e mercado:** ela pode pedir em vez de ir (doente, chuva, cansada, tarde, coisinha); entra nas finanças, chega pela portaria.
+- **O iFood do Patrick mostra só os pedidos dele.** O que ela pede pra ela fica nos **Bastidores** ("iFood da Ma"), junto com o **banco dela** (extrato). Os Bastidores vão crescer e passar por muitas melhorias.
+- O Patrick vai mandar prints do app real (página da loja, prato aberto, sacola, mercado/farmácia) pro layout.
+
 **Etapa 5 — Redes sociais (Instagram e X).** Um perfil dela em cada: no Instagram as fotos que ela posta (as mesmas que já existem no mundo: rolê, look, Milo, vista), stories do dia e comentários; no X o que ela pensa em voz alta. Ele curte, comenta e responde, e ela vê. **O que é novo:** as pessoas do mundo dela (Bia, Theo, Júlia, Lívia, o pai) também aparecem — comentando nas fotos dela, com perfis próprios — e o Patrick pode interagir com elas. Pontos pra desenhar antes: o que ela posta sozinha e com que frequência; o que ela sente com comentário dele (e de outros) e como isso chega na conversa (sem notificação de sistema no chat); o que os amigos postam; custo de foto por post; privacidade (o que ela não posta).
 
