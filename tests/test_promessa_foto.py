@@ -72,6 +72,19 @@ class PromessaTest(unittest.TestCase):
         self.assertFalse(promessa_foto.attempt(self.db))
         self.assertIsNone(promessa_foto.pending(self.db))
 
+    def test_opcoes_de_look_uma_de_cada_vez(self):
+        """26/09 (/feedback): em álbum não dá — ela leva uns minutos trocando de roupa."""
+        p = promessa_foto.observe_marina_line(self.db, "Tô separando as duas opções aqui... jaja te mando", "", T)
+        self.assertEqual(p["count"], 2)
+        sent_at = datetime.fromisoformat(p["due_at"])
+        p2 = promessa_foto.next_part(self.db, ["look a", "look b"], 42, sent_at)
+        self.assertEqual((p2["part"], p2["seed"]), (2, 42))
+        due2 = datetime.fromisoformat(p2["due_at"])
+        self.assertTrue(sent_at + timedelta(minutes=3) <= due2 <= sent_at + timedelta(minutes=6))
+        self.assertIsNone(promessa_foto.due(self.db, sent_at + timedelta(minutes=1)), "trocando de roupa")
+        self.assertIn("trocando de roupa", promessa_foto.prompt_lines(self.db, sent_at)[0])
+        self.assertEqual(promessa_foto.due(self.db, due2)["outfits"], ["look a", "look b"])
+
     def test_looks_mesma_cena_roupas_diferentes(self):
         a, b = photo_director.WARDROBE["sair"][:2]
         shots = [photo_director.direct(self.db, T, request="look de sair", force_pose="espelho_corpo",

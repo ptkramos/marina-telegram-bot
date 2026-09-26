@@ -69,6 +69,20 @@ class ProactivityService:
     def __init__(self, db: Optional[DatabaseManager] = None):
         self.db = db or db_manager
 
+    def _explicitly_awake(self, dt: datetime) -> bool:
+        """Estado recente (<1 h) que ela mesma declarou/combinou e que não é dormir (virou a noite num freela)."""
+        from world_repository import WorldStateRepository
+        snap = WorldStateRepository(self.db).latest()
+        if not snap:
+            return False
+        observed = datetime.fromisoformat(snap['observed_at'])
+        if not (timedelta(0) <= dt - observed < timedelta(hours=1)):
+            return False
+        reason = json.loads(snap.get('source_json') or '{}').get('reason') or ''
+        activity = (snap.get('activity') or '').casefold()
+        return (reason in ('explicit_plan', 'confirmed_commitment')
+                and not any(x in activity for x in ('dorm', 'sleep', 'sono')))
+
     def check_sleep_window(self, now: Optional[datetime] = None) -> bool:
         """Retorna True se estiver na janela de sono da Marina (03h30 às 08h00)."""
         dt = now or datetime.now()
@@ -117,6 +131,14 @@ class ProactivityService:
             return False, "proactivity_disabled"
 
         dt = now or datetime.now()
+        # 26/09: boa noite às 00:40 e às 02:45 "teve alguma novidade sobre sexta?" — a janela fixa
+        # (03h30–08h) não sabia que ela já tinha deitado. Deitada (mesmo num micro-despertar) não puxa assunto.
+        try:
+            from sleep_plan import SleepPlan, enabled as sleep_plan_enabled
+            if sleep_plan_enabled() and SleepPlan(self.db).in_bed(dt) and not self._explicitly_awake(dt):
+                return False, "sleep_plan"
+        except Exception:
+            logger.exception("proactivity.sleep_plan_check")
 
         living = (True
                   and True)

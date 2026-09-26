@@ -187,7 +187,7 @@ def gift_tick(db, now: datetime, *, can_receive: bool, why_not: str = "", ate_re
         summary = (f"O Patrick mandou de surpresa {what} do {rest} pelo app; ela recebeu{portaria}"
                    + (" e guardou pra depois, porque tinha acabado de comer." if ate_recently else "."))
     if cur.get("note"):
-        summary += f" Bilhete dele: \"{cur['note']}\"."
+        summary += f" Bilhete que ele escreveu pra ela: \"{cur['note']}\"."
     from meals import meal_kind
     key = (f"meal:{at.date().isoformat()}:{meal_kind(at)}:presente" if eats_now
            else f"presente:{at.isoformat(timespec='minutes')}")
@@ -239,7 +239,9 @@ def prompt_lines(db, now: datetime) -> list[str]:
         if cur.get("ate_recently"):
             line += " (você tinha acabado de comer e guardou pra depois)"
         if cur.get("note"):
-            line += f". Bilhete dele: \"{cur['note']}\""
+            # 26/09 (Evitar 031): "minha gatinha" no bilhete é ele falando de você, não o contrário.
+            line += (f". Bilhete que ele escreveu pra você: \"{cur['note']}\" (é a voz dele: \"minha\"/\"meu\" ali "
+                     "é ele falando de você)")
         return [line + "."]
     ordered = datetime.fromisoformat(cur["ordered_at"])
     if cur.get("arrived_at"):

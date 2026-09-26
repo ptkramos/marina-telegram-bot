@@ -408,6 +408,10 @@ class SleepPlan:
         nap = self.nap(now.date())
         return bool(nap and nap[0] <= now < nap[1])
 
+    def in_bed(self, now: datetime) -> bool:
+        """Entre deitar e levantar (dormindo ou num micro-despertar), ou no cochilo."""
+        return self.napping(now) or any(bed <= now < wake for _n, bed, wake in self.nights_around(now))
+
     def is_asleep(self, now: datetime) -> bool:
         if self.napping(now):
             return True

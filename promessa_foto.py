@@ -134,6 +134,20 @@ def promise_intimate(db, said: str, due_at: datetime, now: datetime, *, where: s
 
 
 MAX_ATTEMPTS = 3
+# 26/09 (Patrick, /feedback): as opções de look não vêm em álbum — ela troca de roupa entre uma e outra.
+CHANGE_OUTFIT_MIN = (3, 6)
+
+
+def next_part(db, outfits: list, seed: int, now: datetime) -> dict:
+    """Mandou a opção 1; a próxima vem depois de trocar de roupa (mesmo cenário: mesma seed)."""
+    st = _load(db)
+    p = st["promessa"]
+    rng = random.Random(f"troca:{now.isoformat()}")
+    p.update({"part": p.get("part", 1) + 1, "outfits": outfits, "seed": seed, "attempts": 0,
+              "due_at": (now + timedelta(minutes=rng.randint(*CHANGE_OUTFIT_MIN))).isoformat()})
+    _save(db, st)
+    logger.info("promessa_foto.looks parte=%s due=%s", p["part"], p["due_at"][11:16])
+    return p
 
 
 def attempt(db) -> bool:
@@ -162,6 +176,9 @@ def prompt_lines(db, now: datetime) -> list[str]:
     p = pending(db)
     if not p:
         return []
+    if p["kind"] == "looks" and p.get("part", 1) > 1:
+        return [f"[SUA PROMESSA] Você já mandou a opção {p['part'] - 1} de look e tá trocando de roupa pra "
+                f"mandar a {p['part']}. Não diga que já mandou e não mande outra foto antes."]
     o_que = {"looks": "as opções de look" if p["count"] > 1 else "o look",
              "comida": f"a foto {('do ' + p['subject']) if p['subject'] else 'da comida'}",
              "selfie": "uma foto sua",

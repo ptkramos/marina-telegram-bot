@@ -1944,7 +1944,7 @@ class DatabaseManager:
             if since_id is not None and since_id > 0:
                 cursor.execute(
                     """
-                    SELECT id, role, content, timestamp
+                    SELECT id, role, content, timestamp, is_initiative
                     FROM conversas
                     WHERE id > ?
                     ORDER BY id ASC LIMIT ?
@@ -1956,7 +1956,7 @@ class DatabaseManager:
             else:
                 cursor.execute(
                     """
-                    SELECT id, role, content, timestamp
+                    SELECT id, role, content, timestamp, is_initiative
                     FROM conversas
                     ORDER BY id DESC LIMIT ?
                     """,

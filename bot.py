@@ -2008,6 +2008,10 @@ def _last_patrick_line(marina: str = "") -> str:
         for i in range(len(msgs) - 1, -1, -1):
             if (msgs[i].get("role") == "assistant"
                     and alvo in " ".join((msgs[i].get("content") or "").split())):
+                # 26/09 (Registro 131, Evitar 031): fala de iniciativa dela ("chegou um bolo aqui")
+                # pegava a fala dele de horas antes. Se antes dela vem outra dela, ninguém falou nada.
+                if msgs[i].get("is_initiative") or (i and msgs[i - 1].get("role") == "assistant"):
+                    return "(ela puxou o assunto)"
                 msgs = msgs[:i]
                 break
     for msg in reversed(msgs):
@@ -2069,7 +2073,8 @@ async def bom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     intimo = has_explicit_signal(marina)
     if not intimo and getattr(settings, "INTIMACY_ENABLED", True):
         try:
-            intimo = IntimacyEngine(memory_manager.db).current().state in ("active", "climax", "afterglow")
+            # 26/09 (Registro 134): o pós-gozo ("afterglow") já é conversa comum — "tenho dinheiro sim".
+            intimo = IntimacyEngine(memory_manager.db).current().state in ("active", "climax")
         except Exception:
             intimo = False
     fields = {
@@ -4857,14 +4862,18 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
         feeling = None
     seed = random.randint(1, 2**31 - 1)
     shots = []
+    part = p.get("part", 1)
     if p["kind"] == "looks":
-        outfits = random.sample(photo_director.WARDROBE["sair"], p["count"])
-        for outfit in outfits:      # mesma cena (mesmo sorteio), roupa diferente
-            shots.append(photo_director.direct(
-                db, now, request="look de sair", her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
-                her_initiative=True, force_pose="espelho_corpo", outfit_override=outfit,
-                rng=random.Random(seed)))
-        o_que = "as duas opções de look pra ele escolher" if p["count"] > 1 else "o look pra ele dar a opinião"
+        # 26/09 (/feedback): uma de cada vez, com a troca de roupa no meio; mesma cena (mesma seed).
+        outfits = p.get("outfits") or random.sample(photo_director.WARDROBE["sair"], p["count"])
+        seed = p.get("seed") or seed
+        shots.append(photo_director.direct(
+            db, now, request="look de sair", her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
+            her_initiative=True, force_pose="espelho_corpo", outfit_override=outfits[part - 1],
+            rng=random.Random(seed)))
+        o_que = ("o look pra ele dar a opinião" if len(outfits) == 1
+                 else f"a opção {part} de look (a {part + 1} vem depois que você trocar de roupa)" if part < len(outfits)
+                 else f"a opção {part} de look, a última — agora ele escolhe")
     elif p["kind"] == "intimo" and p.get("subject") == "banho":
         # Os registros do banho: o brinquedo (transparente se a conversa falou nele) e o gozo, no chuveiro.
         for turn in (IntimacyTurn("active", 0.9), IntimacyTurn("climax", 0.95)):
@@ -4904,12 +4913,14 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
     legenda = generate_dynamic_speech(
         f"Você está mandando pro Patrick {o_que}. Você tinha dito: '{p['said'][:160]}'. Como é a foto: "
         f"{shots[-1].facts}. Escreva UMA legenda curtinha, do seu jeito"
-        + (" (pode perguntar qual ele prefere: 1 ou 2)" if p["kind"] == "looks" and len(images) > 1 else "")
+        + (" (pode perguntar qual ele prefere: 1 ou 2)" if p["kind"] == "looks" and part > 1 else "")
         + (" — você acabou de gozar no banho pensando nele, conta isso, manhosa e ainda ofegante" if intimo else "")
         + ". Sem introdução, sem Ps: nem parênteses.", max_tokens=50, temperature=0.75,
         model=(intimate_model() or settings.LLM_MODEL) if intimo else None)
     if not legenda or _is_policy_refusal(legenda):
         legenda = ("gozei tanto pensando em você que minhas pernas ainda tão tremendo 🫠" if intimo
+                   else "e a 2… qual? 👀" if p["kind"] == "looks" and part > 1
+                   else "opção 1 👀" if p["kind"] == "looks" and p["count"] > 1
                    else "1 ou 2? 👀" if len(images) > 1 else "prometido é devido 😌")
     from chat_naturalness import strip_closing_periods
     legenda = strip_closing_periods(limpar_fala_marina(legenda))
@@ -4927,7 +4938,10 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
             photo_director.confirm_sent(db, shot)
         memory_manager.db.registrar_iniciativa_marina(f"[{len(images)} foto(s): {o_que}] {legenda}",
                                                       media_type='photo')
-        promessa_foto.close(db, "cumprida")
+        if p["kind"] == "looks" and part < len(outfits):
+            promessa_foto.next_part(db, outfits, seed, now)
+        else:
+            promessa_foto.close(db, "cumprida")
         if intimo:
             # o gozo do banho vale como o dela (refratário, "tesão demora a voltar")
             from intimacy import observe_marina_line as intimacy_observe_marina

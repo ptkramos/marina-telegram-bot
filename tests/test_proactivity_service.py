@@ -29,7 +29,7 @@ class TestProactivityService(unittest.TestCase):
         dt_madrugada = datetime(2026, 9, 15, 4, 15, 0)
         should_run, reason = self.service.should_trigger(now=dt_madrugada)
         self.assertFalse(should_run)
-        self.assertEqual(reason, "sleep_window")
+        self.assertIn(reason, ("sleep_window", "sleep_plan"))      # 26/09: o plano de sono vem antes
 
     def test_pending_event_takes_highest_priority(self):
         """Um evento pendente vencido deve disparar a iniciativa com prioridade máxima."""

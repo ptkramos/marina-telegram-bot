@@ -133,6 +133,18 @@ class FeedbackContextTests(unittest.TestCase):
             self.assertTrue(bot._last_patrick_line("Não contei, ele não sabe").startswith("[Foto"))
             self.assertTrue(bot._last_patrick_line().startswith("[Foto"))
 
+    def test_fala_de_iniciativa_nao_pega_fala_antiga_dele(self):
+        """26/09 (Registro 131): o bolo chegou às 15:06, a fala dele era das 13:18."""
+        import bot
+        sessao = [
+            {"role": "user", "content": "Vem ensaio por aí?"},
+            {"role": "assistant", "content": "Vem sim, tenho ensaio hj"},
+            {"role": "assistant", "content": "AMOR??? Acabou de chegar um bolo de pote", "is_initiative": 1},
+        ]
+        with patch.object(bot.memory_manager.db, "get_mensagens_sessao", return_value=sessao):
+            self.assertEqual(bot._last_patrick_line("AMOR??? Acabou de chegar um bolo de pote"), "(ela puxou o assunto)")
+            self.assertEqual(bot._last_patrick_line("Vem sim, tenho ensaio hj"), "Vem ensaio por aí?")
+
 
 class ArenaClockTests(unittest.TestCase):
     def test_relogio_congelado_vale_para_imports_posteriores(self):

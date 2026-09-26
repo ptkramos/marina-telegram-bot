@@ -67,7 +67,8 @@ class VariableSleepTest(_Base):
                                 datetime.combine(saturday, time(23, 30)))
 
     def test_outing_pushes_bedtime(self):
-        day = next(d for d in self.days if d.weekday() == 4)
+        # 26/09: a sexta 25/09 virou passado e a noite passada fica congelada — usa a próxima sexta.
+        day = next(d for d in self.days if d.weekday() == 4 and d > date.today())
         before = self.plan.bed(day)
         with self.db.get_connection() as conn:
             conn.execute("INSERT INTO eventos_pendentes (source_key, event_type, description, event_at, end_at, "
@@ -178,6 +179,16 @@ class WorldIntegrationTest(_Base):
         acts_after = [c.activity for c in engine.candidates(wake + timedelta(minutes=5), has_class=True)]
         self.assertNotIn("dormindo", acts_after)
         self.assertTrue(any("se arrumando" in a for a in acts_after))
+
+    def test_deitada_nao_puxa_assunto(self):
+        """26/09: boa noite às 00:40 e às 02:45 'teve alguma novidade sobre sexta?'."""
+        from proactivity_service import ProactivityService
+        night, bed, wake = next((n, b, w) for n, b, w in self.plan.nights_around(
+            datetime.combine(self.days[3], time(23, 0))) if b.hour < 3 or b.hour >= 21)
+        svc = ProactivityService(self.db)
+        for at in (bed + timedelta(minutes=5), bed + (wake - bed) / 2):
+            self.assertEqual(svc.should_trigger(at), (False, "sleep_plan"), at)
+        self.assertNotEqual(svc.should_trigger(wake + timedelta(hours=2))[1], "sleep_plan")
 
     def test_she_wakes_up_in_the_world_right_away(self):
         """Antes ela podia seguir 'dormindo' até 60 min depois de acordar."""
