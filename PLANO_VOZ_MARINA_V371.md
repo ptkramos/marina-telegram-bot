@@ -1143,6 +1143,7 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
 - **Ela manda delivery pra ele** (`pedido_dela.py`): quando oferece ("vou te mandar um suquinho pelo app") e, às vezes, de surpresa (ele doente, dia ruim); nunca no meio do sexting. Ele acompanha pelo botão "🛵 Acompanhar entrega" na fala dela.
 - **Freela vazio** diz que não tem job: rolê não vira ensaio.
 - **Banho:** as falas de ida pro box começam o banho, "já tô saindo do chuveiro" encerra (`end_shower`), e o que foi adiado pelo banho sai quando ele acaba (`release_after_shower`).
+- **Organização (26/09):** painel `FRENTES_MARINA.md`, mapa `CLAUDE.md` e skills por frente; a próxima conversa começa pela agenda reativa (frente do mundo).
 - **Uma iniciativa por vez (26/09):** a entrega surpresa e uma saudade saíram juntas e intercalaram os balões; agora cada mensagem sai inteira e a saudade desiste se outra iniciativa acabou de sair. Plano de saúde canônico (Bradesco Saúde Top Nacional, dependente do pai; Samaritano Botafogo ou Novamed).
 - **Agenda única (26/09):** o que ela decide na hora (café, açaí, Milo, orla, shopping, praia, mercado, farmácia, academia) vira item da mesma agenda das saídas, com preparo a partir da decisão, caminho, consumo real e volta; passeio do Milo da manhã, mercado e médico também. Ela pode contar "deu vontade e fui".
 - **Academia de verdade (26/09):** o treino do dia é compromisso decidido de manhã, com preparo, ida a pé, treino e volta; conversar não cancela mais. Last.fm dele configurado (ela vê o que ele ouve quando houver scrobble).
