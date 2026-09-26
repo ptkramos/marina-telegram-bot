@@ -61,6 +61,9 @@ CORES = {
     "amarelo": ("Amarelo", "pastel butter yellow", "estacao"),
     "glitter": ("Glitter", "sparkly silver glitter", "estacao"),
 }
+# estado curto no painel (Patrick, 26/09)
+ESTADO = {"perfeita": "Nova", "crescendo": "Crescendo", "pedindo manutenção": "Vencendo",
+          "começando a gastar": "Gastando", "gastando": "Gastando", "descascando": "Descascando"}
 # bolinha da cor no painel (Bastidores → Por dentro)
 HEX = {"vermelho": "#c0182a", "vinho": "#6d1a2c", "nude": "#e3b5a4", "branco": "#f3eee6", "francesinha": "#f1d9d0",
        "preto": "#1b1b1d", "marsala": "#8a3b3b", "marinho": "#1f2a4d", "musgo": "#4a5a33", "rosa_bebe": "#f4c2d0",
@@ -240,19 +243,18 @@ class Unhas:
         s = self.sessao(now)
         return bool(s and s["onde"] == "salao")
 
-    def _evento_perto(self, now: datetime) -> Optional[str]:
-        """Job, casting, encontro ou festa nas próximas 48 h: 'trabalho' | 'encontro' | 'festa'."""
+    def _evento_perto(self, now: datetime) -> Optional[tuple[str, datetime]]:
+        """Job, casting, encontro ou festa nas próximas 48 h: ('trabalho' | 'encontro' | 'festa', quando)."""
         with self.db.get_connection() as conn:
             rows = conn.execute(
-                """SELECT event_type, description FROM eventos_pendentes WHERE confirmed=1 AND status!='cancelled'
-                   AND event_at>? AND event_at<?""", (now.isoformat(), (now + timedelta(hours=48)).isoformat())).fetchall()
+                """SELECT event_type, description, event_at FROM eventos_pendentes WHERE confirmed=1
+                   AND status!='cancelled' AND event_at>? AND event_at<? ORDER BY event_at""",
+                (now.isoformat(), (now + timedelta(hours=48)).isoformat())).fetchall()
         for r in rows:
-            if r["event_type"] == "trabalho":
-                return "trabalho"
-            if r["event_type"] == "encontro":
-                return "encontro"
-            if _EVENTO_RE.search(r["description"] or ""):
-                return "festa"
+            tipo = ("trabalho" if r["event_type"] == "trabalho" else "encontro" if r["event_type"] == "encontro"
+                    else "festa" if _EVENTO_RE.search(r["description"] or "") else None)
+            if tipo:
+                return tipo, datetime.fromisoformat(r["event_at"])
         return None
 
     def _saldo(self, now: datetime) -> int:
@@ -277,7 +279,7 @@ class Unhas:
         slot = (now.hour * 60 + now.minute) // 20
         rng = random.Random(f"unhas:salao:{now.date().isoformat()}:{slot}")
         if evento and (d >= 8 if gel else d >= 2):
-            motivo, chance = evento, 0.35
+            motivo, chance = evento[0], 0.35
         elif d >= 18 if gel else d >= 7:
             motivo, chance = "rotina", 0.15
         elif (d >= 12 if gel else d >= 4) and self._saldo(now) >= 600:
@@ -299,13 +301,15 @@ class Unhas:
         texto = f"Fazendo as unhas na {SALAO_NOME}"
         cid = v.agendar("manicure", SALAO, inicio, fim, texto, origem="planejado" if motivo == "rotina" else "vontade",
                         decidido_em=now, chave=chave, ida_min=SALAO_IDA_MIN,
-                        extra={"motivo": MOTIVO_TXT[motivo], "preco": PRECO_SALAO})
+                        extra={"motivo": motivo_txt(motivo, evento[1] if evento else None, now),
+                               "preco": PRECO_SALAO})
         if not cid:
             return None
         st["salao_dia"] = now.date().isoformat()
         self._nova_sessao(st, "salao", inicio, fim, now, rng, chave=chave, motivo=motivo)
         self._save(st)
-        v._registra(chave, now, f"Marcou a manicure na {SALAO_NOME} ({MOTIVO_TXT[motivo]}).")
+        v._registra(chave, now,
+                    f"Marcou a manicure na {SALAO_NOME} ({motivo_txt(motivo, evento[1] if evento else None, now)}).")
         logger.info("unhas.salao motivo=%s inicio=%s", motivo, inicio.isoformat(timespec="minutes"))
         return cid
 
@@ -465,7 +469,7 @@ class Unhas:
         onde = f"na {SALAO_NOME}" if a["onde"] == "salao" else "em casa"
         return {"cor": nome(a["cor"]), "hex": HEX.get(a["cor"], ""),
                 "desgaste": round(min(1.0, a["dias"] / (24 if a["tipo"] == "gel" else 7)), 2), "gasta": a["gasta"],
-                "estado": a["condicao"][:1].upper() + a["condicao"][1:],
+                "estado": ESTADO[a["condicao"]],
                 "tipo": "Gel" if a["tipo"] == "gel" else "Esmalte", "feita": f"{quando}, {onde}"}
 
     def prompt_lines(self, now: datetime) -> list[str]:
@@ -503,5 +507,14 @@ class Unhas:
         return lines
 
 
-MOTIVO_TXT = {"rotina": "o gel já tava pedindo manutenção", "trabalho": "tem job chegando",
-              "encontro": "tem encontro chegando", "festa": "tem festa chegando", "mimo": "quis se dar um mimo"}
+# motivo seco (Patrick, 26/09): "manutenção do gel", "job amanhã", "encontro hoje", "mimo"
+MOTIVO_TXT = {"rotina": "manutenção do gel", "trabalho": "job", "encontro": "encontro", "festa": "festa",
+              "mimo": "mimo"}
+
+
+def motivo_txt(motivo: str, quando: Optional[datetime], now: datetime) -> str:
+    txt = MOTIVO_TXT[motivo]
+    if quando is None or motivo in ("rotina", "mimo"):
+        return txt
+    dias = (quando.date() - now.date()).days
+    return f"{txt} {('hoje', 'amanhã', 'depois de amanhã')[min(max(dias, 0), 2)]}"

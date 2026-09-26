@@ -50,6 +50,8 @@ class UnhasTest(unittest.TestCase):
         self.assertIn("classic glossy red", self.u.visual(T))
         p = self.u.painel(T)
         self.assertEqual((p["cor"], p["estado"], p["tipo"], p["feita"]), ("Vermelho", "Gastando", "Esmalte", "Há 6 dias, em casa"))
+        self._atual("vermelho", "gel", 20, "salao")
+        self.assertEqual(self.u.painel(T)["estado"], "Vencendo")
         self.assertTrue(p["gasta"] and 0.8 < p["desgaste"] < 0.9)
 
     def test_em_casa_so_entediada_e_gasta(self):
@@ -114,6 +116,12 @@ class UnhasTest(unittest.TestCase):
         self.assertEqual((a["tipo"], a["onde"]), ("gel", "salao"))
         financas.materialize(self.db, fim + timedelta(minutes=2))
         self.assertEqual(financas._load(self.db)["saldo"], saldo - PRECO_SALAO)
+
+    def test_motivo_seco(self):
+        from unhas import motivo_txt
+        self.assertEqual(motivo_txt("trabalho", T + timedelta(days=1), T), "job amanhã")
+        self.assertEqual(motivo_txt("encontro", T + timedelta(hours=2), T), "encontro hoje")
+        self.assertEqual(motivo_txt("rotina", None, T), "manutenção do gel")
 
     def test_salao_nao_vai_domingo_nem_sem_dinheiro(self):
         self._atual("nude", "gel", 20, "salao")

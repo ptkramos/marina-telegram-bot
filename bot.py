@@ -4635,7 +4635,7 @@ async def _autonomous_routine_v36(application: Application):
             elif reason == 'unhas_cor':
                 from unhas import nome as nome_cor
                 a, b = (nome_cor(c).lower() for c in (pergunta or {}).get('opcoes', ('vermelho', 'nude')))
-                fallback = f"amor vou fazer a unha… {a} ou {b}? escolhe vc"
+                fallback = f"vou fazer a unha agr, {a} ou {b}? vc decide"
             else:
                 # A thought of Patrick is not evidence of a new world event.
                 options = (
@@ -5078,7 +5078,7 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
                    else "e a 2… qual? 👀" if p["kind"] == "looks" and part > 1
                    else "opção 1 👀" if p["kind"] == "looks" and p["count"] > 1
                    else "1 ou 2? 👀" if len(images) > 1
-                   else "ficou bom? 💅" if p["kind"] == "unhas" else "prometido é devido 😌")
+                   else "olha como ficou" if p["kind"] == "unhas" else "prometido é devido 😌")
     from chat_naturalness import strip_closing_periods
     legenda = strip_closing_periods(limpar_fala_marina(legenda))
     bot = application.bot

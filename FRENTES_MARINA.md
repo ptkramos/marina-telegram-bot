@@ -21,8 +21,7 @@ desgaste; Ophicina do Cabelo na rotina/evento/mimo, R$ 180 do saldo; em casa ent
 foto da mão depois; a cor em toda foto; seção Unhas no Por dentro).
 
 **Próximo, nesta ordem:**
-1. **Etapa 1 — cuidados: cabelo** (mesmo molde das unhas; salão já é a Ophicina do Cabelo). Antes, revisar com ele
-   os textos das unhas que ficaram pendentes (PLANO_WEBAPP, "Unhas — como ficou": estados, nomes das cores, reservas).
+1. **Etapa 1 — cuidados: cabelo** (mesmo molde das unhas; salão já é a Ophicina do Cabelo). Textos das unhas revisados.
 2. Conflito: rolê em dia de aula que começa antes da aula acabar sobrepõe volta e ida.
 3. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber…).
 4. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
