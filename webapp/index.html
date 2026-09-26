@@ -157,16 +157,31 @@
     </div>
   </div>
 
+  <!-- 26/09 (Patrick): Bastidores em abas; rótulos falam como painel, sentimento fala do jeito dela -->
   <section id="v-bastidores" class="view" hidden>
     <header class="top"><h1>Bastidores</h1><p class="sub">Só você vê isso</p></header>
-    <div id="bast-status" class="card"></div>
-    <h2>Corpo</h2><div id="bast-corpo" class="card"></div>
-    <h2>Humor</h2><div id="bast-humor" class="card"></div>
-    <h2>Sentindo agora</h2><div id="bast-sentindo" class="card"></div>
-    <h2>Com você</h2><div id="bast-vinculo" class="card"></div>
-    <h2>Dinheiro dela</h2><div id="bast-dinheiro" class="card"></div><div id="bast-movs" class="list"></div>
-    <h2>Hoje</h2><div id="bast-hoje" class="list"></div>
-    <h2>Mundo</h2><pre id="bast-mundo" class="card pre"></pre>
+    <div class="seg" id="bs-abas">
+      <button data-bast="agora" class="on">Agora</button><button data-bast="dentro">Por dentro</button>
+      <button data-bast="dinheiro">Dinheiro</button><button data-bast="mundo">Mundo</button>
+    </div>
+    <div class="bast-aba" id="ba-agora">
+      <div class="card"><div class="big" id="ag-atividade"></div><div class="muted small" id="ag-local"></div><div id="ag-linhas" class="linhas"></div></div>
+      <h2>Hoje</h2><div id="ag-hoje" class="card"></div>
+    </div>
+    <div class="bast-aba" id="ba-dentro" hidden>
+      <h2>Corpo</h2><div id="bd-corpo" class="card"></div>
+      <h2>Humor</h2><div id="bd-humor" class="card"></div>
+      <h2>Sentindo agora</h2><div id="bd-sentindo" class="card"></div>
+      <h2>Vocês dois</h2><div id="bd-voces" class="card"></div>
+    </div>
+    <div class="bast-aba" id="ba-dinheiro" hidden>
+      <div class="card"><div class="muted small">Saldo</div><div class="saldo-bast" id="bn-saldo"></div><div id="bn-linhas" class="linhas"></div></div>
+      <h2>Extrato</h2><div id="bn-extrato" class="card"></div>
+    </div>
+    <div class="bast-aba" id="ba-mundo" hidden>
+      <h2>Pessoas</h2><div id="bm-pessoas" class="card"></div>
+      <div id="bm-resto"></div>
+    </div>
   </section>
 
   <div id="toast" hidden></div>

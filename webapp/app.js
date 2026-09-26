@@ -234,51 +234,65 @@ const loaders = {
     $("pg-err").textContent = "";
   },
 
+  // 26/09 (Patrick): abas Agora · Por dentro · Dinheiro · Mundo. O servidor já manda o texto pronto
+  // (status_view, emocao_view, world_panel, mov_desc); aqui é só desenho.
   async bastidores() {
     try {
       const [d, g] = await Promise.all([api("/api/bastidores"), api("/api/dinheiro")]);
-      const s = d.status, e = d.emocao;
-      const linhas = [["house", `${s.local} · ${s.atividade}`], ["phone", s.disponivel], ["flower1", `Dia ${s.ciclo_dia} do ciclo (${s.ciclo_fase})`]];
-      (s.saude || []).forEach(([l, r]) => linhas.push(["thermometer-half", `${l} · ${r}`]));
-      if (s.proximo) linhas.push(["calendar-event", `Próximo: ${s.proximo[0]} ${s.proximo[1]}`]);
-      (s.planos || []).forEach(([p, w]) => linhas.push(["calendar3", `${p} · ${w}`]));
-      $("bast-status").innerHTML = linhas.map(([i, l]) => `<div class="com-ic linha-ic">${ic(i, "muted")}<span>${esc(l)}</span></div>`).join("");
-
+      const s = d.status, e = d.emocao, m = d.mundo;
+      const linha = (icone, rotulo, valor) => `<div class="linha"><span class="li-ic">${ic(icone)}</span>
+        <span class="li-rot">${esc(rotulo)}</span><span class="li-val">${esc(valor)}</span></div>`;
+      const vazio = (txt) => `<p class="muted vazio-txt">${esc(txt)}</p>`;
       const bar = (label, v, word, warm) => `<div class="bar-row"><span>${esc(label)}</span>
         <div class="bar${warm ? " warm" : ""}"><i style="width:${pct(v)}%"></i></div><span class="w">${esc(word || pct(v) + "%")}</span></div>`;
-      let corpo = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Tesão")).join("");
-      const extra = [];
-      if (e.in_the_mood) extra.push("no clima agora");
-      if (e.hours_since_release != null) extra.push(`última vez há ${Math.round(e.hours_since_release)} h`);
-      if (e.hours_slept != null) extra.push(`dormiu ${e.hours_slept.toFixed(1).replace(".", ",")} h`);
-      if (e.phase) extra.push(e.phase);
-      if (e.discomfort_why) extra.push(e.discomfort_why);
-      if (extra.length) corpo += `<div class="small muted">${esc(extra.join(" · "))}</div>`;
-      $("bast-corpo").innerHTML = corpo;
-      $("bast-humor").innerHTML = `<div class="big">${esc(cap(e.mood))}</div>` + e.mood_bars.map((b) => bar(b.label, b.value)).join("");
-      $("bast-sentindo").innerHTML = e.feelings.length ? e.feelings.map((f) => `<div class="feel">
-        <div class="head"><span>${esc(f.word)}${f.target ? " com " + esc(f.target) : ""}${f.count > 1 ? ` <span class="muted small">· ${f.count} momentos</span>` : ""}</span>
-        <div class="bar"><i style="width:${pct(f.value)}%"></i></div></div>
-        <div class="why">${esc(f.cause)}${f.until_resolved ? " (até resolver)" : ""}</div></div>`).join("")
-        : `<p class="muted">Nada marcante agora.</p>`;
-      $("bast-vinculo").innerHTML = e.bond.map((b) => bar(b.label, b.value, null, b.label === "Desejo")).join("");
 
-      let din = `<div class="muted small">Saldo</div><div class="big">${brl(g.saldo)}</div>`;
-      if (g.devendo) din += `<div class="small">Te deve ${brl(g.devendo)}</div>`;
-      if (g.pedido) din += `<div class="small">Precisando de ${brl(g.pedido.valor)}: ${esc(g.pedido.motivo)}</div>`;
-      $("bast-dinheiro").innerHTML = din;
-      $("bast-movs").innerHTML = g.movs.slice(0, 12).map((m) => {
-        const dt = new Date(m.at);
-        const when = dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " +
+      // Agora
+      $("ag-atividade").textContent = s.atividade;
+      $("ag-local").textContent = s.local;
+      $("ag-linhas").innerHTML = [linha("phone", "Celular", s.celular), s.ciclo && linha("droplet", "Ciclo", s.ciclo),
+        ...s.saude.map((x) => linha("thermometer-half", "Saúde", x)), s.proximo && linha("calendar-event", "Próximo", s.proximo),
+        ...s.planos.map((x) => linha("calendar3", "Plano", x))].filter(Boolean).join("");
+      $("ag-hoje").innerHTML = d.hoje.length ? `<ol class="linha-tempo">${d.hoje.map((h) =>
+        `<li><span class="lt-hora">${esc(h.at)}</span><span class="lt-ponto"></span><span class="lt-txt">${esc(cap(h.texto.replace(/\.$/, "")))}</span></li>`).join("")}</ol>`
+        : vazio(s.dormindo ? "Ela ainda não acordou." : "Nada registrado hoje ainda.");
+
+      // Por dentro
+      $("bd-corpo").innerHTML = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Tesão")).join("")
+        + (e.linhas.length || e.no_clima ? `<div class="linhas sep">${e.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}
+          ${e.no_clima ? `<div class="linha"><span class="li-ic">${ic("fire")}</span><span class="li-rot">No clima agora</span></div>` : ""}</div>` : "");
+      $("bd-humor").innerHTML = `<div class="big">${esc(e.humor)}</div>` + e.humor_barras.map((b) => bar(b.label, b.value)).join("");
+      $("bd-sentindo").innerHTML = e.sentindo.length ? e.sentindo.map((f) => `<div class="feel">
+        <div class="head"><span class="t">${esc(f.texto)}</span><div class="bar"><i style="width:${pct(f.valor)}%"></i></div></div>
+        <div class="why">${esc(f.motivo)}</div>
+        ${f.vezes > 1 || f.ate_resolver ? `<div class="pilulas">${f.vezes > 1 ? `<span class="pilula">${f.vezes} vezes</span>` : ""}${f.ate_resolver ? '<span class="pilula">até resolver</span>' : ""}</div>` : ""}</div>`).join("")
+        : vazio("Nada marcante agora.");
+      $("bd-voces").innerHTML = e.voces.map((b) => bar(b.label, b.value, null, b.label === "Desejo")).join("");
+
+      // Dinheiro
+      $("bn-saldo").textContent = brl(g.saldo);
+      $("bn-linhas").innerHTML = [g.devendo && linha("arrow-return-left", "Deve a você", brl(g.devendo)),
+        g.pedido && linha("exclamation-circle", `Precisa de ${brl(g.pedido.valor)}`, cap(g.pedido.motivo))].filter(Boolean).join("");
+      $("bn-linhas").hidden = !g.devendo && !g.pedido;
+      $("bn-extrato").innerHTML = g.movs.length ? g.movs.slice(0, 20).map((mv) => {
+        const dt = new Date(mv.at);
+        const when = dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " · " +
           dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-        return `<div class="item"><div><div class="t">${esc(cap(m.desc))}</div><div class="d">${when}</div></div>
-          <div class="${m.valor >= 0 ? "plus" : "minus"}">${m.valor >= 0 ? "+" : "−"}${brl(Math.abs(m.valor))}</div></div>`;
-      }).join("");
+        return `<div class="mov"><div class="mov-txt"><div>${esc(mv.desc)}</div><div class="d">${when}</div></div>
+          <div class="mov-val ${mv.valor >= 0 ? "plus" : "minus"}">${mv.valor >= 0 ? "+" : "−"} ${brl(Math.abs(mv.valor))}</div></div>`;
+      }).join("") : vazio("Nenhuma movimentação ainda.");
 
-      $("bast-hoje").innerHTML = d.hoje.length ? d.hoje.map((h) => `<div class="item"><span class="d">${esc(h.at)}</span>
-        <span style="flex:1">${esc(h.texto)}</span></div>`).join("") : `<p class="muted">Nada registrado hoje ainda.</p>`;
-      $("bast-mundo").textContent = d.mundo || "";
-    } catch (err) { failIn($("bast-status"), err); }
+      // Mundo
+      $("bm-pessoas").innerHTML = m.pessoas.map((p) => `<div class="pessoa"><span class="avatar-ini">${esc(p.iniciais)}</span>
+        <div class="ps-txt"><div class="t">${esc(p.nome)}</div><div class="d">${esc(cap(p.quem))}</div></div>
+        <div class="ps-dir"><div class="d">${p.falaram ? esc(p.falaram) : "Sem contato ainda"}</div>
+        ${p.vezes_30d ? `<div class="d">${p.vezes_30d} ${p.vezes_30d > 1 ? "vezes" : "vez"} no mês</div>` : ""}</div></div>`).join("")
+        || vazio("Ninguém ainda.");
+      const bloco = (titulo, itens) => itens.length ? `<h2>${titulo}</h2><div class="card">${itens.join("")}</div>` : "";
+      $("bm-resto").innerHTML =
+        bloco("Rolando agora", m.rolando.map((r) => `<div class="item-m"><div>${esc(cap(r.titulo))}</div>${r.com.length ? `<div class="d">Com ${esc(r.com.join(", "))}</div>` : ""}</div>`))
+        + bloco("Planos", m.planos.map((p) => `<div class="item-m dois-lados"><span>${esc(cap(p.descricao))}</span><span class="d">${esc(p.quando)}</span></div>`))
+        + bloco("Lugares", m.lugares.map((l) => `<div class="item-m dois-lados"><span>${esc(l.nome)}</span><span class="d">${esc(l.quanto)}</span></div>`));
+    } catch (err) { failIn($("ag-linhas"), err); }
   },
 };
 
@@ -286,6 +300,12 @@ const loaders = {
 document.addEventListener("click", (e) => {
   const go = e.target.closest("[data-go]");
   if (go) { show(go.dataset.go); return; }
+  const aba = e.target.closest("[data-bast]");
+  if (aba) {
+    document.querySelectorAll("[data-bast]").forEach((b) => b.classList.toggle("on", b === aba));
+    document.querySelectorAll(".bast-aba").forEach((v) => (v.hidden = v.id !== "ba-" + aba.dataset.bast));
+    window.scrollTo(0, 0);
+  }
 });
 
 $("pix-valor").addEventListener("input", () => ($("pix-err").textContent = ""));

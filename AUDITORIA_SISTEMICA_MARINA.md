@@ -1453,6 +1453,8 @@ Conversa de verdade com o Patrick doente, o Mini App novo e uma cena de sexting 
 
 Detalhes no PLANO_WEBAPP ("Abas do iFood e padrão visual").
 
+**Bastidores revisados (26/09, manhã, pendência 14).** Tirei os textos reais da VPS (só leitura) e listei o que estava ruim: nome interno do lugar e código da atividade, emoji herdado do `/status`, "exausta" enquanto ela dormia, a frase "dormiu 8,7 h · TPM · última vez há 30 h" sem rótulo, "saudade com Patrick" (preposição errada e ele em 3ª pessoa) e o `/mundo` colado ("último contato sem contato ainda; 0 nos últimos 30 dias", com o `weekly` do cânone aparecendo como número). O Patrick escolheu abas e voz híbrida. Tudo refeito na camada do Mini App, sem mexer nos comandos; detalhes no PLANO_WEBAPP ("Bastidores em abas").
+
 ## O que estava certo
 
 "Tô na rua, saí pra encontrar a Júlia" às 14:53 e "cheguei sim" às 15:52 batiam com o mundo (a caminho 14:49–15:30).

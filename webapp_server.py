@@ -15,6 +15,7 @@ import hashlib
 import hmac
 import json
 import logging
+import re
 import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -264,7 +265,7 @@ def _today_events(db, now: datetime, limit: int = 14) -> list[dict]:
                WHERE event_at>=? AND event_at<=? ORDER BY event_at DESC LIMIT ?""",
             (start, now.isoformat(), limit)).fetchall()
     return [{"at": datetime.fromisoformat(r["event_at"]).strftime("%H:%M"), "tipo": r["event_type"],
-             "texto": (r["summary"] or r["title"] or "").strip()} for r in reversed(rows)]
+             "texto": voz_painel((r["summary"] or r["title"] or "").strip().rstrip("."))} for r in reversed(rows)]
 
 
 # ---------------------------------------------------------------------- rotas --
@@ -279,6 +280,139 @@ async def api_inicio(request: web.Request) -> web.Response:
                   "pra_voce": gift_to_him_view(hooks.db, now)})
 
 
+# --------------------------------------------- Bastidores: textos (Patrick, 26/09) --
+# Voz híbrida: rótulos e dados falam como painel ("você"); sentimento fala do jeito dela.
+TELEFONE = (("Dormindo", "Responde quando acordar"), ("Ocupada", "Ocupada, responde com calma"),
+            ("Concentrada", "Respostas mais espaçadas"), ("Online", "Responde rápido"))
+FASES = {"fase menstrual": "Menstruada", "fase folicular": "Fase folicular",       # nomes do cycle.py, em minúscula
+         "fase ovulatória / período fértil": "Período fértil", "fase lútea inicial": "Fase lútea",
+         "fase pré-menstrual / tpm": "TPM"}
+# preposição de cada sentimento quando é por alguém: "com saudade DELE", "grata A ELE", "chateada COM ele"
+DE_ALGUEM = {"com saudade", "orgulhosa", "admirada", "com vergonha"}
+A_ALGUEM = {"grata"}
+SEM_ALGUEM = {"com culpa"}          # o motivo embaixo já diz com quem
+
+
+def _hora(at: datetime) -> str:
+    return f"{at.hour}h{at.minute:02d}" if at.minute else f"{at.hour}h"
+
+
+def _quando_txt(txt: str) -> str:
+    """'hoje 14:00' (do /status) → 'hoje 14h'."""
+    try:
+        dia, hm = txt.rsplit(" ", 1)
+        h, m = hm.split(":")
+        return f"{dia} {int(h)}h{m}" if m != "00" else f"{dia} {int(h)}h"
+    except ValueError:
+        return txt
+
+
+def status_view(snap: dict) -> dict:
+    local = (snap.get("local") or "").replace(" (fictícia)", "")
+    if local.startswith("Apartamento da Marina"):
+        local = "Em casa" + local[len("Apartamento da Marina"):].replace(" (", " · ").rstrip(")")
+    else:
+        local = local.replace(" (", " · ").rstrip(")")
+    disp = snap.get("disponivel") or ""
+    celular = next((txt for key, txt in TELEFONE if disp.startswith(key)), disp)
+    fase = snap.get("ciclo_fase") or ""
+    return {"atividade": cap(snap.get("atividade") or ""), "local": local, "celular": celular,
+            "dormindo": disp.startswith("Dormindo"),
+            "ciclo": f"Dia {snap['ciclo_dia']} · {FASES.get(fase, cap(fase))}" if snap.get("ciclo_dia") else "",
+            "saude": [f"{cap(l)} · {r}" for l, r in snap.get("saude") or []],
+            "proximo": f"{cap(snap['proximo'][0])}, {_quando_txt(snap['proximo'][1])}" if snap.get("proximo") else "",
+            "planos": [f"{cap(p)}, {_quando_txt(w)}" for p, w in snap.get("planos") or []]}
+
+
+def cap(s: str) -> str:
+    return s[:1].upper() + s[1:] if s else s
+
+
+def _alguem(target: str, word: str) -> str:
+    """'o Patrick' vira ele; os outros ficam com o nome curto ('a Bia')."""
+    if not target or word in SEM_ALGUEM:
+        return ""
+    if target == "o Patrick":
+        return "dele" if word in DE_ALGUEM else "a ele" if word in A_ALGUEM else "com ele"
+    art, _, resto = target.partition(" ")
+    if word in DE_ALGUEM:
+        return f"d{art} {resto}"                                  # "da Bia", "do Theo"
+    if word in A_ALGUEM:
+        return f"à {resto}" if art == "a" else f"ao {resto}"
+    return f"com {target}"
+
+
+# os eventos do mundo são gravados em 3ª pessoa ("O Patrick fez um pix pra ela"); na tela vira a voz certa
+_PATRICK_RE = re.compile(r"\b[Oo] Patrick\b")
+
+
+def voz_painel(txt: str) -> str:
+    """Painel falando com você: 'O Patrick fez um pix pra ela' → 'Você fez um Pix pra ela'."""
+    txt = re.sub(r"\b([oa])s? (\w+) do Patrick\b", lambda m: f"{m.group(1)} {'seu' if m.group(1) == 'o' else 'sua'} {m.group(2)}", txt or "")
+    txt = re.sub(r"\bdo Patrick\b", "de você", txt)
+    txt = re.sub(r"\bno Patrick\b", "em você", txt)
+    txt = re.sub(r"\b(?:pro|para o) Patrick\b", "pra você", txt)
+    txt = _PATRICK_RE.sub("você", txt)
+    return cap(txt.replace("pix", "Pix"))
+
+
+def voz_dela(txt: str) -> str:
+    """Motivo do sentimento do jeito dela: 'O Patrick fez um pix pra ela' → 'Ele fez um Pix pra mim';
+    'ele te elogiou' → 'ele me elogiou'."""
+    txt = _PATRICK_RE.sub("ele", txt or "")
+    for a, b in ((r"\bdo Patrick\b", "dele"), (r"\bpra ela\b", "pra mim"), (r"\bcom ela\b", "comigo"),
+                 (r"\bte\b", "me"), (r"\bde você\b", "de mim"), (r"\bcom você\b", "comigo"), (r"^você\b", "eu")):
+        txt = re.sub(a, b, txt)
+    return cap(txt.replace("pix", "Pix"))
+
+
+def _horas(h: float) -> str:
+    h_int, m = int(h), int(round((h - int(h)) * 60))
+    if m == 60:
+        h_int, m = h_int + 1, 0
+    return f"{h_int}h{m:02d}" if m else f"{h_int}h"
+
+
+def emocao_view(e: dict, dormindo: bool) -> dict:
+    """Painel de emoção em texto de gente: linhas rotuladas em vez de 'dormiu 8,7 h · TPM'."""
+    body = [dict(b) for b in e["body"]]
+    if dormindo:
+        body[0]["word"] = "dormindo"                 # 'exausta' dormindo era pressão de sono, não ela mal
+    linhas = []
+    if dormindo:
+        linhas.append(["moon", "Sono", "dormindo agora"])
+    elif e.get("hours_slept") is not None:
+        acordou = e.get("awake_since")
+        linhas.append(["moon", "Sono", f"dormiu {_horas(e['hours_slept'])}"
+                       + (f" · acordou às {_hora(datetime.fromisoformat(str(acordou)))}" if acordou else "")])
+    if e.get("hours_since_release") is not None:
+        h = e["hours_since_release"]
+        linhas.append(["heart-pulse", "Último orgasmo", f"há {round(h)} h" if h < 48 else f"há {round(h / 24)} dias"])
+    if e.get("discomfort_why"):
+        linhas.append(["bandaid", "Desconforto", cap(e["discomfort_why"])])
+    sentindo = [{"texto": cap(" ".join(x for x in (f["word"], _alguem(f["target"], f["word"])) if x)),
+                 "motivo": voz_dela(f["cause"]), "valor": f["value"], "vezes": f["count"], "ate_resolver": f["until_resolved"]}
+                for f in e["feelings"]]
+    return {"body": body, "no_clima": e.get("in_the_mood", False), "linhas": linhas, "humor": cap(e["mood"]),
+            "humor_barras": e["mood_bars"], "sentindo": sentindo, "voces": e["bond"]}
+
+
+MOVS = ((re.compile(r"^pix do Patrick(?:: (.+))?$"), lambda m: "Seu Pix" + (f" · {m.group(1)}" if m.group(1) else "")),
+        (re.compile(r"^presente do Patrick: (.+?)(?: \(ele disse: .*\))?$"), lambda m: f"Seu presente: {m.group(1)}"),
+        (re.compile(r"^delivery pro Patrick: (.+)$"), lambda m: f"Delivery pra você: {m.group(1)}"),
+        (re.compile(r"^devolveu o empréstimo do Patrick$"), lambda m: "Devolveu seu empréstimo"),
+        (re.compile(r"^contas dela \((.+)\)$"), lambda m: cap(m.group(1))))
+
+
+def mov_desc(desc: str) -> str:
+    """Extrato em voz de painel: 'pix do Patrick: pro açaí' → 'Seu Pix · pro açaí'."""
+    for rx, fmt in MOVS:
+        m = rx.match(desc or "")
+        if m:
+            return fmt(m)
+    return cap(desc or "")
+
+
 async def api_bastidores(request: web.Request) -> web.Response:
     hooks: Hooks = request.app["hooks"]
     now = hooks.now()
@@ -286,13 +420,14 @@ async def api_bastidores(request: web.Request) -> web.Response:
     def collect():
         from emotion import EmotionEngine
         from social_day import SocialDay
-        out = {"status": hooks.status(now), "emocao": EmotionEngine(hooks.db).panel(now),
+        status = status_view(hooks.status(now))
+        out = {"status": status, "emocao": emocao_view(EmotionEngine(hooks.db).panel(now), status["dormindo"]),
                "hoje": _today_events(hooks.db, now)}
         try:
-            out["mundo"] = SocialDay(hooks.db).world_summary(now)
+            out["mundo"] = SocialDay(hooks.db).world_panel(now)
         except Exception:
             logger.exception("webapp.mundo.error")
-            out["mundo"] = ""
+            out["mundo"] = {"pessoas": [], "lugares": [], "rolando": [], "planos": []}
         return out
     return _json(await asyncio.to_thread(collect))
 
@@ -306,7 +441,8 @@ async def api_banco(request: web.Request) -> web.Response:
         financas.materialize(hooks.db, now)
         st = financas._load(hooks.db)
         devendo = sum(e["valor"] for e in st.get("emprestimos", []) if not e.get("devolvido_at"))
-        return {"saldo": st.get("saldo", 0), "movs": list(reversed(st.get("movs", []))),
+        movs = [{**m, "desc": mov_desc(m.get("desc", ""))} for m in reversed(st.get("movs", []))]
+        return {"saldo": st.get("saldo", 0), "movs": movs,
                 "devendo": devendo, "pedido": st.get("pedido")}
     return _json(await asyncio.to_thread(collect))
 

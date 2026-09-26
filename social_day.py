@@ -47,6 +47,12 @@ SHORT_NAME = {
     "livia_vasconcelos": "a Lívia",
 }
 
+# Quem é cada um, curto, pros Bastidores (o texto do cânone é longo: "amiga/colega da faculdade")
+QUEM = {"henrique_salles": "pai", "bia_andrade": "melhor amiga", "carol_menezes": "amiga da academia",
+        "theo_martins": "amigo da faculdade", "julia_azevedo": "amiga da faculdade", "helena_prado": "professora da faculdade",
+        "livia_vasconcelos": "agente de carreira", "celia_ribeiro": "vizinha", "neide_souza": "faxineira, vai às quintas",
+        "jorge_almeida": "porteiro"}
+
 # Gente que ela pode conhecer onde a rotina já a leva (Auditoria #6, parte 3).
 # Não são canônicos: nascem via SocialWorld.discover_person no primeiro
 # encontro. Quem ela encontra em 3 dias vira `secondary`, em 6 `recurring` — e
@@ -890,6 +896,64 @@ class SocialDay:
             lines += [f"• {p['description']} — {datetime.fromisoformat(p['event_at']).strftime('%d/%m %H:%M')}"
                       for p in plans]
         return "\n".join(lines)
+
+    def world_panel(self, now: datetime) -> dict:
+        """O mesmo mundo do /mundo, estruturado pros Bastidores (26/09): quem é cada um,
+        quando falaram, lugares, o que está rolando e planos. Sem assunto de conversa."""
+        fam = {"discovered": "Acabou de descobrir", "known": "Conhece", "habitual": "Vai sempre",
+               "occasional": "De vez em quando", "favorite": "Favorito"}
+        nivel = {"ephemeral": "acabou de conhecer", "secondary": "já é conhecido(a)", "recurring": "entrou pro círculo"}
+        with self.db.get_connection() as conn:
+            people = conn.execute(
+                """SELECT w.canonical_key, w.display_name, w.character_type, w.canon_locked, w.relationship_to_marina,
+                          r.last_interaction_at, r.contact_frequency
+                   FROM world_characters w JOIN social_relationships r ON r.character_key=w.canonical_key
+                   WHERE w.active=1 AND w.canonical_key NOT IN ('marina','patrick_ramos')""").fetchall()
+            places = conn.execute(
+                """SELECT p.name, COALESCE(s.familiarity, p.familiarity) AS familiarity
+                   FROM world_places p LEFT JOIN social_place_state s ON s.place_key=p.canonical_key
+                   WHERE p.canon_locked=0 AND p.active=1""").fetchall()
+        pessoas = []
+        for p in people:
+            key = p["canonical_key"]
+            novo = key in NPC_INDEX and not p["canon_locked"]
+            quem = NPC_INDEX[key][3] if key in NPC_INDEX else QUEM.get(key) or p["relationship_to_marina"] or ""
+            nome = p["display_name"]
+            if " (" in nome:                                     # "Beatriz (Bia) Andrade" → "Bia Andrade"
+                apelido = nome.split(" (")[1].split(")")[0]
+                nome = " ".join([apelido] + nome.split(") ")[1].split()) if ") " in nome else apelido
+            last = datetime.fromisoformat(p["last_interaction_at"]) if p["last_interaction_at"] else None
+            pessoas.append({"nome": nome, "iniciais": "".join(w[0] for w in nome.replace("Dona ", "").replace("Seu ", "").split()[:2]).upper(),
+                            "quem": quem + (f" · {nivel.get(p['character_type'], '')}" if novo else ""),
+                            "novo": novo, "falaram": self._quando_curto(last, now) if last else None,
+                            "vezes_30d": p["contact_frequency"] if isinstance(p["contact_frequency"], int) else 0, "_last": last or datetime.min})
+        pessoas.sort(key=lambda x: x.pop("_last"), reverse=True)
+        rolando = []
+        for s in self.open_stories():
+            com = [short_name(k) for k in json.loads(s["metadata_json"] or "{}").get("participants", []) if k != "marina"]
+            rolando.append({"titulo": s["title"], "com": com})
+        return {"pessoas": pessoas,
+                "lugares": [{"nome": p["name"], "quanto": fam.get(p["familiarity"], p["familiarity"])} for p in places],
+                "rolando": rolando,
+                "planos": [{"descricao": p["description"], "quando": self._dia_hora(datetime.fromisoformat(p["event_at"]), now)}
+                           for p in self.upcoming_outings(now)]}
+
+    @staticmethod
+    def _quando_curto(moment: datetime, now: datetime) -> str:
+        dias = (now.date() - moment.date()).days
+        if dias == 0:
+            return f"hoje, {moment:%H:%M}"
+        if dias == 1:
+            return f"ontem, {moment:%H:%M}"
+        return f"há {dias} dias"
+
+    @staticmethod
+    def _dia_hora(at: datetime, now: datetime) -> str:
+        """'hoje 20h', 'amanhã 14h30', 'sáb 20h' (padrão dos apps)."""
+        dias = (at.date() - now.date()).days
+        dia = "hoje" if dias == 0 else "amanhã" if dias == 1 else \
+            ("seg", "ter", "qua", "qui", "sex", "sáb", "dom")[at.weekday()] if dias < 7 else f"{at:%d/%m}"
+        return f"{dia} {at.hour}h{at.minute:02d}" if at.minute else f"{dia} {at.hour}h"
 
     @staticmethod
     def _quando(moment: datetime, now: datetime) -> str:

@@ -13,7 +13,7 @@ detalhado de cada entrega, na ordem em que aconteceram.
 
 ## 0. Painel de status — atualizado em 2026-09-26 (manhã)
 
-Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 1.002 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
+Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 1.011 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
 
 Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
@@ -62,7 +62,7 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | 10 | C.2 assistir junto; C2/C3 da consolidação | Fases |
 | 11 | ✅ **25/09:** bolha que chega enquanto ela gera, antes do 1º balão sair, faz ela desistir da resposta e responder o lote junto (`MessageDebouncer.should_yield`, até 2 vezes seguidas). Se o 1º balão já saiu, a bolha nova continua sendo o turno seguinte, como numa conversa de verdade | Naturalidade |
 | 12 | Perda de coerência entre turnos e qualidade das mensagens espontâneas: observar depois do restart (usar `/bom` e `/ruim`) | Auditorias #3 e #6 |
-| 14 | **Bastidores do Mini App:** labels e mensagens informativas "com padrão horrível" (herdados dos comandos). Revisar com o Patrick sentado no PC | Patrick 25/09 |
+| 14 | 🟡 **26/09:** Bastidores em abas (Agora · Por dentro · Dinheiro · Mundo) e textos refeitos, com voz híbrida escolhida pelo Patrick: rótulos e dados falam como painel ("você"), sentimento fala do jeito dela. Status sem código cru nem emoji, corpo em linhas rotuladas (dormindo não aparece "exausta"), sentimento com preposição certa ("com saudade dele", "grata à Bia"), extrato e "Hoje" falando com ele, Mundo em cartões com quem é cada um. **Falta:** ele ver no celular e ajustar palavra por palavra | Patrick 25–26/09 |
 | 15 | **Regras das fotos por promessa:** revisar juntos quando e como ela cumpre (tipos, prazos, 3 tentativas, 3 h de validade) | Patrick 25/09 |
 | 16 | **Auditoria de prompt:** blocos velhos/duplicados (VOZ DA MARINA 2,7k, RITMO 1,6k, LINHAS DURAS 1,6k); trocar o teto do teste de prompt por orçamento do payload real | Patrick 25/09 |
 | 17 | **Promessa de ação vira evento:** "vou descer com o Milo", "vou terminar de me arrumar" (4 h antes) não acontecem no mundo | Uso real 25/09 |

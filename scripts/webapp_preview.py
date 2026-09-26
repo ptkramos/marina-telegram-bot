@@ -43,8 +43,24 @@ async def main(port: int) -> None:
     seed_world_bible(db)
 
     def status(now: datetime) -> dict:
+        # mesmo formato do bot._status_snapshot (valores de exemplo)
         return {"now": now.isoformat(), "atividade": "tempo livre em casa", "local": "Apartamento da Marina (Botafogo)",
-                "disponivel": "Online, respondendo rápido"}
+                "disponivel": "Online, respondendo rápido", "ciclo_dia": 24, "ciclo_fase": "fase pré-menstrual / tpm",
+                "saude": [], "proximo": ("aula de Projeto", "segunda 14:00"), "planos": [("bar com o Theo e a Júlia", "sábado 20:30")]}
+
+    # um sentimento e movimentações de exemplo pros Bastidores
+    import financas
+    from emotion import EmotionEngine
+    agora = datetime.now()
+    EmotionEngine(db).feel("tristeza", "saudade", 0.5, "ele passou o dia sumido", agora, target="o Patrick")
+    financas.receive_pix(db, 150, "pro açaí", agora)
+    import canon_extras
+    from social_world import seed_social
+    seed_social(db)
+    canon_extras.ensure(db)
+    with db.get_connection() as conn:          # um contato de exemplo pro Mundo
+        conn.execute("UPDATE social_relationships SET last_interaction_at=?, contact_frequency=4 WHERE character_key='bia_andrade'",
+                     (agora.replace(hour=8, minute=15).isoformat(),))
 
     async def pix(valor: int, recado: str) -> dict:
         return {"ok": True}

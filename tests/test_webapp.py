@@ -232,7 +232,9 @@ class ApiTest(unittest.IsolatedAsyncioTestCase):
     async def test_bastidores_traz_as_barrinhas(self):
         d = await (await self.client.get("/api/bastidores", headers=self.h)).json()
         self.assertEqual([b["label"] for b in d["emocao"]["body"]], ["Energia", "Fome", "Tesão"])
-        self.assertTrue(all(0 <= b["value"] <= 1 for b in d["emocao"]["bond"]))
+        self.assertTrue(all(0 <= b["value"] <= 1 for b in d["emocao"]["voces"]))
+        self.assertEqual(d["status"]["celular"], "Responde rápido")
+        self.assertIn("pessoas", d["mundo"])
 
 
 class ComprovanteTest(unittest.TestCase):
