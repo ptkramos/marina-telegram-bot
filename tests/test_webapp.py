@@ -199,6 +199,13 @@ class ApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(order["note"], "pra minha gatinha")
         self.assertEqual(self.receipt.await_count, 1)
         self.assertEqual((await self.client.get("/api/ifood/loja/mcdonalds-cg", headers=self.h)).status, 404)
+        # 26/09 (print da aba Pedidos): o histórico traz logo, itens com foto e o dia por extenso
+        h = (await (await self.client.get("/api/ifood", headers=self.h)).json())["pedidos"][0]
+        self.assertEqual(h["loja_id"], "starbucks-bf")
+        self.assertTrue(h["logo"])
+        self.assertEqual([(i["nome"], i["qtd"]) for i in h["itens"]], [("Latte Grande", 2), ("Pão de queijo", 1)])
+        self.assertTrue(all(i["foto"] for i in h["itens"]))
+        self.assertRegex(h["dia"], r"^(Seg|Ter|Qua|Qui|Sex|Sáb|Dom), \d\d/\d\d/\d{4}$")
 
     def test_loja_fechada(self):
         loja = {"abre": 11, "fecha": 23}
@@ -234,6 +241,17 @@ class ComprovanteTest(unittest.TestCase):
         for data in (recibo.pix(50, "pro açaí", T), recibo.pedido("Açaí 500 ml", "Açaí da Praia", 38, T, "", T)):
             self.assertTrue(data.startswith(b"\xff\xd8"), "JPEG (o Telegram exige pra foto via inline)")
             self.assertGreater(len(data), 5000)
+
+    def test_pedido_em_colunas_com_taxas(self):
+        """26/09: itens com quantidade, nome e preço em colunas; subtotal e taxas alinhados à direita."""
+        import recibo
+        itens = [{"qtd": 2, "nome": "Croissant de presunto e queijo com requeijão cremoso extra", "preco": 31.8},
+                 {"qtd": 1, "nome": "Latte Grande", "preco": 21.9}]
+        logo = Path(webapp_server.STATIC_DIR) / "lojas" / "starbucks-bf.png"
+        data = recibo.pedido(itens, "Starbucks", 54.69, T, "", T, taxa=0, servico=0.99,
+                             logo_loja=logo if logo.exists() else None)
+        self.assertTrue(data.startswith(b"\xff\xd8"))
+        self.assertEqual(recibo._wrap("a b c", recibo._font(26), 10_000), ["a b c"])
 
     def test_marina_ignora_o_comprovante_via_bot(self):
         import asyncio

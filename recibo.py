@@ -5,7 +5,7 @@ Uso pessoal: marcas reais, logos do Wikimedia Commons (domínio público) em web
 from __future__ import annotations
 
 import io
-import textwrap
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -41,6 +41,19 @@ def _font(size: int, bold: bool = False) -> ImageFont.ImageFont:
 def _brl(valor: float) -> str:
     inteiro, cent = f"{valor:,.2f}".split(".")
     return f"R$ {inteiro.replace(',', '.')},{cent}"
+
+
+def _wrap(text: str, font, width: int) -> list[str]:
+    """Quebra por largura real em pixels (não por nº de letras), pra nada passar da margem."""
+    lines, cur = [], ""
+    for word in (text or "").split():
+        test = f"{cur} {word}".strip()
+        if cur and font.getlength(test) > width:
+            lines.append(cur)
+            cur = word
+        else:
+            cur = test
+    return lines + [cur] if cur else lines or [""]
 
 
 def _data(when: datetime) -> str:
@@ -83,16 +96,26 @@ class _Canvas:
         self.y += gap
 
     def field(self, label: str, value: str, *, extra: str = "", icon: Optional[Image.Image] = None):
+        """Rótulo cinza, valor em negrito (sempre: 26/09 o Patrick pediu alinhamento e padrão iguais em tudo)."""
         self.text(label, 22, color=GRAY, gap=6)
         x = PAD
-        if icon is not None:
-            self.img.paste(icon, (PAD, self.y + 2), icon)
-            x = PAD + icon.width + 10
-        for i, line in enumerate(textwrap.wrap(value, 38) or [""]):
-            self.text(line, 28, bold=not extra, gap=4, x=x)      # 26/09: a 2ª linha saía sem negrito
+        f = _font(28, True)
+        if icon is not None:            # ícone centrado na altura da 1ª linha do valor
+            top, bottom = f.getbbox("Ág")[1], f.getbbox("Ág")[3]
+            self.img.paste(icon, (PAD, self.y + (top + bottom - icon.height) // 2), icon)
+            x = PAD + icon.width + 12
+        for line in _wrap(value, f, W - PAD - x):
+            self.text(line, 28, bold=True, gap=4, x=x)
         if extra:
-            self.text(extra, 22, color=GRAY, gap=4)
+            self.text(extra, 22, color=GRAY, gap=4, x=x)
         self.y += 18
+
+    def row(self, left: str, right: str, size: int = 24, *, bold=False, color=GRAY):
+        """Linha de valores: rótulo à esquerda, valor colado na margem direita, mesma linha de base."""
+        f = _font(size, bold)
+        self.d.text((PAD, self.y), left, font=f, fill=color)
+        self.d.text((W - PAD - self.d.textlength(right, font=f), self.y), right, font=f, fill=color)
+        self.y += f.getbbox("Ág")[3] + 12
 
     def jpeg(self) -> bytes:
         self.y += 40
@@ -119,27 +142,62 @@ def pix(valor: float, mensagem: str, when: datetime, para: str = "Marina Salles"
     return c.jpeg()
 
 
-def pedido(item: str, restaurante: str, total: float, previsao: datetime, observacao: str, when: datetime,
-           endereco: str = "Casa da Ma") -> bytes:
+def pedido(itens, restaurante: str, total: float, previsao: datetime, observacao: str, when: datetime,
+           endereco: str = "Casa da Ma", *, taxa: Optional[float] = None, servico: Optional[float] = None,
+           logo_loja: Optional[Path] = None) -> bytes:
+    """itens: lista de {"qtd", "nome", "preco"} (preço da linha) ou, no formato antigo, texto."""
     c = _Canvas(IFOOD_RED)
     c.paste(_logo("ifood", 56))
     c.y += 30
     c.text("Pedido confirmado", 34, bold=True, gap=8)
-    c.text(f"{restaurante} · {_data(when)}", 22, color=GRAY)
+    c.text(_data(when), 22, color=GRAY, gap=0)
     c.rule(20)
-    # 26/09: sacola com vários itens — item vira lista de linhas ("2x X-Tudo", "1x Guaravita")
-    for entry in ([f"1x {item}"] if isinstance(item, str) else item):
-        for line in textwrap.wrap(entry, 34):
-            c.text(line, 28, bold=True, gap=4)
-    c.rule()
+    # loja: logo redondo + nome, centrados na mesma linha
+    x = PAD
+    if logo_loja and Path(logo_loja).exists():
+        lg = Image.open(logo_loja).convert("RGBA").resize((64, 64), Image.LANCZOS)
+        mask = Image.new("L", (64, 64), 0)
+        ImageDraw.Draw(mask).ellipse((0, 0, 63, 63), fill=255)
+        c.img.paste(lg, (PAD, c.y), mask)
+        c.d.ellipse((PAD, c.y, PAD + 63, c.y + 63), outline=LINE, width=2)
+        x = PAD + 64 + 18
+    f = _font(28, True)
+    c.d.text((x, c.y + 32), restaurante, font=f, fill=INK, anchor="lm")
+    c.y += 64 + 26
+    # itens em colunas: quantidade numa caixinha | nome (2ª linha recuada sob o nome) | preço à direita
+    if isinstance(itens, str):
+        itens = [itens]
+    f, fq = _font(26), _font(22, True)
+    box, gap = 38, 16
+    col_nome = PAD + box + gap
+    for it in itens:
+        if isinstance(it, str):
+            m = re.match(r"(\d+)x (.+)", it)
+            qtd, nome, preco = (int(m.group(1)), m.group(2), None) if m else (1, it, None)
+        else:
+            qtd, nome, preco = it["qtd"], it["nome"], it.get("preco")
+        preco_s = _brl(preco) if preco is not None else ""
+        largura = W - PAD - col_nome - (int(c.d.textlength(preco_s, font=f)) + 24 if preco_s else 0)
+        linhas = _wrap(nome, f, largura)
+        h = f.getbbox("Ág")[3]
+        c.d.rounded_rectangle((PAD, c.y, PAD + box - 1, c.y + box - 1), radius=6, outline=LINE, width=2)
+        c.d.text((PAD + box // 2, c.y + box // 2), str(qtd), font=fq, fill=INK, anchor="mm")
+        base = c.y + box // 2
+        for n, line in enumerate(linhas):
+            c.d.text((col_nome, base + n * (h + 6)), line, font=f, fill=INK, anchor="lm")
+        if preco_s:
+            c.d.text((W - PAD, base), preco_s, font=f, fill=INK, anchor="rm")
+        c.y += max(box, box // 2 + (len(linhas) - 1) * (h + 6) + h // 2 + 4) + 16
+    c.rule(14)
     c.field("Entrega em", endereco)
     c.field("Previsão de entrega", f"{previsao:%H:%M}")
     if observacao:
         c.field("Observações do pedido", observacao)
     c.rule(8)
-    f = _font(30, True)
-    c.d.text((PAD, c.y), "Total", font=f, fill=INK)
-    total_s = _brl(total)
-    c.d.text((W - PAD - c.d.textlength(total_s, font=f), c.y), total_s, font=f, fill=INK)
-    c.y += 40
+    if taxa is not None and servico is not None:
+        c.row("Subtotal", _brl(total - taxa - servico))
+        c.row("Taxa de entrega", _brl(taxa) if taxa else "Grátis")
+        c.row("Taxa de serviço", _brl(servico))
+        c.y += 6
+    c.row("Total", _brl(total), 30, bold=True, color=INK)
     return c.jpeg()

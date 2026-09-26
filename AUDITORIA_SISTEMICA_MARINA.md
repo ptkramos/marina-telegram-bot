@@ -1445,6 +1445,14 @@ Conversa de verdade com o Patrick doente, o Mini App novo e uma cena de sexting 
 
 **Câmera (26/09, `ea93bb5`).** O Patrick notou selfie demais. Poses de tripé já eram maioria (19 × 11 selfies), mas os looks estavam travados no espelho e não existia foto sem ela. Agora: looks no tripé do closet, e comida/Milo/vista do ponto de vista dela, sem o LoRA dela.
 
+**Mini App: abas e padrão visual (26/09, 07:30, 3 prints do Patrick).** Ele esperava os pedidos numa tela separada, pela barra de baixo, como no app real. Também viu emoji no lugar de ícone e a "escadinha" dos Destaques (nome de 2 linhas empurrava os vizinhos). A causa da escadinha: o `<button>` centraliza o conteúdo na vertical. Duas regras novas dele: **ícones do Bootstrap Icons, nunca emoji, nos apps**, e **excelência em alinhamento, inclusive nos comprovantes**. Feito:
+- barra Início/Busca/Pedidos; aba Pedidos com "Seus clássicos" e histórico por dia (logo, itens, foto, "Adicione à sacola");
+- ícones trocados no iFood e nos Bastidores;
+- cartões alinhados pelo topo; stepper e barras com colunas fixas;
+- comprovante do iFood em colunas (quantidade, nome recuado, preço à direita, subtotal e taxas); Pix com valores todos em negrito.
+
+Detalhes no PLANO_WEBAPP ("Abas do iFood e padrão visual").
+
 ## O que estava certo
 
 "Tô na rua, saí pra encontrar a Júlia" às 14:53 e "cheguei sim" às 15:52 batiam com o mundo (a caminho 14:49–15:30).

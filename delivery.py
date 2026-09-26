@@ -55,7 +55,8 @@ def history(db) -> list[dict]:
 
 
 def _remember(db, data: dict) -> None:
-    hist = [{k: data.get(k) for k in ("what", "restaurant", "price", "note", "ordered_at", "eta_at")}] + history(db)
+    hist = [{k: data.get(k) for k in ("what", "restaurant", "price", "note", "ordered_at", "eta_at",
+                                             "loja_id", "logo", "itens") if data.get(k) is not None}] + history(db)
     db.set_estado_relacional(HIST_KEY, json.dumps(hist[:HIST_MAX], ensure_ascii=False))
 
 
@@ -141,8 +142,9 @@ def open_order(db) -> Optional[dict]:
 
 
 def gift(db, *, what: str, restaurant: str, price: int, eta_min: tuple, note: str, now: datetime,
-         eats: bool = True) -> Optional[dict]:
-    """O Patrick manda comida pra ela. None se já tem pedido em aberto."""
+         eats: bool = True, extra: Optional[dict] = None) -> Optional[dict]:
+    """O Patrick manda comida pra ela. None se já tem pedido em aberto.
+    extra: loja_id, logo e itens do iFood novo (vão pro histórico da aba Pedidos)."""
     if open_order(db):
         return None
     rng = random.Random(f"presente:{now.isoformat()}")
@@ -150,7 +152,7 @@ def gift(db, *, what: str, restaurant: str, price: int, eta_min: tuple, note: st
     data = {"by": "patrick", "what": what, "restaurant": restaurant, "price": int(price),
             "note": (note or "").strip()[:200], "eats": bool(eats), "ordered_at": now.isoformat(),
             "eta_at": eta.isoformat(), "arrived_at": None, "status": "a_caminho",
-            "received_at": None, "waited": None, "ate_recently": False, "announced": False}
+            "received_at": None, "waited": None, "ate_recently": False, "announced": False, **(extra or {})}
     _save(db, data)
     _remember(db, data)
     logger.info("delivery.gift what=%s eta=%s", what, eta.isoformat(timespec="minutes"))

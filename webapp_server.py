@@ -224,13 +224,20 @@ def order_view(order: Optional[dict], now: datetime) -> Optional[dict]:
             "note": order.get("note") or "", "status": status, "steps": steps, "headline": headline}
 
 
+DIAS = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
+
+
 def history_view(hist: list[dict], now: datetime) -> list[dict]:
-    """Aba Pedidos do iFood: data, loja, item, total e situação."""
+    """Aba Pedidos do iFood (print real 26/09): dia, loja com logo, itens com foto e situação."""
     out = []
     for h in hist:
         eta = datetime.fromisoformat(h["eta_at"])
+        at = datetime.fromisoformat(h["ordered_at"])
+        itens = h.get("itens") or [{"id": None, "nome": h["what"], "qtd": 1, "foto": None}]
         out.append({"what": h["what"], "restaurant": h["restaurant"], "price": h["price"],
-                    "when": datetime.fromisoformat(h["ordered_at"]).strftime("%d/%m"),
+                    "when": at.strftime("%d/%m"), "dia": f"{DIAS[at.weekday()]}, {at:%d/%m/%Y}",
+                    "loja_id": h.get("loja_id"), "logo": h.get("logo"), "itens": itens,
+                    "concluido": eta <= now,
                     "status": "Pedido concluído" if eta <= now else "Em andamento"})
     return out
 
@@ -383,12 +390,18 @@ async def _pedir_sacola(request: web.Request, hooks: "Hooks", body: dict) -> web
     what = nomes[0] if len(nomes) == 1 else ", ".join(nomes[:-1]) + " e " + nomes[-1]
     nota = " / ".join(l["obs"] for l in linhas if l["obs"])
     come = loja["tipo"] == "restaurante" and loja["categoria"] not in ("Doces", "Sorvetes")
+    # a aba Pedidos mostra logo, itens e foto (e o "Adicione à sacola" repete a sacola)
+    extra = {"loja_id": loja["id"], "logo": loja["logo"],
+             "itens": [{"id": l["item"]["id"], "nome": l["item"]["nome"], "qtd": l["qtd"], "foto": l["item"]["foto"]}
+                       for l in linhas]}
     order = delivery.gift(hooks.db, what=what, restaurant=loja["nome"], price=round(total), eta_min=tuple(loja["eta"]),
-                          note=nota, now=now, eats=come)
+                          note=nota, now=now, eats=come, extra=extra)
     if not order:
         return _error("Você tem um pedido em andamento", 409)
-    jpeg = await asyncio.to_thread(recibo.pedido, [f"{l['qtd']}x {l['item']['nome']}" for l in linhas], loja["nome"],
-                                   total, datetime.fromisoformat(order["eta_at"]), nota, now)
+    itens = [{"qtd": l["qtd"], "nome": l["item"]["nome"], "preco": l["item"]["preco"] * l["qtd"]} for l in linhas]
+    jpeg = await asyncio.to_thread(recibo.pedido, itens, loja["nome"], total, datetime.fromisoformat(order["eta_at"]),
+                                   nota, now, taxa=loja["taxa"], servico=TAXA_SERVICO,
+                                   logo_loja=STATIC_DIR / loja["logo"])
     return _json({"ok": True, "pedido": order_view(order, now), "comprovante": await _post_receipt(request, jpeg)})
 
 

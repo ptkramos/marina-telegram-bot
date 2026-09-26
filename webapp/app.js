@@ -40,13 +40,21 @@ function concluido(msgForaDoTelegram) {
 
 // ------------------------------------------------------------------ navegação --
 const stack = ["inicio"];
+const TABS = ["ifood", "ifbusca", "ifpedidos"];       // abas da barra de baixo do iFood
 function show(view, push = true) {
   document.querySelectorAll(".view").forEach((v) => (v.hidden = v.id !== "v-" + view));
+  $("if-nav").hidden = !TABS.includes(view);
+  document.querySelectorAll("#if-nav [data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === view));
   if (push) stack.push(view);
   if (nativeBack) (stack.length > 1 ? tg.BackButton.show() : tg.BackButton.hide());
   else $("voltar").hidden = stack.length <= 1;
   window.scrollTo(0, 0);
   (loaders[view] || (() => {}))();
+}
+// trocar de aba não empilha: o voltar sai do iFood, como no app de verdade
+function tab(view) {
+  if (TABS.includes(stack[stack.length - 1])) stack.pop();
+  show(view);
 }
 function back() { if (!$("rv-fundo").hidden) { $("rv-fundo").hidden = true; return; } if (stack.length > 1) { stack.pop(); show(stack[stack.length - 1], false); } }
 if (nativeBack) tg.BackButton.onClick(back);
@@ -70,6 +78,10 @@ function pedidoCard(p, titulo) {
 function failIn(el, err) { el.innerHTML = `<p class="err">${esc(err.message)}</p>`; }
 
 // --------------------------------------------------------------------- telas --
+const ic = (name, cls = "") => `<i class="bi bi-${name}${cls ? " " + cls : ""}"></i>`;
+const nota = (n) => String(n).replace(".", ",");
+const abreAs = (h) => `Abre às ${String(h).padStart(2, "0")}:00`;
+
 const loaders = {
   async inicio() {
     try {
@@ -98,16 +110,56 @@ const loaders = {
   // ------------------------------------------------ iFood (26/09, lojas reais) --
   async ifood() {
     try {
-      const d = await api("/api/ifood");
-      IF.lojas = d.lojas;
-      $("if-andamento").innerHTML = d.pedido && d.pedido.status === "a_caminho"
-        ? `<div class="if-andamento"><div class="small muted">Pedido em andamento</div>${pedidoCard(d.pedido, "Seu pedido pra Ma")}</div>` : "";
-      IF.chips();
+      const d = await IF.carregar();
+      $("if-andamento").innerHTML = IF.andamento(d.pedido);
+      IF.chips("if-chips");
       IF.lista();
-      $("if-pedidos").innerHTML = d.pedidos.length ? `<h3 class="if-h">Pedidos</h3>${d.pedidos.map((p) =>
-        `<div class="ped-row"><div><div class="t">${esc(p.restaurant)}</div><div class="d">${esc(cap(p.what))}</div>
-          <div class="d">${esc(p.when)} · ${brl(p.price)}</div></div><span class="d">${esc(p.status)}</span></div>`).join("")}` : "";
     } catch (e) { failIn($("if-lojas"), e); }
+  },
+
+  async ifbusca() {
+    try {
+      await IF.carregar();
+      IF.chips("bs-chips");
+      IF.busca();
+      setTimeout(() => $("if-busca").focus(), 150);
+    } catch (e) { failIn($("bs-lojas"), e); }
+  },
+
+  // aba Pedidos (print real 26/09): em andamento, "Seus clássicos" e o histórico por dia
+  async ifpedidos() {
+    try {
+      const d = await IF.carregar(true);
+      $("pd-andamento").innerHTML = IF.andamento(d.pedido);
+      const lojas = new Map(d.lojas.map((l) => [l.id, l]));
+      const vistos = new Set(), classicos = [];
+      d.pedidos.forEach((p) => {
+        if (p.loja_id && lojas.has(p.loja_id) && !vistos.has(p.loja_id)) { vistos.add(p.loja_id); classicos.push(lojas.get(p.loja_id)); }
+      });
+      $("pd-classicos").innerHTML = classicos.length ? `<h3 class="if-h">Seus clássicos</h3><div class="carrossel">${classicos.map((l) =>
+        `<button class="classico" data-loja="${esc(l.id)}"><img class="loja-circ" src="/static/${esc(l.logo)}" alt="">
+          <div class="cl-nome">${esc(l.nome)}</div>
+          <div class="d">${l.aberta ? `${l.eta[0]}-${l.eta[1]} min • ${IF.taxa(l.taxa)}` : abreAs(l.abre)}</div></button>`).join("")}</div>` : "";
+      if (!d.pedidos.length) {
+        $("pd-historico").innerHTML = `<div class="vazio">${ic("receipt")}<div class="t">Nenhum pedido ainda</div>
+          <div class="d">Os pedidos que você mandar pra Ma aparecem aqui.</div></div>`;
+        return;
+      }
+      let html = `<h3 class="if-h">Histórico</h3>`, dia = null;
+      d.pedidos.forEach((p, n) => {
+        if (p.dia !== dia) { dia = p.dia; html += `<div class="pd-dia">${esc(dia)}</div>`; }
+        const foto = p.itens.find((i) => i.foto);
+        const logo = p.logo ? `<img class="loja-circ peq" src="/static/${esc(p.logo)}" alt="">` : `<span class="loja-circ peq">${ic("shop")}</span>`;
+        html += `<div class="pd-card"><div class="pd-loja">${logo}
+          <div><div class="t">${esc(p.restaurant)}</div><div class="d com-ic">${esc(p.status)}${p.concluido ? ic("check-circle-fill", "ok") : ""}</div></div></div>
+          <div class="pd-itens"><div class="pd-lista">${p.itens.map((i) =>
+            `<div class="pd-item"><span class="qtd">${i.qtd}</span><span class="nome">${esc(i.nome)}</span></div>`).join("")}</div>
+          ${foto ? `<div class="pd-foto" style="background-image:url(/static/${esc(foto.foto)})"></div>` : ""}</div>
+          ${p.loja_id && lojas.has(p.loja_id) ? `<div class="pd-acoes"><button class="link-vermelho" data-loja="${esc(p.loja_id)}">Ver loja</button>
+          <button class="link-vermelho" data-repetir="${n}">Adicione à sacola</button></div>` : ""}</div>`;
+      });
+      $("pd-historico").innerHTML = html;
+    } catch (e) { failIn($("pd-historico"), e); }
   },
 
   async loja() {
@@ -118,10 +170,10 @@ const loaders = {
       $("lj-logo").src = "/static/" + l.logo;
       $("lj-nome").textContent = l.nome;
       $("lj-info").textContent = `Entrega rastreável • ${String(l.km).replace(".", ",")} km • Min ${brl(l.minimo)}`;
-      $("lj-nota").innerHTML = `<span>★ <b>${String(l.nota).replace(".", ",")}</b> <span class="muted">(${IF.aval(l.avaliacoes)} avaliações)</span></span><span class="muted">›</span>`;
+      $("lj-nota").innerHTML = `<span class="com-ic">${ic("star-fill", "estrela")}<b>${nota(l.nota)}</b><span class="muted">(${IF.aval(l.avaliacoes)} avaliações)</span></span>${ic("chevron-right", "muted")}`;
       $("lj-entrega").innerHTML = l.aberta
         ? `<span><b>Padrão</b> • ${l.eta[0]}-${l.eta[1]} min • ${IF.taxa(l.taxa)}</span>`
-        : `<span class="fechada">Loja fechada • Abre às ${String(l.abre).padStart(2, "0")}:00</span>`;
+        : `<span class="fechada">Loja fechada • ${abreAs(l.abre)}</span>`;
       const secoes = l.secoes;
       const dest = secoes[0].nome === "Destaques" ? secoes[0].itens : secoes[0].itens.slice(0, 3);
       $("lj-destaques").innerHTML = `<h3 class="if-h">Destaques</h3><div class="dest-grid">${dest.slice(0, 3).map((i, n) =>
@@ -158,10 +210,10 @@ const loaders = {
     $("sc-min").innerHTML = `O pedido mínimo dessa loja é <b>${brl(c.loja.minimo)}</b> sem contar com a taxa de entrega.`;
     $("sc-itens").innerHTML = c.itens.map((x, n) => `<div class="sc-item"><div class="sc-img" style="background-image:url(/static/${esc(x.item.foto)})"></div>
       <div class="sc-txt"><div class="t">${esc(x.item.nome)}</div><div class="d dois">${esc(x.obs || x.item.desc)}</div><div class="t">${brl(x.item.preco * x.qtd)}</div></div>
-      <div class="sc-ctl"><button data-sc="menos" data-n="${n}">${x.qtd > 1 ? "−" : '<span class="lixo"></span>'}</button><span>${x.qtd}</span><button data-sc="mais" data-n="${n}">+</button></div></div>`).join("");
+      <div class="sc-ctl"><button data-sc="menos" data-n="${n}">${x.qtd > 1 ? ic("dash-lg") : ic("trash3")}</button><span>${x.qtd}</span><button data-sc="mais" data-n="${n}">${ic("plus-lg")}</button></div></div>`).join("");
     const ids = new Set(c.itens.map((x) => x.item.id));
     const outros = c.loja.secoes.flatMap((s) => s.itens).filter((i) => !ids.has(i.id)).slice(0, 6);
-    $("sc-tambem").innerHTML = outros.map((i) => `<button class="car-item" data-prato="${esc(i.id)}"><div class="car-foto" style="background-image:url(/static/${esc(i.foto)})"><span class="car-mais">+</span></div>
+    $("sc-tambem").innerHTML = outros.map((i) => `<button class="car-item" data-prato="${esc(i.id)}"><div class="car-foto" style="background-image:url(/static/${esc(i.foto)})"><span class="car-mais">${ic("plus-lg")}</span></div>
       <div class="t">${brl(i.preco)}</div><div class="small">${esc(i.nome)}</div></button>`).join("");
     $("sc-total").textContent = brl(IF.total());
   },
@@ -186,11 +238,11 @@ const loaders = {
     try {
       const [d, g] = await Promise.all([api("/api/bastidores"), api("/api/dinheiro")]);
       const s = d.status, e = d.emocao;
-      const linhas = [`🏠 ${s.local} · ${s.atividade}`, `📱 ${s.disponivel}`, `🌸 Dia ${s.ciclo_dia} do ciclo (${s.ciclo_fase})`];
-      (s.saude || []).forEach(([l, r]) => linhas.push(`🤒 ${l} · ${r}`));
-      if (s.proximo) linhas.push(`📅 Próximo: ${s.proximo[0]} ${s.proximo[1]}`);
-      (s.planos || []).forEach(([p, w]) => linhas.push(`🗓️ ${p} · ${w}`));
-      $("bast-status").innerHTML = linhas.map((l) => `<div>${esc(l)}</div>`).join("");
+      const linhas = [["house", `${s.local} · ${s.atividade}`], ["phone", s.disponivel], ["flower1", `Dia ${s.ciclo_dia} do ciclo (${s.ciclo_fase})`]];
+      (s.saude || []).forEach(([l, r]) => linhas.push(["thermometer-half", `${l} · ${r}`]));
+      if (s.proximo) linhas.push(["calendar-event", `Próximo: ${s.proximo[0]} ${s.proximo[1]}`]);
+      (s.planos || []).forEach(([p, w]) => linhas.push(["calendar3", `${p} · ${w}`]));
+      $("bast-status").innerHTML = linhas.map(([i, l]) => `<div class="com-ic linha-ic">${ic(i, "muted")}<span>${esc(l)}</span></div>`).join("");
 
       const bar = (label, v, word, warm) => `<div class="bar-row"><span>${esc(label)}</span>
         <div class="bar${warm ? " warm" : ""}"><i style="width:${pct(v)}%"></i></div><span class="w">${esc(word || pct(v) + "%")}</span></div>`;
@@ -264,28 +316,59 @@ const IF = {
   taxa: (t) => (t ? brl(t) : '<span class="gratis">Grátis</span>'),
   subtotal() { return this.cart.itens.reduce((s, x) => s + x.item.preco * x.qtd, 0); },
   total() { return this.cart.loja ? this.subtotal() + this.cart.loja.taxa + TAXA_SERVICO : 0; },
-  chips() {
+  // a lista (e o pedido em andamento) vem uma vez; a aba Pedidos recarrega pra ver o histórico novo
+  async carregar(fresco = false) {
+    if (fresco || !this._d) { this._d = await api("/api/ifood"); this.lojas = this._d.lojas; }
+    return this._d;
+  },
+  andamento(p) {
+    return p && p.status === "a_caminho"
+      ? `<div class="if-andamento"><div class="small muted">Pedido em andamento</div>${pedidoCard(p, "Seu pedido pra Ma")}</div>` : "";
+  },
+  chips(alvo) {
     const cats = [...new Set(this.lojas.filter((l) => l.tipo === "restaurante").map((l) => l.categoria))].sort();
     const all = ["Tudo", "Restaurantes", "Mercados", "Farmácias", ...cats];
-    $("if-chips").innerHTML = all.map((c) => `<button class="chip${c === this.filtro ? " on" : ""}" data-chip="${esc(c)}">${esc(c)}</button>`).join("");
+    $(alvo).innerHTML = all.map((c) => `<button class="chip${c === this.filtro ? " on" : ""}" data-chip="${esc(c)}">${esc(c)}</button>`).join("");
   },
-  lista() {
-    const q = ($("if-busca").value || "").trim().toLowerCase();
+  filtrar(q) {
     const f = this.filtro;
     let ls = this.lojas.filter((l) => f === "Tudo" || (f === "Restaurantes" && l.tipo === "restaurante") ||
       (f === "Mercados" && l.tipo === "mercado") || (f === "Farmácias" && l.tipo === "farmacia") || l.categoria === f);
     if (q) ls = ls.filter((l) => (l.nome + " " + l.categoria).toLowerCase().includes(q));
     const ordem = { restaurante: 0, mercado: 1, farmacia: 2 };
-    ls.sort((a, b) => (b.aberta - a.aberta) || (ordem[a.tipo] - ordem[b.tipo]) || (b.mais_pedido - a.mais_pedido) || a.km - b.km);
-    $("if-titulo").textContent = f === "Tudo" ? "Lojas" : f === "Mercados" || f === "Farmácias" ? "Mais pedidos" : f;
-    $("if-lojas").innerHTML = ls.map((l) => `<button class="loja-row${l.aberta ? "" : " off"}" data-loja="${esc(l.id)}">
+    return ls.sort((a, b) => (b.aberta - a.aberta) || (ordem[a.tipo] - ordem[b.tipo]) || (b.mais_pedido - a.mais_pedido) || a.km - b.km);
+  },
+  linhas(ls) {
+    return ls.map((l) => `<button class="loja-row${l.aberta ? "" : " off"}" data-loja="${esc(l.id)}">
       <img class="loja-circ" src="/static/${esc(l.logo)}" alt=""><div class="lr-txt">
       ${l.mais_pedido && l.aberta ? '<span class="selo-mp">Mais Pedido</span>' : ""}
       <div class="lr-nome">${esc(l.nome)}</div>
-      <div class="d">${l.aberta ? `<span class="estrela">★ ${String(l.nota).replace(".", ",")}</span> (${IF.aval(l.avaliacoes)}) • ${l.eta[0]}-${l.eta[1]} min • ${IF.taxa(l.taxa)}`
-        : `Fechada • Abre às ${String(l.abre).padStart(2, "0")}:00`}</div>
-      ${l.aberta && !l.taxa ? '<span class="tag-gratis">Grátis</span>' : ""}</div><span class="coracao">♡</span></button>`).join("")
+      <div class="d com-ic">${l.aberta
+        ? `${ic("star-fill", "estrela")}<span class="estrela">${nota(l.nota)}</span><span>(${IF.aval(l.avaliacoes)}) • ${l.eta[0]}-${l.eta[1]} min • ${IF.taxa(l.taxa)}</span>`
+        : `<span>Fechada • ${abreAs(l.abre)}</span>`}</div>
+      ${l.aberta && !l.taxa ? '<span class="tag-gratis">Grátis</span>' : ""}</div>${ic("heart", "coracao")}</button>`).join("")
       || `<p class="muted">Nada encontrado.</p>`;
+  },
+  lista() {
+    const f = this.filtro;
+    $("if-titulo").textContent = f === "Tudo" ? "Lojas" : f === "Mercados" || f === "Farmácias" ? "Mais pedidos" : f;
+    $("if-lojas").innerHTML = this.linhas(this.filtrar(""));
+  },
+  busca() {
+    $("bs-lojas").innerHTML = this.linhas(this.filtrar(($("if-busca").value || "").trim().toLowerCase()));
+  },
+  // "Adicione à sacola" do histórico: a mesma sacola de novo (se a loja estiver aberta)
+  async repetir(p) {
+    const loja = await api("/api/ifood/loja/" + encodeURIComponent(p.loja_id));
+    if (!loja.aberta) { toast(`Loja fechada • ${abreAs(loja.abre)}`); return; }
+    const por = new Map(loja.secoes.flatMap((s) => s.itens).map((i) => [i.id, i]));
+    const itens = p.itens.filter((i) => por.has(i.id)).map((i) => ({ item: por.get(i.id), qtd: i.qtd, obs: "" }));
+    if (!itens.length) { toast("Esses itens não estão mais no cardápio"); return; }
+    if (this.cart.loja && this.cart.loja.id !== loja.id && this.cart.itens.length &&
+        !(await this.confirmar(`Sua sacola tem itens de ${this.cart.loja.nome}. Limpar a sacola e adicionar estes itens?`))) return;
+    this.cart = { loja, itens };
+    this.loja = loja;
+    show("sacola");
   },
   stepper() {
     $("pr-qtd").textContent = this.qtd;
@@ -309,7 +392,15 @@ const IF = {
 
 document.addEventListener("click", async (e) => {
   const chip = e.target.closest("[data-chip]");
-  if (chip) { IF.filtro = chip.dataset.chip; IF.chips(); IF.lista(); return; }
+  if (chip) {
+    IF.filtro = chip.dataset.chip;
+    if (stack[stack.length - 1] === "ifbusca") { IF.chips("bs-chips"); IF.busca(); } else { IF.chips("if-chips"); IF.lista(); }
+    return;
+  }
+  const aba = e.target.closest("[data-tab]");
+  if (aba) { tab(aba.dataset.tab); return; }
+  const rep = e.target.closest("[data-repetir]");
+  if (rep) { try { await IF.repetir(IF._d.pedidos[Number(rep.dataset.repetir)]); } catch (err) { toast(err.message); } return; }
   const loja = e.target.closest("[data-loja]");
   if (loja) { IF.lojaId = loja.dataset.loja; show("loja"); return; }
   const sec = e.target.closest("[data-secao]");
@@ -333,13 +424,13 @@ document.addEventListener("click", async (e) => {
   if (e.target.closest("[data-go-back]")) back();
 });
 
-$("if-busca").addEventListener("input", () => IF.lista());
+$("if-busca").addEventListener("input", () => IF.busca());
 $("pr-obs").addEventListener("input", () => ($("pr-cont").textContent = `${$("pr-obs").value.length}/140`));
 $("pr-menos").addEventListener("click", () => { if (IF.qtd > 1) { IF.qtd -= 1; IF.stepper(); } });
 $("pr-mais").addEventListener("click", () => { if (IF.qtd < 20) { IF.qtd += 1; IF.stepper(); } });
 $("pr-add").addEventListener("click", async () => {
   const loja = IF.loja;
-  if (!loja.aberta) { toast(`Loja fechada • Abre às ${String(loja.abre).padStart(2, "0")}:00`); return; }
+  if (!loja.aberta) { toast(`Loja fechada • ${abreAs(loja.abre)}`); return; }
   if (IF.cart.loja && IF.cart.loja.id !== loja.id && IF.cart.itens.length) {
     if (!(await IF.confirmar(`Sua sacola tem itens de ${IF.cart.loja.nome}. Limpar a sacola e adicionar este item?`))) return;
     IF.cart.itens = [];
@@ -369,6 +460,7 @@ $("rv-fazer").addEventListener("click", async () => {
   try {
     await api("/api/delivery", { loja: IF.cart.loja.id, itens: IF.cart.itens.map((x) => ({ id: x.item.id, qtd: x.qtd, obs: x.obs })) });
     IF.cart = { loja: null, itens: [] };
+    IF._d = null;
     $("rv-fundo").hidden = true;
     concluido("Pedido feito");
     stack.length = 1; show("inicio", false);

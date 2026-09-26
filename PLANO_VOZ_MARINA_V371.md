@@ -11,9 +11,9 @@ detalhado de cada entrega, na ordem em que aconteceram.
 
 ---
 
-## 0. Painel de status — atualizado em 2026-09-26 (madrugada)
+## 0. Painel de status — atualizado em 2026-09-26 (manhã)
 
-Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 999 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
+Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 1.002 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
 
 Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
@@ -1147,6 +1147,8 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
 **Fotos**
 - **Promessa de foto vira foto** (`promessa_foto.py`): looks, comida, selfie e íntima; prazo por "jaja/depois"; 3 tentativas; expira em 3 h; a foto normal cumpre a promessa.
 - **Câmera segue a situação (26/09):** looks no tripé do closet (4 poses, uma por opção, 3–6 min de troca de roupa); comida, Milo e vista do ponto de vista dela, sem o LoRA dela (`krea2_pov_prompt`, `pov=True`); Milo canônico (Shih Tzu branco e dourado, coleira azul). A selfie no espelho fica pro espontâneo.
+
+**Mini App (26/09, manhã)** — fora da voz, registrado aqui pra não perder o fio: iFood com abas Início/Busca/Pedidos e histórico igual ao app real, ícones do Bootstrap Icons no lugar de emoji e alinhamento revisado (Destaques, stepper, barras dos Bastidores, comprovantes em colunas). Detalhes no PLANO_WEBAPP.
 
 **Captura**
 - `/bom`/`/ruim` em fala de iniciativa gravam "(ela puxou o assunto)"; pós-gozo não marca mais como sexting.
