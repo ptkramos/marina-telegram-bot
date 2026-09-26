@@ -1457,6 +1457,8 @@ Detalhes no PLANO_WEBAPP ("Abas do iFood e padrão visual").
 
 **Conversa e logs de 26/09 (manhã), revisados a pedido do Patrick:** 16 mensagens; nenhum erro no log. Só avisos de robôs procurando `.env` no endereço do Mini App (barrados) e um ciclo de 15 s pulado enquanto ela gerava. Fluxo certo: as mensagens das 07:21 esperaram ela acordar, às 09:04 ela pegou o presente na portaria e reagiu, e o bom-dia foi respondido junto. Dois achados, na tabela acima.
 
+**Rolê sem consumo (26/09, achado do Patrick na revisão da aba Agora).** Ela foi ao bar antes do reset e o saldo não mexeu: a saída só existia como "estar lá". Causa: nenhum módulo gerava o que acontece durante o rolê. Novo `consumo.py`: cada saída tem pedidos determinísticos (bar, Starbucks com os preços do iFood do app, cinema, praia) e uber; cada um vira acontecimento, gasto no saldo e, se for comida, a refeição do horário. Decisões dele: lazer e uber no saldo dela; ônibus/metrô no Riocard do pai, fora do extrato. Também: "Starbucks da Gávea" vira o nome canônico (migração 026).
+
 **Bastidores revisados (26/09, manhã, pendência 14).** Tirei os textos reais da VPS (só leitura) e listei o que estava ruim: nome interno do lugar e código da atividade, emoji herdado do `/status`, "exausta" enquanto ela dormia, a frase "dormiu 8,7 h · TPM · última vez há 30 h" sem rótulo, "saudade com Patrick" (preposição errada e ele em 3ª pessoa) e o `/mundo` colado ("último contato sem contato ainda; 0 nos últimos 30 dias", com o `weekly` do cânone aparecendo como número). O Patrick escolheu abas e voz híbrida. Tudo refeito na camada do Mini App, sem mexer nos comandos; detalhes no PLANO_WEBAPP ("Bastidores em abas").
 
 ## O que estava certo

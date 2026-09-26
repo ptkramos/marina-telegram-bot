@@ -168,9 +168,9 @@ OUTINGS = (
     (4, 0.35, time(19, 30), time(22, 30), "quartinho_bar", ("theo_martins",), ("julia_azevedo",),
      "Saindo com {quem} no Quartinho Bar"),
     (2, 0.25, time(15, 30), time(16, 45), "starbucks_shopping_gavea", ("julia_azevedo",), (),
-     "Café com {quem} no Starbucks do Shopping da Gávea"),
+     "Café com {quem} no Starbucks da Gávea"),
     (3, 0.25, time(15, 30), time(16, 45), "starbucks_shopping_gavea", ("julia_azevedo", "theo_martins"), (),
-     "Café com {quem} no Starbucks do Shopping da Gávea"),
+     "Café com {quem} no Starbucks da Gávea"),
 )
 BEACHES = ("copacabana_beach", "ipanema_beach", "leblon_beach")
 OUTING_HORIZON_DAYS = 6

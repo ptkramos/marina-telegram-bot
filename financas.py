@@ -4,6 +4,8 @@ Decisões do Patrick:
 - Pix sem ela pedir: ela agradece e USA em algo concreto do mundo, e conta depois.
 - Aperto de dinheiro: ela recorre SEMPRE a ele primeiro (não ao pai).
 - Saldo de verdade, simples: cachês do freela + pix dele − contas dela − delivery − compras.
+- 26/09: o que ela consome no rolê e o uber saem daqui (consumo.py); ônibus e metrô são do
+  Riocard que o pai carrega (fora do saldo e do extrato).
   O pai (Henrique) paga o apê e a comida; isso fica fora do saldo dela (D9).
 
 Estado em estado_relacional[KEY] (JSON) — sem migration: o esquema é travado nos testes.
@@ -88,9 +90,10 @@ def materialize(db, now: datetime) -> int:
     changed = 0
     with db.get_connection() as conn:
         rows = [dict(r) for r in conn.execute(
-            """SELECT event_key, event_at, summary FROM life_events WHERE event_at>=? AND event_at<=?
+            """SELECT event_key, event_at, title, summary FROM life_events WHERE event_at>=? AND event_at<=?
                AND (event_key LIKE 'freela:%:sinal' OR event_key LIKE 'freela:%:cache'
-                    OR event_key LIKE 'casa:%:contas_dela' OR event_key LIKE 'meal:%:delivery')
+                    OR event_key LIKE 'casa:%:contas_dela' OR event_key LIKE 'meal:%:delivery'
+                    OR event_key LIKE 'consumo:%' OR event_key LIKE 'transporte:%')
                ORDER BY event_at""", (desde, now.isoformat()))]
     for row in rows:
         if row["event_key"] in st["vistos"]:
@@ -103,6 +106,10 @@ def materialize(db, now: datetime) -> int:
                 _mov(st, at, int(m.group(1)), "cachê do freela")
         elif key.endswith(":contas_dela"):
             _mov(st, at, -CONTAS_DELA, "contas dela (celular e streamings)")
+        elif key.startswith(("consumo:", "transporte:")):      # 26/09: o que ela pede no rolê e o uber
+            m = _AMOUNT.search(row["summary"] or "")
+            if m:
+                _mov(st, at, -int(m.group(1)), row["title"] or "rolê")
         else:
             _mov(st, at, -_delivery_price(row["summary"] or ""), "delivery")
         st["vistos"].append(key)

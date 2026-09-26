@@ -650,6 +650,12 @@ class WorldStateManager:
         except Exception:
             logger.exception("commute.materialize.error")
         try:
+            # 26/09: o que ela pede no rolê e o uber viram acontecimento e gasto (antes do Meals).
+            from consumo import Consumo
+            Consumo(self.db).materialize(now)
+        except Exception:
+            logger.exception("consumo.materialize.error")
+        try:
             # Fase D1: refeições cuja hora chegou viram acontecimento (e estado, em casa).
             from meals import Meals
             Meals(self.db).materialize(now)

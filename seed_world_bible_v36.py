@@ -154,7 +154,7 @@ PLACES = {
     "pet_services_botafogo": ("Serviços pet em Botafogo", "Botafogo", "pet_service", "known", "near_home"),
     "vet_botafogo": ("Veterinário em Botafogo", "Botafogo", "veterinarian", "known", "near_home"),
     "shopping_gavea": ("Shopping da Gávea", "Gávea", "shopping", "known", "normal_commute"),
-    "starbucks_shopping_gavea": ("Starbucks do Shopping da Gávea", "Gávea", "cafe", "known", "normal_commute"),
+    "starbucks_shopping_gavea": ("Starbucks da Gávea", "Gávea", "cafe", "known", "normal_commute"),
     "quartinho_bar": ("Quartinho Bar", "Botafogo", "bar", "known", "near_home"),
     "copacabana_beach": ("Praia de Copacabana", "Copacabana", "beach", "known", "normal_commute"),
     "ipanema_beach": ("Praia de Ipanema", "Ipanema", "beach", "known", "normal_commute"),

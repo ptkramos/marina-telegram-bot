@@ -150,6 +150,71 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 - **Seu Jorge (26/09):** pegar o delivery na portaria agora conta como contato com ele (`delivery._contato_portaria`); antes o Mundo mostrava "Sem contato ainda" logo depois de ela pegar o presente.
 - **Visto nos dados reais (26/09, 08:48):** depois do reset, todo mundo ainda "sem contato" e "Hoje" vazio — ela estava dormindo (sábado). Conferir de tarde se o pai e as amigas aparecem com contato.
 
+### Aba Agora — decisões com o Patrick, linha a linha (26/09, em andamento, ainda não implementado)
+**Por quê:** o status só mostrava onde ela está e o que faz; não existia preparação nem "indo fazer" (fora a faculdade de manhã) — do "tempo livre em casa" ela pulava pro trajeto.
+
+**Mundo (comportamento):**
+- Todo compromisso fora de casa vira sequência: **Se arrumando → A caminho → Lá → Voltando → Chegou**.
+- Tudo que ela faz pode virar gancho pra avisar ele, mas avisar ou não é escolha dela; se ele pediu pra avisar e ela lembra, ela avisa (já existe).
+- Se arrumando ela não larga tudo pelo celular: dá olhadinhas, responde com atraso, às vezes pede opinião.
+
+**Card (base: layout D):**
+1. **Título curto** ("Se arrumando", "A caminho"). Nome de lugar curto só no título e no chat; nos detalhes, nome oficial.
+2. **Linha 2** diz o que vem, com hora aproximada: "Vai sair pro Quartinho Bar às ~20:00", "Chega na PUC-Rio às ~13:40".
+3. **Barra de progresso** do início até o fim da etapa: "13:05 · há 16min · faltam ~19min · ~13:40". Duração no formato **"1h 10min"**. Sem hora de fim conhecida: hora de início e duração à direita do título.
+4. **Grade** (rótulo de uma palavra, coluna do tamanho do maior rótulo, nada quebra linha): Com (Theo e Júlia), Como (Ônibus / Carona com o Theo), Celular.
+5. **Linha do tempo única:** o dia inteiro (etapas feitas com hora, atual em destaque, próximas com hora aproximada) e os **passos da etapa atual recuados dentro dela**. Vale pra todas as fases.
+6. **Imprevisto** vira passo amarelo na linha do tempo, com hora ("Ônibus veio lotado 13:15").
+- **Horas:** formato 00:00. Aproximadas (~) na chegada prevista, fim de rolê, saída de casa e fim de aula.
+
+**Textos do Celular** (sempre "Olha…"): livre em casa **Olha com frequência** · se arrumando, comendo, no rolê, de carona **Olha de vez em quando** · transporte público e uber **Olha com frequência** · aula, treino, trabalho **Olha nos intervalos** · banho **Olha depois do banho** · dormindo **Olha quando acordar**.
+
+**Passos do Se arrumando** (gerúndio, sem artigo; feitos e atual com hora):
+- Rolê à noite: Tomando banho · Secando cabelo · Fazendo maquiagem · Escolhendo roupa
+- Faculdade: Tomando café · Tomando banho · (Secando cabelo, às vezes) · Escolhendo roupa
+- Café/almoço com amiga: Tomando banho · Fazendo maquiagem · Escolhendo roupa
+- Freela: sem maquiagem (a make é feita lá)
+- Academia e praia: dois passos (ex.: roupa de treino + garrafinha; biquíni + protetor — textos a fechar)
+- Último passo antes de sair, pelo transporte: **Esperando carona** / **Chamando uber** / saindo
+- Skincare faz parte do banho (higiene), não é passo.
+
+**A caminho** (título "A caminho"; linha 2 "Chega na PUC-Rio às ~13:40"):
+- Ônibus: Andando até o ponto · No ônibus · Saltando na Gávea · Andando até a PUC
+- Metrô (e metrô + ônibus): Andando até a estação · No metrô · Trocando pro ônibus · No ônibus · Saltando · Andando até o lugar
+- Carona: No carro com o Theo · Chegando no {lugar curto}
+- Uber: Esperando uber · No uber (valor do uber aparece na linha)
+
+**Lá:**
+- **Título = nome curto do lugar** ("No Quartinho", "No Starbucks", "Na PUC"); **Onde = sempre só o bairro** (Botafogo, Gávea), igual pra toda atividade.
+- Linha 2: o que vem ("Volta pra casa às ~00:00"). Barra no padrão "há X" (na aula também; a matéria fica nos passos).
+- Passos recuados: faculdade = as aulas e o intervalo; rolê/café = **o que ela consumiu, em uma linha**: nome curto à esquerda, **valor e hora em colunas à direita** ("Gin tônica · R$ 34 · 20:40"). Pedido repetido aparece de novo com o mesmo nome (sem "(2)").
+- **Isso é cânone:** cada consumo é acontecimento real do mundo — sai do saldo, entra no extrato, vira lembrança, ela pode comentar. Antes do reset ela foi ao bar e o banco não mexeu. **✅ Feito em 26/09 (`consumo.py`)** — ver "Consumo no rolê" abaixo.
+- Etapa concluída mostra o total gasto nela ("No Quartinho · R$ 86").
+
+**Voltando** (aprovado): "Voltando pra casa" · "Chega em casa às ~00:25" · passos do transporte (uber com valor).
+
+**Em casa:** chegou é **"Em casa"**, não uma fase "Chegou". O que ela faz pra dormir é outro **Se arrumando** ("Vai dormir às ~01:00"; Tirando maquiagem · Tomando banho · Colocando pijama).
+
+**Cânone:** "Starbucks do Shopping da Gávea" vira **"Starbucks da Gávea"** (vale pro mundo todo, inclusive chat).
+
+**Falta decidir:** as atividades em casa (tempo livre, comendo, banho, vendo série, Milo, dormindo) e os textos de academia/praia.
+
+**Ordem combinada com o Patrick:** (1) consumo canônico ✅ → (2) implementar a sequência no mundo + o card novo → (3) atividades em casa.
+
+### Consumo no rolê (26/09, `consumo.py`) ✅
+- **Quem paga (decisão do Patrick):** lazer e uber saem do **saldo dela**; ônibus e metrô são do Riocard que o pai carrega (fora do saldo e fora do extrato). O que o pai paga não aparece no extrato.
+- **O que ela pede** é função do rolê (data, lugar, amigos): o mesmo rolê sempre tem os mesmos pedidos, então card e extrato batem.
+  - Quartinho Bar: 2 a 4 drinks (Gin tônica R$ 34, Chopp R$ 16, Caipirinha R$ 28, Drink de maracujá R$ 32; às vezes troca), porção dividida em 70% dos rolês (Fritas R$ 36, Bolinho de bacalhau R$ 44, Pastel de queijo R$ 38), às vezes uma água.
+  - Starbucks da Gávea: **os mesmos itens e preços do iFood do app** (catálogo `starbucks-bf`): uma bebida e, em 60%, uma comida.
+  - Cinema no Shopping da Gávea: ingresso R$ 42, pipoca dividida R$ 34, às vezes refri.
+  - Praia: cadeira e guarda-sol dividido (60%), água de coco, e 1–2 de mate, biscoito Globo, queijo coalho.
+  - Uber: R$ 6 + R$ 1,30/min (dividido = metade).
+- **Cada pedido vira:** acontecimento do dia (`life_events` tipo `consumo`/`transporte`, "Pediu um gin tônica no Quartinho Bar (R$ 34)."), gasto no saldo (extrato "Quartinho Bar · Gin tônica"), e — se for comida no horário de uma refeição — **a refeição do horário** (`meal:{dia}:{tipo}:fora`), pra ela não jantar de novo em casa. Ela fica sabendo pelo `since_last` (o que aconteceu desde a última fala dela).
+- **Só o que já aconteceu** e só em rolê confirmado e não cancelado; idempotente. Roda no `WorldStateManager.resolve`, depois do trajeto e antes das refeições.
+- **Cânone:** "Starbucks do Shopping da Gávea" → **"Starbucks da Gávea"** (seed + migração `026_starbucks_da_gavea.sql`, que também corrige os eventos já marcados).
+- Testes: `tests/test_consumo.py` (10).
+- **Ainda não:** pedido limitado pelo saldo (hoje ela pede igual com pouco dinheiro; o aperto cai no pedido de ajuda pra você, que já existe) e consumo em outros lugares (PUC, academia, shopping sem cinema).
+
 ## 7. Próximas ideias (Patrick, 26/09)
 
 **iFood realista.** Base: o print do iFood real do Patrick (saudação "Boa tarde, Patrick", endereço, categorias, lojas com logo, nota e avaliações, tempo e taxa de entrega, cupons, abas Início/Busca/Pedidos/Perfil). Povoar o cardápio com lojas e pratos reais de Botafogo como base do cânone do que ela come. O Patrick pediu dicas de outra IA sobre como povoar — aguardando ele colar.

@@ -13,7 +13,7 @@ detalhado de cada entrega, na ordem em que aconteceram.
 
 ## 0. Painel de status — atualizado em 2026-09-26 (manhã)
 
-Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 1.016 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
+Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 1.026 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
 
 Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
@@ -1143,6 +1143,7 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
 - **Ela manda delivery pra ele** (`pedido_dela.py`): quando oferece ("vou te mandar um suquinho pelo app") e, às vezes, de surpresa (ele doente, dia ruim); nunca no meio do sexting. Ele acompanha pelo botão "🛵 Acompanhar entrega" na fala dela.
 - **Freela vazio** diz que não tem job: rolê não vira ensaio.
 - **Banho:** as falas de ida pro box começam o banho, "já tô saindo do chuveiro" encerra (`end_shower`), e o que foi adiado pelo banho sai quando ele acaba (`release_after_shower`).
+- **Consumo no rolê (26/09, `consumo.py`):** o que ela pede no bar, no café, no cinema e na praia, e o uber, viram acontecimento do dia e gasto no saldo dela; comida fora é a refeição do horário. Ela sabe pelo `since_last`.
 - **Sono manda na iniciativa:** deitada (mesmo num micro-despertar) ela não puxa assunto (`SleepPlan.in_bed`); acordada de verdade (freela de madrugada) pode.
 
 **Fotos**
