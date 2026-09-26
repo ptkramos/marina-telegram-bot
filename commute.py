@@ -337,7 +337,24 @@ class Commute:
             legs.append(self._incident(Leg(f"commute:outing:{tag}:volta", end, end + timedelta(minutes=mins),
                                            mode, "volta", _de(place["name"]), region,
                                            driver if mode == "carona" else companion)))
-        return legs
+        return self._voltas_trocadas(legs)
+
+    def _voltas_trocadas(self, legs: list[Leg]) -> list[Leg]:
+        """Agenda reativa (26/09): saiu passando mal/exausta → a volta vira uber."""
+        try:
+            from agenda_reativa import AgendaReativa
+            r = AgendaReativa(self.db)
+        except Exception:
+            return legs
+        out = []
+        for leg in legs:
+            t = r.volta_trocada(leg.key) if leg.direction == "volta" else None
+            if t:
+                from dataclasses import replace
+                leg = replace(leg, mode=t["mode"], end=leg.start + timedelta(minutes=t["mins"]), companion="",
+                              incident="", incident_at=None)
+            out.append(leg)
+        return out
 
     def _legs_agenda_viva(self, day: date) -> list[Leg]:
         """Itens da agenda única decididos na hora (vontade), mercado e médico: o jeito de ir foi

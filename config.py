@@ -76,6 +76,9 @@ class Settings:
     LLM_REASONING: str = os.getenv("LLM_REASONING", "off").strip().lower()
     # Reserva quando o modelo principal falha (antes fixo no código como mistral-nemo).
     LLM_FALLBACK_MODEL: str = os.getenv("LLM_FALLBACK_MODEL", "mistralai/mistral-nemo").strip()
+    # 26/09 — agenda reativa: lê a fala dela ("tá bom, vou treinar") e diz o que mudou na agenda.
+    # Só roda quando a fala tem cara de plano; vazio = o modelo de reserva (barato).
+    AGENDA_LLM_MODEL: str = os.getenv("AGENDA_LLM_MODEL", "").strip()
     # Fase C.1 — modelo do modo íntimo (vazio = sem troca). Ver intimacy.py.
     LLM_INTIMATE_MODEL: str = os.getenv("LLM_INTIMATE_MODEL", "").strip()
     LLM_INTIMATE_REASONING: str = os.getenv("LLM_INTIMATE_REASONING", "off").strip().lower()

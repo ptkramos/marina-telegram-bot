@@ -169,6 +169,13 @@ class TempoLivre:
         h = inicio.hour + inicio.minute / 60
         chuva = self._chuva()
         chama_ele = self._quer_se_masturbar(now, rng) if _hora(h, *MASTURBANDO[4]) else None
+        try:                                              # 26/09: voltou correndo pra casa por tesão
+            from agenda_reativa import AgendaReativa
+            alivio = AgendaReativa(self.db).alivio_em_casa(inicio, consumir=registrar)
+            if alivio is not None:
+                chama_ele = alivio
+        except Exception:
+            logger.exception("tempo_livre.alivio")
         if chama_ele is not None:
             tipo = MASTURBANDO
         else:

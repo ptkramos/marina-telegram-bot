@@ -187,6 +187,14 @@ class ProactivityService:
         # fazer ela me procurar pra flertar até conseguir o sexting que ela
         # quer". Como a saudade, passa por cima do teto diário; quem segura é
         # o intervalo entre uma investida e outra.
+        # 26/09 (agenda reativa): saiu passando mal e voltou de uber — avisa o Patrick (ele paga o uber).
+        try:
+            from agenda_reativa import AgendaReativa
+            if AgendaReativa(self.db).aviso_saida(dt):
+                return True, "saiu_mais_cedo"
+        except Exception:
+            logger.exception("proactivity.saiu_mais_cedo")
+
         # 26/09 (Patrick): se masturbando com saudade/desejo, ela aproveita e chama ele pro sexting.
         try:
             from tempo_livre import convite_sexting

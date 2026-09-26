@@ -457,6 +457,11 @@ class ResponseAvailabilityPolicy:
         # Priority: explicit activity keywords override place heuristic
         if 'acordou de madrugada' in act:
             return 'MICRO_WAKE'
+        # 26/09 (agenda reativa): trancada no banheiro fora de casa (tesão ou passando mal).
+        from agenda_reativa import classe_disponibilidade
+        reservado = classe_disponibilidade(act)
+        if reservado:
+            return reservado
         # 26/09: antes do 'dorm' — "se arrumando pra dormir" não é dormindo.
         if act.startswith('se arrumando'):
             return 'GETTING_READY'

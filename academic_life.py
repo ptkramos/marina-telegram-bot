@@ -246,8 +246,13 @@ class AcademicLife:
                 WHERE owner_character_key='marina' AND confirmed=1 AND status='pending'
                   AND event_type='academic_class_cancelled' AND substr(event_at,1,10)=?''',
                 (day.isoformat(),)).fetchall()
-        cancelled = {json.loads(row['metadata_json'] or '{}').get('academic_block_id')
-                     for row in exceptions}
+        cancelled, ate = set(), {}
+        for row in exceptions:
+            meta = json.loads(row['metadata_json'] or '{}')
+            if meta.get('ate'):          # 26/09 (agenda reativa): saiu no meio, a aula vale até ali
+                ate[meta.get('academic_block_id')] = meta['ate']
+            else:
+                cancelled.add(meta.get('academic_block_id'))
         result = []
         for row in rows:
             if row['id'] in cancelled:
@@ -255,6 +260,11 @@ class AcademicLife:
             block = dict(row)
             block['start_at'] = f"{day.isoformat()}T{row['start_time']}:00"
             block['end_at'] = f"{day.isoformat()}T{row['end_time']}:00"
+            if row['id'] in ate:
+                fim = datetime.fromisoformat(ate[row['id']]).isoformat()
+                if fim <= block['start_at']:
+                    continue
+                block['end_at'] = min(block['end_at'], fim)
             result.append(block)
         return result
 
@@ -304,14 +314,17 @@ class AcademicLife:
             story_thread_id=story_thread_id,
             metadata={'academic_course_id': course['id'], 'academic_term': course['term_key']})
 
-    def cancel_class_occurrence(self, block_id: int, day: date, *, source_key: str) -> int:
+    def cancel_class_occurrence(self, block_id: int, day: date, *, source_key: str,
+                                ate: datetime | None = None) -> int:
+        """Falta na aula; com `ate`, ela saiu no meio e a aula vale até ali (agenda reativa)."""
         block = next((item for item in self.blocks_on(day) if item['id'] == block_id), None)
         if not block:
             raise ValueError('No scheduled class occurrence to cancel')
         return CalendarWorld(self.db).create_commitment(
             source_key=source_key, event_type='academic_class_cancelled',
-            description='aula cancelada',
+            description='saiu mais cedo da aula' if ate else 'aula cancelada',
             start_at=datetime.fromisoformat(block['start_at']),
             end_at=datetime.fromisoformat(block['end_at']),
             owner='marina', location_key=block['location_key'],
-            metadata={'academic_block_id': block_id})
+            metadata={'academic_block_id': block_id,
+                      **({'ate': ate.isoformat(timespec='minutes')} if ate else {})})

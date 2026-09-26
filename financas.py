@@ -196,13 +196,16 @@ def promised_pix_loop(db) -> Optional[dict]:
 
 def pix_turn_text(valor: int, nota: str, res: dict) -> str:
     """Como o pix entra na conversa dela (o /pix e o Mini App usam o mesmo texto)."""
-    if res["kind"] == "prometido":
+    if res["kind"] == "uber":
+        motivo = ""                            # 26/09 (Patrick): o porquê ele mesmo escreve no recado
+    elif res["kind"] == "prometido":
         motivo = f"— é o pix que ele tinha prometido ({res['promessa'].rstrip('.')})"
     elif res["kind"] == "emprestimo":
         motivo = "pra cobrir o aperto que você contou"
     else:
         motivo = "de presente, sem você pedir"
-    return f"[Pix de R$ {valor} do Patrick {motivo}" + (f" — recado: \"{nota}\"" if nota else "") + "]"
+    return (f"[Pix de R$ {valor} do Patrick" + (f" {motivo}" if motivo else "")
+            + (f" — recado: \"{nota}\"" if nota else "") + "]")
 
 
 def receive_pix(db, valor: int, nota: str, now: datetime) -> dict:
@@ -210,6 +213,19 @@ def receive_pix(db, valor: int, nota: str, now: datetime) -> dict:
     st = _init(_load(db), now)
     _mov(st, now, valor, f"pix do Patrick{': ' + nota if nota else ''}")
     pedido = st.get("pedido")
+    try:                                       # 26/09 (agenda reativa): ela saiu mal, voltou de uber e avisou
+        from agenda_reativa import AgendaReativa
+        uber = AgendaReativa(db).uber_pix(now, consumir=True)
+    except Exception:
+        logger.exception("financas.uber_pix")
+        uber = None
+    if uber:
+        _event(db, f"financas:{now:%Y-%m-%dT%H%M%S}:pix", now,
+               f"O Patrick fez um pix de R$ {valor} pra ela depois que ela avisou que voltou de uber"
+               + (f" ('{nota}')" if nota else "") + ".", now, 0.7)
+        _save(db, st)
+        logger.info("financas.pix valor=%s kind=uber saldo=%s", valor, st["saldo"])
+        return {"kind": "uber", "saldo": st["saldo"], "onde": uber["onde"]}
     promised = None if pedido else promised_pix_loop(db)
     if promised:
         kind = "prometido"

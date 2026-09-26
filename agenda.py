@@ -109,6 +109,7 @@ class Etapa:
     passos: list = field(default_factory=list)
     chave: str = ""
     prep_tipo: str = ""
+    compromisso: str = ""         # key do compromisso da agenda (agenda reativa)
 
     @property
     def total(self) -> Optional[int]:
@@ -196,6 +197,7 @@ class Agenda:
         if treino and treino["onde"] == "rua":
             out.append({"tipo": "academia", "key": f"gym:{day.isoformat()}", "place": LUGAR,
                         "inicio": treino["inicio"], "fim": treino["fim"], "friends": [],
+                        "decidido_em": treino.get("decidido_em"), "fim_original": treino.get("fim_original"),
                         "ida": legs.get(f"commute:{day.isoformat()}:gym:ida"),
                         "volta": legs.get(f"commute:{day.isoformat()}:gym:volta")})
         try:
@@ -206,6 +208,7 @@ class Agenda:
         if passeio:
             out.append({"tipo": "milo", "key": f"milo:{day.isoformat()}", "place": "enseada_botafogo",
                         "inicio": passeio["inicio"], "fim": passeio["fim"], "friends": [],
+                        "decidido_em": passeio.get("decidido_em"), "fim_original": passeio.get("fim_original"),
                         "ida": legs.get(f"commute:{day.isoformat()}:milo:ida"),
                         "volta": legs.get(f"commute:{day.isoformat()}:milo:volta")})
         with self.db.get_connection() as conn:              # 26/09: agenda única (vontade, mercado, médico)
@@ -219,6 +222,7 @@ class Agenda:
             out.append({"tipo": meta.get("tipo", "cafe"), "key": r["source_key"], "place": r["location_key"],
                         "inicio": datetime.fromisoformat(r["event_at"]), "fim": datetime.fromisoformat(r["end_at"]),
                         "friends": [], "outing": r, "decidido_em": meta.get("decidido_em"),
+                        "fim_original": meta.get("fim_original"),
                         "ida": legs.get(f"commute:{r['source_key']}:ida"),
                         "volta": legs.get(f"commute:{r['source_key']}:volta")})
         with self.db.get_connection() as conn:
@@ -267,7 +271,9 @@ class Agenda:
                 inicio = ida.start - timedelta(minutes=rng.randint(*PREP_MIN.get(c["tipo"], (8, 12))))
             inicio = max(inicio, fim_anterior)
             if c.get("decidido_em"):                     # decidiu na hora: se arruma a partir dali
-                inicio = max(inicio, datetime.fromisoformat(c["decidido_em"]))
+                decidiu = datetime.fromisoformat(c["decidido_em"])
+                inicio = (max(fim_anterior, decidiu) if ida.start - decidiu <= timedelta(minutes=30)
+                          else max(inicio, decidiu))
             # refeição em casa que cai na janela: ela come primeiro e se arruma depois
             for s in self._refeicoes_em_casa(day):
                 if s.at < ida.start and s.end > inicio:
@@ -296,6 +302,9 @@ class Agenda:
                 fim_anterior = ultimo_fim = volta.end
             else:
                 fim_anterior = ultimo_fim = c["fim"]
+            for e in out:
+                if not e.compromisso and e.chave != "prep:dormir":
+                    e.compromisso = c["key"]
         # 5. Depois de um rolê à noite: Se arrumando (pra dormir)
         if teve_make and ultimo_fim and (ultimo_fim.hour >= 17 or ultimo_fim.date() > day):
             try:
@@ -387,6 +396,9 @@ class Agenda:
         curto = CURTO.get(c["place"], no(place["name"]))
         titulo = curto[:1].upper() + curto[1:]
         passos: list[Passo] = []
+        fim_real = c["fim"]
+        if c.get("fim_original"):                        # saiu mais cedo: os passos seguem o plano até a saída
+            c = {**c, "fim": datetime.fromisoformat(c["fim_original"])}
         if c["tipo"] == "faculdade":
             anterior = None
             for b in c["blocks"]:
@@ -411,10 +423,46 @@ class Agenda:
             for item in plan(c["outing"]):
                 passos.append(Passo(item.nome + (" (dividiu)" if item.dividido else ""), item.at, valor=item.valor))
             cel = CELULAR["role"] if c["tipo"] != "freela" else CELULAR["aula"]
-        fim_la = volta.start if volta else c["fim"]
+        fim_la = volta.start if volta else fim_real
+        passos = self._reativa(c["key"], passos, fim_la)
         return Etapa("la", titulo, c["inicio"], fim_la, linha2=f"Volta pra casa às {aprox(fim_la)}",
                      lugar_key=c["place"], bairro=place["region"], com=com, celular=cel, passos=passos,
                      chave=f"la:{c['key']}")
+
+    def _reativa(self, key: str, passos: list, fim_la: datetime) -> list:
+        """Agenda reativa (26/09): pausa no banheiro e saída mais cedo aparecem nos passos."""
+        try:
+            from agenda_reativa import AgendaReativa
+            r = AgendaReativa(self.db)
+            info = r.interrupcao(key)
+            pausas = r.pausas_de(key)
+        except Exception:
+            return passos
+        if not info and not pausas:
+            return passos
+        out = list(passos)
+        for p in pausas:
+            ini, fim = datetime.fromisoformat(p["inicio"]), datetime.fromisoformat(p["fim"])
+            texto = "Se tocando no banheiro" if p["motivo"] == "tesao" else "No banheiro"
+            retoma = next((q for q in reversed(out) if q.inicio <= ini and not q.aviso), None)
+            out.append(Passo(texto, ini))
+            if retoma:
+                out.append(Passo(retoma.texto, fim))
+        out.sort(key=lambda q: q.inicio)
+        if info:
+            at = datetime.fromisoformat(info["at"])
+            out = [q for q in out if q.inicio < at or q.aviso]
+            out.append(Passo(f"Saindo mais cedo · {r.motivo_curto(info)}", at, aviso=True))
+        return out
+
+    def _saiu(self, key: str) -> Optional[dict]:
+        if not key:
+            return None
+        try:
+            from agenda_reativa import AgendaReativa
+            return AgendaReativa(self.db).interrupcao(key)
+        except Exception:
+            return None
 
     # ------------------------------------------------------ consultas --
     def agora(self, now: datetime) -> Optional[Etapa]:
@@ -459,6 +507,10 @@ class Agenda:
             grade.append(["car-front" if "arona" in atual.como or "ber" in atual.como else "bus-front", "Como", atual.como])
         if atual.com and atual.tipo in ("arrumando", "la"):
             grade.append(["people", "Com", _e(atual.com)])
+        saiu = self._saiu(atual.compromisso)
+        if saiu and atual.tipo in ("la", "voltando") and now >= datetime.fromisoformat(saiu["at"]):
+            from agenda_reativa import AgendaReativa
+            grade.append(["exclamation-circle", "Motivo", AgendaReativa.motivo_curto(saiu)])
         grade.append(["phone", "Celular", atual.celular])
         # linha do tempo: a cadeia do compromisso atual + a próxima etapa
         i = etapas.index(atual)
@@ -475,6 +527,13 @@ class Agenda:
             estado = "feito" if e.fim <= now else "agora" if e is atual else "depois"
             item = {"texto": e.titulo, "hora": hora(e.inicio) if estado != "depois" else aprox(e.inicio),
                     "estado": estado, "valor": e.total if estado == "feito" else None, "passos": []}
+            if e.tipo == "la" and estado == "feito":
+                s = self._saiu(e.compromisso)
+                if s:                                    # "Saiu 33min antes", embaixo de onde ela estava
+                    sai = datetime.fromisoformat(s["sai"])
+                    antes = duracao(datetime.fromisoformat(s["fim_original"]) - sai)
+                    item["passos"].append({"texto": f"Saiu {antes} antes", "estado": "aviso", "valor": None,
+                                           "hora": hora(sai)})
             if e is atual:
                 atual_passo = self.passo_atual(e, now)
                 for p in e.passos:

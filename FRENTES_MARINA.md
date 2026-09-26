@@ -9,23 +9,21 @@ _Atualizado em 26/09/2026, fim da tarde._
 ---
 
 ## 1. Mundo e agenda — skill `frente-mundo`
-**Abertura:** "bora na frente do mundo: agenda reativa"
+**Abertura:** "bora na frente do mundo: unhas"
 
 **Pronto (26/09):** agenda única (planejado, vontade, convite → mesma agenda com etapas); academia e passeio do
 Milo decididos uma vez por dia; mercado e médico como itens (Bradesco Saúde, Samaritano/Novamed); tempo livre
 concreto em casa; masturbação sem cota + convite pro sexting; fome em tempo real, saciedade, belisco e excesso no
-peso; mídia real (música iTunes, leitura com compra, Botafogo pela ESPN, Last.fm dele); consumo no rolê.
+peso; mídia real (música iTunes, leitura com compra, Botafogo pela ESPN, Last.fm dele); consumo no rolê;
+**agenda reativa** (26/09, noite: conversa vira compromisso/remarca/cancela, sair mais cedo por motivo, aula largada
+no meio, tesão como emergência — `agenda_reativa.py`).
 
 **Próximo, nesta ordem:**
-1. **Agenda reativa** — tudo pode ser interrompido se houver motivo (sair mais cedo da academia/aula/rolê,
-   passar mal, emergência de banheiro, tesão como emergência) e **o que ela topa na conversa vira compromisso**
-   ("tá, vou treinar" → item da agenda com preparo e trajeto). Junta com a pendência 17 do PLANO_VOZ
-   ("vou descer com o Milo" não acontece no mundo). A porta já existe: `vontade.py → agendar`.
-2. **Etapa 1 — cuidados:** unhas como status (a cor manda nas fotos; ela pede opinião dele; faz em casa se
+1. **Etapa 1 — cuidados:** unhas como status (a cor manda nas fotos; ela pede opinião dele; faz em casa se
    entediada e com a unha gasta; manicure antes de evento, paga do saldo). Depois cabelo.
-3. Conflito: rolê em dia de aula que começa antes da aula acabar sobrepõe volta e ida.
-4. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada"…).
-5. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
+2. Conflito: rolê em dia de aula que começa antes da aula acabar sobrepõe volta e ida.
+3. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber…).
+4. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
 
 ## 2. Apps (Mini App) — skill `frente-apps`
 **Abertura:** "bora na frente dos apps: Bastidores aba a aba"

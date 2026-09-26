@@ -87,16 +87,19 @@ def _parte(preco: float, pessoas: int, dividido: bool) -> int:
 
 def plan(outing: dict) -> list[Item]:
     """Os pedidos de uma saída (eventos_pendentes: source_key, event_at, end_at, location_key, metadata_json)."""
-    start, end = datetime.fromisoformat(outing["event_at"]), datetime.fromisoformat(outing["end_at"])
+    start, saiu = datetime.fromisoformat(outing["event_at"]), datetime.fromisoformat(outing["end_at"])
     place = outing.get("location_key") or ""
-    friends = (json.loads(outing.get("metadata_json") or "{}") or {}).get("friends") or []
+    meta0 = json.loads(outing.get("metadata_json") or "{}") or {}
+    # 26/09 (agenda reativa): saiu mais cedo — o plano segue o fim original e só vale o que veio antes
+    end = datetime.fromisoformat(meta0["fim_original"]) if meta0.get("fim_original") else saiu
+    friends = meta0.get("friends") or []
     pessoas = 1 + len(friends)
     rng = _rng(outing["source_key"])
     out: list[Item] = []
 
     def add(at, entry, *, dividido=False, comida=False):
         nome, frase, preco = entry
-        if at < end:
+        if at < min(end, saiu):
             out.append(Item(at, nome, frase, _parte(preco, pessoas, dividido), dividido and pessoas > 1, comida))
 
     if place == "quartinho_bar":

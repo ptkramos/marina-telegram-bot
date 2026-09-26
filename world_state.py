@@ -741,6 +741,17 @@ class WorldStateManager:
             Watching(self.db).materialize(now)
         except Exception:
             logger.exception("watch.materialize.error")
+        pausa = None
+        try:
+            # 26/09 (Patrick): tudo pode ser interrompido se houver motivo — antes de ler o compromisso,
+            # que pode ter acabado mais cedo agora. A pausa no banheiro vale por cima de tudo.
+            from agenda_reativa import AgendaReativa
+            reativa = AgendaReativa(self.db)
+            if not force:
+                reativa.talvez(now)
+            pausa = reativa.pausa(now)
+        except Exception:
+            logger.exception("agenda_reativa.error")
         if has_class is None:
             has_class = bool(academic.blocks_on(now.date()))
         if confirmed_commitment is None:
@@ -762,7 +773,11 @@ class WorldStateManager:
         except Exception:
             logger.exception("commute.leg_at.error")
 
-        if confirmed_commitment and confirmed_commitment.get("start_at") and self._active_plan(confirmed_commitment, now):
+        if pausa:
+            chosen = {"activity": pausa["atividade"], "place_key": pausa["place"],
+                      "start_at": pausa["inicio"], "end_at": pausa["fim"]}
+            reason = "explicit_plan"
+        elif confirmed_commitment and confirmed_commitment.get("start_at") and self._active_plan(confirmed_commitment, now):
             chosen = confirmed_commitment
             reason = "confirmed_commitment"
         elif self._active_plan(explicit_plan, now):

@@ -4016,6 +4016,15 @@ async def process_incoming_batch(
         except Exception:
             logger.exception("intimacy.observe_marina.error")
         try:
+            # 26/09 (agenda reativa): o que ela topa/anuncia/desiste na conversa vira agenda de verdade.
+            # Modelo barato, fora do loop (só quando a fala tem cara de plano).
+            from agenda_reativa import PLANO_RE, AgendaReativa
+            if PLANO_RE.search(fala_limpa):
+                asyncio.create_task(asyncio.to_thread(
+                    AgendaReativa(memory_manager.db).observe_conversa, fala_limpa, texto_usuario, datetime.now()))
+        except Exception:
+            logger.exception("agenda_reativa.observe.error")
+        try:
             # D11 (Patrick, 24/09): mal de verdade + "vai no médico" dele → ela vai.
             from health import Health
             if Health(memory_manager.db).observe_patrick(texto_usuario, datetime.now()):
@@ -4418,7 +4427,10 @@ _PROACTIVE_INSTRUCTIONS = {
               "pro flerte — malícia, dengo, uma indireta, um 'tô pensando em você de um jeito…'. Sem ser "
               "explícita de cara: você quer que ELE entre no clima. Não invente acontecimento novo."),
     # 26/09 (Patrick): se masturbando com saudade/desejo, chama ele pro sexting.
-    'sexting_solo': ("{detail} Você está no seu quarto se masturbando agora, com tesão e querendo ele. Chama o "
+    'saiu_mais_cedo': ("{detail} Avise o Patrick agora, do seu jeito e curto: que não tá bem e tá indo pra "
+                       "casa de uber. Pode reclamar um pouco, como quem conta pra namorado. Não peça dinheiro nem pix; "
+                       "se ele se oferecer pra pagar o uber, aceita com carinho. Não invente acontecimento novo."),
+    'sexting_solo': ("{detail} Você está se masturbando agora, com tesão e querendo ele. Chama o "
                      "Patrick pra entrar nisso com você: conta o que está fazendo, do seu jeito (pode ser direta: "
                      "'tô aqui me tocando pensando em você', 'bati uma siririca e ainda tô querendo você'), e "
                      "convida pro sexting. Curto e safado. Não invente acontecimento novo."),
@@ -4490,6 +4502,17 @@ async def autonomous_routine(application: Application):
     await autonomous_routine_v36(application)
 
 
+def _celular_na_mao(now: datetime) -> bool:
+    """O "Celular" do card deixa ela puxar conversa agora?"""
+    try:
+        import webapp_server
+        act_code, *_ = availability_service.policy._resolve_activity(now)
+        return webapp_server.CELULAR_POR_ATIVIDADE.get(act_code, "") in ("Olha com frequência", "Olha de vez em quando")
+    except Exception:
+        logger.exception("proactivity.celular")
+        return False
+
+
 async def autonomous_routine_v36(application: Application):
     """Grounded initiative; commit follow-ups and disclosure only after delivery."""
     async with INITIATIVE_LOCK:
@@ -4502,10 +4525,14 @@ async def _autonomous_routine_v36(application: Application):
     try:
         now = datetime.now()
         from calendar_world import CalendarWorld
-        if CalendarWorld(memory_manager.db).current(now, include_academic=True):
-            return
+        ocupada = CalendarWorld(memory_manager.db).current(now, include_academic=True)
         should_run, why = proactivity_service.should_trigger(now)
         if not should_run:
+            return
+        # 26/09 (Patrick): num compromisso, ela puxa conversa se o celular dela deixa ("Olha com frequência"
+        # ou "de vez em quando": café sozinha, shopping, bar); aula, academia, médico e freela só no intervalo.
+        # O convite do banheiro e o aviso de que saiu mal passam sempre.
+        if ocupada and why not in ('sexting_solo', 'saiu_mais_cedo') and not _celular_na_mao(now):
             return
         gap = _minutos_desde_iniciativa(now)
         if gap < INITIATIVE_GAP_MIN:
@@ -4517,10 +4544,22 @@ async def _autonomous_routine_v36(application: Application):
             candidate = dict(candidate, reason='tesao', detail=EmotionEngine(memory_manager.db).tesao_detail(now),
                              event_id=None, loop_id=None)
             memory_manager.db.set_estado_relacional(TESAO_KEY, now.isoformat())
+        if why == 'saiu_mais_cedo':
+            from agenda_reativa import AgendaReativa, MOTIVOS
+            reativa = AgendaReativa(memory_manager.db)
+            aviso = reativa.aviso_saida(now) or {}
+            porque = MOTIVOS.get(aviso.get("motivo"), ("não tava bem",))[0]
+            candidate = dict(candidate, reason='saiu_mais_cedo', event_id=None, loop_id=None,
+                             detail=f"Você acabou de sair mais cedo {aviso.get('onde', 'de onde estava')}: {porque}.")
+            reativa.marca_aviso_enviado(now)
         if why == 'sexting_solo':
             from emotion import EmotionEngine, TESAO_KEY
             from tempo_livre import marca_convite_enviado
-            candidate = dict(candidate, reason='sexting_solo', detail=EmotionEngine(memory_manager.db).tesao_detail(now),
+            from tempo_livre import convite_sexting
+            # 26/09 (agenda reativa): o convite pode vir de um banheiro fora de casa, não só do quarto
+            onde = (convite_sexting(memory_manager.db, now) or {}).get("onde") or "no seu quarto"
+            candidate = dict(candidate, reason='sexting_solo',
+                             detail=f"Você está {onde}. " + EmotionEngine(memory_manager.db).tesao_detail(now),
                              event_id=None, loop_id=None)
             memory_manager.db.set_estado_relacional(TESAO_KEY, now.isoformat())
             marca_convite_enviado(memory_manager.db)
@@ -4571,8 +4610,10 @@ async def _autonomous_routine_v36(application: Application):
                 fallback = f"Amor, como estão as coisas com {detail}?"
             elif reason == 'shared_topic_callback':
                 fallback = f"Fiquei pensando naquilo que a gente conversou sobre {detail}. Como você está vendo isso agora?"
+            elif reason == 'saiu_mais_cedo':
+                fallback = "amor tô indo pra casa, não tô legal… peguei um uber"
             elif reason == 'sexting_solo':
-                fallback = "Amor… tô aqui no quarto me tocando pensando em você. Vem cá?"
+                fallback = "Amor… tô aqui me tocando pensando em você. Vem cá?"
             else:
                 # A thought of Patrick is not evidence of a new world event.
                 options = (
