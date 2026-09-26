@@ -4,27 +4,29 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 26/09/2026, fim da tarde._
+_Atualizado em 26/09/2026, noite._
 
 ---
 
 ## 1. Mundo e agenda — skill `frente-mundo`
-**Abertura:** "bora na frente do mundo: cabelo" (ou o item 2 abaixo)
+**Abertura:** "bora na frente do mundo: cabelo"
 
 **Pronto (26/09):** agenda única (planejado, vontade, convite → mesma agenda com etapas); academia e passeio do
 Milo decididos uma vez por dia; mercado e médico como itens (Bradesco Saúde, Samaritano/Novamed); tempo livre
 concreto em casa; masturbação sem cota + convite pro sexting; fome em tempo real, saciedade, belisco e excesso no
 peso; mídia real (música iTunes, leitura com compra, Botafogo pela ESPN, Last.fm dele); consumo no rolê;
 **agenda reativa** (26/09, noite: conversa vira compromisso/remarca/cancela, sair mais cedo por motivo, aula largada
-no meio, tesão como emergência — `agenda_reativa.py`).
+no meio, tesão como emergência — `agenda_reativa.py`); **unhas** (26/09, noite — `unhas.py`: cor, gel/esmalte,
+desgaste; Ophicina do Cabelo na rotina/evento/mimo, R$ 180 do saldo; em casa entediada; pergunta a cor às vezes;
+foto da mão depois; a cor em toda foto; seção Unhas no Por dentro).
 
 **Próximo, nesta ordem:**
-1. **Etapa 1 — cuidados:** ✅ **unhas** (26/09, noite — `unhas.py`: cor, gel/esmalte, gastando; salão Ophicina
-   do Cabelo na rotina/evento/mimo, pago do saldo; em casa entediada; pergunta a cor às vezes; foto da mão depois;
-   a cor em toda foto). Revisar com ele os textos da lista no PLANO_WEBAPP ("Unhas — como ficou"). Próximo: cabelo.
+1. **Etapa 1 — cuidados: cabelo** (mesmo molde das unhas; salão já é a Ophicina do Cabelo). Antes, revisar com ele
+   os textos das unhas que ficaram pendentes (PLANO_WEBAPP, "Unhas — como ficou": estados, nomes das cores, reservas).
 2. Conflito: rolê em dia de aula que começa antes da aula acabar sobrepõe volta e ida.
 3. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber…).
 4. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
+5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
 
 ## 2. Apps (Mini App) — skill `frente-apps`
 **Abertura:** "bora na frente dos apps: Bastidores aba a aba"
