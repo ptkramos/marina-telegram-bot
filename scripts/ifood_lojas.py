@@ -25,7 +25,7 @@ LOJAS = [
     ("mamma-jamma", "Mamma Jamma", "Mamma Jamma", "bf", "restaurante", "Pizza", "site:https://mammajamma.com.br/"),
     ("dominos-bf", "Domino's Pizza", "Domino's", "bf", "restaurante", "Pizza", "wd:Domino's 2025.svg"),
     ("spoleto-bf", "Spoleto", "Spoleto", "bf", "restaurante", "Italiana", "wd:Logotipo do Spoleto.svg"),
-    ("tutto-nhoque", "Tutto Nhoque", "Tutto Nhoque", "bf", "restaurante", "Italiana", "site:https://tuttonhoque.com.br/"),
+    ("tutto-nhoque", "Tutto Nhoque", "Tutto Nhoque", "bf", "restaurante", "Italiana", "google:"),
     ("gula-gula", "Gula Gula", "Gula Gula", "bf", "restaurante", "Brasileira", "site:https://gulagula.com.br/"),
     ("joaquina", "Joaquina", "Joaquina", "bf", "restaurante", "Brasileira", "site:https://joaquinarestaurante.com.br/"),
     ("starbucks-bf", "Starbucks", "Starbucks", "bf", "restaurante", "Cafés", "site:https://www.starbucks.com/"),
