@@ -157,9 +157,29 @@ class DirectorTest(unittest.TestCase):
     def test_food_photo_shows_what_she_promised(self):
         s = self.shot("", her_line="O açaí chegou! olha que coisa linda", her_initiative=True,
                       now=datetime(2026, 9, 24, 20, 20))
-        self.assertEqual(s.pose_id, "mostrando_comida")
+        # 26/09 (Patrick): comida é do ponto de vista dela — ela não aparece, sem o LoRA dela.
+        self.assertEqual((s.pose_id, s.pov), ("pov_comida", True))
         self.assertIn("açaí", s.prompt)
+        self.assertNotIn("marinaX", s.prompt)
         self.assertFalse(s.is_nsfw)
+
+    def test_milo_e_vista_sem_ela(self):
+        import civitai_images as ci
+        milo = self.shot("manda uma foto do milo")
+        self.assertEqual((milo.pose_id, milo.pov), ("pov_milo", True))
+        self.assertIn("Shih Tzu", milo.prompt)
+        wf = ci.build_workflow_krea2(milo.prompt, is_nsfw=False, pov=True)
+        self.assertNotIn(ci._settings().CIVITAI_LORA_MARINA_KREA2.strip(), wf["steps"][0]["input"]["loras"])
+        self.assertEqual(self.shot("me mostra a vista daí").pose_id, "pov_vista")
+        self.assertFalse(self.shot("manda uma foto sua com o milo").pov, "foto dela")
+        self.assertFalse(self.shot("olha esse mamilo").pov)
+        self.assertFalse(self.shot("vista aquela roupa e manda foto").pov)
+
+    def test_foto_comum_nao_sai_segurando_lanche(self):
+        """26/09: 'manda uma foto' podia sortear a pose da comida e sair com 'her snack' na mão."""
+        for i in range(30):
+            self.rng = random.Random(i)
+            self.assertNotEqual(self.shot("manda uma foto", send=False).pose_id, "mostrando_comida")
 
     def test_tripod_frees_both_hands(self):
         import civitai_images as ci

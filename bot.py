@@ -4866,10 +4866,12 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
     if p["kind"] == "looks":
         # 26/09 (/feedback): uma de cada vez, com a troca de roupa no meio; mesma cena (mesma seed).
         outfits = p.get("outfits") or random.sample(photo_director.WARDROBE["sair"], p["count"])
+        # 26/09 (Patrick): look ela mostra no tripé do closet, e a pose muda junto com o look.
+        poses = p.get("poses") or random.sample(photo_director.LOOK_POSES, len(outfits))
         seed = p.get("seed") or seed
         shots.append(photo_director.direct(
             db, now, request="look de sair", her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
-            her_initiative=True, force_pose="espelho_corpo", outfit_override=outfits[part - 1],
+            her_initiative=True, force_pose=poses[part - 1], outfit_override=outfits[part - 1],
             rng=random.Random(seed)))
         o_que = ("o look pra ele dar a opinião" if len(outfits) == 1
                  else f"a opção {part} de look (a {part + 1} vem depois que você trocar de roupa)" if part < len(outfits)
@@ -4890,12 +4892,10 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
                                            fertile=_fase_fertil()))
         o_que = "a foto que você prometeu no clima"
     elif p["kind"] == "comida":
-        # 25/09: a do bolo saiu adulta (roupa "provoca", com calcinha). Promessa de comida é foto de casa.
-        casual = random.choice(photo_director.WARDROBE["casa_noite" if now.hour >= 20 or now.hour < 7 else "casa_dia"])
+        # 26/09 (Patrick): foto de comida é do ponto de vista dela — ela não aparece.
         shots.append(photo_director.direct(db, now, request=f"foto do {p['subject'] or 'lanche'}",
                                            her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
-                                           her_initiative=True, force_pose="mostrando_comida",
-                                           outfit_override=casual))
+                                           her_initiative=True, force_pose="pov_comida"))
         o_que = f"a foto {('do ' + p['subject']) if p['subject'] else 'da comida'} que você prometeu"
     else:
         shots.append(photo_director.direct(db, now, her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
@@ -4939,7 +4939,7 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
         memory_manager.db.registrar_iniciativa_marina(f"[{len(images)} foto(s): {o_que}] {legenda}",
                                                       media_type='photo')
         if p["kind"] == "looks" and part < len(outfits):
-            promessa_foto.next_part(db, outfits, seed, now)
+            promessa_foto.next_part(db, outfits, seed, now, poses=poses)
         else:
             promessa_foto.close(db, "cumprida")
         if intimo:

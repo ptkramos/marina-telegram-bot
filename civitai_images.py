@@ -255,7 +255,8 @@ def conditional_loras(prompt: str, *, is_nsfw: bool, exclude=()) -> tuple[dict, 
 
 def build_workflow_krea2(prompt: str, *, is_nsfw: bool, width: int = 1024, height: int = 1536,
                          seed: Optional[int] = None, stack: Optional[str] = None,
-                         breast_slider: Optional[float] = None, lora_weights: Optional[dict] = None) -> dict:
+                         breast_slider: Optional[float] = None, lora_weights: Optional[dict] = None,
+                         pov: bool = False) -> dict:
     name = krea2_stack_name(is_nsfw=is_nsfw, stack=stack)
     spec = KREA2_STACKS[name]
     off = {k for k, v in (lora_weights or {}).items() if not v}   # peso 0 do diretor = desligado
@@ -271,6 +272,10 @@ def build_workflow_krea2(prompt: str, *, is_nsfw: bool, width: int = 1024, heigh
                                                        selfie=NOT_SELFIE_MARK not in prompt)}
     step["loras"].update(extra)
     step["loras"].update({k: v for k, v in (lora_weights or {}).items() if v})   # peso decidido pelo diretor
+    if pov:
+        # 26/09: foto do ponto de vista dela (comida, Milo, vista) — sem ela: fica só o estilo da pilha.
+        style = KREA2_STACKS[name]["loras"]
+        step["loras"] = {k: v for k, v in step["loras"].items() if k in style}
     if spec["model"]:
         step["diffusionModel"] = spec["model"]
     body = {"steps": [{"$type": "imageGen", "input": step}], "allowMatureContent": bool(is_nsfw)}
@@ -303,13 +308,14 @@ def _images(workflow: dict) -> list[dict]:
 
 async def generate(prompt: str, *, is_nsfw: bool, focus_angle: str = "frontal",
                    is_mirror_selfie: bool = False, session: Optional[aiohttp.ClientSession] = None,
-                   seed: Optional[int] = None, lora_weights: Optional[dict] = None) -> Optional[io.BytesIO]:
+                   seed: Optional[int] = None, lora_weights: Optional[dict] = None,
+                   pov: bool = False) -> Optional[io.BytesIO]:
     """Gera uma foto e devolve os bytes, ou None (sem token, erro, bloqueio, timeout)."""
     if not available():
         return None
     headers = {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json",
                "User-Agent": USER_AGENT}
-    body = build_workflow_krea2(prompt, is_nsfw=is_nsfw, seed=seed, lora_weights=lora_weights)
+    body = build_workflow_krea2(prompt, is_nsfw=is_nsfw, seed=seed, lora_weights=lora_weights, pov=pov)
     own = session is None
     session = session or aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT_S + 30))
     try:

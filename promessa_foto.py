@@ -138,12 +138,12 @@ MAX_ATTEMPTS = 3
 CHANGE_OUTFIT_MIN = (3, 6)
 
 
-def next_part(db, outfits: list, seed: int, now: datetime) -> dict:
-    """Mandou a opção 1; a próxima vem depois de trocar de roupa (mesmo cenário: mesma seed)."""
+def next_part(db, outfits: list, seed: int, now: datetime, *, poses: Optional[list] = None) -> dict:
+    """Mandou a opção 1; a próxima vem depois de trocar de roupa (no tripé do closet, pose nova)."""
     st = _load(db)
     p = st["promessa"]
     rng = random.Random(f"troca:{now.isoformat()}")
-    p.update({"part": p.get("part", 1) + 1, "outfits": outfits, "seed": seed, "attempts": 0,
+    p.update({"part": p.get("part", 1) + 1, "outfits": outfits, "poses": poses, "seed": seed, "attempts": 0,
               "due_at": (now + timedelta(minutes=rng.randint(*CHANGE_OUTFIT_MIN))).isoformat()})
     _save(db, st)
     logger.info("promessa_foto.looks parte=%s due=%s", p["part"], p["due_at"][11:16])

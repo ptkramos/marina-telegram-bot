@@ -155,6 +155,18 @@ POSES: tuple[Pose, ...] = (
     # ---------------------------------------------------------------- closet --
     Pose("espelho_corpo", "de pé na frente do espelho grande do closet", ("closet",), (0, 3), "full", "mirror",
          "standing barefoot in front of the tall mirror, her weight on one leg, her free hand resting on her hip"),
+    # 26/09 (Patrick): mostrando look ela usa o tripé do closet, e a pose muda junto com o look.
+    Pose("closet_look_frente", "de pé no meio do closet mostrando o look (tripé)", ("closet",), (0, 1), "full",
+         "timer", "standing in the middle of the closet facing the camera, one hand on her hip, her weight on one "
+         "leg, showing off her outfit"),
+    Pose("closet_look_giro", "girando pra mostrar o look (tripé)", ("closet",), (0, 1), "full", "timer",
+         "caught mid-turn in the middle of the closet, her hair and her outfit swinging with the movement, "
+         "smiling at the camera over her shoulder"),
+    Pose("closet_look_andando", "andando em direção ao tripé, desfilando o look", ("closet",), (0, 1), "full",
+         "timer", "walking toward the camera mid-step like on a runway, one hand tucking her hair behind her ear"),
+    Pose("closet_look_poltrona", "sentada na poltrona de pernas cruzadas, de look (tripé)", ("closet",), (0, 1),
+         "full", "timer", "sitting in the cream armchair with her legs crossed, leaning back, both hands resting "
+         "on the armrests"),
     # 24/09 (/ruim): "de costas pro espelho" saiu irreal (reflexo e selfie brigando) — de costas é timer.
     Pose("closet_costas", "de costas pra câmera no closet, olhando por cima do ombro (timer)", ("closet",), (1, 3),
          "full", "timer", "standing with her back to the camera near the clothing rack, looking back over her "
@@ -215,6 +227,22 @@ POSES: tuple[Pose, ...] = (
     Pose("mostrando_comida", "selfie mostrando a comida", ("cozinha", "sala", "quarto", "varanda", "fora"),
          (0, 1), "close", "selfie", "holding {food} up close to the camera in her left hand, her right arm "
          "stretched toward the camera taking the selfie"),
+    # ----------------------------------------------- do ponto de vista dela --
+    # 26/09 (Patrick): comida, o Milo, a vista — foto tirada por ela, do ponto de vista dela: ela não aparece
+    # (no máximo a mão na borda). Sai sem o LoRA dela (framing "pov").
+    Pose("pov_comida", "a comida, do ponto de vista dela", ("cozinha", "sala", "quarto", "varanda"), (0, 1),
+         "close", "pov", "{food} on the table right in front of her, seen from above at a slight angle, her hand "
+         "holding a spoon at the edge of the frame"),
+    Pose("pov_comida_rua", "a comida na mesa do lugar, do ponto de vista dela", ("fora",), (0, 1), "close", "pov",
+         "{food} on the table right in front of her, seen from above at a slight angle, her hand holding a spoon "
+         "at the edge of the frame"),
+    Pose("pov_milo", "o Milo, do ponto de vista dela", ("sala", "quarto", "varanda", "cozinha"), (0, 1), "close",
+         "pov", "{milo}, looking up at the camera"),
+    Pose("pov_milo_rua", "o Milo no passeio, do ponto de vista dela", ("fora",), (0, 1), "close", "pov",
+         "{milo} on the sidewalk, looking up at the camera, his leash held in her hand at the edge of the frame"),
+    Pose("pov_vista", "a vista da varanda, do ponto de vista dela", ("varanda",), (0, 1), "room", "pov",
+         "the view of Botafogo bay and Sugarloaf Mountain from her balcony, her hand resting on the railing at the "
+         "edge of the frame"),
     # ------------------------------------------------------------------ rua --
     Pose("fora_selfie", "selfie na rua", ("fora",), (0, 1), "close", "selfie",
          "her right arm stretched toward the camera taking the selfie at arm's length"),
@@ -243,8 +271,14 @@ POSE_WORDS = (
     (r"espelho", ("espelho_corpo", "banheiro_espelho", "academia_espelho")),
     (r"sof[aá]", ("sofa_timer", "sofa_selfie")),
     (r"bancada", ("cozinha_bancada", "cozinha_cafe")),
+    (r"\bmilo\b|cachorr(?:o|inho)\b|doguinho", ("pov_milo", "pov_milo_rua")),
+    (r"(?:a|da|essa|que) vista\b|p[oô]r do sol|paisagem|p[aã]o de a[cç][uú]car", ("pov_vista",)),
     (r"varanda", ("varanda_cadeira", "varanda_parapeito")),
 )
+# Canon visual do Milo (Shih Tzu, seed_world_bible). 26/09: nas fotos ele precisa ser sempre o mesmo cachorro.
+MILO_VISUAL = ("Milo, her small Shih Tzu dog with a soft white and golden-brown coat in a short puppy cut, a "
+               "little topknot, a black nose and big round dark eyes, wearing a light blue collar")
+LOOK_POSES = ("closet_look_frente", "closet_look_giro", "closet_look_andando", "closet_look_poltrona")
 FOODS = (
     (r"a[cç]a[ií]", "a bowl of açaí topped with granola"),
     (r"pizza", "a slice of pizza"),
@@ -261,12 +295,21 @@ FOODS = (
 )
 
 
-def _worded_pose(text: str, level: int, at_home: bool) -> Optional[Pose]:
+# "foto sua com o Milo", "você e a vista": é foto dela, não do ponto de vista dela
+_HER_IN_IT_RE = re.compile(r"(?<!pra )(?<!para )\b(?:sua|voc[eê]|vc|tu|contigo)\b", re.IGNORECASE)
+_PHOTO_OF_RE = re.compile(r"\bfot(?:o|inho|inha)s?\s+d[oa]\b", re.IGNORECASE)
+
+
+def _worded_pose(text: str, level: int, at_home: bool, *, hers: bool = False) -> Optional[Pose]:
+    """hers: a fala é dela — foto sem ela só se ela disse "foto do Milo/da vista"."""
     low = (text or "").lower()
+    pov_ok = not _HER_IN_IT_RE.search(low) and (not hers or _PHOTO_OF_RE.search(low))
     for pattern, ids in POSE_WORDS:
         if re.search(pattern, low):
             for pid in ids:
                 pose = BY_ID[pid]
+                if pose.framing == "pov" and not pov_ok:
+                    continue
                 if pose.levels[0] <= level <= pose.levels[1] and ("fora" in pose.rooms) != at_home:
                     return pose
     return None
@@ -341,6 +384,7 @@ class DirectedShot:
     session: dict = field(default_factory=dict)
     lora_weights: dict = field(default_factory=dict)   # pesos decididos aqui (Creamy pela excitação)
     special: bool = False                              # gozo especial (esguicho) → depois vai a selfie molinha
+    pov: bool = False                                  # 26/09: do ponto de vista dela, sem ela (sem o LoRA dela)
 
 
 def asked_level(text: str) -> Optional[int]:
@@ -502,10 +546,10 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         declined, level = "fora de casa", 1
 
     # A posição dita na conversa manda: pedido dele primeiro, depois a fala dela.
-    worded = _worded_pose(request, level, at_home) or _worded_pose(her_line, level, at_home)
+    worded = _worded_pose(request, level, at_home) or _worded_pose(her_line, level, at_home, hers=True)
     food = _food(f"{request} {her_line}") if level <= 1 else None
     if food:
-        worded = BY_ID["mostrando_comida"]
+        worded = BY_ID["pov_comida" if at_home else "pov_comida_rua"]      # 26/09: comida é do ponto de vista dela
     if getattr(turn, "state", "") == "climax" and not worded and level >= 3:
         current = BY_ID.get((session or {}).get("pose", ""))
         if not (current and current.beats):          # sem cena com "momentos" rolando: foto do depois
@@ -539,7 +583,9 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
                     or _default_room(level, now, rng))
         else:
             room = "fora"
-        candidates = [p for p in POSES if room in p.rooms and p.levels[0] <= level <= p.levels[1]]
+        # foto sem ela (comida, Milo, vista) só quando o assunto pede; "manda uma foto" é dela
+        candidates = [p for p in POSES if room in p.rooms and p.levels[0] <= level <= p.levels[1]
+                      and p.framing != "pov" and p.id != "mostrando_comida"]   # comida só se o assunto é comida
         if not at_home and not getattr(camera_ctx, "present_people", ()):
             candidates = [p for p in candidates if p.framing != "friend"]
         if not candidates and at_home:                       # o cômodo não tem pose desse nível: vai pro quarto
@@ -610,6 +656,14 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
                    "beat": beat, "seed": seed, "at": now.isoformat(), "food": f"{request} {her_line}" if food else ""}
     # Calcinha/toalha em foto "normal" o moderador do Civitai barra: vai como adulta (Buzz amarelo).
     adult = level >= 2 or bool(outfit and re.search(r"panties|thong|towel", outfit))
+    if pose.framing == "pov":
+        # 26/09: foto tirada por ela, ela não aparece. Não vira sessão (o próximo "manda outra" é dela).
+        from visual_profile import krea2_pov_prompt
+        subject = action.replace("{milo}", MILO_VISUAL)
+        return DirectedShot(prompt=krea2_pov_prompt(subject, setting), is_nsfw=False, focus_angle="frontal",
+                            place_key=place or "", room=room, pose_id=pose.id, level=0, beat=None, outfit=None,
+                            seed=seed, facts=f"lugar: {where}; foto tirada por você, do seu ponto de vista (você "
+                            f"não aparece): {pose.pt}", session=session or {}, pov=True)
     return DirectedShot(prompt=prompt, is_nsfw=adult, focus_angle=pose.angle, place_key=place or "",
                         room=room, pose_id=pose.id, level=level, beat=beat, outfit=outfit, seed=seed,
                         facts=facts + ("; gozo especial: esguichou forte" if special else ""), declined=declined,

@@ -85,12 +85,15 @@ class PromessaTest(unittest.TestCase):
         self.assertIn("trocando de roupa", promessa_foto.prompt_lines(self.db, sent_at)[0])
         self.assertEqual(promessa_foto.due(self.db, due2)["outfits"], ["look a", "look b"])
 
-    def test_looks_mesma_cena_roupas_diferentes(self):
+    def test_looks_no_tripe_pose_muda_com_o_look(self):
+        """26/09 (Patrick): look ela mostra no tripé do closet, e a pose muda junto com o look."""
         a, b = photo_director.WARDROBE["sair"][:2]
-        shots = [photo_director.direct(self.db, T, request="look de sair", force_pose="espelho_corpo",
-                                       her_initiative=True, outfit_override=o, rng=random.Random(7)) for o in (a, b)]
-        self.assertEqual({s.pose_id for s in shots}, {"espelho_corpo"})
-        self.assertEqual(shots[0].seed, shots[1].seed, "mesma cena")
+        poses = photo_director.LOOK_POSES[:2]
+        shots = [photo_director.direct(self.db, T, request="look de sair", force_pose=pz, her_initiative=True,
+                                       outfit_override=o, rng=random.Random(7)) for o, pz in zip((a, b), poses)]
+        self.assertEqual([s.pose_id for s in shots], list(poses))
+        self.assertEqual({s.room for s in shots}, {"closet"})
+        self.assertTrue(all("self-timer" in s.prompt and "mirror selfie" not in s.prompt for s in shots))
         self.assertIn(a, shots[0].prompt)
         self.assertIn(b, shots[1].prompt)
         self.assertFalse(any(s.is_nsfw for s in shots))

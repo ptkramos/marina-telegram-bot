@@ -104,7 +104,8 @@ class ImageGeneratorClient:
         async with self._lock:
             import civitai_images
             img = await civitai_images.generate(shot.prompt, is_nsfw=shot.is_nsfw, focus_angle=shot.focus_angle,
-                                                seed=shot.seed, lora_weights=shot.lora_weights)
+                                                seed=shot.seed, lora_weights=shot.lora_weights,
+                                                pov=getattr(shot, "pov", False))
         return PhotoGenerationResult(image=img, full_prompt=shot.prompt, scene_tags=shot.pose_id,
                                      is_nsfw=shot.is_nsfw, focus_angle=shot.focus_angle,
                                      place_key=shot.place_key, world_snapshot_id=world_snapshot_id)

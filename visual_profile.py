@@ -160,6 +160,14 @@ def krea2_zoom_prompt(action: str, *, zoom: str, setting: str, backdrop: str, is
     return " ".join(parts)
 
 
+def krea2_pov_prompt(subject: str, setting: str) -> str:
+    """26/09 (Patrick): comida, o Milo, a vista — do ponto de vista dela. Sem gatilho nem traços dela."""
+    subject = _NOT_A_PHOTO.sub("", subject or "").strip(" ,.")
+    return (f"A candid iPhone photo taken by a young woman from her own point of view: {subject}. "
+            f"The scene: {setting}. No person in the photo, only her hand at the edge of the frame at most. "
+            "It looks like a real iPhone photo: natural light, casual framing, real textures.")
+
+
 def krea2_prompt(scene: str, *, is_nsfw: bool, focus_angle: str = "frontal", is_mirror: bool = False) -> str:
     """Prompt em texto corrido pro Krea 2, com o gatilho do LoRA dela e os traços da Marina."""
     scene = _NOT_A_PHOTO.sub("", scene or "")
