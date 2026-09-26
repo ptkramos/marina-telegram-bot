@@ -107,6 +107,8 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 | 2 Banco | ✅ 25/09 |
 | 3 Delivery pra ela | ✅ 25/09 |
 | 4 Presentes, datas, aposentar comandos | ⬜ |
+| iFood realista (layout do app real + cardápio com lojas reais) | ⬜ pedido 26/09 |
+| 5 Redes sociais (Instagram e X) | 💡 ideia 26/09 |
 
 ### Como ficou (25/09)
 - **Arquivos:**
@@ -124,3 +126,17 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
   - Quando recebe, ela manda uma iniciativa (`presente_delivery`) com o bilhete, e o avaliador de emoções registra carinho por ele.
 - **Cache:** o `index.html` sai com a versão dos arquivos no link, pra o webview do Telegram não segurar o `app.js` antigo depois de um deploy.
 - **Testes:** `tests/test_webapp.py` (15), e telas conferidas num navegador em tamanho de celular.
+
+### Ajustes de 25–26/09
+- **Ela manda delivery pra ele** (`pedido_dela.py`): aparece na tela inicial como "Presente da Ma", **no fim da página e só até ser entregue**. Ela compartilha o link "🛵 Acompanhar entrega" na própria fala (chat é chat, app é app).
+- **Pedido dele sai da tela inicial** (feedback 26/09): fica no iFood, em andamento e na lista "Pedidos" (histórico `ifood_pedidos_json`, 30 últimos).
+- **Sem zoom:** viewport, `touch-action`, bloqueio de `gesturestart` e campos com 16 px (o iOS amplia campo menor).
+- **Comprovante:** os PNGs das marcas estavam no `.gitignore` (`*.png`) e nunca tinham ido pra VPS — o do iFood saía sem logo e a revisão do Pix sem o ícone. Agora `!webapp/marcas/*.png`. Item com o nome inteiro (igual ao app) e observação toda em negrito.
+- **Reset do soak (26/09)** zerou finanças, pedidos e histórico do iFood.
+
+## 7. Próximas ideias (Patrick, 26/09)
+
+**iFood realista.** Base: o print do iFood real do Patrick (saudação "Boa tarde, Patrick", endereço, categorias, lojas com logo, nota e avaliações, tempo e taxa de entrega, cupons, abas Início/Busca/Pedidos/Perfil). Povoar o cardápio com lojas e pratos reais de Botafogo como base do cânone do que ela come. O Patrick pediu dicas de outra IA sobre como povoar — aguardando ele colar.
+
+**Etapa 5 — Redes sociais (Instagram e X).** Um perfil dela em cada: no Instagram as fotos que ela posta (as mesmas que já existem no mundo: rolê, look, Milo, vista), stories do dia e comentários; no X o que ela pensa em voz alta. Ele curte, comenta e responde, e ela vê. **O que é novo:** as pessoas do mundo dela (Bia, Theo, Júlia, Lívia, o pai) também aparecem — comentando nas fotos dela, com perfis próprios — e o Patrick pode interagir com elas. Pontos pra desenhar antes: o que ela posta sozinha e com que frequência; o que ela sente com comentário dele (e de outros) e como isso chega na conversa (sem notificação de sistema no chat); o que os amigos postam; custo de foto por post; privacidade (o que ela não posta).
+

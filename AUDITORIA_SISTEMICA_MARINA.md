@@ -1416,6 +1416,35 @@ O Patrick acordou com amigdalite e achou que ela tinha voltado a agir como assis
 - **Mini App:** `marina.psoft.app` com certificado.
 - **Achados do servidor que não são da Marina** (ficam com o Patrick): firewall desligado com as portas 8000/3000/3099 abertas, e o certbot do sistema quebrado desde 02/09 por um `cryptography` instalado por pip.
 
+## Depois da auditoria (25/09, tarde → 26/09, madrugada) — uso real
+
+Conversa de verdade com o Patrick doente, o Mini App novo e uma cena de sexting no banho. Cada problema virou commit; o que é voz está detalhado no PLANO_VOZ ("Uso real 25–26/09").
+
+| Hora | O que o Patrick viu | Causa | Correção (commit) |
+|---|---|---|---|
+| 25/09 12h | Pagou o açaí prometido pelo Pix e ela agradeceu como presente | O Pix não sabia do combinado | Pix prometido fecha o open loop e vira pagamento (`0832554`) |
+| 25/09 12h | Ela responde bolha por bolha e fala demais | Cada bolha dele virava um turno | Bolha nova antes do 1º balão faz ela desistir e responder o lote (`2c0db97`) |
+| 25/09 12h | Mesma ideia repetida com outras palavras | O corte só pegava repetição literal | Aviso das ideias recentes + corte de paráfrase (`8833fee`) |
+| 25/09 13:18 | O rolê do bar virou "ensaio" | Freela sem job não dizia que não tinha ensaio | `freela.prompt_lines` vazio diz que não há job (`1c34f74`) |
+| 25/09 13h | "hj às 19h30 no Quartinho com o Theo e a Júlia" soa relatório | Planos saíam com hora, nomes e lugar | `soften_times` + regra de aviso informal no ritmo (`2ee5b97`, `4e3f4e7`) |
+| 25/09 15:22 | Prometeu foto do bolo e dos looks e nada chegava | Promessa de foto não tinha dono | `promessa_foto.py`: promessa vira compromisso com hora (`3369fdf`, `1c3497e`) |
+| 25/09 16:28 | Anunciou o box 4 vezes e os registros nunca vieram | Nenhuma frase punha ela no banho | `SHOWER_NOW_RE`; banho no sexting vira promessa íntima (`11f3762`) |
+| 25/09 16:55 | Mensagens dele presas depois de ela dizer que saiu do banho | O banho que eu semeei à mão ia até 17:08 | `SHOWER_END_RE`/`end_shower`; "já te mando o estrago" no clima é íntima (`bb95252`) |
+| 25/09 17:06 | Ela ficou quieta 12 min | Retrato do mundo "tomando banho" seguiu valendo e adiou pra 17:36 | Retrato de banho sem banho = desconhecido; adiadas pelo banho saem quando ele acaba (`6ae9bfa`) |
+| 25/09 17:2x | "Chuva de mensagens" depois de já ter respondido | 3–5 ideias por turno em conversa casual | Turno curtinho (65% casual, 40% normal) + corte depois do 1º balão com conteúdo (`484d03e`) |
+| 26/09 02:45 | "Teve alguma novidade sobre sexta?" depois do boa-noite das 00:40 | Iniciativa só olhava a janela fixa 03h30–08h | Plano de sono manda: deitada não puxa assunto (`621e847`) |
+
+**Reset do soak (26/09, 04:10, pedido do Patrick).** As mensagens da madrugada deixaram lixo na memória. Antes do reset:
+- o `reset_soak_learning` apagava a tabela `feedbacks` (anotação dele pra nós, ela não lê) e deixava `emotion_episodes` (116) e as marcas `facul:`/`sono:` do `world_bootstrap`. Corrigido (`7a28c14`, `tests/test_reset_soak.py`);
+- os `/bom` e `/ruim` gravam na biblioteca **da VPS** (o deploy não leva `data/feedback`): 5 registros e 2 evitares novos trazidos pro PC antes de mexer;
+- rodado com o serviço parado; backup em `backups/pre_soak_reset_20260926_071015.db` na VPS. 1.816 linhas removidas; 11 feedbacks preservados.
+
+**Feedbacks do caderno atendidos (26/09):** áudio falando "aga jota" (abreviação volta por extenso antes da voz); Mini App sem zoom e pedido dele só no iFood; comprovante sem logo (os PNGs das marcas estavam no `.gitignore` e nunca foram pra VPS); opções de look em álbum (agora uma por vez, 3–6 min de troca); `/bom` com o "Patrick disse" de horas antes em fala de iniciativa e pós-gozo marcado como sexting; bilhete do delivery lido na voz errada ("minha gatinha"). Commits `f409a17` e `621e847`.
+
+**Fundo canônico (teste pago, 26/09).** O Krea 2 com o LoRA dela não aceita imagem de entrada (`createVariant`/`editImage` recusados no `whatif`). O Qwen `editImage` com duas imagens (ela + cenário real do Unsplash) **ignorou o cenário** nas duas ordens. Trocar só a roupa numa foto funciona (fundo idêntico), mas mexe no rosto; misturando só a região que mudou, o rosto volta ao original. Como os looks passaram pro tripé com pose nova a cada look (decisão do Patrick: gerar cada um do zero), a troca de roupa não entrou no fluxo. Gasto: 155 Buzz + 30 do teste do Milo.
+
+**Câmera (26/09, `ea93bb5`).** O Patrick notou selfie demais. Poses de tripé já eram maioria (19 × 11 selfies), mas os looks estavam travados no espelho e não existia foto sem ela. Agora: looks no tripé do closet, e comida/Milo/vista do ponto de vista dela, sem o LoRA dela.
+
 ## O que estava certo
 
 "Tô na rua, saí pra encontrar a Júlia" às 14:53 e "cheguei sim" às 15:52 batiam com o mundo (a caminho 14:49–15:30).

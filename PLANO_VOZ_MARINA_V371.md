@@ -11,9 +11,9 @@ detalhado de cada entrega, na ordem em que aconteceram.
 
 ---
 
-## 0. Painel de status — atualizado em 2026-09-25 (manhã)
+## 0. Painel de status — atualizado em 2026-09-26 (madrugada)
 
-Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 934 testes verdes.
+Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 999 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
 
 Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
@@ -30,9 +30,9 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | **C.3** Rituais | ✅ | Bom dia, boa noite, cotidiano. Desde 24/09 nada sai de dentro do chuveiro |
 | **C.4** Locomoção viva | ✅ | `commute.py` + Distance Matrix + carona com o Theo |
 | **D** Rotina viva | ✅ | D1 comida · D2/D3/D13 sono · D4 banho · D5 Milo · D6 o que ela assiste + TMDB · D7 faculdade · D8 fim de semana · **D9 casa (revisado 24/09)** · **D10 freela (aprovado 24/09)** · **D11 saúde (revisado 24/09)** · D12 laços · D14 motor emocional. Falta só o resto das fatias da noite do D6 |
-| **Naturalidade de chat** | ✅ | Sem ponto final de fecho, repetição e ideia repetida cortadas, espera ele terminar de digitar, ela conta do dia dela, reações, bolhas livres (até 10). **25/09:** balão como pedaço de pensamento (~40 caracteres), abreviações misturadas, ela não vira farmacêutica quando ele está doente |
-| **Fotos (Civitai, Krea 2)** | ✅ ligado no `.env` | LoRA `marinaX` (v1.1), base FinePorn v4, sliders do Loraholic pro corpo canônico, LoRAs de ocasião. Tudo na seção "Fotos pelo Civitai" |
-| **Mini App** (banco, delivery surpresa, bastidores) | ✅ 25/09 | `https://marina.psoft.app`, botão "Marina" no chat. Plano e detalhes em `PLANO_WEBAPP_MARINA.md` |
+| **Naturalidade de chat** | ✅ | Sem ponto final de fecho, repetição e ideia repetida cortadas, espera ele terminar de digitar, ela conta do dia dela, reações, bolhas livres (até 10). **25/09:** balão como pedaço de pensamento (~40 caracteres), abreviações misturadas, ela não vira farmacêutica quando ele está doente. **25–26/09:** responde o lote e não a bolha, sem paráfrase de si mesma, planos com período e não hora, turno curtinho, áudio sem abreviação (seção "Uso real 25–26/09") |
+| **Fotos (Civitai, Krea 2)** | ✅ ligado no `.env` | LoRA `marinaX` (v1.1), base FinePorn v4, sliders do Loraholic pro corpo canônico, LoRAs de ocasião. Tudo na seção "Fotos pelo Civitai". **26/09:** câmera segue a situação (looks no tripé, comida/Milo/vista do ponto de vista dela, sem o LoRA dela); promessa de foto vira foto |
+| **Mini App** (banco, delivery surpresa, bastidores) | ✅ 25/09 · ajustes 26/09 | `https://marina.psoft.app`, botão "Marina" no chat. Plano e detalhes em `PLANO_WEBAPP_MARINA.md` |
 | **C** Consolidação | 🟡 | C1 parcial (estilo do Patrick é descrição, não amostras); C2 e C3 ⬜ |
 
 ### O que o Patrick decidiu em 24/09 (resumo)
@@ -46,8 +46,8 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | # | Pendência | De onde |
 |---|---|---|
 | 1 | **C.1b no uso real:** ver se as fotos que ela manda fazem sentido (nível, pose, cadência). Crescer o catálogo com as poses que o Patrick trouxer do site. Marquinha de cima larga na foto explícita (resistência do FinePorn, já conhecida) | Fotos |
-| 1c | **`/pix valor`** (feedback do Patrick, 24/09): ele manda dinheiro pra mimar ela; numa emergência ela pode preferir pedir emprestado pra ele em vez do pai. Precisa desenhar: onde o dinheiro entra (contas do D9), como ela reage, quando pede | Feedback |
-| 1d | **Ângulo sem rosto ("de trás da cabeça", POV por cima do ombro):** testado com e sem o LoRA dela (24/09, fotos Y/Z/ZZ) e sempre sai selfie de frente. Quem puxa é o prompt (descrição do rosto, expressão, texto de selfie, LoRA de smartphone), não o LoRA. Fazer um prompt próprio pra foto sem rosto; o Patrick topa tirar o LoRA dela nesses casos se o corpo se mantiver | Fotos |
+| 1c | ✅ **25/09 pelo Mini App** (Nubank → Itaú dela, comprovante como mensagem dele; Pix prometido fecha o combinado). Pedido original: **`/pix valor`** (feedback do Patrick, 24/09): ele manda dinheiro pra mimar ela; numa emergência ela pode preferir pedir emprestado pra ele em vez do pai. Precisa desenhar: onde o dinheiro entra (contas do D9), como ela reage, quando pede | Feedback |
+| 1d | 🟡 **26/09: foto sem ela feita** pra comida, Milo e vista (framing `pov`, sem o LoRA dela). Falta o ângulo dela sem rosto. **Ângulo sem rosto ("de trás da cabeça", POV por cima do ombro):** testado com e sem o LoRA dela (24/09, fotos Y/Z/ZZ) e sempre sai selfie de frente. Quem puxa é o prompt (descrição do rosto, expressão, texto de selfie, LoRA de smartphone), não o LoRA. Fazer um prompt próprio pra foto sem rosto; o Patrick topa tirar o LoRA dela nesses casos se o corpo se mantiver | Fotos |
 | 1e | **Fatores do gozo especial** (esguicho): hoje é provisório (25%, o dobro no fértil). Candidatos: tesão acumulado, sessão longa no auge, período fértil, saudade, pedido dele | Fotos |
 | 1f | **/emocao — sentimentos do dia:** os acontecimentos grandes (cansaço do treino, fofoca da Bia, o gozo do sexting) não viram sentimento; só o carinho do planner aparece. Ensinar o avaliador de eventos a enxergar esses momentos | Emoção |
 | 1g | **FinePorn v5:** cadastrada sem ativar (pilhas n3v5/ev5); A/B pronto no script. Indisponível no Civitai em 25/09 | Fotos |
@@ -56,12 +56,19 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 | 4 | D11 pra depois: "no médico" como estado, banheiro na virose, o pai ligando mais quando ela está doente, farmácia como saída, contágio | D11 |
 | 5 | D10 pra depois: job fora do Rio, ensaio TFP, a Lívia negociando cachê, fotos do job, cachê virando gasto | D10 |
 | 6 | D9 pra depois: apê bagunçado em semana de entrega, Dona Neide e Seu Jorge nos contatos do dia | D9 |
-| 7 | Sexting de dentro do banho, pra provocar (exceção à regra do chuveiro) | Auditoria #11 |
+| 7 | ✅ **25/09:** sexting no banho — as falas de ida pro box põem ela no banho de verdade e os registros chegam quando ela sai (`promessa_foto.promise_intimate`) | Auditoria #11 |
 | 8 | D6: o resto das fatias da noite (skincare, rolar o celular, ligação com a família, arrumar o quarto) | Fase D |
 | 9 | Slider de peso ligado ao D1: aprovado, **acompanhar** se o corpo muda direito quando o peso dela mexer | Fotos |
 | 10 | C.2 assistir junto; C2/C3 da consolidação | Fases |
 | 11 | ✅ **25/09:** bolha que chega enquanto ela gera, antes do 1º balão sair, faz ela desistir da resposta e responder o lote junto (`MessageDebouncer.should_yield`, até 2 vezes seguidas). Se o 1º balão já saiu, a bolha nova continua sendo o turno seguinte, como numa conversa de verdade | Naturalidade |
 | 12 | Perda de coerência entre turnos e qualidade das mensagens espontâneas: observar depois do restart (usar `/bom` e `/ruim`) | Auditorias #3 e #6 |
+| 14 | **Bastidores do Mini App:** labels e mensagens informativas "com padrão horrível" (herdados dos comandos). Revisar com o Patrick sentado no PC | Patrick 25/09 |
+| 15 | **Regras das fotos por promessa:** revisar juntos quando e como ela cumpre (tipos, prazos, 3 tentativas, 3 h de validade) | Patrick 25/09 |
+| 16 | **Auditoria de prompt:** blocos velhos/duplicados (VOZ DA MARINA 2,7k, RITMO 1,6k, LINHAS DURAS 1,6k); trocar o teto do teste de prompt por orçamento do payload real | Patrick 25/09 |
+| 17 | **Promessa de ação vira evento:** "vou descer com o Milo", "vou terminar de me arrumar" (4 h antes) não acontecem no mundo | Uso real 25/09 |
+| 18 | **Fundo canônico dos cômodos:** em pausa — o Qwen não encaixa ela num cenário dado (teste 26/09). Retomar se aparecer editor que faça | Patrick 26/09 |
+| 19 | **iFood realista:** layout a partir do print do iFood real (abas Início/Busca/Pedidos, lojas com nota, tempo e taxa) e cardápio com opções reais de Botafogo como base do cânone | Patrick 26/09 |
+| 20 | **Redes sociais no Mini App (Instagram e X):** ideia nova — ver `PLANO_WEBAPP_MARINA.md`, seção 7 | Patrick 26/09 |
 | 13 | Técnicas antigas: `KnowledgeDialogue` com frase pronta, câmera/fator proativo com regra própria de 60 min, código morto da proatividade antiga, `build_safe_core_prompt`, blocos de finalização duplicados, erros de concordância | Auditorias #2–#6 |
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
@@ -1120,6 +1127,29 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
 
   O diretor de cena da Marina deve escrever assim: frases concretas de câmera, luz e foco, não adjetivos soltos.
 - **Teste quando o LoRA chegar:** 2 cenas normais × (n1, n2), 2 cenas adultas × (a, b, c, d) e a grade do slider. Mesma semente, uns 16 retratos, ~400 Buzz. O Patrick escolhe pelo olho.
+
+### Uso real 25–26/09 ✅ — o que mudou (tabela de causas na Auditoria, "Depois da auditoria 25/09 tarde")
+
+**Conversa**
+- **Lote, não bolha** (`MessageDebouncer.should_yield`): bolha que chega antes do 1º balão sair faz ela desistir e responder tudo junto (até 2 vezes seguidas).
+- **Paráfrase de si mesma** (`chat_naturalness.drop_paraphrased`, `recent_ideas_hint`): aviso das ideias das últimas falas antes de gerar e corte depois (4 radicais em comum e 60% de sobreposição). Fora do sexting.
+- **Planos informais** (`soften_times`): "hj à noite com a galera", não "às 19h30 no Quartinho com o Theo e a Júlia". Hora só se ele perguntar, e nunca em confirmação de lembrete.
+- **Turno curtinho** (`short_turn`/`keep_short`): 65% dos turnos casuais e 40% dos normais são reação + uma frase de 2–6 palavras; o resto do texto sai. Nunca quando ele pede conteúdo ("me conta", "por quê") ou manda várias coisas, nem no sexting, foto, áudio ou lembrete. "Chuva de mensagens" é conteúdo a mais, não número de balões.
+- **Áudio** (`expand_for_speech` no `voice_engine.synthesize`): "hj" volta a "hoje" antes da voz.
+
+**Mundo**
+- **Pix prometido** (`financas.promised_pix_loop`): o Pix do combinado é pagamento e fecha o open loop.
+- **Ela manda delivery pra ele** (`pedido_dela.py`): quando oferece ("vou te mandar um suquinho pelo app") e, às vezes, de surpresa (ele doente, dia ruim); nunca no meio do sexting. Ele acompanha pelo botão "🛵 Acompanhar entrega" na fala dela.
+- **Freela vazio** diz que não tem job: rolê não vira ensaio.
+- **Banho:** as falas de ida pro box começam o banho, "já tô saindo do chuveiro" encerra (`end_shower`), e o que foi adiado pelo banho sai quando ele acaba (`release_after_shower`).
+- **Sono manda na iniciativa:** deitada (mesmo num micro-despertar) ela não puxa assunto (`SleepPlan.in_bed`); acordada de verdade (freela de madrugada) pode.
+
+**Fotos**
+- **Promessa de foto vira foto** (`promessa_foto.py`): looks, comida, selfie e íntima; prazo por "jaja/depois"; 3 tentativas; expira em 3 h; a foto normal cumpre a promessa.
+- **Câmera segue a situação (26/09):** looks no tripé do closet (4 poses, uma por opção, 3–6 min de troca de roupa); comida, Milo e vista do ponto de vista dela, sem o LoRA dela (`krea2_pov_prompt`, `pov=True`); Milo canônico (Shih Tzu branco e dourado, coleira azul). A selfie no espelho fica pro espontâneo.
+
+**Captura**
+- `/bom`/`/ruim` em fala de iniciativa gravam "(ela puxou o assunto)"; pós-gozo não marca mais como sexting.
 
 ### Noite de 23/09 (ela dormindo): painéis, promessa de avisar, ideia repetida ✅
 
