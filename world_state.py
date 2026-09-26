@@ -859,6 +859,15 @@ class WorldStateManager:
             if bloco:
                 chosen = {**chosen, "activity": bloco.atividade, "place_key": "marina_apartment"}
                 slot_end = bloco.fim
+        if reason == "announced_transition" and previous and not force:
+            # 26/09: a mesma transição (refeição, belisco, banho) não vira um retrato novo a cada turno
+            try:
+                same = (json.loads(previous["current_plan_json"] or "null")
+                        == json.loads(json.dumps(dict(chosen), default=str)))
+            except (TypeError, ValueError):
+                same = False
+            if same and datetime.fromisoformat(previous["observed_at"]) <= now:
+                return previous
         place_key = chosen.get("place_key") if isinstance(chosen, Mapping) else None
         place = self.bible.get_place(place_key) if place_key else None
         return self.states.add_snapshot({

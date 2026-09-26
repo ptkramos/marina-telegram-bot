@@ -2,9 +2,13 @@
 
 O tempo livre vira o que ela faz de verdade, em blocos de 10 a 90 min: olhando o TikTok,
 montando looks, vendo o desfile da Chanel, ouvindo Sabrina Carpenter, jogando Stardew Valley,
-se tocando… Regra de ouro dele: **tudo acontece de verdade e vira história** — cada bloco é
-acontecimento do dia (ela lembra e pode contar) e tem efeito quando tem (se tocando registra o
-orgasmo no corpo dela, igual ao "se resolver sozinha" de antes de dormir).
+se masturbando… Regra de ouro dele: **tudo acontece de verdade e vira história** — cada bloco é
+acontecimento do dia (ela lembra e pode contar) e tem efeito quando tem (a masturbação registra
+o orgasmo no corpo dela).
+
+Masturbação (Patrick, 26/09): sem limite — com tesão, em casa, ela goza quando quiser; quem segura
+é o próprio corpo (depois do gozo a vontade cai e volta aos poucos). Com saudade ou desejo por ele,
+às vezes ela aproveita o momento e chama ele pro sexting.
 
 - O que ela faz sai do horário, do corpo (tesão, energia) e do tempo lá fora; o cômodo não é
   travado, só precisa fazer sentido (desfile na TV do quarto, da sala ou do closet, ou pelo celular
@@ -61,9 +65,10 @@ TIPOS = (
     ("atoa", "Deitada à toa", ("quarto",), None, (13, 26), 1.0, (15, 30)),
     ("jogando", "Jogando {jogo}", ("sala", "quarto"), "tela", (14, 25), 1.0, (40, 90)),
 )
-SE_TOCANDO = ("se_tocando", "Se tocando", ("quarto",), None, (10, 26), 0.0, (15, 25))
-SOLO_BLOCK_CHANCE = 0.35
-SOLO_COOLDOWN_H = 8
+MASTURBANDO = ("masturbando", "Se masturbando", ("quarto",), None, (8, 27), 0.0, (15, 25))
+SOLO_BLOCK_CHANCE = 0.45            # com tesão (>= SOLO_MIN_LIBIDO); mais tesão, mais chance
+CHAMA_ELE_CHANCE = 0.5              # com saudade/desejo por ele, chama pro sexting
+CONVITE_KEY = "sexting_convite_json"
 
 
 @dataclass
@@ -76,6 +81,7 @@ class Bloco:
     pelo_celular: bool
     inicio: datetime
     fim: datetime
+    chama_ele: bool = False  # masturbação: aproveita e chama o Patrick pro sexting
 
     @property
     def comodo_nome(self) -> str:
@@ -85,6 +91,8 @@ class Bloco:
     def atividade(self) -> str:
         """Texto do mundo (WorldState → prompt e disponibilidade)."""
         extra = " pelo celular" if self.pelo_celular and self.aparelho == "tela" else ""
+        if self.chama_ele:
+            extra = " pensando no Patrick e chamando ele pro sexting"
         return f"em casa, {self.texto[:1].lower() + self.texto[1:]}{extra} ({self.comodo_nome.lower()})"
 
 
@@ -137,30 +145,31 @@ class TempoLivre:
         except Exception:
             return False
 
-    def _quer_se_tocar(self, now: datetime, rng: random.Random) -> bool:
+    def _quer_se_masturbar(self, now: datetime, rng: random.Random) -> Optional[bool]:
+        """None: não quer. False: quer, sozinha. True: quer e chama o Patrick (saudade/desejo por ele).
+        Sem cota nem intervalo fixo: o tesão depois do gozo cai sozinho (emotion._libido)."""
         try:
-            from emotion import EmotionEngine, SOLO_MIN_LIBIDO
-            engine = EmotionEngine(self.db)
-            f = engine.feeling(now)
-            last = engine.last_release(now)
+            from emotion import EmotionEngine, SOLO_MIN_LIBIDO, PATRICK_TARGET
+            f = EmotionEngine(self.db).feeling(now)
         except Exception:
-            return False
+            return None
         if f.libido < SOLO_MIN_LIBIDO or f.excitation >= 0.45:
-            return False                                  # sem vontade, ou já no clima com ele
-        if last and now - last < timedelta(hours=SOLO_COOLDOWN_H):
-            return False
-        with self.db.get_connection() as conn:
-            if conn.execute("SELECT 1 FROM life_events WHERE event_key=?", (f"solo:{now.date().isoformat()}",)).fetchone():
-                return False
-        return rng.random() < SOLO_BLOCK_CHANCE
+            return None                                   # sem vontade, ou já no clima com ele
+        if rng.random() >= SOLO_BLOCK_CHANCE + 1.5 * (f.libido - SOLO_MIN_LIBIDO):
+            return None
+        chateada = f.bond.get("hurt", 0) >= 0.25 or any(
+            e.target == PATRICK_TARGET and e.family in ("tristeza", "raiva") and e.intensity >= 0.15 for e in f.episodes)
+        quer_ele = f.missing >= 0.35 or f.bond.get("romantic_intensity", 0) >= 0.85
+        return bool(quer_ele and not chateada and rng.random() < CHAMA_ELE_CHANCE)
 
     def _escolhe(self, now: datetime, i: int, inicio: datetime, fim_slot: datetime) -> Bloco:
         dia = self._dia(now)
         rng = _rng(dia, f"tipo:{i}")
         h = inicio.hour + inicio.minute / 60
         chuva = self._chuva()
-        if _hora(h, *SE_TOCANDO[4]) and self._quer_se_tocar(now, rng):
-            tipo = SE_TOCANDO
+        chama_ele = self._quer_se_masturbar(now, rng) if _hora(h, *MASTURBANDO[4]) else None
+        if chama_ele is not None:
+            tipo = MASTURBANDO
         else:
             opcoes = [t for t in TIPOS if _hora(h, *t[4]) and not (t[0] == "sol" and chuva)
                       and not (t[0] == "plantas" and chuva)]
@@ -174,7 +183,7 @@ class TempoLivre:
             pelo_celular = True                           # às vezes vê deitada no celular mesmo com TV
         fim = inicio + timedelta(minutes=rng.randint(*mins))
         return Bloco(f"livre:{dia.isoformat()}:{i}", chave, texto, comodo, aparelho, pelo_celular, inicio,
-                     max(fim, inicio + timedelta(minutes=10)))
+                     max(fim, inicio + timedelta(minutes=10)), bool(chama_ele))
 
     def agora(self, now: datetime, *, registrar: bool = True) -> Optional[Bloco]:
         """O bloco de agora (decide e guarda na primeira vez que ela está livre nele).
@@ -212,8 +221,8 @@ class TempoLivre:
         onde = {"quarto": "no quarto", "sala": "na sala", "closet": "no closet", "varanda": "na varanda",
                 "piscina": "na piscina do prédio"}.get(b.comodo, "em casa")
         texto = b.texto[:1].lower() + b.texto[1:]
-        if b.tipo == "se_tocando":
-            return self._se_tocou(b, now, onde)
+        if b.tipo in ("masturbando", "se_tocando"):
+            return self._se_masturbou(b, now, onde)
         summary = f"Ficou {texto}{' pelo celular' if b.pelo_celular and b.aparelho == 'tela' else ''} {onde}."
         with self.db.get_connection() as conn:
             conn.execute(
@@ -223,15 +232,21 @@ class TempoLivre:
                 (b.chave, b.inicio.isoformat(), b.texto, summary, json.dumps(["marina"]), now.isoformat()))
             conn.commit()
 
-    def _se_tocou(self, b: Bloco, now: datetime, onde: str) -> None:
-        """Vale no corpo: mesma marca do "se resolver sozinha" (uma por dia), orgasmo e alívio."""
+    def _se_masturbou(self, b: Bloco, now: datetime, onde: str) -> None:
+        """Vale no corpo: orgasmo e alívio. Chamando ele, vira convite pro sexting (proatividade)."""
         from emotion import EmotionEngine, RELEASE_KEY, SOLO_TELL_CHANCE
-        key = f"solo:{b.inicio.date().isoformat()}"
-        rng = _rng(self._dia(b.inicio), "conta")
-        tells = rng.random() < SOLO_TELL_CHANCE
-        summary = (f"Com tesão, se tocou {onde} e se resolveu sozinha, pensando no Patrick."
-                   + (" Pode contar pra ele, do jeito dela, se vier a calhar." if tells
-                      else " Guardou só pra ela: não conta pro Patrick."))
+        key = f"solo:{b.chave}"
+        rng = _rng(self._dia(b.inicio), f"conta:{b.chave}")
+        tells = b.chama_ele or rng.random() < SOLO_TELL_CHANCE
+        if b.chama_ele:
+            summary = (f"Com tesão e querendo o Patrick, se masturbou {onde} e chamou ele pra entrar no clima "
+                       "junto (sexting).")
+            self.db.set_estado_relacional(CONVITE_KEY, json.dumps(
+                {"key": key, "inicio": b.inicio.isoformat(), "fim": b.fim.isoformat(), "enviado": False}))
+        else:
+            summary = (f"Com tesão, se masturbou {onde} pensando no Patrick."
+                       + (" Pode contar pra ele, do jeito dela, se vier a calhar." if tells
+                          else " Guardou só pra ela: não conta pro Patrick."))
         with self.db.get_connection() as conn:
             cur = conn.execute(
                 """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
@@ -249,7 +264,7 @@ class TempoLivre:
                 pass
         gozo = b.inicio + (b.fim - b.inicio) * 0.8
         self.db.set_estado_relacional(RELEASE_KEY, gozo.isoformat())
-        EmotionEngine(self.db).feel("alegria", "alivio", 0.3, "se resolveu sozinha", gozo, source_key=f"{key}:alivio")
+        EmotionEngine(self.db).feel("alegria", "alivio", 0.3, "se masturbou e gozou", gozo, source_key=f"{key}:alivio")
 
     def atual(self, now: datetime) -> Optional[Bloco]:
         """Só leitura (card): o bloco guardado que cobre agora."""
@@ -263,3 +278,28 @@ class TempoLivre:
         out = [Bloco(**{**g, "inicio": datetime.fromisoformat(g["inicio"]), "fim": datetime.fromisoformat(g["fim"])})
                for g in self._state().get(self._dia(now).isoformat(), {}).values()]
         return sorted(out, key=lambda b: b.inicio)
+
+
+def convite_sexting(db, now: datetime) -> Optional[dict]:
+    """O convite pro sexting de agora (masturbação chamando ele), se ainda não foi mandado."""
+    raw = db.get_estado_relacional(CONVITE_KEY)
+    try:
+        c = json.loads(raw) if raw else None
+    except (TypeError, ValueError):
+        return None
+    if not c or c.get("enviado"):
+        return None
+    if not datetime.fromisoformat(c["inicio"]) <= now < datetime.fromisoformat(c["fim"]):
+        return None
+    return c
+
+
+def marca_convite_enviado(db) -> None:
+    raw = db.get_estado_relacional(CONVITE_KEY)
+    try:
+        c = json.loads(raw) if raw else None
+    except (TypeError, ValueError):
+        return
+    if c:
+        c["enviado"] = True
+        db.set_estado_relacional(CONVITE_KEY, json.dumps(c))

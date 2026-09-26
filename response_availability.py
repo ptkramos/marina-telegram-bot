@@ -73,7 +73,7 @@ DEFAULT_PROFILES = {
         'soft_delay_min_s': 30, 'soft_delay_max_s': 420, 'guardrail_s': 900,
         'brief_likelihood': 0.3, 'prefer': 'MIXED',
     },
-    # Sozinha, se tocando: não pega o celular até terminar.
+    # Sozinha, se masturbando: não pega o celular até terminar.
     'SOLO': {
         'phone_access': 'LOW', 'attention': 'LOW', 'interruptibility': 'LOW',
         'soft_delay_min_s': 300, 'soft_delay_max_s': 1200, 'guardrail_s': 1800,
@@ -456,7 +456,9 @@ class ResponseAvailabilityPolicy:
             return 'GETTING_READY'
         # 26/09: tempo livre concreto ("em casa, olhando o tiktok (quarto)")
         if act.startswith('em casa, '):
-            if 'se tocando' in act:
+            if 'chamando ele' in act:
+                return 'HOME_RELAXING'           # masturbando e chamando o Patrick: celular na mão
+            if 'se masturbando' in act or 'se tocando' in act:
                 return 'SOLO'
             if any(x in act for x in ('pelo celular', 'lendo', 'jogando', 'desenhando', 'montando looks',
                                       'organizando o closet', 'arrumando o quarto')):
@@ -471,7 +473,7 @@ class ResponseAvailabilityPolicy:
             return 'WAKING'
         if any(x in act for x in ('tomando banho', 'no banho', 'banho')):
             return 'SHOWER'
-        if any(x in act for x in ('jantando', 'almoçando', 'almocando', 'lanchando', 'comendo')):
+        if any(x in act for x in ('jantando', 'almoçando', 'almocando', 'lanchando', 'beliscando', 'comendo')):
             return 'MEAL'
         # Patch 030: passeio com o Milo — sem isso o estado ia pra UNKNOWN.
         if any(x in act for x in ('passeando', 'passeio', 'caminhando')):

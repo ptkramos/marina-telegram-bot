@@ -187,6 +187,16 @@ class ProactivityService:
         # fazer ela me procurar pra flertar até conseguir o sexting que ela
         # quer". Como a saudade, passa por cima do teto diário; quem segura é
         # o intervalo entre uma investida e outra.
+        # 26/09 (Patrick): se masturbando com saudade/desejo, ela aproveita e chama ele pro sexting.
+        try:
+            from tempo_livre import convite_sexting
+            if convite_sexting(self.db, dt):
+                last_user, _ = self.get_last_messages_timestamps()
+                if not last_user or dt - last_user >= timedelta(minutes=3):   # conversando: sai na conversa
+                    return True, "sexting_solo"
+        except Exception:
+            logger.exception("proactivity.sexting_solo")
+
         if self.tesao_initiative(dt):
             # Assunto importante dele (compromisso pra perguntar como foi) vem antes.
             if self.determine_living_world_candidate(dt).get("rank", 0) < 70:

@@ -288,7 +288,7 @@ class DesireTest(unittest.TestCase):
             self.assertIsNone(self.engine.maybe_release_alone(NOW.replace(hour=20)), "ainda não é hora de dormir")
             summary = self.engine.maybe_release_alone(bed - timedelta(minutes=30))
             again = self.engine.maybe_release_alone(bed - timedelta(minutes=20))
-        self.assertIn("se resolveu sozinha", summary)
+        self.assertIn("se masturbou", summary)
         self.assertIn("Pode contar pra ele", summary)
         self.assertIsNone(again, "uma vez por noite")
         self.assertEqual(self.engine.last_release(bed), bed - timedelta(minutes=30))

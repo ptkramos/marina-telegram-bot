@@ -86,12 +86,8 @@ const loaders = {
   async inicio() {
     try {
       const d = await api("/api/inicio");
-      const a = d.agora;
-      $("inicio-sub").textContent = `${a.local} · ${new Date(a.now).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
-      $("inicio-agora").textContent = cap(a.atividade);
-      $("inicio-disp").textContent = a.disponivel;
       $("inicio-presente").innerHTML = pedidoCard(d.pra_voce, "Presente da Ma");
-    } catch (e) { failIn($("inicio-agora"), e); }
+    } catch (e) { failIn($("inicio-presente"), e); }
   },
 
   nubank() {
@@ -344,6 +340,10 @@ $("pix-confirmar").addEventListener("click", async () => {
     $("pix-valor").value = ""; $("pix-recado").value = "";
     concluido("Transferência feita");
     stack.length = 1; show("inicio", false);
+// 26/09 (Patrick): o que ela sente atualiza em tempo real — Bastidores aberto se recarrega sozinho
+setInterval(() => {
+  if (stack[stack.length - 1] === "bastidores" && !document.hidden) loaders.bastidores();
+}, 60000);
   } catch (err) { $("rev-err").textContent = err.message; }
   finally { btn.disabled = false; }
 });
@@ -505,8 +505,16 @@ $("rv-fazer").addEventListener("click", async () => {
     $("rv-fundo").hidden = true;
     concluido("Pedido feito");
     stack.length = 1; show("inicio", false);
+// 26/09 (Patrick): o que ela sente atualiza em tempo real — Bastidores aberto se recarrega sozinho
+setInterval(() => {
+  if (stack[stack.length - 1] === "bastidores" && !document.hidden) loaders.bastidores();
+}, 60000);
   } catch (err) { $("rv-err").textContent = err.message; }
   finally { btn.disabled = false; }
 });
 
 show("inicio", false);
+// 26/09 (Patrick): o que ela sente atualiza em tempo real — Bastidores aberto se recarrega sozinho
+setInterval(() => {
+  if (stack[stack.length - 1] === "bastidores" && !document.hidden) loaders.bastidores();
+}, 60000);

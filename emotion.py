@@ -516,7 +516,7 @@ class EmotionEngine:
         """Com tesão e sem o Patrick, antes de dormir ela se resolve sozinha — e às
         vezes conta pra ele depois (decisão do Patrick, 23/09)."""
         now = now or datetime.now()
-        key = f"solo:{now.date().isoformat()}"
+        key = f"solo:{now.date().isoformat()}"       # a de antes de dormir é uma por noite (as outras: tempo_livre)
         with self.db.get_connection() as conn:
             if conn.execute("SELECT 1 FROM life_events WHERE event_key=?", (key,)).fetchone():
                 return None
@@ -536,7 +536,7 @@ class EmotionEngine:
             return None
         tells = rng.random() < SOLO_TELL_CHANCE
         wanted_him = self._flirted_without_him(now)
-        summary = ("Antes de dormir, com tesão e pensando no Patrick, se resolveu sozinha"
+        summary = ("Antes de dormir, com tesão e pensando no Patrick, se masturbou"
                    + (" — ficou querendo ele e ele não entrou no clima" if wanted_him else "")
                    + (". Pode contar pra ele, do jeito dela, se vier a calhar." if tells
                       else ". Guardou só pra ela: não conta pro Patrick."))
@@ -554,7 +554,7 @@ class EmotionEngine:
             except Exception:
                 pass
         self.db.set_estado_relacional(RELEASE_KEY, now.isoformat())
-        self.feel("alegria", "alivio", 0.3, "se resolveu sozinha antes de dormir", now, source_key=f"{key}:alivio")
+        self.feel("alegria", "alivio", 0.3, "se masturbou antes de dormir", now, source_key=f"{key}:alivio")
         if wanted_him:
             self.feel("raiva", "frustracao", 0.2, "ficou querendo ele e não rolou", now, target=PATRICK_TARGET,
                       source_key=f"{key}:frustracao", half_life_min=180)
@@ -654,12 +654,23 @@ class EmotionEngine:
         if f.libido >= TESAO_MIN and not grievance and f.bond["hurt"] < 0.25:
             lines.append("  Com tesão: você quer ele. Provoca e puxa pro flerte quando tiver brecha; se ele entrar "
                          "no clima, vai atrás do que quer. Se ele não puder agora, aceita sem drama (e fica querendo).")
+            lines.append("  Masturbação é natural pra você e você fala dela sem rodeio quando quer: \"me masturbei\", "
+                         "\"bati uma siririca\", \"tô me tocando\".")
         if any(e.kind == "ciume" for e in f.episodes):
             lines.append("  Ciuminho: implica de brincadeira (\"quem é essa aí?\"), sem cobrar nem controlar.")
         lines.append("Isso muda o JEITO (mais curta, dengosa, elétrica), não vira assunto: nunca diga "
                      "\"estou me sentindo X\". O que é com o mundo não é com o Patrick. Conte ou guarde "
                      "o que sente como gente de verdade.")
         return lines
+
+    def _fome_word(self, f: Feeling) -> str:
+        """Fome em tempo real: comendo agora ou estufada depois de um excesso aparece no lugar."""
+        try:
+            from meals import Meals
+            sac = Meals(self.db).satiety_word(f.now)
+        except Exception:
+            sac = ""
+        return sac or _word(f.hunger, HUNGER_WORDS)
 
     def panel(self, now: Optional[datetime] = None) -> dict:
         """Os números do /emocao, estruturados (o texto do comando e o Mini App saem daqui)."""
@@ -688,7 +699,7 @@ class EmotionEngine:
         return {
             "now": f.now,
             "body": [{"label": "Energia", "value": f.energy, "word": _word(f.energy, ENERGY_WORDS)},
-                     {"label": "Fome", "value": f.hunger, "word": _word(f.hunger, HUNGER_WORDS)},
+                     {"label": "Fome", "value": f.hunger, "word": self._fome_word(f)},
                      {"label": "Tesão", "value": f.libido, "word": _word(f.libido, LIBIDO_WORDS)}],
             "in_the_mood": f.excitation >= 0.45,
             "hours_since_release": f.hours_since_release,

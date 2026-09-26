@@ -89,6 +89,12 @@ NPC_POOLS = {
 }
 NPC_INDEX = {row[0]: row for pool in NPC_POOLS.values() for row in pool}
 
+
+def proximidade(genero: str, nivel: str = "ephemeral") -> str:
+    """Como ela chamaria a pessoa hoje (Patrick, 26/09): começa em "Conhecido" e vai chegando perto.
+    O jeito que se conheceram fica guardado no personagem (`initial_state_json.como_conheceu`)."""
+    return "Conhecida" if genero == "f" else "Conhecido"   # ao virar cânone, passa a mostrar quem é
+
 # Fase D12 — laços. O pai (Henrique) liga quando está livre e manda mensagem
 # quando está ocupado; checa a filha pelo menos 1×/dia e banca a comida dela.
 DAD_MORNING_TOPICS = ("bom dia e se ela já tomou café", "se ela está comendo direito",
@@ -710,7 +716,8 @@ class SocialDay:
         bible = WorldBibleRepository(self.db)
         first_meeting = False
         if contact.character_key in NPC_INDEX and not bible.get_character(contact.character_key):
-            first_meeting = self._discover_npc(contact.character_key)
+            place = bible.get_place(contact.place_key) if contact.place_key else None
+            first_meeting = self._discover_npc(contact.character_key, contact, place)
         place = bible.get_place(contact.place_key) if contact.place_key else None
         name = short_name(contact.character_key)
         verbo = "Conheceu" if first_meeting else "Encontrou"
@@ -747,15 +754,22 @@ class SocialDay:
         if contact.continues:
             self._continue_story(contact, name)
 
-    def _discover_npc(self, key: str) -> bool:
+    def _discover_npc(self, key: str, contact: Optional["Contact"] = None, place: Optional[dict] = None) -> bool:
+        """Conheceu alguém. Patrick (26/09): no Mundo a pessoa aparece pela proximidade ("Conhecido");
+        o jeito que se conheceram fica guardado aqui, pra ela contar se a pessoa virar cânone."""
         from social_world import SocialWorld
         from world_repository import WorldBibleRepository
         npc = NPC_INDEX[key]
         SocialWorld(self.db).discover_person(key, npc[1], npc[4])
+        origem = {"gender": npc[2]}
+        if contact:
+            origem.update(conheceu_em=contact.at.isoformat(), conheceu_onde=place["name"] if place else None,
+                          como_conheceu=f"{npc[3]}; conheceu {contact.at:%d/%m}"
+                                        + (f" ({place['name']})" if place else "") + f", falando de {contact.topic}")
         WorldBibleRepository(self.db).upsert_character(key, {
             "display_name": npc[1], "character_type": "ephemeral", "home_region": npc[4],
             "occupation": None, "relationship_to_marina": npc[3],
-            "story_tendencies_json": list(npc[5]), "initial_state_json": {"gender": npc[2]},
+            "story_tendencies_json": list(npc[5]), "initial_state_json": origem,
             "canon_locked": 0, "active": 1})
         logger.info("social_day.npc.discovered key=%s", key)
         return True
@@ -857,8 +871,6 @@ class SocialDay:
     def world_summary(self, now: datetime) -> str:
         """Texto do /mundo: o mundo dela visto de fora. Não mostra assunto de
         conversa (pode ser segredo de amiga) — só quem, quando e em que pé está."""
-        nivel = {"ephemeral": "acabou de conhecer", "secondary": "já é conhecido(a)",
-                 "recurring": "entrou pro círculo"}
         fam = {"discovered": "descoberto", "known": "conhecido", "habitual": "habitual",
                "occasional": "de vez em quando", "favorite": "favorito ⭐"}
         with self.db.get_connection() as conn:
@@ -884,8 +896,8 @@ class SocialDay:
         novos = [p for p in people if p["canonical_key"] in NPC_INDEX and not p["canon_locked"]]
         if novos:
             lines += ["", "🙋 Conhecidos novos"]
-            lines += [f"• {p['display_name']}, {NPC_INDEX[p['canonical_key']][3]} — "
-                      f"{nivel.get(p['character_type'], p['character_type'])}" for p in novos]
+            lines += [f"• {p['display_name']} — {proximidade(NPC_INDEX[p['canonical_key']][2], p['character_type'])}"
+                      for p in novos]
         if places:
             lines += ["", "📍 Lugares que ela anda descobrindo"]
             lines += [f"• {p['name']} — {fam.get(p['familiarity'], p['familiarity'])}" for p in places]
@@ -908,7 +920,6 @@ class SocialDay:
         quando falaram, lugares, o que está rolando e planos. Sem assunto de conversa."""
         fam = {"discovered": "Acabou de descobrir", "known": "Conhece", "habitual": "Vai sempre",
                "occasional": "De vez em quando", "favorite": "Favorito"}
-        nivel = {"ephemeral": "acabou de conhecer", "secondary": "já é conhecido(a)", "recurring": "entrou pro círculo"}
         with self.db.get_connection() as conn:
             people = conn.execute(
                 """SELECT w.canonical_key, w.display_name, w.character_type, w.canon_locked, w.relationship_to_marina,
@@ -923,14 +934,17 @@ class SocialDay:
         for p in people:
             key = p["canonical_key"]
             novo = key in NPC_INDEX and not p["canon_locked"]
-            quem = NPC_INDEX[key][3] if key in NPC_INDEX else QUEM.get(key) or p["relationship_to_marina"] or ""
+            if novo:                                             # proximidade, não a história de como conheceu
+                quem = proximidade(NPC_INDEX[key][2], p["character_type"])
+            else:
+                quem = NPC_INDEX[key][3] if key in NPC_INDEX else QUEM.get(key) or p["relationship_to_marina"] or ""
             nome = p["display_name"]
             if " (" in nome:                                     # "Beatriz (Bia) Andrade" → "Bia Andrade"
                 apelido = nome.split(" (")[1].split(")")[0]
                 nome = " ".join([apelido] + nome.split(") ")[1].split()) if ") " in nome else apelido
             last = datetime.fromisoformat(p["last_interaction_at"]) if p["last_interaction_at"] else None
             pessoas.append({"nome": nome, "iniciais": "".join(w[0] for w in nome.replace("Dona ", "").replace("Seu ", "").split()[:2]).upper(),
-                            "quem": quem + (f" · {nivel.get(p['character_type'], '')}" if novo else ""),
+                            "quem": quem,
                             "novo": novo, "falaram": self._quando_curto(last, now) if last else None,
                             "vezes_30d": p["contact_frequency"] if isinstance(p["contact_frequency"], int) else 0, "_last": last or datetime.min})
         pessoas.sort(key=lambda x: x.pop("_last"), reverse=True)

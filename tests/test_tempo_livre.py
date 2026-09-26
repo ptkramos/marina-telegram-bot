@@ -24,7 +24,7 @@ class TempoLivreTest(unittest.TestCase):
         with self.db.get_connection() as conn:
             conn.execute("INSERT INTO world_bootstrap (key, value, updated_at) VALUES ('clean_canonical_start_done','1','2026-09-01')")
             conn.commit()
-        p = patch.object(TempoLivre, "_quer_se_tocar", return_value=False)
+        p = patch.object(TempoLivre, "_quer_se_masturbar", return_value=None)
         p.start()
         self.addCleanup(p.stop)
 
@@ -76,29 +76,66 @@ class TempoLivreTest(unittest.TestCase):
         self.assertEqual(mapa("marina_apartment", "em casa, olhando o TikTok (quarto)"), "HOME_RELAXING")
         self.assertEqual(mapa("marina_apartment", "em casa, vendo o desfile da Chanel pelo celular (varanda)"), "HOME_BUSY")
         self.assertEqual(mapa("marina_apartment", "em casa, lendo É Assim que Acaba (sala)"), "HOME_BUSY")
-        self.assertEqual(mapa("marina_apartment", "em casa, se tocando (quarto)"), "SOLO")
+        self.assertEqual(mapa("marina_apartment", "em casa, se masturbando (quarto)"), "SOLO")
+        self.assertEqual(mapa("marina_apartment",
+                              "em casa, se masturbando pensando no Patrick e chamando ele pro sexting (quarto)"),
+                         "HOME_RELAXING")
 
 
-class SeTocandoTest(unittest.TestCase):
-    def test_vale_no_corpo(self):
+class MasturbacaoTest(unittest.TestCase):
+    def setUp(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
-        db = DatabaseManager(Path(temp.name) / "s.db")
-        seed_world_bible(db)
-        with db.get_connection() as conn:
+        self.db = DatabaseManager(Path(temp.name) / "s.db")
+        seed_world_bible(self.db)
+        with self.db.get_connection() as conn:
             conn.execute("INSERT INTO world_bootstrap (key, value, updated_at) VALUES ('clean_canonical_start_done','1','2026-09-01')")
             conn.commit()
-        with patch.object(TempoLivre, "_quer_se_tocar", return_value=True):
-            b = TempoLivre(db).agora(T)
-        self.assertEqual((b.tipo, b.texto, b.comodo), ("se_tocando", "Se tocando", "quarto"))
+
+    def test_vale_no_corpo(self):
+        with patch.object(TempoLivre, "_quer_se_masturbar", return_value=False):
+            b = TempoLivre(self.db).agora(T)
+        self.assertEqual((b.tipo, b.texto, b.comodo), ("masturbando", "Se masturbando", "quarto"))
+        self.assertEqual(b.atividade, "em casa, se masturbando (quarto)")
         from emotion import EmotionEngine
-        last = EmotionEngine(db).last_release(b.fim)
+        last = EmotionEngine(self.db).last_release(b.fim)
         self.assertIsNotNone(last, "o orgasmo fica registrado no corpo dela")
         self.assertTrue(b.inicio <= last <= b.fim)
-        with db.get_connection() as conn:
-            row = conn.execute("SELECT summary FROM life_events WHERE event_key=?", (f"solo:{T.date()}",)).fetchone()
-        self.assertIn("se tocou no quarto", row["summary"])
-        self.assertIsNone(EmotionEngine(db).maybe_release_alone(T.replace(hour=23)), "uma vez por dia")
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT summary FROM life_events WHERE event_key=?", (f"solo:{b.chave}",)).fetchone()
+        self.assertIn("se masturbou no quarto", row["summary"])
+        self.assertIsNone(tempo_livre.convite_sexting(self.db, b.inicio + timedelta(minutes=2)))
+
+    def test_sem_cota_por_dia(self):
+        with patch.object(TempoLivre, "_quer_se_masturbar", return_value=False):
+            a = TempoLivre(self.db).agora(T)
+            b = TempoLivre(self.db).agora(a.fim + timedelta(minutes=1))
+        self.assertEqual((a.tipo, b.tipo), ("masturbando", "masturbando"))
+        with self.db.get_connection() as conn:
+            n = conn.execute("SELECT COUNT(*) FROM life_events WHERE event_key LIKE 'solo:%'").fetchone()[0]
+        self.assertEqual(n, 2)
+
+    def test_sem_tesao_nao_acontece(self):
+        from emotion import Feeling
+        f = Feeling(now=T, energy=0.8, hours_slept=8, awake_since=None, hunger=0.2, discomfort=0, discomfort_why="",
+                    cycle_phase="", valence=0.6, arousal=0.5, playfulness=0.5, libido=0.4)
+        with patch("emotion.EmotionEngine.feeling", return_value=f):
+            import random
+            self.assertIsNone(TempoLivre(self.db)._quer_se_masturbar(T, random.Random(1)))
+
+    def test_com_saudade_chama_ele_pro_sexting(self):
+        with patch.object(TempoLivre, "_quer_se_masturbar", return_value=True):
+            b = TempoLivre(self.db).agora(T)
+        self.assertTrue(b.chama_ele)
+        self.assertIn("chamando ele pro sexting", b.atividade)
+        agora = b.inicio + timedelta(minutes=1)
+        self.assertIsNotNone(tempo_livre.convite_sexting(self.db, agora))
+        from proactivity_service import ProactivityService
+        with patch.object(ProactivityService, "get_last_messages_timestamps", return_value=(None, None)):
+            ok, why = ProactivityService(self.db).should_trigger(agora)
+        self.assertEqual((ok, why), (True, "sexting_solo"))
+        tempo_livre.marca_convite_enviado(self.db)
+        self.assertIsNone(tempo_livre.convite_sexting(self.db, agora), "um convite por vez")
 
 
 if __name__ == "__main__":

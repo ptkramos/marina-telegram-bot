@@ -144,7 +144,7 @@ class CardCasaTest(unittest.TestCase):
     def test_tempo_livre(self):
         from tempo_livre import TempoLivre
         now = DIA.replace(hour=14, minute=10)
-        with patch.object(TempoLivre, "_quer_se_tocar", return_value=False):
+        with patch.object(TempoLivre, "_quer_se_masturbar", return_value=None):
             b = TempoLivre(self.db).agora(now)
         self._snap(b.atividade, now)
         c = Agenda(self.db).card_casa(now + timedelta(minutes=2), "Olha com frequência")

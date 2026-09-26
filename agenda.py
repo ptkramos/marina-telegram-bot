@@ -415,7 +415,7 @@ class Agenda:
                 "grade": grade, "linha": linha}
 
     # ------------------------------------------------------ card em casa --
-    REFEICAO = {"cafe": "Tomando café", "almoco": "Almoçando", "lanche": "Lanchando", "jantar": "Jantando"}
+    REFEICAO = {"cafe": "Tomando café", "almoco": "Almoçando", "lanche": "Beliscando", "jantar": "Jantando"}
 
     def _snapshot(self) -> Optional[dict]:
         with self.db.get_connection() as conn:
@@ -426,10 +426,17 @@ class Agenda:
         """O que acontece no dia, em ordem (pra linha do tempo em casa)."""
         dia = now.date() if now.hour >= 4 else now.date() - timedelta(days=1)
         out: list[tuple[datetime, str]] = []
-        try:
+        try:                                             # o que ela comeu de verdade + o que ainda vem
             from meals import Meals
-            for s in Meals(self.db).day_plan(dia):
-                if not s.skipped:
+            meals = Meals(self.db)
+            feitas = meals.eaten_today(now)
+            chaves = {e["event_key"] for e in feitas}
+            for e in feitas:
+                if not (e["summary"] or "").startswith("Pulou"):
+                    kind = e["event_key"].split(":")[2]
+                    out.append((datetime.fromisoformat(e["event_at"]), self.REFEICAO.get(kind, "Comendo")))
+            for s in meals.day_plan(dia):
+                if not s.skipped and s.key not in chaves and s.at > now:
                     out.append((s.at, self.REFEICAO.get(s.kind, "Comendo")))
         except Exception:
             pass
@@ -476,12 +483,23 @@ class Agenda:
         bloco = TempoLivre(self.db).atual(now) if low.startswith("em casa, ") else None
         if bloco:
             linha2, comodo, inicio, fim = bloco.texto, bloco.comodo_nome, bloco.inicio, bloco.fim
-        elif any(x in low for x in ("jantando", "almoçando", "almocando", "lanchando", "café da manhã", "comendo")):
+        elif any(x in low for x in ("jantando", "almoçando", "almocando", "lanchando", "beliscando", "café da manhã",
+                                    "comendo")):
             from meals import meal_kind, Meals
             titulo, comodo = "Se alimentando", "Sala"
-            kind = meal_kind(inicio or now)
+            kind = next((k for k, w in (("lanche", "beliscando"), ("lanche", "lanchando"), ("jantar", "jantando"),
+                                        ("almoco", "almo"), ("cafe", "café")) if w in low), None) or meal_kind(inicio or now)
             linha2 = self.REFEICAO.get(kind, "Comendo")
-            slot = next((s for s in Meals(self.db).day_plan(now.date()) if s.at <= now <= s.end), None)
+            slot = None
+            ultima = Meals(self.db)._ultima(now)            # a refeição de verdade (prato, e quando largou)
+            meta = json.loads((ultima or {}).get("metadata_json") or "{}")
+            if ultima and ultima["end_at"] and meta.get("prato") and now < datetime.fromisoformat(ultima["end_at"]):
+                from meals import MealSlot
+                t0, t1 = datetime.fromisoformat(ultima["event_at"]), datetime.fromisoformat(ultima["end_at"])
+                slot = MealSlot(kind, "", t0, int((t1 - t0).total_seconds() // 60), "casa", meta["prato"])
+                inicio, fim = t0, t1
+            if slot is None:
+                slot = next((s for s in Meals(self.db).day_plan(now.date()) if s.at <= now <= s.end), None)
             prato = slot.dish if slot else (low.split("comendo o ", 1)[1].split(" que ")[0].split(" em casa")[0]
                                              if "comendo o " in low else "")
             if prato:

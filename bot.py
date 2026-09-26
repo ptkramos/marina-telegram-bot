@@ -4375,6 +4375,11 @@ _PROACTIVE_INSTRUCTIONS = {
     'tesao': ("{detail} Você está com tesão e com vontade dele. Mande uma provocação curta pra puxar ele "
               "pro flerte — malícia, dengo, uma indireta, um 'tô pensando em você de um jeito…'. Sem ser "
               "explícita de cara: você quer que ELE entre no clima. Não invente acontecimento novo."),
+    # 26/09 (Patrick): se masturbando com saudade/desejo, chama ele pro sexting.
+    'sexting_solo': ("{detail} Você está no seu quarto se masturbando agora, com tesão e querendo ele. Chama o "
+                     "Patrick pra entrar nisso com você: conta o que está fazendo, do seu jeito (pode ser direta: "
+                     "'tô aqui me tocando pensando em você', 'bati uma siririca e ainda tô querendo você'), e "
+                     "convida pro sexting. Curto e safado. Não invente acontecimento novo."),
     'light_affection': ("Mande uma mensagem espontânea curta pro Patrick. Use só o que está no seu "
                         "estado atual e no seu dia — um pensamento sobre o que você está fazendo, uma "
                         "reação ao momento ou só carinho. Não invente acontecimento novo. Varie: não "
@@ -4461,6 +4466,13 @@ async def autonomous_routine_v36(application: Application):
             candidate = dict(candidate, reason='tesao', detail=EmotionEngine(memory_manager.db).tesao_detail(now),
                              event_id=None, loop_id=None)
             memory_manager.db.set_estado_relacional(TESAO_KEY, now.isoformat())
+        if why == 'sexting_solo':
+            from emotion import EmotionEngine, TESAO_KEY
+            from tempo_livre import marca_convite_enviado
+            candidate = dict(candidate, reason='sexting_solo', detail=EmotionEngine(memory_manager.db).tesao_detail(now),
+                             event_id=None, loop_id=None)
+            memory_manager.db.set_estado_relacional(TESAO_KEY, now.isoformat())
+            marca_convite_enviado(memory_manager.db)
         if why == 'saudade' and candidate['reason'] in ('light_affection', 'no_candidate'):
             s = proactivity_service.saudade(now)
             sem = (f"Faz {s['hours']:.0f}h que o Patrick não fala com você"
@@ -4508,6 +4520,8 @@ async def autonomous_routine_v36(application: Application):
                 fallback = f"Amor, como estão as coisas com {detail}?"
             elif reason == 'shared_topic_callback':
                 fallback = f"Fiquei pensando naquilo que a gente conversou sobre {detail}. Como você está vendo isso agora?"
+            elif reason == 'sexting_solo':
+                fallback = "Amor… tô aqui no quarto me tocando pensando em você. Vem cá?"
             else:
                 # A thought of Patrick is not evidence of a new world event.
                 options = (

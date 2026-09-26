@@ -20,9 +20,15 @@ Regra de ouro: o modelo só conta o que o mundo registrou. Este módulo registra
 * **Apetite**: fome sobe com as horas desde a última comida; glutoninha de
   base; academia e TPM aceleram; energia baixa segura.
 * **Disfarce**: em alguns dias, com fome, ela diz que já beliscou.
-* **Peso**: 1,68 m, base 54 kg; muda devagar pelo saldo da semana (lanches ×
-  academia). Ela só sabe quando se pesa (na academia, 1×/semana). Acima de
-  56 kg a Lívia cobra e vem a dieta curta; abaixo de 52 kg é a saúde que reage.
+* **Peso**: 1,68 m, base 54 kg; muda devagar pelo saldo da semana (lanches,
+  excessos × academia). Ela só sabe quando se pesa (na academia, 1×/semana). Acima
+  de 56 kg a Lívia cobra e vem a dieta curta; abaixo de 52 kg é a saúde que reage.
+* **Saciedade** (Patrick, 26/09): a fome cai em tempo real enquanto ela come. Satisfeita,
+  ela larga o prato (a refeição acaba antes); se é dia de gula, come tudo mesmo assim e
+  o que passou da conta vira **excesso** (fica estufada, demora mais pra ter fome, e
+  pesa na balança da semana).
+* **Beliscando** (Patrick, 26/09): com fome em casa e a próxima refeição longe, ela
+  belisca alguma coisa na hora — vira lanche de verdade.
 """
 from __future__ import annotations
 
@@ -51,6 +57,13 @@ MEAL_PROMISE_RE = re.compile(
 )
 
 START_DELAY_MIN = (2, 5)
+# Saciedade: quanto cada refeição "enche" (mesma escala da fome, 0–1).
+PORCAO = {"cafe": 0.6, "almoco": 0.9, "jantar": 0.85, "lanche": 0.3}
+SATISFEITA = 0.1          # come até a fome passar disso pra baixo… (margem de conforto)
+EXCESSO_MIN = 0.15        # …e o que passar disto além da conta é excesso
+GULA_CHANCE = 0.35        # glutoninha: dia de comer tudo mesmo satisfeita
+BELISCO_FOME = 0.62       # fome em casa que faz ela beliscar
+BELISCO_GAP = timedelta(minutes=90)
 DURATION_MIN = {"cafe": (10, 25), "almoco": (25, 45), "jantar": (20, 35), "lanche": (5, 15)}
 # Uma refeição por janela: repetir "vou jantar agora" não abre outro jantar.
 SAME_MEAL_WINDOW = timedelta(hours=3)
@@ -58,7 +71,7 @@ SAME_MEAL_WINDOW = timedelta(hours=3)
 KIND_NAME = {"cafe": ("café da manhã", "tomando café da manhã"),
              "almoco": ("almoço", "almoçando"),
              "jantar": ("jantar", "jantando"),
-             "lanche": ("lanche", "lanchando")}
+             "lanche": ("lanche", "beliscando")}
 
 # Cardápio: o cânone (japonesa, massas, pizza, hambúrguer, brunch, doces, açaí)
 # com o pé no chão de quem mora sozinha e cozinha o básico. Time iFood — o pai
@@ -288,24 +301,53 @@ class Meals:
                 "SELECT 1 FROM life_events WHERE event_type IN ('meal','snack') AND event_key LIKE ? LIMIT 1",
                 (f"meal:{day.isoformat()}:{kind}%",)).fetchone())
 
-    def _record(self, slot: MealSlot, now: datetime) -> bool:
+    def saciedade(self, slot: MealSlot) -> dict:
+        """Quanto ela come dessa refeição: pela fome que chegou, pela porção e pelo dia de gula."""
+        antes = self.hunger(slot.at)
+        porcao = PORCAO.get(slot.kind, 0.5) * (1.1 if "brunch" in slot.dish else 1.0)
+        precisa = max(0.0, antes - SATISFEITA)            # o que a fome dela pede
+        rng = _rng(slot.at.date(), f"gula:{slot.key}")
+        chance = GULA_CHANCE + (0.2 if self._phase() == "tpm" else 0.0) - (0.25 if self.on_diet(slot.at.date()) else 0.0)
+        gula = rng.random() < chance
+        if porcao <= precisa + EXCESSO_MIN or gula or slot.kind == "lanche":
+            comeu, larga = porcao, False            # lanche é vontade (pipoca na série): come mesmo sem fome
+        else:
+            comeu, larga = max(precisa, porcao * 0.25), True
+        minutos = max(5, round(slot.minutes * comeu / porcao)) if larga else slot.minutes
+        excesso = round(max(0.0, comeu - precisa), 3) if gula and slot.kind != "lanche" else 0.0
+        return {"fome_antes": round(antes, 3), "comeu": round(comeu, 3), "porcao": round(porcao, 3),
+                "larga": larga, "excesso": excesso if excesso >= EXCESSO_MIN else 0.0, "minutos": minutos}
+
+    def _record(self, slot: MealSlot, now: datetime, motivo: str = "") -> Optional[dict]:
+        """Registra a refeição; devolve a saciedade (None se já estava registrada)."""
         name, _ = KIND_NAME[slot.kind]
         where = {"casa": "em casa", "puc": "no restaurante da PUC", "gavea": "no Shopping da Gávea"}[slot.where]
+        sac = {} if slot.skipped else self.saciedade(slot)
+        if sac:
+            sac["prato"] = slot.dish
+        if motivo:
+            sac["motivo"] = motivo
         if slot.skipped:
             summary = f"Pulou o {name}: acordou em cima da hora pra aula."
         elif slot.kind == "lanche":
             summary = f"Beliscou {slot.dish}."
         else:
             summary = f"{name.capitalize()} {where}: {slot.dish}."
+        if sac.get("larga"):
+            summary = summary.rstrip(".") + "; ficou satisfeita e largou o resto no prato."
+        elif sac.get("excesso"):
+            summary = summary.rstrip(".") + "; comeu além da conta e ficou estufada."
+        end = slot.at + timedelta(minutes=sac.get("minutos", slot.minutes))
         with self.db.get_connection() as conn:
             cur = conn.execute(
-                """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,
-                   source_type,autonomy_level,importance,participants_json,share_worthy,created_at)
-                   VALUES (?,?,?,?,?,'simulated',1,0.1,?,0.3,?)""",
-                (slot.key, slot.at.isoformat(), "snack" if slot.kind == "lanche" else "meal",
-                 name, summary, json.dumps(["marina"]), now.isoformat()))
+                """INSERT OR IGNORE INTO life_events(event_key,event_at,end_at,event_type,title,summary,
+                   source_type,autonomy_level,importance,participants_json,share_worthy,metadata_json,created_at)
+                   VALUES (?,?,?,?,?,?,'simulated',1,0.1,?,0.3,?,?)""",
+                (slot.key, slot.at.isoformat(), end.isoformat(), "snack" if slot.kind == "lanche" else "meal",
+                 name, summary, json.dumps(["marina"]), json.dumps(sac, ensure_ascii=False) if sac else None,
+                 now.isoformat()))
             conn.commit()
-            return bool(cur.rowcount)
+            return {**sac, "fim": end} if cur.rowcount else None
 
     def _transition_busy(self, now: datetime) -> bool:
         raw = self.db.get_estado_relacional().get("pending_transition_json")
@@ -363,13 +405,43 @@ class Meals:
                 continue      # já comeu (promessa antecipou)
             if slot.where == "casa" and not slot.skipped and not self._at_home() and now < slot.end:
                 continue      # fora de casa na hora: espera ela voltar (a janela ainda está aberta)
-            if self._record(slot, now):
+            sac = self._record(slot, now)
+            if sac is not None:
                 created += 1
-                if (slot.where == "casa" and not slot.skipped and now < slot.end
+                if (slot.where == "casa" and not slot.skipped and now < sac["fim"]
                         and not self._transition_busy(now)):
-                    self._start_eating(slot, slot.at, slot.end, now)
+                    self._start_eating(slot, slot.at, sac["fim"], now)
+        created += self._belisca(now, floor)
         self._weigh_in(now)
         return created
+
+    def _belisca(self, now: datetime, floor: datetime) -> int:
+        """Com fome em casa e a próxima refeição longe: belisca alguma coisa agora."""
+        if now < floor or not self._at_home() or self._transition_busy(now) or now.hour < 7 and now.hour >= 2:
+            return 0
+        if self.hunger(now) < BELISCO_FOME:
+            return 0
+        proxima = next((s for s in self.day_plan(now.date()) if s.at > now and not s.skipped), None)
+        if proxima and proxima.at - now < timedelta(minutes=60):
+            return 0                                      # segura pra próxima refeição
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT MAX(event_at) FROM life_events WHERE event_type IN ('meal','snack') "
+                               "AND event_at<=?", (now.isoformat(),)).fetchone()
+            n = conn.execute("SELECT COUNT(*) FROM life_events WHERE event_key LIKE ?",
+                             (f"meal:{now.date().isoformat()}:lanche:b%",)).fetchone()[0]
+        if row and row[0] and now - datetime.fromisoformat(row[0]) < BELISCO_GAP:
+            return 0
+        rng = _rng(now.date(), f"belisco:{n}")
+        opcoes = MENU["dieta"][:1] + ["uma fruta"] if self.on_diet(now.date()) else MENU["lanche"]
+        slot = MealSlot("lanche", f"meal:{now.date().isoformat()}:lanche:b{n + 1}", now,
+                        rng.randint(*DURATION_MIN["lanche"]), "casa", rng.choice(opcoes))
+        sac = self._record(slot, now, motivo="fome")
+        if sac is None:
+            return 0
+        if not self._transition_busy(now):
+            self._start_eating(slot, slot.at, sac["fim"], now)
+        logger.info("meal.belisco dish=%s", slot.dish)
+        return 1
 
     # ----------------------------------------------------------- promessa --
     def observe_marina_line(self, text: str, now: datetime) -> Optional[dict]:
@@ -409,11 +481,30 @@ class Meals:
                 "(activity LIKE '%academia%' OR activity LIKE '%trein%') LIMIT 1",
                 (start, now.isoformat())).fetchone())
 
+    def _ultima(self, now: datetime) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            row = conn.execute(
+                """SELECT event_at, end_at, event_type, summary, metadata_json FROM life_events
+                   WHERE event_type IN ('meal','snack') AND event_at>=? AND event_at<=? AND summary NOT LIKE 'Pulou%'
+                   ORDER BY event_at DESC LIMIT 1""",
+                (datetime.combine(now.date(), time(0, 0)).isoformat(), now.isoformat())).fetchone()
+        return dict(row) if row else None
+
     def hunger(self, now: datetime) -> float:
-        eaten = [e for e in self.eaten_today(now) if "Pulou" not in (e["summary"] or "")]
-        if eaten:
-            last = datetime.fromisoformat(eaten[-1]["event_at"])
-            base = 0.30 if eaten[-1]["event_type"] == "snack" else 0.05
+        """Fome agora (tempo real): cai enquanto ela come e sobe com as horas desde que terminou.
+        Depois de um excesso começa abaixo de zero (estufada) e demora mais pra voltar."""
+        e = self._ultima(now)
+        meta = json.loads(e["metadata_json"] or "{}") if e else {}
+        if e and "fome_antes" in meta:
+            ini = datetime.fromisoformat(e["event_at"])
+            fim = datetime.fromisoformat(e["end_at"]) if e["end_at"] else ini + timedelta(minutes=15)
+            if now < fim:                   # comendo: a fome vai passando
+                frac = (now - ini).total_seconds() / max(60.0, (fim - ini).total_seconds())
+                return round(max(0.0, min(1.0, meta["fome_antes"] - meta["comeu"] * frac)), 3)
+            last, base = fim, max(-0.4, meta["fome_antes"] - meta["comeu"])
+        elif e:
+            last = datetime.fromisoformat(e["event_at"])
+            base = 0.30 if e["event_type"] == "snack" else 0.05
         else:
             last = self._wake(now.date())
             base = 0.30                     # acorda com fome
@@ -448,6 +539,19 @@ class Meals:
             pass
         return max(0.0, min(1.0, base + rate * hours))
 
+    def satiety_word(self, now: datetime) -> str:
+        """Pro painel: "comendo", "satisfeita", "estufada" (vazio quando nada disso)."""
+        e = self._ultima(now)
+        meta = json.loads(e["metadata_json"] or "{}") if e else {}
+        if not meta.get("fome_antes") and meta.get("fome_antes") != 0:
+            return ""
+        fim = datetime.fromisoformat(e["end_at"]) if e["end_at"] else None
+        if fim and now < fim:
+            return "comendo"
+        if meta.get("excesso") and fim and now - fim < timedelta(hours=2):
+            return "estufada"
+        return ""
+
     def disguises_today(self, day: date) -> bool:
         """Dias em que, com fome, ela diz que já beliscou (drama e mentirinha)."""
         return _rng(day, "disfarce").random() < (0.35 if self.on_diet(day) else 0.2)
@@ -461,13 +565,17 @@ class Meals:
         if data.get("week"):
             since = (now - timedelta(days=7)).isoformat()
             with self.db.get_connection() as conn:
-                snacks = conn.execute("SELECT COUNT(*) FROM life_events WHERE event_type='snack' AND event_at>=?",
+                snacks = conn.execute("SELECT COUNT(*) FROM life_events WHERE event_type='snack' AND event_at>=? "
+                                      "AND COALESCE(metadata_json,'') NOT LIKE '%\"motivo\": \"fome\"%'",
                                       (since,)).fetchone()[0]
+                excessos = sum(1 for (m,) in conn.execute(
+                    "SELECT metadata_json FROM life_events WHERE event_type IN ('meal','snack') AND event_at>=? "
+                    "AND metadata_json IS NOT NULL", (since,)) if json.loads(m).get("excesso"))
                 gym = conn.execute(
                     "SELECT COUNT(DISTINCT substr(observed_at,1,10)) FROM world_state WHERE observed_at>=? AND "
                     "(activity LIKE '%academia%' OR activity LIKE '%trein%')", (since,)).fetchone()[0]
             rng = random.Random(f"marina-peso:{week}")
-            delta = 0.12 * (snacks - 3) - 0.12 * (gym - 3) + rng.uniform(-0.2, 0.2)
+            delta = 0.12 * (snacks - 3) + 0.1 * excessos - 0.12 * (gym - 3) + rng.uniform(-0.2, 0.2)
             if self.on_diet(now.date()):
                 delta -= 0.3
             data["kg"] = round(max(49.0, min(60.0, data["kg"] + max(-0.6, min(0.6, delta)))), 1)
@@ -529,6 +637,12 @@ class Meals:
             lines.append(f"- Hoje você {', '.join(faltam)}.")
         # 24/09: a resposta pronta pro "já comeu?/já papou?" — pelos fatos, não pelo chute do modelo.
         refeicoes = [e for e in eaten if "Pulou" not in (e["summary"] or "")]
+        sac = self.satiety_word(now)
+        if sac == "comendo":
+            lines.append("- Você está comendo agora: a fome vai passando; satisfeita, você larga o prato (ou não, se "
+                         "for dia de gula).")
+        elif sac == "estufada":
+            lines.append("- Você comeu além da conta e está estufada (\"comi demais kkk\").")
         if refeicoes:
             ultima = refeicoes[-1]
             lines.append(f"- Se o Patrick perguntar se você comeu/almoçou/jantou/papou: SIM — a última foi às "
