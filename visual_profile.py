@@ -160,11 +160,14 @@ def krea2_zoom_prompt(action: str, *, zoom: str, setting: str, backdrop: str, is
     return " ".join(parts)
 
 
-def krea2_pov_prompt(subject: str, setting: str) -> str:
-    """26/09 (Patrick): comida, o Milo, a vista — do ponto de vista dela. Sem gatilho nem traços dela."""
+def krea2_pov_prompt(subject: str, setting: str, *, hand: bool = False, nails: str = "") -> str:
+    """26/09 (Patrick): comida, o Milo, a vista — do ponto de vista dela. Sem gatilho nem traços dela.
+    hand: a foto é da mão dela (unha pronta); nails: a frase da cor de verdade das unhas (unhas.py)."""
     subject = _NOT_A_PHOTO.sub("", subject or "").strip(" ,.")
+    who = ("Only her hand is in the photo, no face." if hand
+           else "No person in the photo, only her hand at the edge of the frame at most.")
     return (f"A candid iPhone photo taken by a young woman from her own point of view: {subject}. "
-            f"The scene: {setting}. No person in the photo, only her hand at the edge of the frame at most. "
+            f"The scene: {setting}. {who} " + (f"{nails} " if nails else "") +
             "It looks like a real iPhone photo: natural light, casual framing, real textures.")
 
 

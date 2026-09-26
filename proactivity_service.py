@@ -195,6 +195,14 @@ class ProactivityService:
         except Exception:
             logger.exception("proactivity.saiu_mais_cedo")
 
+        # 26/09 (Patrick): vai fazer as unhas e às vezes pergunta a cor pra ele antes.
+        try:
+            from unhas import Unhas
+            if Unhas(self.db).pergunta_pendente(dt):
+                return True, "unhas_cor"
+        except Exception:
+            logger.exception("proactivity.unhas_cor")
+
         # 26/09 (Patrick): se masturbando com saudade/desejo, ela aproveita e chama ele pro sexting.
         try:
             from tempo_livre import convite_sexting

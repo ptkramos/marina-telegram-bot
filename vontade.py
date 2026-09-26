@@ -60,7 +60,7 @@ FEMININO = ("estação", "drogaria", "drogarias", "officina", "kopenhagen", "ens
             "novamed")
 PREP_MIN = {"milo": (3, 5), "cafe": (8, 12), "acai": (6, 10), "orla": (8, 12), "shopping": (20, 30),
             "praia": (15, 20), "mercado": (6, 10), "farmacia": (5, 8), "academia": (10, 15),
-            "mercado_semana": (8, 12), "medico": (12, 18), "pronto_atendimento": (8, 12)}
+            "mercado_semana": (8, 12), "medico": (12, 18), "pronto_atendimento": (8, 12), "manicure": (8, 12)}
 
 
 def no(nome: str) -> str:

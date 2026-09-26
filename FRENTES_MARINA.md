@@ -9,7 +9,7 @@ _Atualizado em 26/09/2026, fim da tarde._
 ---
 
 ## 1. Mundo e agenda — skill `frente-mundo`
-**Abertura:** "bora na frente do mundo: unhas"
+**Abertura:** "bora na frente do mundo: cabelo" (ou o item 2 abaixo)
 
 **Pronto (26/09):** agenda única (planejado, vontade, convite → mesma agenda com etapas); academia e passeio do
 Milo decididos uma vez por dia; mercado e médico como itens (Bradesco Saúde, Samaritano/Novamed); tempo livre
@@ -19,8 +19,9 @@ peso; mídia real (música iTunes, leitura com compra, Botafogo pela ESPN, Last.
 no meio, tesão como emergência — `agenda_reativa.py`).
 
 **Próximo, nesta ordem:**
-1. **Etapa 1 — cuidados:** unhas como status (a cor manda nas fotos; ela pede opinião dele; faz em casa se
-   entediada e com a unha gasta; manicure antes de evento, paga do saldo). Depois cabelo.
+1. **Etapa 1 — cuidados:** ✅ **unhas** (26/09, noite — `unhas.py`: cor, gel/esmalte, gastando; salão Ophicina
+   do Cabelo na rotina/evento/mimo, pago do saldo; em casa entediada; pergunta a cor às vezes; foto da mão depois;
+   a cor em toda foto). Revisar com ele os textos da lista no PLANO_WEBAPP ("Unhas — como ficou"). Próximo: cabelo.
 2. Conflito: rolê em dia de aula que começa antes da aula acabar sobrepõe volta e ida.
 3. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber…).
 4. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…

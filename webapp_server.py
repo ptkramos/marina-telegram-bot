@@ -292,7 +292,8 @@ CELULAR_POR_ATIVIDADE = {
     "MEAL": "Olha de vez em quando", "SOCIAL": "Olha de vez em quando", "GETTING_READY": "Olha de vez em quando",
     "WAKING": "Olha de vez em quando", "PET_WALK": "Olha de vez em quando", "MICRO_WAKE": "Olha de vez em quando",
     "COMMUTE": "Olha com frequência", "HOME_RELAXING": "Olha com frequência", "UNKNOWN": "Olha com frequência",
-    "HOME_BUSY": "Olha de vez em quando", "SOLO": "Olha depois", "OUT_SOLO": "Olha com frequência"}
+    "HOME_BUSY": "Olha de vez em quando", "SOLO": "Olha depois", "OUT_SOLO": "Olha com frequência",
+    "MANICURE": "Olha de vez em quando"}
 FASES = {"fase menstrual": "Menstruada", "fase folicular": "Fase folicular",       # nomes do cycle.py, em minúscula
          "fase ovulatória / período fértil": "Período fértil", "fase lútea inicial": "Fase lútea",
          "fase pré-menstrual / tpm": "TPM"}
@@ -441,6 +442,12 @@ async def api_bastidores(request: web.Request) -> web.Response:
             status["card"] = None
         out = {"status": status, "emocao": emocao_view(EmotionEngine(hooks.db).panel(now), status["dormindo"]),
                "hoje": _today_events(hooks.db, now)}
+        try:
+            from unhas import Unhas                  # 26/09: unhas como status (seção própria no Por dentro)
+            out["unhas"] = Unhas(hooks.db).painel(now)
+        except Exception:
+            logger.exception("webapp.unhas.error")
+            out["unhas"] = None
         try:
             out["mundo"] = SocialDay(hooks.db).world_panel(now)
         except Exception:

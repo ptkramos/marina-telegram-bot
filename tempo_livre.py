@@ -64,6 +64,8 @@ TIPOS = (
     ("jogando", "Jogando {jogo}", ("sala", "quarto"), "tela", (14, 25), 1.0, (40, 90)),
 )
 MASTURBANDO = ("masturbando", "Se masturbando", ("quarto",), None, (8, 27), 0.0, (15, 25))
+# 26/09 (Patrick): unha gasta e entediada → faz em casa (esmalte comum; a vez em si mora no unhas.py)
+UNHAS = ("unhas", "Fazendo as unhas", ("quarto", "sala", "varanda"), None, (9, 23), 0.0, (40, 60))
 SOLO_BLOCK_CHANCE = 0.45            # com tesão (>= SOLO_MIN_LIBIDO); mais tesão, mais chance
 CHAMA_ELE_CHANCE = 0.5              # com saudade/desejo por ele, chama pro sexting
 CONVITE_KEY = "sexting_convite_json"
@@ -176,8 +178,17 @@ class TempoLivre:
                 chama_ele = alivio
         except Exception:
             logger.exception("tempo_livre.alivio")
+        unhas = False
+        if chama_ele is None:
+            try:
+                from unhas import Unhas
+                unhas = Unhas(self.db).quer_em_casa(now, inicio, rng)
+            except Exception:
+                logger.exception("tempo_livre.unhas")
         if chama_ele is not None:
             tipo = MASTURBANDO
+        elif unhas:
+            tipo = UNHAS
         else:
             opcoes = [t for t in TIPOS if _hora(h, *t[4]) and not (t[0] == "sol" and chuva)
                       and not (t[0] == "plantas" and chuva)]
@@ -271,6 +282,9 @@ class TempoLivre:
             if b.inicio <= now < b.fim:
                 if b.faixas and registrar:
                     self._ouviu(b, now)
+                if b.tipo == "unhas":                     # a cor aparece quando ela decide (ou ele escolhe)
+                    from unhas import Unhas
+                    b.texto = Unhas(self.db).texto_bloco(now)
                 return b
             if b.fim > now:
                 return None
@@ -299,6 +313,10 @@ class TempoLivre:
         texto = b.texto[:1].lower() + b.texto[1:]
         if b.tipo in ("masturbando", "se_tocando"):
             return self._se_masturbou(b, now, onde)
+        if b.tipo == "unhas":                             # o acontecimento sai no fim, com a cor (unhas.py)
+            from unhas import Unhas
+            Unhas(self.db).comecou_em_casa(b.inicio, b.fim, now, b.chave)
+            return
         summary = f"Ficou {texto}{' pelo celular' if b.pelo_celular and b.aparelho == 'tela' else ''} {onde}."
         if b.faixas:
             nomes = [f"\"{f['nome']}\" ({f['artista']})" for f in b.faixas[:4]]

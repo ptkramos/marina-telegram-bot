@@ -31,7 +31,7 @@ CURTO = {"quartinho_bar": "no Quartinho", "starbucks_shopping_gavea": "no Starbu
          "leblon_beach": "na praia", "boutique_agency": "na agência", "bodytech_sao_clemente": "na academia",
          "estadio_nilton_santos": "no Nilton Santos", "enseada_botafogo": "na Enseada",
          "botafogo_praia_shopping": "no shopping", "hospital_samaritano_botafogo": "no Samaritano",
-         "novamed_botafogo": "na Novamed"}
+         "novamed_botafogo": "na Novamed", "ophicina_do_cabelo_botafogo": "na Ophicina"}
 COMO = {"onibus": "Ônibus", "metro": "Metrô", "metro_onibus": "Metrô e ônibus", "uber": "Uber", "a_pe": "A pé"}
 
 # passos do Se arrumando: (texto, peso). O último passo depende do transporte.
@@ -53,12 +53,13 @@ PREP = {
     "mercado_semana": (("Fazendo a lista", 60), ("Pegando as sacolas", 40)),
     "medico": (("Trocando de roupa", 60), ("Separando a carteirinha do plano", 40)),
     "pronto_atendimento": (("Trocando de roupa", 60), ("Separando a carteirinha do plano", 40)),
+    "manicure": (("Trocando de roupa", 70), ("Pegando a bolsa", 30)),
     "jogo": (("Tomando banho", 40), ("Vestindo a camisa do Botafogo", 25), ("Fazendo maquiagem", 25)),
     "dormir": (("Tirando maquiagem", 25), ("Tomando banho", 50), ("Colocando pijama", 25)),
 }
 PREP_MIN = {"milo": (3, 5), "cafe": (8, 12), "acai": (6, 10), "farmacia": (5, 8), "mercado": (6, 10),
             "orla": (8, 12), "shopping": (20, 30), "mercado_semana": (8, 12), "medico": (12, 18),
-            "pronto_atendimento": (8, 12),
+            "pronto_atendimento": (8, 12), "manicure": (8, 12),
             "academia": (10, 15), "noite": (60, 90), "encontro": (30, 45), "jogo": (40, 55), "freela": (40, 55), "praia": (15, 20), "dormir": (30, 45)}
 # o que acontece lá (quando não é consumo nem aula)
 LA_PASSOS = {
@@ -67,6 +68,8 @@ LA_PASSOS = {
     "shopping": (("Olhando vitrines", 60), ("Provando roupa", 40)),
     "mercado_semana": (("Pegando frutas e verduras", 35), ("Enchendo o carrinho", 45), ("No caixa", 20)),
     "medico": (("Na recepção", 25), ("Na consulta", 55), ("Pegando a receita", 20)),
+    # 26/09: unha em gel na Ophicina (unhas.py)
+    "manicure": (("Tirando o esmalte antigo", 18), ("Fazendo a mão em gel", 44), ("Fazendo o pé", 34), ("Pagando", 4)),
     "pronto_atendimento": (("Na triagem", 15), ("Esperando ser chamada", 40), ("No atendimento", 30),
                            ("Pegando a receita", 15)),
 }
@@ -214,9 +217,10 @@ class Agenda:
         with self.db.get_connection() as conn:              # 26/09: agenda única (vontade, mercado, médico)
             vivos = [dict(r) for r in conn.execute(
                 """SELECT source_key, event_at, end_at, location_key, metadata_json, description FROM eventos_pendentes
-                   WHERE (source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ?) AND confirmed=1
-                   AND status != 'cancelled' AND end_at IS NOT NULL ORDER BY event_at""",
-                (f"vontade:{day.isoformat()}:%", f"mercado:{day.isoformat()}%", f"medico:{day.isoformat()}%"))]
+                   WHERE (source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ?)
+                   AND confirmed=1 AND status != 'cancelled' AND end_at IS NOT NULL ORDER BY event_at""",
+                (f"vontade:{day.isoformat()}:%", f"mercado:{day.isoformat()}%", f"medico:{day.isoformat()}%",
+                 f"unhas:{day.isoformat()}:%"))]
         for r in vivos:
             meta = json.loads(r["metadata_json"] or "{}") or {}
             out.append({"tipo": meta.get("tipo", "cafe"), "key": r["source_key"], "place": r["location_key"],
@@ -412,6 +416,9 @@ class Agenda:
         elif c["tipo"] in LA_PASSOS:
             passos = self._distribui(list(LA_PASSOS[c["tipo"]]), c["inicio"], c["fim"])
             cel = CELULAR["aula"] if c["tipo"] in ("medico", "pronto_atendimento", "mercado_semana") else CELULAR["role"]
+            if c["tipo"] == "manicure":                      # 26/09: o valor na direita, como o consumo do rolê
+                from unhas import PRECO_SALAO
+                passos[-1].valor = PRECO_SALAO
         elif c["tipo"] == "academia":
             rng = _rng(c["inicio"].date(), "treino")
             meio = rng.choice((("Musculação · pernas", 55), ("Musculação · superiores", 55), ("Funcional", 55)))

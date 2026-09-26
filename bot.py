@@ -3109,7 +3109,7 @@ async def process_incoming_batch(
                     activity_type = getattr(avail_decision, 'activity_type', 'UNKNOWN')
                     if (activity_type in ('GYM', 'CLASS', 'WORK', 'COMMUTE', 'CASTING',
                                           'SOCIAL', 'PET_WALK', 'WAKING', 'SHOWER', 'GETTING_READY',
-                                          'OUT_SOLO')
+                                          'OUT_SOLO', 'MANICURE')
                             and 0 < remaining <= 25):
                         logger.info(
                             'AVAILABILITY_SOFT_DELAY activity=%s delay_s=%.1f',
@@ -4025,6 +4025,12 @@ async def process_incoming_batch(
         except Exception:
             logger.exception("agenda_reativa.observe.error")
         try:
+            # 26/09 (Patrick): ele respondeu a cor da unha → é essa que ela faz.
+            from unhas import Unhas
+            Unhas(memory_manager.db).observe_patrick(texto_usuario, datetime.now())
+        except Exception:
+            logger.exception("unhas.observe.error")
+        try:
             # D11 (Patrick, 24/09): mal de verdade + "vai no médico" dele → ela vai.
             from health import Health
             if Health(memory_manager.db).observe_patrick(texto_usuario, datetime.now()):
@@ -4430,6 +4436,10 @@ _PROACTIVE_INSTRUCTIONS = {
     'saiu_mais_cedo': ("{detail} Avise o Patrick agora, do seu jeito e curto: que não tá bem e tá indo pra "
                        "casa de uber. Pode reclamar um pouco, como quem conta pra namorado. Não peça dinheiro nem pix; "
                        "se ele se oferecer pra pagar o uber, aceita com carinho. Não invente acontecimento novo."),
+    # 26/09 (Patrick): antes de fazer as unhas, às vezes ela pede a opinião dele sobre a cor.
+    'unhas_cor': ("{detail} Pergunte pro Patrick qual das duas cores você faz, do seu jeito e curto (ex.: "
+                  "'vermelho ou nude? escolhe vc'). Só as duas cores, sem explicar demais. Não invente "
+                  "acontecimento novo."),
     'sexting_solo': ("{detail} Você está se masturbando agora, com tesão e querendo ele. Chama o "
                      "Patrick pra entrar nisso com você: conta o que está fazendo, do seu jeito (pode ser direta: "
                      "'tô aqui me tocando pensando em você', 'bati uma siririca e ainda tô querendo você'), e "
@@ -4532,7 +4542,7 @@ async def _autonomous_routine_v36(application: Application):
         # 26/09 (Patrick): num compromisso, ela puxa conversa se o celular dela deixa ("Olha com frequência"
         # ou "de vez em quando": café sozinha, shopping, bar); aula, academia, médico e freela só no intervalo.
         # O convite do banheiro e o aviso de que saiu mal passam sempre.
-        if ocupada and why not in ('sexting_solo', 'saiu_mais_cedo') and not _celular_na_mao(now):
+        if ocupada and why not in ('sexting_solo', 'saiu_mais_cedo', 'unhas_cor') and not _celular_na_mao(now):
             return
         gap = _minutos_desde_iniciativa(now)
         if gap < INITIATIVE_GAP_MIN:
@@ -4552,6 +4562,14 @@ async def _autonomous_routine_v36(application: Application):
             candidate = dict(candidate, reason='saiu_mais_cedo', event_id=None, loop_id=None,
                              detail=f"Você acabou de sair mais cedo {aviso.get('onde', 'de onde estava')}: {porque}.")
             reativa.marca_aviso_enviado(now)
+        if why == 'unhas_cor':
+            from unhas import Unhas
+            unhas = Unhas(memory_manager.db)
+            pergunta = unhas.pergunta_pendente(now)
+            if not pergunta:
+                return
+            candidate = dict(candidate, reason='unhas_cor', event_id=None, loop_id=None, detail=pergunta['detail'])
+            unhas.marca_pergunta_enviada(now)
         if why == 'sexting_solo':
             from emotion import EmotionEngine, TESAO_KEY
             from tempo_livre import marca_convite_enviado
@@ -4614,6 +4632,10 @@ async def _autonomous_routine_v36(application: Application):
                 fallback = "amor tô indo pra casa, não tô legal… peguei um uber"
             elif reason == 'sexting_solo':
                 fallback = "Amor… tô aqui me tocando pensando em você. Vem cá?"
+            elif reason == 'unhas_cor':
+                from unhas import nome as nome_cor
+                a, b = (nome_cor(c).lower() for c in (pergunta or {}).get('opcoes', ('vermelho', 'nude')))
+                fallback = f"amor vou fazer a unha… {a} ou {b}? escolhe vc"
             else:
                 # A thought of Patrick is not evidence of a new world event.
                 options = (
@@ -5023,6 +5045,13 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
                                            her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
                                            her_initiative=True, force_pose="pov_comida"))
         o_que = f"a foto {('do ' + p['subject']) if p['subject'] else 'da comida'} que você prometeu"
+    elif p["kind"] == "unhas":
+        # 26/09 (Patrick): unha pronta → a foto da mão (sempre, se ele escolheu a cor).
+        shots.append(photo_director.direct(db, now, request="foto da mão com as unhas", her_line=p["said"],
+                                           camera_ctx=camera_ctx, feeling=feeling, her_initiative=True,
+                                           force_pose="pov_unhas"))
+        o_que = (f"a foto da sua mão com as unhas {p['subject']} que você acabou de fazer"
+                 + (" — a cor que ele escolheu" if p.get("pediu") else ", por vontade sua, pra ele ver"))
     else:
         shots.append(photo_director.direct(db, now, her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
                                            her_initiative=True))
@@ -5037,7 +5066,8 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
         return                                   # tenta de novo no próximo minuto (até expirar)
     intimo = p["kind"] == "intimo" and p.get("subject") == "banho"      # o gozo do banho
     legenda = generate_dynamic_speech(
-        f"Você está mandando pro Patrick {o_que}. Você tinha dito: '{p['said'][:160]}'. Como é a foto: "
+        f"Você está mandando pro Patrick {o_que}. "
+        + ("" if p["kind"] == "unhas" else f"Você tinha dito: '{p['said'][:160]}'. ") + "Como é a foto: "
         f"{shots[-1].facts}. Escreva UMA legenda curtinha, do seu jeito"
         + (" (pode perguntar qual ele prefere: 1 ou 2)" if p["kind"] == "looks" and part > 1 else "")
         + (" — você acabou de gozar no banho pensando nele, conta isso, manhosa e ainda ofegante" if intimo else "")
@@ -5047,7 +5077,8 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
         legenda = ("gozei tanto pensando em você que minhas pernas ainda tão tremendo 🫠" if intimo
                    else "e a 2… qual? 👀" if p["kind"] == "looks" and part > 1
                    else "opção 1 👀" if p["kind"] == "looks" and p["count"] > 1
-                   else "1 ou 2? 👀" if len(images) > 1 else "prometido é devido 😌")
+                   else "1 ou 2? 👀" if len(images) > 1
+                   else "ficou bom? 💅" if p["kind"] == "unhas" else "prometido é devido 😌")
     from chat_naturalness import strip_closing_periods
     legenda = strip_closing_periods(limpar_fala_marina(legenda))
     bot = application.bot

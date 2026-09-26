@@ -37,6 +37,7 @@ RATE_PER_HOUR = {
     "SOLO": +0.05,
     "PET_WALK": +0.04,   # sozinha com o Milo também é recarga
     "OUT_SOLO": +0.01,   # café/açaí/farmácia sozinha: quase neutro
+    "MANICURE": 0.0,     # papo com a manicure: nem cansa nem recarrega
     "GYM": 0.0,
     "CLASS": -0.08,      # 7h–15h na PUC: cheia → ~0,36 ao chegar em casa
     "SOCIAL": -0.10,     # rolê, evento, casting
@@ -53,6 +54,8 @@ def _kind_at(db: DatabaseManager, moment: datetime) -> str:
     if commitment:
         if commitment.get("academic_block_id") or "faculdade" in (commitment.get("activity") or ""):
             return "CLASS"
+        if "unhas n" in (commitment.get("activity") or "").lower():
+            return "MANICURE"
         return "HOME" if commitment.get("place_key") == "marina_apartment" else "SOCIAL"
     engine = RoutineEngine(db)
     has_class = bool(AcademicLife(db).blocks_on(moment.date()))

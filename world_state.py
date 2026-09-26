@@ -730,6 +730,12 @@ class WorldStateManager:
         except Exception:
             logger.exception("delivery.materialize.error")
         try:
+            # 26/09: a unha que ficou pronta (cor, salão pago do saldo, foto da mão) — antes das finanças.
+            from unhas import Unhas
+            Unhas(self.db).materialize(now)
+        except Exception:
+            logger.exception("unhas.materialize.error")
+        try:
             # 24/09: o dinheiro dela (cachês, contas, delivery, apertos, pix do Patrick).
             from financas import materialize as financas_materialize
             financas_materialize(self.db, now)
@@ -812,7 +818,9 @@ class WorldStateManager:
             # única, e o "se arrumando" abaixo já pega o preparo.
             try:
                 from vontade import Vontade
-                Vontade(self.db).talvez(now)
+                from unhas import Unhas
+                if not Unhas(self.db).talvez_salao(now):   # 26/09: manicure (rotina, evento ou mimo)
+                    Vontade(self.db).talvez(now)
             except Exception:
                 logger.exception("vontade.error")
         if chosen is not None:

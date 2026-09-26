@@ -79,6 +79,12 @@ DEFAULT_PROFILES = {
         'soft_delay_min_s': 30, 'soft_delay_max_s': 420, 'guardrail_s': 900,
         'brief_likelihood': 0.3, 'prefer': 'MIXED',
     },
+    # 26/09: na manicure, com uma mão sendo feita: vê a notificação e responde curtinho quando dá.
+    'MANICURE': {
+        'phone_access': 'MEDIUM', 'attention': 'MEDIUM', 'interruptibility': 'MEDIUM',
+        'soft_delay_min_s': 45, 'soft_delay_max_s': 600, 'guardrail_s': 1200,
+        'brief_likelihood': 0.5, 'prefer': 'MIXED',
+    },
     # Sozinha, se masturbando: não pega o celular até terminar.
     'SOLO': {
         'phone_access': 'LOW', 'attention': 'LOW', 'interruptibility': 'LOW',
@@ -472,6 +478,7 @@ class ResponseAvailabilityPolicy:
             if 'se masturbando' in act or 'se tocando' in act:
                 return 'SOLO'
             if any(x in act for x in ('pelo celular', 'lendo', 'jogando', 'desenhando', 'montando looks', ' x ',
+                                      'fazendo as unhas',
                                       'organizando o closet', 'arrumando o quarto')):
                 return 'HOME_BUSY'
             return 'HOME_RELAXING'
@@ -486,6 +493,9 @@ class ResponseAvailabilityPolicy:
             return 'SHOWER'
         if any(x in act for x in ('jantando', 'almoçando', 'almocando', 'lanchando', 'beliscando', 'comendo')):
             return 'MEAL'
+        # 26/09: na manicure (Ophicina) — uma mão livre de cada vez, olha o celular de vez em quando.
+        if 'unhas n' in act or 'manicure' in act:
+            return 'MANICURE'
         # 26/09: agenda única — consulta médica e saídas sozinha por vontade.
         if 'consulta' in act or 'pronto-atendimento' in act:
             return 'CLASS'

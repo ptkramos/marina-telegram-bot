@@ -562,6 +562,8 @@ class WorldContextBuilder:
             comida += College(self.db).prompt_lines(now)
             from freela import Freela
             comida += Freela(self.db).prompt_lines(now)
+            from unhas import Unhas                     # 26/09: a unha de verdade (cor manda nas fotos)
+            comida += Unhas(self.db).prompt_lines(now)
         except Exception:
             import logging
             logging.getLogger(__name__).exception("meals.prompt_lines.error")

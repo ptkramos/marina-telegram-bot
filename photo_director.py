@@ -17,6 +17,7 @@ Decisões do Patrick:
 from __future__ import annotations
 
 import json
+import logging
 import random
 import re
 from dataclasses import dataclass, field
@@ -24,6 +25,8 @@ from datetime import datetime, timedelta
 from typing import Callable, Optional
 
 import apartamento
+
+logger = logging.getLogger(__name__)
 
 SESSION_KEY = "photo_session_json"
 SESSION_TTL_MIN = 45
@@ -243,6 +246,12 @@ POSES: tuple[Pose, ...] = (
     Pose("pov_vista", "a vista da varanda, do ponto de vista dela", ("varanda",), (0, 1), "room", "pov",
          "the view of Botafogo bay and Sugarloaf Mountain from her balcony, her hand resting on the railing at the "
          "edge of the frame"),
+    # 26/09 (Patrick): unha pronta → a foto da mão, do ponto de vista dela (unhas.py)
+    Pose("pov_unhas", "a mão com as unhas prontas, do ponto de vista dela", ("quarto", "sala", "varanda", "closet"),
+         (0, 1), "close", "pov", "her own hand held up close to the camera, fingers gently spread, showing off her "
+         "freshly done nails"),
+    Pose("pov_unhas_rua", "a mão com as unhas prontas, na rua, do ponto de vista dela", ("fora",), (0, 1), "close",
+         "pov", "her own hand held up close to the camera, fingers gently spread, showing off her freshly done nails"),
     # ------------------------------------------------------------------ rua --
     Pose("fora_selfie", "selfie na rua", ("fora",), (0, 1), "close", "selfie",
          "her right arm stretched toward the camera taking the selfie at arm's length"),
@@ -646,6 +655,9 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
                         civitai_images.KREA2_FINGERING: 0.0}
         if face == AHEGAO_TRIGGER:
             lora_weights[civitai_images.KREA2_AHEGAO] = AHEGAO_WEIGHT
+    nails = _nails(db, now)                  # 26/09: a cor de verdade das unhas dela (unhas.py)
+    if nails:
+        prompt = f"{prompt} {nails}"
     where = apartamento.ROOMS[room]["pt"] if room in apartamento.ROOMS else "na rua"
     facts = f"lugar: {where}; pose: {pose.pt}; roupa: {outfit or 'pelada'}"
     if beat:
@@ -660,7 +672,9 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         # 26/09: foto tirada por ela, ela não aparece. Não vira sessão (o próximo "manda outra" é dela).
         from visual_profile import krea2_pov_prompt
         subject = action.replace("{milo}", MILO_VISUAL)
-        return DirectedShot(prompt=krea2_pov_prompt(subject, setting), is_nsfw=False, focus_angle="frontal",
+        mao = pose.id.startswith("pov_unhas")
+        return DirectedShot(prompt=krea2_pov_prompt(subject, setting, hand=mao,
+                                                    nails=nails if (mao or "hand" in subject) else ""), is_nsfw=False, focus_angle="frontal",
                             place_key=place or "", room=room, pose_id=pose.id, level=0, beat=None, outfit=None,
                             seed=seed, facts=f"lugar: {where}; foto tirada por você, do seu ponto de vista (você "
                             f"não aparece): {pose.pt}", session=session or {}, pov=True)
@@ -668,6 +682,15 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
                         room=room, pose_id=pose.id, level=level, beat=beat, outfit=outfit, seed=seed,
                         facts=facts + ("; gozo especial: esguichou forte" if special else ""), declined=declined,
                         session=new_session, lora_weights=lora_weights, special=special)
+
+
+def _nails(db, now: datetime) -> str:
+    try:
+        from unhas import Unhas
+        return Unhas(db).visual(now)
+    except Exception:
+        logger.exception("photo_director.unhas")
+        return ""
 
 
 # Creamy pela excitação (Patrick, 24/09): sem Creamy no começo; se dedilhando, do degrau

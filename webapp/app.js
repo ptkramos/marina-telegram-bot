@@ -277,6 +277,14 @@ const loaders = {
       $("bd-corpo").innerHTML = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Tesão")).join("")
         + (e.linhas.length || e.no_clima ? `<div class="linhas sep">${e.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}
           ${e.no_clima ? `<div class="linha"><span class="li-ic">${ic("fire")}</span><span class="li-rot">No clima agora</span></div>` : ""}</div>` : "");
+      // 26/09 (Patrick): unhas em seção própria — cor, barra de desgaste, Estado, Tipo, Feita
+      const u = d.unhas;
+      $("bd-unhas-t").hidden = $("bd-unhas").hidden = !u;
+      if (u) {
+        $("bd-unhas").innerHTML = `<div class="big un-cor">${u.hex ? `<span class="un-dot" style="background:${esc(u.hex)}"></span>` : ""}${esc(u.cor)}</div>
+          <div class="bar un-bar${u.gasta ? " gasta" : ""}"><i style="width:${pct(u.desgaste)}%"></i></div>
+          <div class="linhas">${linha("stars", "Estado", u.estado)}${linha("droplet-half", "Tipo", u.tipo)}${linha("calendar-check", "Feita", u.feita)}</div>`;
+      }
       $("bd-humor").innerHTML = `<div class="big">${esc(e.humor)}</div>` + e.humor_barras.map((b) => bar(b.label, b.value)).join("");
       $("bd-sentindo").innerHTML = e.sentindo.length ? e.sentindo.map((f) => `<div class="feel">
         <div class="head"><span class="t">${esc(f.texto)}</span><div class="bar"><i style="width:${pct(f.valor)}%"></i></div></div>

@@ -28,6 +28,7 @@ PLACE_VISUAL: dict[str, str] = {
     'enseada_botafogo': 'Botafogo waterfront promenade outdoors, coastal path, candid smartphone photo',
     'botafogo_praia_shopping': 'shopping mall interior corridor, casual storefront lighting',
     'zona_sul_sao_clemente': 'supermarket aisle interior, fluorescent store lighting',
+    'ophicina_do_cabelo_botafogo': 'bright beauty salon interior, manicure table with nail polish bottles, candid smartphone photo',
     'pet_services_botafogo': 'pet shop or pet service interior, casual indoor lighting',
     'vet_botafogo': 'veterinary clinic waiting area interior',
     'shopping_gavea': 'shopping mall interior, bright commercial lighting',
