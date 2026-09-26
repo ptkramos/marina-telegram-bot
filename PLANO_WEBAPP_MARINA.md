@@ -107,7 +107,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 | 2 Banco | ✅ 25/09 |
 | 3 Delivery pra ela | ✅ 25/09 |
 | 4 Presentes, datas, aposentar comandos | ⬜ |
-| iFood realista (layout do app real + cardápio com lojas reais) | 🟡 26/09: **39 lojas reais, todas com logo real** (25 Botafogo, 14 Campo Grande; loja de bairro sem logo fácil saiu, decisão do Patrick). Logos do Wikimedia, dos sites, recortados dos prints dele e, pros mercados e farmácias dela (Zona Sul, Hortifruti, Pão de Açúcar, Mundial, Droga Raia), do Google Imagens. Faltam cardápios, fotos, layout, Bastidores |
+| iFood realista (layout do app real + cardápio com lojas reais) | 🟡 26/09: **64 lojas reais, todas com logo real** (43 Botafogo, 21 Campo Grande). Restaurantes de bairro voltaram com logo pelo Google Imagens; 3 saíram (Galeteria Botafogo, Ben Ali, Tacos & Wraps: o Google só trazia outras lojas) e 3 ficam marcadas pra conferir (Cake & Co., Mr. Wong, Rei da Picanha: nome repetido em outras cidades). Logos do Wikimedia, dos sites, recortados dos prints dele e, pros mercados e farmácias dela (Zona Sul, Hortifruti, Pão de Açúcar, Mundial, Droga Raia), do Google Imagens. Faltam cardápios, fotos, layout, Bastidores |
 | 5 Redes sociais (Instagram e X) | 💡 ideia 26/09 |
 
 ### Como ficou (25/09)
