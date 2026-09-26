@@ -43,6 +43,7 @@ ROUTES = {
     "Ipanema": {"metro": 22, "onibus": 32, "uber": 18},
     "Leblon": {"metro": 30, "onibus": 40, "uber": 22},
     "Gávea": {"onibus": 40, "metro_onibus": 45, "uber": 22},
+    "Engenho de Dentro": {"uber": 35},      # 26/09: jogo no Nilton Santos (carona com o Theo ou uber)
 }
 BASE_WEIGHT = {"a_pe": 1.0, "metro": 0.45, "onibus": 0.45, "metro_onibus": 0.3, "uber": 0.25}
 RUSH = ((time(7, 0), time(9, 30)), (time(17, 0), time(19, 30)))

@@ -41,6 +41,8 @@ PRAIA = {"cadeira": ("Cadeira e guarda-sol", "cadeira e guarda-sol", 30),
          "coco": ("Água de coco", "uma água de coco", 12),
          "extras": (("Mate", "um mate", 10), ("Biscoito Globo", "um biscoito Globo", 8),
                     ("Queijo coalho", "um queijo coalho", 15))}
+ESTADIO = {"ingresso": ("Ingresso", "o ingresso do jogo", 60), "cerveja": ("Cerveja", "uma cerveja", 15),
+           "agua": ("Água", "uma água", 6), "lanche": ("Cachorro-quente", "um cachorro-quente", 18)}
 # Starbucks: os mesmos itens e preços do iFood do app (catálogo), pra o mundo bater com o app
 STARBUCKS_LOJA = "starbucks-bf"
 STARBUCKS_FALLBACK = {"Bebidas": (("Latte Grande", 21.9),), "Comidas": (("Pão de queijo", 12.9),)}
@@ -103,6 +105,16 @@ def plan(outing: dict) -> list[Item]:
             add(start + timedelta(minutes=rng.randint(30, 70)), rng.choice(BAR["petiscos"]), dividido=True, comida=True)
         if rng.random() < 0.3:
             add(end - timedelta(minutes=rng.randint(20, 40)), BAR["agua"])
+    elif place == "estadio_nilton_santos":           # 26/09: jogo do Botafogo no estádio
+        add(start, ESTADIO["ingresso"])
+        at = start + timedelta(minutes=rng.randint(20, 40))
+        for _ in range(rng.randint(1, 3)):
+            if at > end - timedelta(minutes=20):
+                break
+            add(at, ESTADIO["cerveja"] if rng.random() < 0.7 else ESTADIO["agua"])
+            at += timedelta(minutes=rng.randint(30, 50))
+        if rng.random() < 0.5:
+            add(start + timedelta(minutes=rng.randint(10, 30)), ESTADIO["lanche"], comida=True)
     elif place == "starbucks_shopping_gavea":
         menu = _starbucks()
         at = start + timedelta(minutes=rng.randint(3, 8))

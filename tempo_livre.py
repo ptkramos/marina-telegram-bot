@@ -14,8 +14,9 @@ Masturbação (Patrick, 26/09): sem limite — com tesão, em casa, ela goza qua
   travado, só precisa fazer sentido (desfile na TV do quarto, da sala ou do closet, ou pelo celular
   em qualquer lugar — e aí ela demora mais pra responder).
 - O bloco é decidido quando ela está livre naquele momento e fica guardado (não muda depois).
-- Mídia é real (artistas, livros, mangás, jogos do cânone 023, marcas). A etapa 2 amplia com
-  progresso de leitura, músicas e busca.
+- Mídia é real (Patrick, 26/09): a música é a playlist dela com faixas reais (`musica.py`), a
+  leitura anda de verdade, com volume e página (`leitura.py`), e em dia de jogo do Botafogo ela vê
+  na TV da sala (`futebol.py`), a não ser que tenha saído pra ver fora.
 - Texto no padrão decidido: gerúndio + o que é ("Ouvindo Sabrina Carpenter"). Vai na linha 2 do
   card; o título em casa é sempre "Em casa".
 """
@@ -35,10 +36,7 @@ GENERICO = ("tempo livre em casa", "curtindo a noite em casa", "em casa, ainda r
 COMODO = {"quarto": "Quarto", "sala": "Sala", "closet": "Closet", "varanda": "Varanda", "cozinha": "Cozinha",
           "banheiro": "Banheiro", "piscina": "Piscina do prédio", "academia": "Academia do prédio"}
 
-# mídia real (a etapa 2 amplia: progresso, músicas, busca)
-ARTISTAS = ("Sabrina Carpenter", "Dua Lipa", "Taylor Swift", "Olivia Rodrigo", "Chappell Roan", "Anitta",
-            "Luísa Sonza", "Marina Sena", "Pabllo Vittar", "Liniker", "YOASOBI", "Aimer", "Ado", "NewJeans",
-            "BLACKPINK", "TWICE")
+from musica import ARTISTAS  # noqa: E402  (mídia real: a playlist dela sai do musica.py)
 LEITURAS = ("o mangá de Sono Bisque Doll", "o mangá de Dandadan", "o mangá de Kaguya-sama",
             "o mangá de Sakura Card Captor", "É Assim que Acaba", "Os Sete Maridos de Evelyn Hugo",
             "De Férias com Você", "a Vogue do mês")
@@ -82,6 +80,9 @@ class Bloco:
     inicio: datetime
     fim: datetime
     chama_ele: bool = False  # masturbação: aproveita e chama o Patrick pro sexting
+    faixas: Optional[list] = None   # música: a playlist real que toca no bloco
+    leitura: Optional[dict] = None  # leitura: título, volume, páginas (início → fim)
+    jogo: Optional[str] = None      # jogo do Botafogo (id da ESPN)
 
     @property
     def comodo_nome(self) -> str:
@@ -162,7 +163,7 @@ class TempoLivre:
         quer_ele = f.missing >= 0.35 or f.bond.get("romantic_intensity", 0) >= 0.85
         return bool(quer_ele and not chateada and rng.random() < CHAMA_ELE_CHANCE)
 
-    def _escolhe(self, now: datetime, i: int, inicio: datetime, fim_slot: datetime) -> Bloco:
+    def _escolhe(self, now: datetime, i: int, inicio: datetime, fim_slot: datetime, registrar: bool = True) -> Bloco:
         dia = self._dia(now)
         rng = _rng(dia, f"tipo:{i}")
         h = inicio.hour + inicio.minute / 60
@@ -174,6 +175,9 @@ class TempoLivre:
             opcoes = [t for t in TIPOS if _hora(h, *t[4]) and not (t[0] == "sol" and chuva)
                       and not (t[0] == "plantas" and chuva)]
             tipo = rng.choices(opcoes, weights=[t[5] for t in opcoes])[0] if opcoes else TIPOS[0]
+            musica_dele = self._musica_dele()
+            if musica_dele and any(t[0] == "musica" for t in opcoes) and rng.random() < 0.7:
+                tipo = next(t for t in TIPOS if t[0] == "musica")   # o Patrick mandou música: ela vai ouvir
         chave, texto, comodos, aparelho, _, _, mins = tipo
         texto = texto.format(marca=rng.choice(MARCAS), artista=rng.choice(ARTISTAS), leitura=rng.choice(LEITURAS),
                              jogo=rng.choice(JOGOS))
@@ -181,9 +185,62 @@ class TempoLivre:
         pelo_celular = aparelho == "celular" or (aparelho == "tela" and comodo not in ("quarto", "sala", "closet"))
         if aparelho == "tela" and not pelo_celular and rng.random() < 0.3:
             pelo_celular = True                           # às vezes vê deitada no celular mesmo com TV
-        fim = inicio + timedelta(minutes=rng.randint(*mins))
+        fim = max(inicio + timedelta(minutes=rng.randint(*mins)), inicio + timedelta(minutes=10))
+        faixas = leitura = None
+        if chave == "musica":
+            from musica import Musica
+            faixas = Musica(self.db).playlist(inicio, fim, rng) or None
+            if faixas:
+                texto = f"Ouvindo {faixas[0]['artista']}"
+        elif chave == "lendo" and registrar:
+            from leitura import Leitura
+            sessao = Leitura(self.db).sessao(inicio, fim, rng, now)
+            if sessao:
+                texto = sessao.texto
+                leitura = {"titulo": sessao.titulo, "vol": sessao.vol, "pag_ini": sessao.pag_ini,
+                           "pag_fim": sessao.pag_fim, "pags": sessao.pags, "terminou": sessao.terminou}
+            else:                                         # nada pra ler em casa: fica no celular
+                chave, texto, aparelho, pelo_celular = "instagram", "Olhando o Instagram", "celular", True
         return Bloco(f"livre:{dia.isoformat()}:{i}", chave, texto, comodo, aparelho, pelo_celular, inicio,
-                     max(fim, inicio + timedelta(minutes=10)), bool(chama_ele))
+                     fim, bool(chama_ele), faixas, leitura)
+
+    def _musica_dele(self) -> bool:
+        try:
+            from musica import Musica
+            return bool(Musica(self.db).dela()["ouvir"])
+        except Exception:
+            return False
+
+    def _jogo(self, now: datetime, st: dict, dia: str, registrar: bool) -> Optional[Bloco]:
+        """Dia de jogo do Botafogo e ela em casa: vê na TV da sala (o bloco é o jogo inteiro)."""
+        try:
+            from futebol import Futebol, DURACAO
+            fut = Futebol(self.db)
+            j = fut.jogo_em(now)
+        except Exception:
+            return None
+        if not j:
+            return None
+        chave = f"j{j['id']}"
+        g = st.get(dia, {}).get(chave)
+        if g:
+            return Bloco(**{**g, "inicio": datetime.fromisoformat(g["inicio"]), "fim": datetime.fromisoformat(g["fim"])})
+        ini = datetime.fromisoformat(j["inicio"])
+        b = Bloco(f"jogo:{j['id']}", "jogo", f"Vendo {fut.titulo(j)}", "sala", "tela", False,
+                  max(ini - timedelta(minutes=5), now - timedelta(minutes=2)), ini + DURACAO, jogo=j["id"])
+        if registrar:
+            st.setdefault(dia, {})[chave] = {**b.__dict__, "inicio": b.inicio.isoformat(), "fim": b.fim.isoformat()}
+            self._save(st, now)
+            with self.db.get_connection() as conn:
+                conn.execute(
+                    """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
+                       autonomy_level,importance,participants_json,share_worthy,created_at)
+                       VALUES (?,?,'tempo_livre',?,?,'real_world',1,0.4,?,0.6,?)""",
+                    (b.chave, b.inicio.isoformat(), b.texto,
+                     f"Viu {fut.titulo(j)} ({j['competicao']}) na TV da sala, torcendo pelo Botafogo.",
+                     json.dumps(["marina"]), now.isoformat()))
+                conn.commit()
+        return b
 
     def agora(self, now: datetime, *, registrar: bool = True) -> Optional[Bloco]:
         """O bloco de agora (decide e guarda na primeira vez que ela está livre nele).
@@ -194,7 +251,10 @@ class TempoLivre:
         i, ini, fim_slot = self._slot(now)
         dia = self._dia(now).isoformat()
         st = self._state()
-        guardados = st.get(dia, {})
+        jogo = self._jogo(now, st, dia, registrar)
+        if jogo:
+            return jogo
+        guardados = {k: v for k, v in st.get(dia, {}).items() if not k.startswith("j")}
         for n in range(6):
             chave = f"{i}{'abcdef'[n - 1] if n else ''}"
             g = guardados.get(chave)
@@ -202,19 +262,28 @@ class TempoLivre:
                 break
             b = Bloco(**{**g, "inicio": datetime.fromisoformat(g["inicio"]), "fim": datetime.fromisoformat(g["fim"])})
             if b.inicio <= now < b.fim:
+                if b.faixas and registrar:
+                    self._ouviu(b, now)
                 return b
             if b.fim > now:
                 return None
             ini = b.fim
         else:
             return None
-        b = self._escolhe(now, chave, max(ini, now - timedelta(minutes=5)), fim_slot)
+        b = self._escolhe(now, chave, max(ini, now - timedelta(minutes=5)), fim_slot, registrar)
         if not registrar:
             return b
         st.setdefault(dia, {})[chave] = {**b.__dict__, "inicio": b.inicio.isoformat(), "fim": b.fim.isoformat()}
         self._save(st, now)
         self._registra(b, now)
         return b
+
+    def _ouviu(self, b: Bloco, now: datetime) -> None:
+        try:
+            from musica import Musica
+            Musica(self.db).ouviu(b.faixas, now)
+        except Exception:
+            logger.exception("tempo_livre.musica_ouviu")
 
     def _registra(self, b: Bloco, now: datetime) -> None:
         """Vira acontecimento do dia (e, se for o caso, efeito no corpo)."""
@@ -224,6 +293,12 @@ class TempoLivre:
         if b.tipo in ("masturbando", "se_tocando"):
             return self._se_masturbou(b, now, onde)
         summary = f"Ficou {texto}{' pelo celular' if b.pelo_celular and b.aparelho == 'tela' else ''} {onde}."
+        if b.faixas:
+            nomes = [f"\"{f['nome']}\" ({f['artista']})" for f in b.faixas[:4]]
+            summary = f"Ficou ouvindo a playlist dela {onde}: " + ", ".join(nomes) + "."
+        elif b.leitura:
+            summary = (f"Ficou {texto} {onde}, da página {b.leitura['pag_ini']} até a {b.leitura['pag_fim']}"
+                       + (" (terminou)." if b.leitura["terminou"] else "."))
         with self.db.get_connection() as conn:
             conn.execute(
                 """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,

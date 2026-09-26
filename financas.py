@@ -93,7 +93,7 @@ def materialize(db, now: datetime) -> int:
             """SELECT event_key, event_at, title, summary FROM life_events WHERE event_at>=? AND event_at<=?
                AND (event_key LIKE 'freela:%:sinal' OR event_key LIKE 'freela:%:cache'
                     OR event_key LIKE 'casa:%:contas_dela' OR event_key LIKE 'meal:%:delivery'
-                    OR event_key LIKE 'consumo:%' OR event_key LIKE 'transporte:%')
+                    OR event_key LIKE 'consumo:%' OR event_key LIKE 'transporte:%' OR event_key LIKE 'compra:%')
                ORDER BY event_at""", (desde, now.isoformat()))]
     for row in rows:
         if row["event_key"] in st["vistos"]:
@@ -106,7 +106,7 @@ def materialize(db, now: datetime) -> int:
                 _mov(st, at, int(m.group(1)), "cachê do freela")
         elif key.endswith(":contas_dela"):
             _mov(st, at, -CONTAS_DELA, "contas dela (celular e streamings)")
-        elif key.startswith(("consumo:", "transporte:")):      # 26/09: o que ela pede no rolê e o uber
+        elif key.startswith(("consumo:", "transporte:", "compra:")):  # 26/09: rolê, uber e o que ela compra (livros)
             m = _AMOUNT.search(row["summary"] or "")
             if m:
                 _mov(st, at, -int(m.group(1)), row["title"] or "rolê")

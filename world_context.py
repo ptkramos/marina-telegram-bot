@@ -552,6 +552,12 @@ class WorldContextBuilder:
             comida += financas_lines(self.db, now)   # 24/09: saldo, aperto, /pix
             from watch import Watching
             comida += Watching(self.db).prompt_lines()
+            from musica import Musica                   # 26/09: mídia real (música, leitura, Botafogo)
+            comida += Musica(self.db).prompt_lines(now)
+            from leitura import Leitura
+            comida += Leitura(self.db).prompt_lines(now)
+            from futebol import Futebol
+            comida += Futebol(self.db).prompt_lines(now)
             from college import College
             comida += College(self.db).prompt_lines(now)
             from freela import Freela

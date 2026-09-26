@@ -31,7 +31,8 @@ class TestWorldBibleSeed(unittest.TestCase):
         expected = seed_world_bible(self.db)
         counts = self._counts()
         self.assertEqual(counts["world_characters"], expected["characters"])
-        self.assertEqual(counts["world_places"], expected["places"])
+        # 26/09: a migration 028 grava o Nilton Santos (real) antes do seed.
+        self.assertEqual(counts["world_places"], expected["places"] + 1)
         self.assertEqual(counts["routine_patterns"], expected["routines"])
         # Fase D6: a migration 023 grava o cânone de gostos (títulos) antes do seed.
         with self.db.get_connection() as conn:

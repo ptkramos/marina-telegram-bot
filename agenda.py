@@ -28,7 +28,8 @@ logger = logging.getLogger(__name__)
 # nome curto (título e chat) e preposição
 CURTO = {"quartinho_bar": "no Quartinho", "starbucks_shopping_gavea": "no Starbucks", "puc_rio": "na PUC",
          "shopping_gavea": "no Shopping da Gávea", "copacabana_beach": "na praia", "ipanema_beach": "na praia",
-         "leblon_beach": "na praia", "boutique_agency": "na agência", "bodytech_sao_clemente": "na academia"}
+         "leblon_beach": "na praia", "boutique_agency": "na agência", "bodytech_sao_clemente": "na academia",
+         "estadio_nilton_santos": "no Nilton Santos"}
 COMO = {"onibus": "Ônibus", "metro": "Metrô", "metro_onibus": "Metrô e ônibus", "uber": "Uber", "a_pe": "A pé"}
 
 # passos do Se arrumando: (texto, peso). O último passo depende do transporte.
@@ -38,9 +39,10 @@ PREP = {
     "freela": (("Tomando banho", 50), ("Escolhendo roupa", 35)),        # sem make: é feita lá
     "faculdade": (("Tomando café", 25), ("Tomando banho", 35), ("Escolhendo roupa", 25)),
     "praia": (("Colocando biquíni", 50), ("Passando protetor", 40)),
+    "jogo": (("Tomando banho", 40), ("Vestindo a camisa do Botafogo", 25), ("Fazendo maquiagem", 25)),
     "dormir": (("Tirando maquiagem", 25), ("Tomando banho", 50), ("Colocando pijama", 25)),
 }
-PREP_MIN = {"noite": (60, 90), "encontro": (30, 45), "freela": (40, 55), "praia": (15, 20), "dormir": (30, 45)}
+PREP_MIN = {"noite": (60, 90), "encontro": (30, 45), "jogo": (40, 55), "freela": (40, 55), "praia": (15, 20), "dormir": (30, 45)}
 FACULDADE_CABELO_CHANCE = 0.4          # "às vezes" (nem todo dia ela lava o cabelo)
 
 # imprevisto numa linha só (card): o texto do mundo é longo demais
@@ -112,7 +114,8 @@ def duracao(td: timedelta) -> str:
 
 
 BAIRRO_PREP = {"Gávea": "na Gávea", "Leblon": "no Leblon", "Jardim Botânico": "no Jardim Botânico",
-               "Humaitá": "no Humaitá", "Flamengo": "no Flamengo", "Centro": "no Centro"}
+               "Humaitá": "no Humaitá", "Flamengo": "no Flamengo", "Centro": "no Centro",
+               "Engenho de Dentro": "no Engenho de Dentro"}
 
 
 def em_bairro(bairro: str) -> str:
@@ -172,7 +175,7 @@ class Agenda:
             freela = r["source_key"].startswith("freela:")
             place = r["location_key"]
             tipo = ("freela" if freela else "praia" if place.endswith("_beach")
-                    else "noite" if inicio.hour >= 18 else "encontro")
+                    else "jogo" if ":j" in r["source_key"] else "noite" if inicio.hour >= 18 else "encontro")
             out.append({"tipo": tipo, "key": r["source_key"], "place": place, "inicio": inicio,
                         "fim": datetime.fromisoformat(r["end_at"]), "outing": r,
                         "friends": (json.loads(r["metadata_json"] or "{}") or {}).get("friends") or [],
@@ -218,7 +221,7 @@ class Agenda:
                                  lugar_key="marina_apartment", com=com, celular=CELULAR["arrumando"],
                                  passos=self._distribui(passos + [(final, 10)], inicio, ida.start),
                                  chave=f"prep:{c['key']}", prep_tipo=c["tipo"]))
-                teve_make = teve_make or c["tipo"] in ("noite", "encontro")
+                teve_make = teve_make or c["tipo"] in ("noite", "encontro", "jogo")
             # 2. A caminho
             out.append(self._trajeto(ida, "caminho", "A caminho",
                                      f"Chega {self._na(place['name'])} às {aprox(ida.end)}", place, c))
@@ -464,6 +467,40 @@ class Agenda:
             pass
         return sorted(out, key=lambda m: m[0])
 
+    def _passos_midia(self, bloco, now: datetime) -> tuple[list, list]:
+        """Música: as faixas (as 2 que tocaram, a de agora e a próxima). Leitura: páginas.
+        Jogo: os lances de verdade e o placar."""
+        if bloco.faixas:
+            idx = max((i for i, f in enumerate(bloco.faixas) if datetime.fromisoformat(f["at"]) <= now), default=0)
+            janela = bloco.faixas[max(0, idx - 2): idx + 2]
+            return [Passo(f["nome"], datetime.fromisoformat(f["at"])) for f in janela], []
+        if bloco.leitura:
+            lt = bloco.leitura
+            frac = max(0.0, min(1.0, (now - bloco.inicio).total_seconds()
+                                / max(60.0, (bloco.fim - bloco.inicio).total_seconds())))
+            pag = round(lt["pag_ini"] + (lt["pag_fim"] - lt["pag_ini"]) * frac)
+            passos = [Passo(f"Começou na pág. {lt['pag_ini']}" if lt["pag_ini"] else "Começou", bloco.inicio)]
+            if bloco.inicio < now:
+                passos.append(Passo(f"Pág. {pag}", now))
+            passos.append(Passo("Terminar o volume" if lt["terminou"] else f"Até a pág. ~{lt['pag_fim']}", bloco.fim))
+            return passos, [["book", "Progresso", f"pág. {pag} de {lt['pags']}"]]
+        if bloco.jogo:
+            from futebol import Futebol
+            fut = Futebol(self.db)
+            j = next((x for x in fut.jogos() if x["id"] == bloco.jogo), None)
+            if not j:
+                return [], []
+            ini = datetime.fromisoformat(j["inicio"])
+            lances = [x for x in fut.lances(j)["lances"] if datetime.fromisoformat(x["at"]) <= now]
+            passos = [Passo(x["texto"] + (f" · {x['minuto']}" if x["texto"].startswith(("Gol", "Expulsão")) else ""),
+                            datetime.fromisoformat(x["at"])) for x in lances]
+            if not passos:
+                passos = [Passo("1º tempo", ini)]
+            if not any(p.texto == "Fim de jogo" for p in passos):
+                passos.append(Passo("Fim de jogo", bloco.fim))
+            return passos[-5:], [["dribbble", "Placar", fut.placar_texto(j)]]
+        return [], []
+
     def card_casa(self, now: datetime, celular: str) -> Optional[dict]:
         """Fora de uma saída: "Em casa" (ou "Se alimentando", ou o passeio do Milo)."""
         snap = self._snapshot()
@@ -483,6 +520,12 @@ class Agenda:
         bloco = TempoLivre(self.db).atual(now) if low.startswith("em casa, ") else None
         if bloco:
             linha2, comodo, inicio, fim = bloco.texto, bloco.comodo_nome, bloco.inicio, bloco.fim
+            passos, grade_extra = self._passos_midia(bloco, now)
+            if bloco.faixas:                              # a linha 2 acompanha o artista que está tocando
+                from musica import Musica
+                tocando = Musica.tocando(bloco.faixas, now)
+                if tocando:
+                    linha2 = f"Ouvindo {tocando['artista']}"
         elif any(x in low for x in ("jantando", "almoçando", "almocando", "lanchando", "beliscando", "café da manhã",
                                     "comendo")):
             from meals import meal_kind, Meals

@@ -460,7 +460,7 @@ class ResponseAvailabilityPolicy:
                 return 'HOME_RELAXING'           # masturbando e chamando o Patrick: celular na mão
             if 'se masturbando' in act or 'se tocando' in act:
                 return 'SOLO'
-            if any(x in act for x in ('pelo celular', 'lendo', 'jogando', 'desenhando', 'montando looks',
+            if any(x in act for x in ('pelo celular', 'lendo', 'jogando', 'desenhando', 'montando looks', ' x ',
                                       'organizando o closet', 'arrumando o quarto')):
                 return 'HOME_BUSY'
             return 'HOME_RELAXING'

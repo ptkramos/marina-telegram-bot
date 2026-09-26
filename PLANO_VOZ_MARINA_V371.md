@@ -13,7 +13,7 @@ detalhado de cada entrega, na ordem em que aconteceram.
 
 ## 0. Painel de status — atualizado em 2026-09-26 (manhã)
 
-Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 1.055 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
+Cada item foi conferido **no código**, não no que este plano dizia. Suíte: 1.065 testes verdes. **Soak resetado em 26/09, 04:10** (a pedido do Patrick).
 
 Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
@@ -1143,6 +1143,7 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
 - **Ela manda delivery pra ele** (`pedido_dela.py`): quando oferece ("vou te mandar um suquinho pelo app") e, às vezes, de surpresa (ele doente, dia ruim); nunca no meio do sexting. Ele acompanha pelo botão "🛵 Acompanhar entrega" na fala dela.
 - **Freela vazio** diz que não tem job: rolê não vira ensaio.
 - **Banho:** as falas de ida pro box começam o banho, "já tô saindo do chuveiro" encerra (`end_shower`), e o que foi adiado pelo banho sai quando ele acaba (`release_after_shower`).
+- **Mídia real (26/09):** a playlist dela é de faixas reais (iTunes); música que o Patrick manda por link ela ouve de verdade quando está livre e adota se curtir; a leitura anda (volume e página) e ela compra o próximo volume com o saldo; o Botafogo tem agenda e resultado reais (ESPN) — ela vê em casa, às vezes no bar ou no Nilton Santos. Falta o Last.fm dele (usuário e chave).
 - **Masturbação, fome e pessoas (26/09, ajustes do Patrick):** ela se masturba quando quer (sem cota), fala "masturbação"/"siririca" sem rodeio e, com saudade, chama ele pro sexting no meio (`sexting_solo`). A fome cai enquanto ela come: satisfeita larga o prato, com gula come além e fica estufada (o excesso pesa); com fome em casa ela belisca. Pessoas novas são "Conhecido(a)"; como se conheceram fica guardado pra quando virarem cânone.
 - **Tempo livre concreto (26/09, `tempo_livre.py`):** em casa ela está olhando o TikTok, montando looks, vendo desfile, ouvindo um artista real, lendo, jogando, brincando com o Milo, se tocando… Vira acontecimento (ela lembra e pode contar) e muda o ritmo de resposta (entretida responde mais devagar; se tocando só depois).
 - **Convite de antes do reset (26/09):** rolê que ainda vai acontecer não some mais por causa do reset; o convite conta como recebido no início da vida registrada.

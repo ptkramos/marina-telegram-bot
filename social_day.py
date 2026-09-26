@@ -503,6 +503,44 @@ class SocialDay:
                         "start": start.isoformat(), "end": datetime.combine(day, end_t).isoformat(),
                         "invite_at": invite_at.isoformat(), "decide_at": decide_at.isoformat(),
                         "status": "pending"})
+        out += self._convites_jogo(day)
+        return out
+
+    def _convites_jogo(self, day: date) -> list[dict]:
+        """26/09 (Patrick): jogo do Botafogo às vezes vira rolê — num bar com os amigos ou no Nilton
+        Santos (jogo em casa). É convite como os outros: ela decide no dia."""
+        try:
+            from futebol import Futebol
+            fut = Futebol(self.db)
+            jogos = fut.do_dia(day)
+        except Exception:
+            return []
+        out = []
+        for j in jogos:
+            rng = _rng(day, f"jogo:{j['id']}")
+            classico = fut.classico(j)
+            ini = datetime.fromisoformat(j["inicio"])
+            roll = rng.random()
+            if j["mandante"] and roll < (0.25 if classico else 0.12):
+                place, core, extra = "estadio_nilton_santos", ("theo_martins",), ("bia_andrade",)
+                start, end = ini - timedelta(minutes=60), ini + timedelta(minutes=120)
+                texto = f"Ver {fut.titulo(j)} no Nilton Santos com {{quem}}"
+            elif roll < (0.45 if classico else 0.25):
+                place, core, extra = "quartinho_bar", ("theo_martins",), ("bia_andrade", "julia_azevedo")
+                start, end = ini - timedelta(minutes=20), ini + timedelta(minutes=130)
+                texto = f"Ver {fut.titulo(j)} com {{quem}} no Quartinho Bar"
+            else:
+                continue
+            friends = [rng.choice(core)] + [f for f in extra if rng.random() < 0.4]
+            quem = " e ".join(short_name(f) for f in friends)
+            invite_at = (datetime.combine(day - timedelta(days=rng.randint(1, 3)), time(12, 0))
+                         + timedelta(minutes=rng.randint(0, 9 * 60)))
+            invite_at = min(invite_at, start - timedelta(hours=2))
+            decide_at = max(invite_at, start - timedelta(hours=rng.randint(2, 5)))
+            out.append({"key": f"outing:{day.isoformat()}:j{j['id']}", "friends": friends, "who": quem,
+                        "text": texto.format(quem=quem), "place": place, "start": start.isoformat(),
+                        "end": end.isoformat(), "invite_at": invite_at.isoformat(),
+                        "decide_at": decide_at.isoformat(), "status": "pending"})
         return out
 
     def _willing(self, invite: dict, now: datetime) -> tuple[bool, str]:

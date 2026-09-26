@@ -3035,6 +3035,14 @@ async def process_incoming_batch(
             return
         texto_usuario = resolved_req.text
 
+    try:
+        # 26/09 (Patrick): música que ele manda (Apple Music, Spotify, YouTube) — ela ouve de verdade.
+        from musica import LINK_RE, Musica
+        if LINK_RE.search(texto_usuario or ""):
+            await asyncio.to_thread(Musica(memory_manager.db).link_do_patrick, texto_usuario, datetime.now())
+    except Exception:
+        logger.exception("musica.link.error")
+
     avail_decision = None
     availability_budget_hint = None
     if not availability_bypass:
@@ -4761,6 +4769,18 @@ async def media_lookup_routine(application: Application):
     except Exception as e:
         logger.error(f"Erro no job de media_lookup_routine: {e}", exc_info=True)
 
+async def midia_real_routine(application: Application):
+    """26/09 (Patrick): catálogo de músicas (iTunes) e agenda/lances do Botafogo (ESPN), fora do turno."""
+    try:
+        from musica import Musica
+        from futebol import Futebol
+        now = datetime.now()
+        await asyncio.to_thread(Musica(memory_manager.db).aquecer, now)
+        await asyncio.to_thread(Futebol(memory_manager.db).atualizar, now)
+    except Exception as e:
+        logger.error(f"Erro no job de midia_real_routine: {e}", exc_info=True)
+
+
 async def session_reflection_routine(application: Application):
     """Job periódico de reflexão de sessão (Release 3.5.3)."""
     try:
@@ -5149,6 +5169,10 @@ async def post_init(application: Application):
             next_run_time=datetime.now() + timedelta(seconds=20),
         )
         logger.info(f"Job de Media Lookup agendado a cada {media_hours}h.")
+
+    # 26/09 — mídia real: músicas (iTunes) e Botafogo (ESPN), fora do caminho do turno.
+    scheduler.add_job(midia_real_routine, "interval", minutes=5, args=[application], max_instances=1,
+                      coalesce=True, next_run_time=datetime.now() + timedelta(seconds=40))
 
     # Job periódico de Session Reflection (Release 3.5.3)
     if getattr(settings, "SESSION_REFLECTION_ENABLED", False):
