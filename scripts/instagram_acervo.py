@@ -78,7 +78,7 @@ async def foto_marina(db, n: int, at: datetime, pose: str = ""):
                           snapshot_id=None)
     ocasiao = ig.ocasiao_da_roupa(motivo, at.hour)
     roupa = ig.escolher_roupa(db, ocasiao, rng) if ocasiao else None
-    dela = ig.escolher_roupa(db, ocasiao, rng, evitar=(roupa,)) if ocasiao and amiga else None
+    dela = ig.escolher_roupa(db, ocasiao, rng, evitar=(roupa,), simples=True) if ocasiao and amiga else None
     shot = photo_director.direct(db, at, camera_ctx=ctx, turn=SimpleNamespace(state="cut", arousal=0.0), rng=rng,
                                  force_pose=pose or pose_plano, outfit_override=roupa, friend_outfit_override=dela,
                                  expression_override="a natural confident smile, looking great for an Instagram post")

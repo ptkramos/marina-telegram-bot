@@ -387,7 +387,8 @@ POSES: tuple[Pose, ...] = (
          "around her shoulders, both smiling at the camera, their heads a little apart"),
     Pose("fora_amigas_alguem_tirando", "com a amiga, alguém tirando a foto das duas", ("fora",), (0, 1),
          "three_quarter", "friend", "standing side by side with her friend, arms around each other's waists, both "
-         "smiling at the person taking the photo, with a little space between their heads"),
+         "smiling at the person taking the photo a few steps away, nobody in the photo holding a phone, with a "
+         "little space between their heads"),
 )
 GROUP_POSES = ("fora_selfie_amiga", "fora_selfie_amiga_abraco", "fora_amigas_alguem_tirando")
 GROUP_SIDE = "right"   # a amiga fica do lado direito; a troca de rosto cola só esse lado

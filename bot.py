@@ -5328,7 +5328,8 @@ def _ig_shot(plano: dict, now: datetime, feeling):
     # 27/09 (Patrick): guarda-roupa do Instagram, sem repetir roupa; praia é de biquíni (a amiga também)
     ocasiao = instagram.ocasiao_da_roupa(motivo, now.hour)
     roupa = instagram.escolher_roupa(memory_manager.db, ocasiao, rng) if ocasiao else None
-    dela = instagram.escolher_roupa(memory_manager.db, ocasiao, rng, evitar=(roupa,))         if ocasiao and plano.get("amiga") else None
+    dela = (instagram.escolher_roupa(memory_manager.db, ocasiao, rng, evitar=(roupa,), simples=True)
+            if ocasiao and plano.get("amiga") else None)
     return photo_director.direct(memory_manager.db, now, camera_ctx=ctx, feeling=feeling,
                                  turn=SimpleNamespace(state="cut", arousal=0.0), rng=rng,
                                  force_pose=plano.get("pose"), outfit_override=roupa, friend_outfit_override=dela,

@@ -171,10 +171,13 @@ ROUPAS = {
 ROUPA_MEMORIA = 12
 
 
-def escolher_roupa(db, ocasiao: str, rng: random.Random, evitar: tuple = ()) -> str:
+def escolher_roupa(db, ocasiao: str, rng: random.Random, evitar: tuple = (), simples: bool = False) -> str:
+    """simples: só a peça, sem acessório por cima (a amiga na foto de grupo: o editor da troca de rosto
+    confunde saída de praia e chapéu com a roupa do RG)."""
     usadas = {r["roupa"] for r in _rows(db, "SELECT roupa FROM ig_posts WHERE autor='marina' AND roupa IS NOT NULL "
                                             "ORDER BY criado_em DESC LIMIT ?", (ROUPA_MEMORIA,))}
-    opcoes = [r for r in ROUPAS[ocasiao] if r not in usadas and r not in evitar] or list(ROUPAS[ocasiao])
+    todas = [r for r in ROUPAS[ocasiao] if not simples or not re.search(r" with | and ", r)] or list(ROUPAS[ocasiao])
+    opcoes = [r for r in todas if r not in usadas and r not in evitar] or todas
     return rng.choice(opcoes)
 
 

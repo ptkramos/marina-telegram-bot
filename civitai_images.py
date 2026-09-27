@@ -402,7 +402,7 @@ FRIEND_RG = {"bia_andrade": "data/amigas/bia_rg.jpg", "carol_menezes": "data/ami
 FRIEND_EDIT_PROMPT = ("Give the {noun} on the {side}, {who}, the exact face of the {noun} in the second image: "
                       "the face shape, eyes, eyebrows, nose, lips and skin tone. Keep the other woman, both poses, the "
                       "clothes, the accessories, the hair, the background and the lighting exactly as they are in "
-                      "the first image.")
+                      "the first image. Take only the face from the second image, never its clothes or background.")
 # 28/09 (1ª foto pelo código): o editor não só troca o rosto — redesenha as duas pessoas um pouco mais
 # embaixo (o fundo fica parado). Emenda fixa no meio passava em cima do rosto da amiga e deixava um "olho
 # fantasma". A costura agora é o caminho, linha a linha, onde a original e a edição mais concordam
