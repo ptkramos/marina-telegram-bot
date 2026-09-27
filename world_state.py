@@ -635,10 +635,17 @@ class WorldStateManager:
     def _getting_ready(self, now: datetime) -> Optional[dict]:
         try:
             from agenda import Agenda
-            return Agenda(self.db).prep_activity(now)
+            prep = Agenda(self.db).prep_activity(now)
         except Exception:
             logger.exception("agenda.prep.error")
             return None
+        if prep:
+            try:                                   # 26/09: o penteado da saída (às vezes pergunta pra ele)
+                from cabelo import Cabelo
+                Cabelo(self.db).se_arrumando(prep, now)
+            except Exception:
+                logger.exception("cabelo.se_arrumando.error")
+        return prep
 
     def resolve(self, now: datetime, **kw):
         """Um resolve por vez no processo (26/09: a entrega pôs ela "comendo o sanduíche" e um resolve
@@ -736,6 +743,12 @@ class WorldStateManager:
         except Exception:
             logger.exception("unhas.materialize.error")
         try:
+            # 26/09: o salão que terminou (cabelo novo, pago do saldo, foto) e o penteado de sair — antes das finanças.
+            from cabelo import Cabelo
+            Cabelo(self.db).materialize(now)
+        except Exception:
+            logger.exception("cabelo.materialize.error")
+        try:
             # 24/09: o dinheiro dela (cachês, contas, delivery, apertos, pix do Patrick).
             from financas import materialize as financas_materialize
             financas_materialize(self.db, now)
@@ -819,7 +832,9 @@ class WorldStateManager:
             try:
                 from vontade import Vontade
                 from unhas import Unhas
-                if not Unhas(self.db).talvez_salao(now):   # 26/09: manicure (rotina, evento ou mimo)
+                from cabelo import Cabelo
+                # 26/09: manicure e cabelo na Ophicina (rotina, evento, mimo) antes da vontade
+                if not Unhas(self.db).talvez_salao(now) and not Cabelo(self.db).talvez_salao(now):
                     Vontade(self.db).talvez(now)
             except Exception:
                 logger.exception("vontade.error")

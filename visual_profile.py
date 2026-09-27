@@ -25,10 +25,12 @@ logger = logging.getLogger("VisualProfile")
 KREA2_TRIGGER = "marinaX"
 KREA2_EMOTIONS_TRIGGER = "Detailed Emotions and Expressions"
 # 24/09 (bateria com o LoRA): "warm light amber" saiu amarelo demais na luz do dia.
+# 26/09 (Patrick): o cabelo de agora (cabelo.py) troca estes dois pedaços na foto — cor/corte e penteado.
+HAIR_COLOR = "long chestnut brown hair with golden blonde tips"
+HAIR_STYLE = "semi-straight with soft waves at the ends"
 KREA2_IDENTITY = (
     "a candid smartphone photo of a young Brazilian woman with soft light amber-hazel eyes, a few faint light "
-    "freckles across her nose and cheeks, and long chestnut brown hair with golden blonde tips, "
-    "semi-straight with soft waves at the ends"
+    f"freckles across her nose and cheeks, and {HAIR_COLOR}, {HAIR_STYLE}"
 )
 KREA2_BODY_SFW = "She has a fit, slim body with a natural sun-kissed tan."
 # 24/09 (Patrick): a marquinha estava grande demais — agora é de micro biquíni. Não escrever
@@ -107,8 +109,7 @@ KREA2_DIRECTOR_RULES = (
     "Objects: every object is held in a named hand or rests on a named surface; in a mirror selfie one "
     "hand holds the phone, so she holds at most one other object, in her free hand.",
 )
-KREA2_IDENTITY_SHORT = ("a young Brazilian woman with long chestnut brown hair with golden blonde tips and "
-                        "light amber-hazel eyes")
+KREA2_IDENTITY_SHORT = f"a young Brazilian woman with {HAIR_COLOR} and light amber-hazel eyes"
 KREA2_ZOOM_OPEN = {
     "close": "A close photo of",
     "three_quarter": "A three-quarter photo, framed from just above her head down to her thighs, of",

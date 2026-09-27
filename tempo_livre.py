@@ -66,6 +66,8 @@ TIPOS = (
 MASTURBANDO = ("masturbando", "Se masturbando", ("quarto",), None, (8, 27), 0.0, (15, 25))
 # 26/09 (Patrick): unha gasta e entediada → faz em casa (esmalte comum; a vez em si mora no unhas.py)
 UNHAS = ("unhas", "Fazendo as unhas", ("quarto", "sala", "varanda"), None, (9, 23), 0.0, (40, 60))
+# 26/09 (Patrick): cabelo ressecado e entediada → umectação (óleo e touca; lava no próximo banho — cabelo.py)
+UMECTACAO = ("umectacao", "Umectando o cabelo", ("quarto", "sala", "varanda"), "celular", (10, 21), 0.0, (60, 90))
 SOLO_BLOCK_CHANCE = 0.45            # com tesão (>= SOLO_MIN_LIBIDO); mais tesão, mais chance
 CHAMA_ELE_CHANCE = 0.5              # com saudade/desejo por ele, chama pro sexting
 CONVITE_KEY = "sexting_convite_json"
@@ -185,10 +187,19 @@ class TempoLivre:
                 unhas = Unhas(self.db).quer_em_casa(now, inicio, rng)
             except Exception:
                 logger.exception("tempo_livre.unhas")
+        umectar = False
+        if chama_ele is None and not unhas:
+            try:
+                from cabelo import Cabelo
+                umectar = Cabelo(self.db).quer_umectar(now, inicio, rng)
+            except Exception:
+                logger.exception("tempo_livre.umectacao")
         if chama_ele is not None:
             tipo = MASTURBANDO
         elif unhas:
             tipo = UNHAS
+        elif umectar:
+            tipo = UMECTACAO
         else:
             opcoes = [t for t in TIPOS if _hora(h, *t[4]) and not (t[0] == "sol" and chuva)
                       and not (t[0] == "plantas" and chuva)]
@@ -317,6 +328,9 @@ class TempoLivre:
             from unhas import Unhas
             Unhas(self.db).comecou_em_casa(b.inicio, b.fim, now, b.chave)
             return
+        if b.tipo == "umectacao":                         # touca até o fim; lava no próximo banho (cabelo.py)
+            from cabelo import Cabelo
+            Cabelo(self.db).umectou(b.inicio, b.fim, now)
         summary = f"Ficou {texto}{' pelo celular' if b.pelo_celular and b.aparelho == 'tela' else ''} {onde}."
         if b.faixas:
             nomes = [f"\"{f['nome']}\" ({f['artista']})" for f in b.faixas[:4]]

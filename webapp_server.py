@@ -449,6 +449,12 @@ async def api_bastidores(request: web.Request) -> web.Response:
             logger.exception("webapp.unhas.error")
             out["unhas"] = None
         try:
+            from cabelo import Cabelo                # 26/09: cabelo como status (seção própria no Por dentro)
+            out["cabelo"] = Cabelo(hooks.db).painel(now)
+        except Exception:
+            logger.exception("webapp.cabelo.error")
+            out["cabelo"] = None
+        try:
             out["mundo"] = SocialDay(hooks.db).world_panel(now)
         except Exception:
             logger.exception("webapp.mundo.error")

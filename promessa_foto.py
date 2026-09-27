@@ -144,6 +144,17 @@ def promise_unhas(db, cor: str, due_at: datetime, now: datetime, *, pediu: bool)
     return promise
 
 
+def promise_cabelo(db, subject: str, due_at: datetime, now: datetime, *, pediu: bool, pose: str) -> dict:
+    """26/09 (Patrick): cabelo feito → a foto. No salão alguém de lá tira; em casa, espelho ou tripé."""
+    promise = {"kind": "cabelo", "count": 1, "subject": subject, "said": f"cabelo {subject}", "pediu": pediu,
+               "pose": pose, "made_at": now.isoformat(), "due_at": due_at.isoformat(), "status": "pendente"}
+    st = _load(db)
+    st["promessa"] = promise
+    _save(db, st)
+    logger.info("promessa_foto.made kind=cabelo subject=%s due=%s", subject, due_at.isoformat(timespec="minutes"))
+    return promise
+
+
 MAX_ATTEMPTS = 3
 # 26/09 (Patrick, /feedback): as opções de look não vêm em álbum — ela troca de roupa entre uma e outra.
 CHANGE_OUTFIT_MIN = (3, 6)
@@ -190,6 +201,9 @@ def prompt_lines(db, now: datetime) -> list[str]:
     if p["kind"] == "looks" and p.get("part", 1) > 1:
         return [f"[SUA PROMESSA] Você já mandou a opção {p['part'] - 1} de look e tá trocando de roupa pra "
                 f"mandar a {p['part']}. Não diga que já mandou e não mande outra foto antes."]
+    if p["kind"] == "cabelo":
+        return [f"[FOTO DO CABELO] Seu cabelo ({p['subject']}) acabou de ficar pronto e você vai mandar a foto pro "
+                "Patrick daqui a pouco. Não diga que já mandou."]
     if p["kind"] == "unhas":
         return [f"[FOTO DAS UNHAS] Suas unhas ({p['subject']}) acabaram de ficar prontas e você vai mandar a foto "
                 "da mão pro Patrick daqui a pouco. Não diga que já mandou."]

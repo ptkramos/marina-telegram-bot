@@ -483,6 +483,13 @@ class Rituals:
         `told_patrick=False` é o banho quieto (ele não estava conversando): se ele
         escrever antes de ela sair do banho, a resposta precisa saber disso."""
         start = now + timedelta(minutes=2)
+        lavou = 0
+        try:                                   # 26/09: dia de lavar o cabelo deixa o banho mais longo (cabelo.py)
+            from cabelo import Cabelo
+            lavou = Cabelo(self.db).banho(start, minutes, now)
+        except Exception:
+            logger.exception("ritual.banho.cabelo")
+        minutes += lavou
         end = start + timedelta(minutes=minutes)
         payload = {"routine_type": "shower", "activity": "tomando banho", "place_key": "marina_apartment",
                    "announced_at": now.isoformat(), "transition_at": start.isoformat(),
@@ -495,7 +502,8 @@ class Rituals:
                    source_type,autonomy_level,importance,participants_json,share_worthy,created_at)
                    VALUES (?,?,?,?,?,'simulated',1,0.05,?,0.1,?)""",
                 (f"banho:{start.strftime('%Y-%m-%dT%H%M')}", start.isoformat(), "routine", "banho",
-                 f"Tomou banho ({start:%H:%M}–{end:%H:%M}).", json.dumps(["marina"]), now.isoformat()))
+                 f"Tomou banho{' e lavou o cabelo' if lavou else ''} ({start:%H:%M}–{end:%H:%M}).",
+                 json.dumps(["marina"]), now.isoformat()))
             conn.commit()
         logger.info("ritual.banho start=%s end=%s", start.isoformat(timespec="minutes"),
                     end.isoformat(timespec="minutes"))

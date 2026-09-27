@@ -9,7 +9,7 @@ _Atualizado em 26/09/2026, noite._
 ---
 
 ## 1. Mundo e agenda — skill `frente-mundo`
-**Abertura:** "bora na frente do mundo: cabelo"
+**Abertura:** "bora na frente do mundo: textos do cabelo"
 
 **Pronto (26/09):** agenda única (planejado, vontade, convite → mesma agenda com etapas); academia e passeio do
 Milo decididos uma vez por dia; mercado e médico como itens (Bradesco Saúde, Samaritano/Novamed); tempo livre
@@ -18,10 +18,10 @@ peso; mídia real (música iTunes, leitura com compra, Botafogo pela ESPN, Last.
 **agenda reativa** (26/09, noite: conversa vira compromisso/remarca/cancela, sair mais cedo por motivo, aula largada
 no meio, tesão como emergência — `agenda_reativa.py`); **unhas** (26/09, noite — `unhas.py`: cor, gel/esmalte,
 desgaste; Ophicina do Cabelo na rotina/evento/mimo, R$ 180 do saldo; em casa entediada; pergunta a cor às vezes;
-foto da mão depois; a cor em toda foto; seção Unhas no Por dentro).
+foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo** (26/09, noite — `cabelo.py`: lava dia sim, dia não no banho, penteado de agora, corte/luzes/hidratação, Ophicina junta o vencido e cobra do saldo, pergunta penteado e corte/cor, sugestão dele vira mudança, cabelo de agora em toda foto, seção Cabelo no Por dentro).
 
 **Próximo, nesta ordem:**
-1. **Etapa 1 — cuidados: cabelo** (mesmo molde das unhas; salão já é a Ophicina do Cabelo). Textos das unhas revisados.
+1. Revisar com ele os textos do cabelo que decidi sozinho (lista no PLANO_WEBAPP, "Cabelo — como ficou").
 2. Conflito: rolê em dia de aula que começa antes da aula acabar sobrepõe volta e ida.
 3. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber…).
 4. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…

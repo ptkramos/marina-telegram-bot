@@ -195,6 +195,14 @@ class ProactivityService:
         except Exception:
             logger.exception("proactivity.saiu_mais_cedo")
 
+        # 26/09 (Patrick): antes de sair ou do salão, às vezes pergunta o cabelo pra ele.
+        try:
+            from cabelo import Cabelo
+            if Cabelo(self.db).pergunta_pendente(dt):
+                return True, "cabelo_pergunta"
+        except Exception:
+            logger.exception("proactivity.cabelo_pergunta")
+
         # 26/09 (Patrick): vai fazer as unhas e às vezes pergunta a cor pra ele antes.
         try:
             from unhas import Unhas

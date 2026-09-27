@@ -494,7 +494,7 @@ class ResponseAvailabilityPolicy:
         if any(x in act for x in ('jantando', 'almoçando', 'almocando', 'lanchando', 'beliscando', 'comendo')):
             return 'MEAL'
         # 26/09: na manicure (Ophicina) — uma mão livre de cada vez, olha o celular de vez em quando.
-        if 'unhas n' in act or 'manicure' in act:
+        if 'unhas n' in act or 'manicure' in act or 'cabelo n' in act:   # 26/09: cabelo na Ophicina, igual
             return 'MANICURE'
         # 26/09: agenda única — consulta médica e saídas sozinha por vontade.
         if 'consulta' in act or 'pronto-atendimento' in act:

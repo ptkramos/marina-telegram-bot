@@ -252,6 +252,24 @@ POSES: tuple[Pose, ...] = (
          "freshly done nails"),
     Pose("pov_unhas_rua", "a mão com as unhas prontas, na rua, do ponto de vista dela", ("fora",), (0, 1), "close",
          "pov", "her own hand held up close to the camera, fingers gently spread, showing off her freshly done nails"),
+    # 26/09 (Patrick): às vezes a unha vem numa selfie, com a mão em destaque perto da boca
+    Pose("unhas_selfie", "selfie com a mão das unhas prontas perto da boca", ("quarto", "sala", "varanda", "closet"),
+         (0, 1), "close", "selfie", "her free hand raised to her lips with her fingertips lightly touching them, "
+         "showing off her freshly done nails in the foreground"),
+    Pose("unhas_selfie_rua", "selfie na rua com a mão das unhas prontas perto da boca", ("fora",), (0, 1), "close",
+         "selfie", "her free hand raised to her lips with her fingertips lightly touching them, showing off her "
+         "freshly done nails in the foreground"),
+    # 26/09 (Patrick): cabelo feito — no salão alguém de lá tira; em casa, espelho ou tripé (cabelo.py)
+    Pose("salao_cabelo", "na cadeira do salão com o cabelo pronto, alguém do salão tirando", ("fora",), (0, 1),
+         "three_quarter", "friend", "sitting in the salon chair right after her hair appointment, facing the camera, "
+         "her freshly done hair falling over her shoulders, smiling",
+         outfit="a black hairdresser cape fastened at her neck and draped over her shoulders and body, a white "
+                "ribbed tank top underneath"),
+    Pose("cabelo_espelho", "no espelho mostrando o cabelo pronto", ("closet", "quarto"), (0, 1), "three_quarter",
+         "mirror", "standing in front of the mirror, turning her head slightly, her free hand running through her freshly "
+         "done hair to show it off"),
+    Pose("cabelo_tripe", "no tripé mostrando o cabelo pronto", ("quarto", "sala", "closet"), (0, 1), "three_quarter",
+         "timer", "facing the camera, running one hand through her freshly done hair to show it off"),
     # ------------------------------------------------------------------ rua --
     Pose("fora_selfie", "selfie na rua", ("fora",), (0, 1), "close", "selfie",
          "her right arm stretched toward the camera taking the selfie at arm's length"),
@@ -658,6 +676,7 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     nails = _nails(db, now)                  # 26/09: a cor de verdade das unhas dela (unhas.py)
     if nails:
         prompt = f"{prompt} {nails}"
+    prompt = _hair(db, now, prompt, action)  # 26/09: o cabelo de agora — cor, corte e penteado (cabelo.py)
     where = apartamento.ROOMS[room]["pt"] if room in apartamento.ROOMS else "na rua"
     facts = f"lugar: {where}; pose: {pose.pt}; roupa: {outfit or 'pelada'}"
     if beat:
@@ -682,6 +701,26 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
                         room=room, pose_id=pose.id, level=level, beat=beat, outfit=outfit, seed=seed,
                         facts=facts + ("; gozo especial: esguichou forte" if special else ""), declined=declined,
                         session=new_session, lora_weights=lora_weights, special=special)
+
+
+_HAIR_DA_POSE = re.compile(r"\b(?:wet|damp|tangled|spread)\b", re.IGNORECASE)
+
+
+def _hair(db, now: datetime, prompt: str, action: str) -> str:
+    """Troca o cabelo fixo do perfil pelo de agora. Se a pose já diz como o cabelo está (molhado, espalhado
+    no travesseiro, embaraçado), o penteado fica o da pose."""
+    from visual_profile import HAIR_COLOR, HAIR_STYLE
+    try:
+        from cabelo import Cabelo
+        cor, estilo = Cabelo(db).visual(now)
+    except Exception:
+        logger.exception("photo_director.cabelo")
+        return prompt
+    if cor:
+        prompt = prompt.replace(HAIR_COLOR, cor)
+    if estilo and not _HAIR_DA_POSE.search(action or ""):
+        prompt = prompt.replace(HAIR_STYLE, estilo)
+    return prompt
 
 
 def _nails(db, now: datetime) -> str:

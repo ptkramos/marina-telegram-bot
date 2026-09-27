@@ -54,7 +54,7 @@ def _kind_at(db: DatabaseManager, moment: datetime) -> str:
     if commitment:
         if commitment.get("academic_block_id") or "faculdade" in (commitment.get("activity") or ""):
             return "CLASS"
-        if "unhas n" in (commitment.get("activity") or "").lower():
+        if any(x in (commitment.get("activity") or "").lower() for x in ("unhas n", "cabelo n")):
             return "MANICURE"
         return "HOME" if commitment.get("place_key") == "marina_apartment" else "SOCIAL"
     engine = RoutineEngine(db)

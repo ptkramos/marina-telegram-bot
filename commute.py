@@ -363,10 +363,11 @@ class Commute:
         with self.db.get_connection() as conn:
             rows = [dict(r) for r in conn.execute(
                 """SELECT source_key, event_at, end_at, location_key, metadata_json FROM eventos_pendentes
-                   WHERE (source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ?)
+                   WHERE (source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ?
+                          OR source_key LIKE ?)
                    AND confirmed=1 AND status != 'cancelled' AND end_at IS NOT NULL ORDER BY event_at""",
                 (f"vontade:{day.isoformat()}:%", f"mercado:{day.isoformat()}%", f"medico:{day.isoformat()}%",
-                 f"unhas:{day.isoformat()}:%"))]
+                 f"unhas:{day.isoformat()}:%", f"cabelo:{day.isoformat()}:%"))]
         for r in rows:
             meta = json.loads(r["metadata_json"] or "{}") or {}
             place = self._place(r["location_key"]) or {"name": r["location_key"], "region": "Botafogo"}

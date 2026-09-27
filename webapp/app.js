@@ -285,6 +285,15 @@ const loaders = {
           <div class="bar un-bar${u.gasta ? " gasta" : ""}"><i style="width:${pct(u.desgaste)}%"></i></div>
           <div class="linhas">${linha("stars", "Estado", u.estado)}${linha("droplet-half", "Tipo", u.tipo)}${linha("calendar-check", "Feita", u.feita)}</div>`;
       }
+      // 26/09 (Patrick): cabelo em seção própria — penteado, quatro barras (amarela quando vence) e as linhas
+      const cab = d.cabelo;
+      $("bd-cabelo-t").hidden = $("bd-cabelo").hidden = !cab;
+      if (cab) {
+        $("bd-cabelo").innerHTML = `<div class="big un-cor">${cab.hex ? `<span class="un-dot" style="background:${esc(cab.hex)}"></span>` : ""}${esc(cab.penteado)}</div>
+          <div class="ca-barras">${cab.barras.map((b) => `<div class="bar-row"><span>${esc(b.label)}</span>
+            <div class="bar${b.alerta ? " alerta" : ""}"><i style="width:${pct(b.valor)}%"></i></div><span class="w">${esc(b.palavra)}</span></div>`).join("")}</div>
+          <div class="linhas sep">${cab.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
+      }
       $("bd-humor").innerHTML = `<div class="big">${esc(e.humor)}</div>` + e.humor_barras.map((b) => bar(b.label, b.value)).join("");
       $("bd-sentindo").innerHTML = e.sentindo.length ? e.sentindo.map((f) => `<div class="feel">
         <div class="head"><span class="t">${esc(f.texto)}</span><div class="bar"><i style="width:${pct(f.valor)}%"></i></div></div>

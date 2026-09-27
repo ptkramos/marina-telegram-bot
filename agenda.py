@@ -54,12 +54,13 @@ PREP = {
     "medico": (("Trocando de roupa", 60), ("Separando a carteirinha do plano", 40)),
     "pronto_atendimento": (("Trocando de roupa", 60), ("Separando a carteirinha do plano", 40)),
     "manicure": (("Trocando de roupa", 70), ("Pegando a bolsa", 30)),
+    "cabelo": (("Trocando de roupa", 70), ("Pegando a bolsa", 30)),
     "jogo": (("Tomando banho", 40), ("Vestindo a camisa do Botafogo", 25), ("Fazendo maquiagem", 25)),
     "dormir": (("Tirando maquiagem", 25), ("Tomando banho", 50), ("Colocando pijama", 25)),
 }
 PREP_MIN = {"milo": (3, 5), "cafe": (8, 12), "acai": (6, 10), "farmacia": (5, 8), "mercado": (6, 10),
             "orla": (8, 12), "shopping": (20, 30), "mercado_semana": (8, 12), "medico": (12, 18),
-            "pronto_atendimento": (8, 12), "manicure": (8, 12),
+            "pronto_atendimento": (8, 12), "manicure": (8, 12), "cabelo": (8, 12),
             "academia": (10, 15), "noite": (60, 90), "encontro": (30, 45), "jogo": (40, 55), "freela": (40, 55), "praia": (15, 20), "dormir": (30, 45)}
 # o que acontece lá (quando não é consumo nem aula)
 LA_PASSOS = {
@@ -217,10 +218,11 @@ class Agenda:
         with self.db.get_connection() as conn:              # 26/09: agenda única (vontade, mercado, médico)
             vivos = [dict(r) for r in conn.execute(
                 """SELECT source_key, event_at, end_at, location_key, metadata_json, description FROM eventos_pendentes
-                   WHERE (source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ?)
+                   WHERE (source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ? OR source_key LIKE ?
+                          OR source_key LIKE ?)
                    AND confirmed=1 AND status != 'cancelled' AND end_at IS NOT NULL ORDER BY event_at""",
                 (f"vontade:{day.isoformat()}:%", f"mercado:{day.isoformat()}%", f"medico:{day.isoformat()}%",
-                 f"unhas:{day.isoformat()}:%"))]
+                 f"unhas:{day.isoformat()}:%", f"cabelo:{day.isoformat()}:%"))]
         for r in vivos:
             meta = json.loads(r["metadata_json"] or "{}") or {}
             out.append({"tipo": meta.get("tipo", "cafe"), "key": r["source_key"], "place": r["location_key"],
@@ -413,6 +415,12 @@ class Agenda:
                 passos.append(Passo(nome, ini))
                 anterior = fim
             cel = CELULAR["aula"]
+        elif c["tipo"] == "cabelo":                          # 26/09: os serviços da vez (cabelo.py), valor na direita
+            meta = json.loads(c["outing"]["metadata_json"] or "{}")
+            passos = self._distribui([tuple(x) for x in meta.get("passos") or [["No salão", 95], ["Pagando", 5]]],
+                                     c["inicio"], c["fim"])
+            passos[-1].valor = meta.get("preco")
+            cel = CELULAR["role"]
         elif c["tipo"] in LA_PASSOS:
             passos = self._distribui(list(LA_PASSOS[c["tipo"]]), c["inicio"], c["fim"])
             cel = CELULAR["aula"] if c["tipo"] in ("medico", "pronto_atendimento", "mercado_semana") else CELULAR["role"]
@@ -492,7 +500,8 @@ class Agenda:
         pra = "pra dormir" if e.prep_tipo == "dormir" else e.linha2.replace("Vai sair ", "pra sair ").split(" às ")[0]
         texto = f"se arrumando {pra}" + (f" ({passo.texto.lower()})" if passo else "")
         return {"activity": texto, "place_key": "marina_apartment", "start_at": e.inicio.isoformat(),
-                "end_at": e.fim.isoformat(), "passo": passo.texto if passo else "", "chave": e.chave}
+                "end_at": e.fim.isoformat(), "passo": passo.texto if passo else "", "chave": e.chave,
+                "prep_tipo": e.prep_tipo}
 
     # ------------------------------------------------------------ card --
     def card(self, now: datetime) -> Optional[dict]:

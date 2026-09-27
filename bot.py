@@ -4031,6 +4031,12 @@ async def process_incoming_batch(
         except Exception:
             logger.exception("unhas.observe.error")
         try:
+            # 26/09 (Patrick): ele respondeu o penteado/corte, ou sugeriu mudança no cabelo ("fica linda de franja").
+            from cabelo import Cabelo
+            Cabelo(memory_manager.db).observe_patrick(texto_usuario, datetime.now())
+        except Exception:
+            logger.exception("cabelo.observe.error")
+        try:
             # D11 (Patrick, 24/09): mal de verdade + "vai no médico" dele → ela vai.
             from health import Health
             if Health(memory_manager.db).observe_patrick(texto_usuario, datetime.now()):
@@ -4440,6 +4446,9 @@ _PROACTIVE_INSTRUCTIONS = {
     'unhas_cor': ("{detail} Pergunte pro Patrick qual das duas cores você faz, do seu jeito e curto (ex.: "
                   "'vermelho ou nude? escolhe vc'). Só as duas cores, sem explicar demais. Não invente "
                   "acontecimento novo."),
+    # 26/09 (Patrick): antes de sair ("solto ou preso?") ou antes do salão (corte/cor), às vezes pede a opinião dele.
+    'cabelo_pergunta': ("{detail} Pergunte pro Patrick qual dos dois, do seu jeito e curto (ex.: 'solto ou "
+                        "preso? escolhe vc'). Só as duas opções, sem explicar demais. Não invente acontecimento novo."),
     'sexting_solo': ("{detail} Você está se masturbando agora, com tesão e querendo ele. Chama o "
                      "Patrick pra entrar nisso com você: conta o que está fazendo, do seu jeito (pode ser direta: "
                      "'tô aqui me tocando pensando em você', 'bati uma siririca e ainda tô querendo você'), e "
@@ -4542,7 +4551,7 @@ async def _autonomous_routine_v36(application: Application):
         # 26/09 (Patrick): num compromisso, ela puxa conversa se o celular dela deixa ("Olha com frequência"
         # ou "de vez em quando": café sozinha, shopping, bar); aula, academia, médico e freela só no intervalo.
         # O convite do banheiro e o aviso de que saiu mal passam sempre.
-        if ocupada and why not in ('sexting_solo', 'saiu_mais_cedo', 'unhas_cor') and not _celular_na_mao(now):
+        if ocupada and why not in ('sexting_solo', 'saiu_mais_cedo', 'unhas_cor', 'cabelo_pergunta')                 and not _celular_na_mao(now):
             return
         gap = _minutos_desde_iniciativa(now)
         if gap < INITIATIVE_GAP_MIN:
@@ -4570,6 +4579,15 @@ async def _autonomous_routine_v36(application: Application):
                 return
             candidate = dict(candidate, reason='unhas_cor', event_id=None, loop_id=None, detail=pergunta['detail'])
             unhas.marca_pergunta_enviada(now)
+        if why == 'cabelo_pergunta':
+            from cabelo import Cabelo
+            cabelo = Cabelo(memory_manager.db)
+            pergunta = cabelo.pergunta_pendente(now)
+            if not pergunta:
+                return
+            candidate = dict(candidate, reason='cabelo_pergunta', event_id=None, loop_id=None,
+                             detail=pergunta['detail'])
+            cabelo.marca_pergunta_enviada(now)
         if why == 'sexting_solo':
             from emotion import EmotionEngine, TESAO_KEY
             from tempo_livre import marca_convite_enviado
@@ -4636,6 +4654,11 @@ async def _autonomous_routine_v36(application: Application):
                 from unhas import nome as nome_cor
                 a, b = (nome_cor(c).lower() for c in (pergunta or {}).get('opcoes', ('vermelho', 'nude')))
                 fallback = f"vou fazer a unha agr, {a} ou {b}? vc decide"
+            elif reason == 'cabelo_pergunta':
+                from cabelo import ESTILOS, MUDANCAS
+                ops = (pergunta or {}).get('opcoes') or ('natural', 'coque')
+                a, b = ((ESTILOS[o][0] if o in ESTILOS else MUDANCAS[o][0]).lower() for o in ops)
+                fallback = f"{a} ou {b}? escolhe vc"
             else:
                 # A thought of Patrick is not evidence of a new world event.
                 options = (
@@ -5047,11 +5070,22 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
         o_que = f"a foto {('do ' + p['subject']) if p['subject'] else 'da comida'} que você prometeu"
     elif p["kind"] == "unhas":
         # 26/09 (Patrick): unha pronta → a foto da mão (sempre, se ele escolheu a cor).
+        # 26/09 (Patrick): POV na maioria das vezes; às vezes selfie com a mão perto da boca.
+        fora = getattr(camera_ctx, "place_key", None) not in (None, photo_director.HOME)
+        selfie = random.Random(seed).random() < 0.3
+        pose = ("unhas_selfie" if selfie else "pov_unhas") + ("_rua" if fora else "")
         shots.append(photo_director.direct(db, now, request="foto da mão com as unhas", her_line=p["said"],
                                            camera_ctx=camera_ctx, feeling=feeling, her_initiative=True,
-                                           force_pose="pov_unhas"))
+                                           force_pose=pose))
         o_que = (f"a foto da sua mão com as unhas {p['subject']} que você acabou de fazer"
                  + (" — a cor que ele escolheu" if p.get("pediu") else ", por vontade sua, pra ele ver"))
+    elif p["kind"] == "cabelo":
+        # 26/09 (Patrick): no salão alguém de lá tira (ela de capa na cadeira); em casa, espelho ou tripé.
+        shots.append(photo_director.direct(db, now, request="foto do cabelo pronto", her_line=p["said"],
+                                           camera_ctx=camera_ctx, feeling=feeling, her_initiative=True,
+                                           force_pose=p.get("pose") or "cabelo_espelho"))
+        o_que = (f"a foto do seu cabelo ({p['subject']}) que acabou de ficar pronto"
+                 + (" — ele que escolheu" if p.get("pediu") else ", por vontade sua, pra ele ver"))
     else:
         shots.append(photo_director.direct(db, now, her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
                                            her_initiative=True))
@@ -5067,7 +5101,7 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
     intimo = p["kind"] == "intimo" and p.get("subject") == "banho"      # o gozo do banho
     legenda = generate_dynamic_speech(
         f"Você está mandando pro Patrick {o_que}. "
-        + ("" if p["kind"] == "unhas" else f"Você tinha dito: '{p['said'][:160]}'. ") + "Como é a foto: "
+        + ("" if p["kind"] in ("unhas", "cabelo") else f"Você tinha dito: '{p['said'][:160]}'. ") + "Como é a foto: "
         f"{shots[-1].facts}. Escreva UMA legenda curtinha, do seu jeito"
         + (" (pode perguntar qual ele prefere: 1 ou 2)" if p["kind"] == "looks" and part > 1 else "")
         + (" — você acabou de gozar no banho pensando nele, conta isso, manhosa e ainda ofegante" if intimo else "")
@@ -5078,7 +5112,7 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
                    else "e a 2… qual? 👀" if p["kind"] == "looks" and part > 1
                    else "opção 1 👀" if p["kind"] == "looks" and p["count"] > 1
                    else "1 ou 2? 👀" if len(images) > 1
-                   else "olha como ficou" if p["kind"] == "unhas" else "prometido é devido 😌")
+                   else "olha como ficou" if p["kind"] in ("unhas", "cabelo") else "prometido é devido 😌")
     from chat_naturalness import strip_closing_periods
     legenda = strip_closing_periods(limpar_fala_marina(legenda))
     bot = application.bot
