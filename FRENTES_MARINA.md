@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 27/09/2026, 16:15 (frente de imagens: rosto fixo de Carol, Júlia e Theo; fotos de perfil no Mundo do Bastidores)._
+_Atualizado em 27/09/2026, 17:05 (frente de imagens: foto de grupo de ponta a ponta no ar, `63a3532`; próxima conversa, Instagram na frente dos apps)._
 
 ---
 
@@ -30,12 +30,16 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** "bora na frente dos apps: Bastidores aba a aba"
+**Abertura:** "bora na frente dos apps: Instagram da Marina (Etapa 5)"
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps.
 
 **Próximo:**
+0. **Instagram da Marina** (Etapa 5 do PLANO_WEBAPP), pedido do Patrick em 27/09: a matéria-prima já existe — rosto
+   fixo das quatro amigas, foto de perfil delas (`webapp/avatars`) e foto de grupo com troca de rosto
+   (`photo_director.GROUP_POSES`, `sd_client.generate_directed`). Decidir com ele por mockup: perfil, feed, stories,
+   o que ela posta (e quando), comentários das amigas. Cada foto nova custa ~20 Buzz (de grupo, ~61).
 1. Bastidores **aba a aba** com ele (Por dentro, Dinheiro, Mundo), como foi a Agora — ele quer ver no celular e
    ajustar palavra por palavra (PLANO_VOZ 14).
 2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
@@ -93,7 +97,7 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
 **Abertos:** nenhum.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
-**Abertura:** "bora na frente de imagens: foto de grupo com as amigas de ponta a ponta"
+**Abertura:** "bora na frente de imagens: quarto apagado com flash e foto de grupo das outras amigas"
 
 Cadeia única: pose de referência → prompt no jeito da casa (`photo_director.Pose`) → motor (Civitai Krea 2, LoRA `marinaX`).
 O *quando* ela manda foto continua na frente da voz.
@@ -101,6 +105,7 @@ O *quando* ela manda foto continua na frente da voz.
 **Pronto:** pilha oficial decidida foto a foto (24/09); catálogo por cômodo com faixa de nível (70 poses, com as 18 referências do Patrick em 27/09); sessão com seed; foto sem ela (comida, Milo, vista); unha e cabelo de agora em toda foto; FinePorn v5 em A/B, **mantida a v4** (27/09); plug de coração como 3º brinquedo da gaveta; **Bia com rosto fixo** (28/09): foto-RG `data/amigas/bia_rg.jpg` + `visual_profile.FRIENDS_VISUAL` (quem ela é + estilo) + foto de grupo pela troca de rosto (`civitai_images.swap_friend_face`: Krea 2 Edit, 41 Buzz, cola só o lado dela; Marina intacta); **Carol com rosto fixo** (28/09): foto-RG `data/amigas/carol_rg.jpg`, loira de mel com braço fechado de tatuagem, pele branca rosada; **Júlia com rosto fixo** (28/09): `data/amigas/julia_rg.jpg`, nipo-brasileira de franja, olho verde (a menina da foto de grupo do teste da Bia, editada por partes); **Theo com rosto fixo** (28/09): `data/amigas/theo_rg.jpg`, pardo de cachos (a troca de rosto diz "the man" pra ele, `FRIENDS_VISUAL[...]["noun"]`); **foto de perfil dos quatro no Mundo do Bastidores** (28/09): Krea 2 Edit sobre o RG (cenário e roupa novos, 41 Buzz cada), recorte no rosto em `webapp/avatars/<chave>.jpg`; quem não tem foto fica nas iniciais. **Foto de grupo de ponta a ponta** (28/09): agenda → câmera (`active_people_json`, estava sempre vazio) → diretor (`GROUP_POSES`, selfie com a amiga, só na rua e com RG) → `sd_client` troca o rosto; costura pelo caminho onde original e edição concordam (`seam_path`). 1ª foto real com a Bia conferida por mim (Marina intacta, rosto do RG, sem emenda); cabeças um pouco separadas nas poses de grupo (Patrick). `Pose.face` (a inclinada pra câmera olha pro lado, boca entreaberta); Detail Slider reprovado (1.0 e 3.0).
 
 **Próximo:**
+0. **Quarto apagado com flash** (o Patrick gostou no teste da pose inclinada, 27/09): "her dark bedroom with the lights off… the only light is the bright direct flash of the camera" ficou igual à referência dele. Decidir se vira opção de luz à noite no quarto (`apartamento.setting/backdrop`, e o fim "natural light" → "direct camera flash") e quando entra (tarde da noite, clima de sexting?).
 1. Foto de grupo: acompanhar a 1ª no uso real (log `foto de grupo sem a troca de rosto` = falhou a troca). Pendências: Carol/Júlia/Theo ainda não rodaram em grupo (a Carol é o maior contraste); foto de grupo em casa (amiga visitando) e com duas amigas (a troca hoje é de uma só, lado direito); ligar no Instagram.
 2. Poses que o Patrick mandar (PLANO_VOZ 1). Lição: roupa *sendo tirada* + nudez = recusa do Krea 2 (ruído de letras); escrever a roupa parada.
 3. Ângulo de trás sem espelho (PLANO_VOZ 1d); fatores do gozo especial (1e); acompanhar o slider de peso (9).
