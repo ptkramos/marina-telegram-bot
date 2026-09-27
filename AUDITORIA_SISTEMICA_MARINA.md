@@ -1570,3 +1570,6 @@ Primeira rodada (27/09): amigas com LoRA de rosto (Bia = RLY Roxy; sozinha ok; e
 - `meals.materialize`: refeição em casa com ela fora espera ela voltar, mesmo passada a janela (antes caía no "chegou, come agora" com ela ainda no bar).
 
 `tests/test_bug_hoje_card.py`, 6 testes com os horários do caso.
+
+## Frente de auditoria de funcionamento (27/09)
+O Patrick está achando muitos bugs depois do 26/09 (~50 commits em várias conversas). Frente nova, skill `frente-auditoria` e seção 7 do `FRENTES_MARINA.md`: conferir entrega por entrega, com prova na produção, se funciona e está amarrada com o resto, e se falta deploy. Ponto de partida: VPS em `afd81fd`, `main` em `f69d2d4` (dois commits da frente de imagens sem deploy).

@@ -21,6 +21,7 @@ ser "praticamente humana" — um mundo vivo onde tudo o que ela faz acontece de 
 | Voz e chat (como ela fala, balões, quando manda foto, proatividade) | `frente-voz` | PLANO_VOZ, AUDITORIA |
 | Infra (VPS, deploy, desempenho, testes) | `frente-infra` | AUDITORIA |
 | Bugs do uso real (capturar, diagnosticar, corrigir) | `frente-bugs` | FRENTES_MARINA.md (seção 5) |
+| Auditoria de funcionamento (o que foi entregue funciona e está amarrado? faltou deploy?) | `frente-auditoria` | FRENTES_MARINA.md (seção 7) |
 | Imagens (poses de referência, prompts de foto, motor Civitai/LoRA) | `frente-imagens` | PLANO_VOZ ("Fotos pelo Civitai") |
 | Encerrar/trocar de conversa | `passagem-de-bastao` | FRENTES_MARINA.md |
 

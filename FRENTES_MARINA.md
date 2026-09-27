@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 26/09/2026, noite._
+_Atualizado em 27/09/2026, madrugada._
 
 ---
 
@@ -25,7 +25,7 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 2. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber…).
 3. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
 4. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
-5. Incoerências que a linha do tempo Hoje mostrou (26/09, noite): blocos do tempo livre não respeitam saídas nem o banho ("Montou looks" até 15:11 com a academia às 14:53; Instagram dentro da academia; música atravessando o banho); "Beliscou pipoca vendo série" com ela no bar; convite da Bia registrado às 04:19.
+5. Incoerências que a linha do tempo Hoje mostrou (26/09, noite), ainda abertas: "Montou looks" até 15:11 com a academia às 14:53; música atravessando o banho; convite da Bia registrado às 04:19. (Pipoca no bar, bloco antes da chegada e bloco por cima do banho: corrigidos na frente de bugs, 27/09.)
 
 ## 2. Apps (Mini App) — skill `frente-apps`
 **Abertura:** "bora na frente dos apps: Bastidores aba a aba"
@@ -94,3 +94,26 @@ O *quando* ela manda foto continua na frente da voz.
 3. Fatores do gozo especial (PLANO_VOZ 1e); acompanhar o slider de peso (9).
 5. **Aparência das amigas (pro Instagram, 27/09):** a Bia = LoRA "RLY Thot Shot – Roxy" (`urn:air:krea2:lora:civitai:2873344@3246636`, gatilhos `rlyroxy`, `cat eye eyeliner`). Foto **só dela** funciona (sem marca d'água). **Marina + amiga na mesma foto não funciona:** os dois LoRAs de rosto se misturam (gêmeas, delineado vaza pra Marina), testado com Bia 0.8 e 1.2. Falta: definir com o Patrick o texto de aparência da Bia (de manhã), ele manda os LoRAs das outras (Carol, Júlia; Theo fora da série), **foto em grupo só por prompt funciona** (27/09): amiga sem LoRA, descrita com contraste forte e de um lado, Marina com o LoRA em 1.0 (0.8 deixou o delineado vazar) — ainda sobra um ar de irmã; decidir o contraste da Bia (tom de pele, cabelo, rosto) e se ela usa LoRA sozinha ou só texto em tudo.
 4. Do Patrick: trocar a chave do Civitai (vazou em 24/09).
+
+## 7. Auditoria de funcionamento — skill `frente-auditoria`
+**Abertura:** "bora na auditoria de funcionamento: tudo o que fizemos em 26/09"
+
+O Patrick está achando muitos bugs no uso real: o dia 26/09 teve ~50 commits em várias conversas, e muita coisa pode ter ficado desamarrada (um módulo novo que o outro não conhece). Não é criar nada novo: é conferir se cada entrega **funciona de verdade na produção**, junto com as outras.
+
+**Primeiro, antes de auditar (27/09, 02:40):**
+- **Deploy faltando:** a VPS está em `afd81fd`, o `main` em `f69d2d4`. Não subiram `499bf82` (aparência das amigas) e `f69d2d4` (foto em grupo por prompt), ambos da frente de imagens. Confirmar com o Patrick se aquela conversa terminou antes de subir.
+- `origin/main` parado em 26/09: nada de 26–27/09 foi enviado ao GitHub (só o Patrick decide o push).
+- Outras conversas abertas: sem worktree nem stash; conferir `git status` (fora `data/feedback/*`) no começo.
+
+**Roteiro** (uma entrega por vez; para cada uma, prova na produção — banco, mundo, log de 26–27/09 — e veredito: funciona / quebrou / não foi exercitada):
+1. Etapas do dia e card Agora (se arrumando → a caminho → lá → voltando) × agenda única × agenda reativa × academia/Milo.
+2. Em casa: tempo livre concreto, card Em casa, Hoje × rituais (banho) × refeições (fome, belisco, entrega) × saídas.
+3. Consumo no rolê e dinheiro: pedidos, uber, saldo, Pix dele, Ophicina (unhas/cabelo) cobrando do saldo.
+4. Corpo: fome/saciedade/peso, masturbação sem cota e convite pro sexting, unhas e cabelo como status (e nas fotos).
+5. Chat: uma iniciativa por vez, balões, ponto vira balão, portaria (Seu Jorge), mídia (música dele, leitura, ESPN, Last.fm).
+6. Mini App: iFood (lojas, sacola, checkout, pedidos), Bastidores em abas, comprovantes.
+7. Reset do soak (feedbacks preservados), convite futuro que sobrevive ao reset, migração 027.
+8. Imagens (27/09): câmera segue a situação, catálogo de poses, unha e cabelo nas fotos.
+
+Bug achado vira item na seção 5 (Bugs), com a correção feita aqui mesmo se for pequena.
+
