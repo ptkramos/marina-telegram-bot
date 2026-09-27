@@ -46,11 +46,70 @@ class TextoCurtoTest(unittest.TestCase):
 
     def test_bloco_em_casa_usa_o_titulo(self):
         c = curto(ev("tempo_livre", "Ficou olhando o Instagram no quarto.", title="Olhando o Instagram"))
-        self.assertEqual((c["ic"], c["texto"]), ("device-mobile", "Olhou o Instagram"))
+        self.assertEqual((c["ic"], c["texto"]), ("brand-instagram", "Olhou o Instagram"))
 
     def test_pix_na_voz_do_painel(self):
         c = curto(ev("money", "O Patrick fez um pix de R$ 300 pra ela de presente."))
-        self.assertEqual(c["texto"], "Você fez um Pix de R$ 300 pra ela de presente")
+        self.assertEqual((c["texto"], c["sub"], c["valor"]), ("Você fez um Pix pra ela", "De presente", 300))
+
+    def test_acao_na_linha_detalhe_embaixo(self):
+        """26/09 (Patrick): a ação na linha, a descrição curta menor e cinza embaixo, o valor na coluna."""
+        casos = (
+            (ev("gift", "Mandou Cappuccino do Rei do Mate pro Patrick pelo app de surpresa (R$ 18)."),
+             ("Mandou um presente pra você", "Cappuccino do Rei do Mate", 18)),
+            (ev("midia", 'Ouviu "Espresso" (Sabrina Carpenter), que o Patrick mandou: curtiu e botou na playlist dela.'),
+             ("Ouviu a música que você mandou", '"Espresso", Sabrina Carpenter · curtiu', None)),
+            (ev("consumo", "Cabelo na Ophicina: repicado (o Patrick escolheu) e escova · R$ 220."),
+             ("Fez o cabelo", "Repicado e escova · você escolheu", 220)),
+            (ev("consumo", "Fez as unhas em gel (mão e pé) na Ophicina do Cabelo: vermelho (R$ 180)."),
+             ("Fez as unhas", "Gel · vermelho", 180)),
+            (ev("tempo_livre", "Fez as unhas em casa, esmalte nude rosado.", title="Fez as unhas em casa"),
+             ("Fez as unhas", "Esmalte nude rosado", None)),
+            (ev("routine", "Trabalhou no seminário de Moda e Cultura (entrega 02/10), rendendo bem.", title="faculdade"),
+             ("Trabalhou no seminário de Moda e Cultura", "Entrega 02/10 · rendendo bem", None)),
+            (ev("commute", "No caminho (ida, ônibus): ônibus veio lotado."), ("Ônibus veio lotado", "", None)),
+            (ev("routine", "Desistiu de sair pro Starbucks: começou a chover.", title="agenda reativa"),
+             ("Desistiu de sair pro Starbucks", "Começou a chover", None)),
+        )
+        for e, (texto, sub, valor) in casos:
+            c = curto(e)
+            self.assertEqual((c["texto"], c["sub"], c["valor"]), (texto, sub, valor), e["summary"])
+
+    def test_motivo_da_saida(self):
+        self.assertEqual(curto(ev("routine", "Deu vontade e foi: café no Starbucks (tarde livre).", title="vontade"))["motivo"],
+                         "Resolveu sair · tarde livre")
+        self.assertEqual(curto(ev("routine", "O Patrick convenceu e ela saiu pra academia.", title="agenda reativa"))["motivo"],
+                         "Você convenceu")
+
+
+class RevisaoTest(unittest.TestCase):
+    """26/09 (Patrick): textos crus do mundo em linha de painel."""
+
+    def test_masturbacao_em_casa(self):
+        c = curto(ev("routine", "Com tesão, se masturbou no quarto pensando no Patrick. Guardou só pra ela: não conta pro Patrick.",
+                     title="sozinha"))
+        self.assertEqual((c["ic"], c["texto"], c["sub"]), ("masturbacao", "Se masturbou no quarto", "Pensando em você"))
+
+    def test_masturbacao_chamando_ele(self):
+        c = curto(ev("routine", "Com tesão e querendo o Patrick, se masturbou no quarto e chamou ele pra entrar no clima junto (sexting)."))
+        self.assertEqual((c["texto"], c["sub"]), ("Se masturbou no quarto", "Chamou você pra entrar no clima"))
+
+    def test_tesao_fora_de_casa(self):
+        c = curto(ev("routine", "Bateu um tesão que não dava pra segurar: se trancou no banheiro do bar e se tocou pensando no Patrick."))
+        self.assertEqual((c["texto"], c["sub"]), ("Se masturbou no banheiro do bar", "Tesão muito alto"))
+
+    def test_antes_de_dormir(self):
+        c = curto(ev("routine", "Antes de dormir, com tesão e pensando no Patrick, se masturbou. Guardou só pra ela: não conta pro Patrick."))
+        self.assertEqual(c["texto"], "Se masturbou antes de dormir")
+
+    def test_casa_milo(self):
+        self.assertEqual((curto(ev("routine", "Cuidou da bagunça dela: trocou a roupa de cama."))["texto"],
+                          curto(ev("routine", "Cuidou da bagunça dela: trocou a roupa de cama."))["sub"]),
+                         ("Arrumou a casa", "Trocou a roupa de cama"))
+        c = curto(ev("routine", "O Milo fez xixi no tapete do banheiro.", title="Milo"))
+        self.assertEqual((c["texto"], c["sub"]), ("Arte do Milo", "Fez xixi no tapete do banheiro"))
+        c = curto(ev("routine", "Pagou o passeador pra levar o Milo hoje — dia puxado.", title="Milo"))
+        self.assertEqual((c["texto"], c["sub"]), ("Pagou o passeador do Milo", "Dia puxado"))
 
 
 class PassadoTest(unittest.TestCase):
@@ -58,8 +117,16 @@ class PassadoTest(unittest.TestCase):
         for antes, depois in (("Olhando o Instagram", "Olhou o Instagram"), ("Ouvindo Dua Lipa", "Ouviu Dua Lipa"),
                               ("Vendo o desfile da Chanel", "Viu o desfile da Chanel"), ("Lendo Duna", "Leu Duna"),
                               ("Fazendo as unhas", "Fez as unhas"), ("Tomando sol", "Tomou sol"),
-                              ("Se maquiando", "Se maquiou"), ("Beliscou pipoca", "Beliscou pipoca")):
+                              ("Se maquiando", "Se maquiou"), ("Deitada à toa", "Ficou à toa"), ("Beliscou pipoca", "Beliscou pipoca")):
             self.assertEqual(passado(antes), depois)
+
+    def test_icones_dos_blocos(self):
+        from hoje import _ic_midia
+        for texto, ic in (("Olhando o X", "brand-x"), ("Olhando o TikTok", "brand-tiktok"), ("Desenhando croqui", "pencil"),
+                          ("Arrumando o quarto", "home-check"), ("Brincando com o Milo", "dog"),
+                          ("Regando as plantas", "plant"), ("Tomando sol", "sun"), ("Deitada à toa", "sofa"),
+                          ("Organizando o closet", "hanger")):
+            self.assertEqual(_ic_midia(texto), ic, texto)
 
     def test_saida_no_passado(self):
         self.assertEqual(_foi("No Quartinho"), "Foi pro Quartinho")

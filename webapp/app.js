@@ -79,9 +79,13 @@ function failIn(el, err) { el.innerHTML = `<p class="err">${esc(err.message)}</p
 
 // --------------------------------------------------------------------- telas --
 // 26/09 (Patrick): ícones do Tabler (outline), no lugar do Bootstrap Icons
-const ic = (name, cls = "") => `<i class="ti ti-${name}${cls ? " " + cls : ""}"></i>`;
+// ícones que o Tabler não tem: chuveiro desenhado no traço dele (app.css) e o hand-love-you de cabeça pra baixo
+const IC_PROPRIO = { masturbacao: "hand-love-you ic-inv", chuveiro: "chuveiro" };
+const ic = (name, cls = "") => `<i class="ti ti-${IC_PROPRIO[name] || name}${cls ? " " + cls : ""}"></i>`;
 const nota = (n) => String(n).replace(".", ",");
 const abreAs = (h) => `Abre às ${String(h).padStart(2, "0")}:00`;
+
+const HOJE_ABERTOS = new Set();   // períodos passados que ele abriu no Hoje (sobrevivem à recarga de 1 min)
 
 const loaders = {
   async inicio() {
@@ -270,26 +274,31 @@ const loaders = {
             ...s.saude.map((x) => ["temperature", "Saúde", x]), s.proximo && ["calendar-event", "Próximo", s.proximo],
             ...s.planos.map((x) => ["calendar", "Plano", x])].filter(Boolean))}`;
       }
-      // 26/09 (Patrick): Hoje por período, saída com o que rolou dentro, previsto em cinza; caixa que rola e abre no agora
+      // 26/09 (Patrick): Hoje por período, saída com o que rolou dentro, previsto em cinza.
+      // Períodos que já passaram ficam fechados ("Manhã · 7") e abrem ao tocar; o de agora fica aberto.
       const hj = d.hoje.periodos || [];
       const hjHora = (x) => `<span class="lt-hora">${esc(x.hora)}</span>`;
       const hjVal = (x) => `<span class="lt-val">${x.valor ? brl0(x.valor) : ""}</span>`;   // coluna sempre existe: hora alinhada
       const hjTx = (x) => `<span class="lt-txt">${esc(x.texto)}${x.sub ? `<span class="lt-sub">${esc(x.sub)}</span>` : ""}</span>`;
-      const caixa = $("ag-hoje").querySelector(".hj-rola");
-      const rolou = caixa && caixa.dataset.mexeu ? caixa.scrollTop : null;
-      $("ag-hoje").innerHTML = hj.length ? `<div class="hj-rola">${hj.map((p) => `<div class="hj-per">${esc(p.nome)}</div>
-          <ol class="linha-tempo">${p.itens.map((x) => `<li class="${x.previsto ? "previsto" : ""}${x.aviso ? " aviso" : ""}">
+      const atual = hj.reduce((k, p, n) => (p.itens.some((x) => !x.previsto) ? n : k), 0);
+      const desenhaHoje = () => {
+      $("ag-hoje").innerHTML = hj.length ? hj.map((p, n) => {
+        const fechado = n < atual && !HOJE_ABERTOS.has(p.nome);
+        const feitos = p.itens.filter((x) => !x.previsto).length;
+        return `<button class="hj-per${n < atual ? " passado" : ""}" data-per="${esc(p.nome)}"${n < atual ? "" : " disabled"}>
+            <span>${esc(p.nome)}${fechado ? ` · ${feitos}` : ""}</span>${n < atual ? ic(fechado ? "chevron-down" : "chevron-up") : ""}</button>
+          ${fechado ? "" : `<ol class="linha-tempo">${p.itens.map((x) => `<li class="${x.previsto ? "previsto" : ""}${x.aviso ? " aviso" : ""}">
             <span class="lt-ic">${ic(x.ic)}</span>${hjTx(x)}${hjVal(x)}${hjHora(x)}</li>
             ${x.filhos.length ? `<li class="lt-filhos"><ol>${x.filhos.map((f) => `<li class="${f.aviso ? "aviso" : ""}">
-              ${hjTx(f)}${hjVal(f)}${hjHora(f)}</li>`).join("")}</ol></li>` : ""}`).join("")}</ol>`).join("")}</div>`
-        : vazio(s.dormindo ? "Ela ainda não acordou." : "Nada registrado hoje ainda.");
-      const novaCaixa = $("ag-hoje").querySelector(".hj-rola");
-      if (novaCaixa) {
-        const prev = novaCaixa.querySelector("li.previsto");
-        if (rolou !== null) { novaCaixa.scrollTop = rolou; novaCaixa.dataset.mexeu = "1"; }
-        else novaCaixa.scrollTop = prev ? prev.offsetTop - novaCaixa.clientHeight + 64 : novaCaixa.scrollHeight;
-        novaCaixa.addEventListener("scroll", () => { novaCaixa.dataset.mexeu = "1"; }, { passive: true });
-      }
+              ${hjTx(f)}${hjVal(f)}${hjHora(f)}</li>`).join("")}</ol></li>` : ""}`).join("")}</ol>`}`;
+      }).join("") : vazio(s.dormindo ? "Ela ainda não acordou." : "Nada registrado hoje ainda.");
+      $("ag-hoje").querySelectorAll(".hj-per.passado").forEach((b) => b.addEventListener("click", () => {
+        const nome = b.dataset.per;
+        HOJE_ABERTOS.has(nome) ? HOJE_ABERTOS.delete(nome) : HOJE_ABERTOS.add(nome);
+        desenhaHoje();
+      }));
+      };
+      desenhaHoje();
 
       // Por dentro
       $("bd-corpo").innerHTML = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Tesão")).join("")

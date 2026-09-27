@@ -292,11 +292,18 @@ button.primary:disabled { opacity: .5; }
 .li-rot { color: var(--muted); }
 .li-val { min-width: 0; }
 .vazio-txt { margin: 2px 0; }
+/* 26/09 (Patrick): ícones próprios — chuveiro no traço do Tabler; hand-love-you invertido (masturbação) */
+.ti-chuveiro::before { content: ""; display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20v-11a5 5 0 0 1 5 -5h1a5 5 0 0 1 5 5'/%3E%3Cpath d='M11 9h8'/%3E%3Cpath d='M13 13v.01M16 13v.01M19 13v.01M13 16v.01M16 16v.01M19 16v.01M16 19v.01'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20v-11a5 5 0 0 1 5 -5h1a5 5 0 0 1 5 5'/%3E%3Cpath d='M11 9h8'/%3E%3Cpath d='M13 13v.01M16 13v.01M19 13v.01M13 16v.01M16 16v.01M19 16v.01M16 19v.01'/%3E%3C/svg%3E") center / contain no-repeat; }
+.ic-inv { display: inline-block; transform: rotate(180deg); }
 .linha-tempo { list-style: none; margin: 0; padding: 0; }
 /* 26/09 (Patrick): Hoje — ícone, texto, valor e hora em colunas; saída com os filhos recuados; previsto em cinza */
-.hj-rola { max-height: 340px; overflow-y: auto; position: relative; margin: -4px -6px -4px -2px; padding: 0 6px 0 2px; overscroll-behavior: contain; }
-.hj-per { font-size: 12px; color: var(--muted); margin: 10px 0 2px; }
-.hj-per:first-child { margin-top: 2px; }
+.hj-per { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: 0;
+  padding: 8px 0 4px; font: inherit; font-size: 12px; color: var(--muted); text-align: left; }
+.hj-per:first-child { padding-top: 0; }
+.hj-per.passado { cursor: pointer; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.hj-per.passado + .linha-tempo { margin-top: 4px; }
+.hj-per:disabled { cursor: default; }
 .linha-tempo > li { display: grid; grid-template-columns: 20px 1fr auto auto; gap: 8px; align-items: baseline; padding: 5px 0; font-size: 14px; }
 .lt-ic { color: var(--muted); text-align: center; }
 .lt-txt { min-width: 0; }
