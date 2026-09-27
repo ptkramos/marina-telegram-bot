@@ -1,0 +1,87 @@
+import unittest
+from datetime import datetime
+
+from hoje import curto, dia_de, passado, _foi, _periodo
+
+
+def ev(tipo, summary, title="", at="2026-09-26T12:00:00", end=None, key="k"):
+    return {"event_type": tipo, "summary": summary, "title": title, "event_at": at, "end_at": end, "event_key": key}
+
+
+class TextoCurtoTest(unittest.TestCase):
+    """26/09 (Patrick): linha do tempo Hoje em linha de painel, sem texto interno do mundo."""
+
+    def test_conversa_separa_assunto(self):
+        c = curto(ev("social_contact", "Trocou mensagens com o pai; assunto: saudade dela."))
+        self.assertEqual((c["ic"], c["texto"], c["sub"]), ("message-dots", "Trocou mensagens com o pai", "Assunto: saudade dela"))
+
+    def test_encontro_sem_lugar_entre_parenteses(self):
+        c = curto(ev("social_contact", "Encontrou a Carol (Bodytech São Clemente); assunto: alimentação."))
+        self.assertEqual(c["texto"], "Encontrou a Carol")
+
+    def test_consumo_vira_item_com_valor(self):
+        c = curto(ev("consumo", "Pediu um gin tônica no Quartinho Bar (R$ 34)."))
+        self.assertEqual((c["texto"], c["valor"]), ("Pediu um gin tônica", 34))
+
+    def test_banho_com_fim(self):
+        c = curto(ev("routine", "Tomou banho e lavou o cabelo (17:10–17:40).", at="2026-09-26T17:10:00"))
+        self.assertEqual(c["texto"], "Tomou banho e lavou o cabelo")
+        self.assertEqual(c["fim"], datetime(2026, 9, 26, 17, 40))
+
+    def test_refeicao_curta(self):
+        c = curto(ev("meal", "Almoço em casa: um poke pedido no iFood."))
+        self.assertEqual((c["texto"], c["sub"]), ("Almoçou", "Poke do iFood"))
+
+    def test_presente_do_patrick_em_voce(self):
+        c = curto(ev("meal", "O Patrick mandou de surpresa Cappuccino do Rei do Mate pelo app; ela recebeu e foi comer."))
+        self.assertEqual((c["texto"], c["sub"]), ("Comeu o Rei do Mate que você mandou", "Cappuccino"))
+
+    def test_conheceu_so_o_nome(self):
+        c = curto(ev("social_contact", "Conheceu a Gabi, tutora da spitz que brinca com o Milo (Enseada); assunto: o bairro."))
+        self.assertEqual(c["texto"], "Conheceu a Gabi")
+
+    def test_xixi_do_milo_vira_calcada(self):
+        c = curto(ev("routine", "Desceu rapidinho com o Milo pro xixi da manhã.", title="Milo"))
+        self.assertEqual((c["texto"], c["filhos"]), ("Foi pra calçada", [{"texto": "Xixi do Milo"}]))
+
+    def test_bloco_em_casa_usa_o_titulo(self):
+        c = curto(ev("tempo_livre", "Ficou olhando o Instagram no quarto.", title="Olhando o Instagram"))
+        self.assertEqual((c["ic"], c["texto"]), ("device-mobile", "Olhou o Instagram"))
+
+    def test_pix_na_voz_do_painel(self):
+        c = curto(ev("money", "O Patrick fez um pix de R$ 300 pra ela de presente."))
+        self.assertEqual(c["texto"], "Você fez um Pix de R$ 300 pra ela de presente")
+
+
+class PassadoTest(unittest.TestCase):
+    def test_gerundio_vira_passado(self):
+        for antes, depois in (("Olhando o Instagram", "Olhou o Instagram"), ("Ouvindo Dua Lipa", "Ouviu Dua Lipa"),
+                              ("Vendo o desfile da Chanel", "Viu o desfile da Chanel"), ("Lendo Duna", "Leu Duna"),
+                              ("Fazendo as unhas", "Fez as unhas"), ("Tomando sol", "Tomou sol"),
+                              ("Se maquiando", "Se maquiou"), ("Beliscou pipoca", "Beliscou pipoca")):
+            self.assertEqual(passado(antes), depois)
+
+    def test_saida_no_passado(self):
+        self.assertEqual(_foi("No Quartinho"), "Foi pro Quartinho")
+        self.assertEqual(_foi("Na academia"), "Foi pra academia")
+
+    def test_convite(self):
+        c = curto(ev("social_invite", "A Bia te chamou: Saindo com a Bia no Quartinho Bar (hoje às 21:00)."))
+        self.assertEqual(c["texto"], "A Bia chamou pro Quartinho Bar")
+        c = curto(ev("social_invite", "Topou o convite: Saindo com a Bia no Quartinho Bar."))
+        self.assertEqual(c["texto"], "Topou ir pro Quartinho Bar")
+
+
+class DiaTest(unittest.TestCase):
+    def test_madrugada_e_de_ontem(self):
+        self.assertEqual(dia_de(datetime(2026, 9, 27, 1, 30)).day, 26)
+
+    def test_periodos(self):
+        d = datetime(2026, 9, 26).date()
+        self.assertEqual(_periodo(datetime(2026, 9, 26, 9), d), "Manhã")
+        self.assertEqual(_periodo(datetime(2026, 9, 26, 13), d), "Tarde")
+        self.assertEqual(_periodo(datetime(2026, 9, 27, 1), d), "Noite")
+
+
+if __name__ == "__main__":
+    unittest.main()

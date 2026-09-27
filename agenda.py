@@ -518,16 +518,16 @@ class Agenda:
         pos = (now - atual.inicio).total_seconds() / max(1, (atual.fim - atual.inicio).total_seconds())
         grade = []
         if atual.tipo == "la":
-            grade.append(["geo-alt", "Onde", atual.bairro])
+            grade.append(["map-pin", "Onde", atual.bairro])
         if atual.tipo in ("caminho", "voltando"):
-            grade.append(["car-front" if "arona" in atual.como or "ber" in atual.como else "bus-front", "Como", atual.como])
+            grade.append(["car" if "arona" in atual.como or "ber" in atual.como else "bus", "Como", atual.como])
         if atual.com and atual.tipo in ("arrumando", "la"):
-            grade.append(["people", "Com", _e(atual.com)])
+            grade.append(["users", "Com", _e(atual.com)])
         saiu = self._saiu(atual.compromisso)
         if saiu and atual.tipo in ("la", "voltando") and now >= datetime.fromisoformat(saiu["at"]):
             from agenda_reativa import AgendaReativa
-            grade.append(["exclamation-circle", "Motivo", AgendaReativa.motivo_curto(saiu)])
-        grade.append(["phone", "Celular", atual.celular])
+            grade.append(["alert-circle", "Motivo", AgendaReativa.motivo_curto(saiu)])
+        grade.append(["device-mobile", "Celular", atual.celular])
         # linha do tempo: a cadeia do compromisso atual + a próxima etapa
         i = etapas.index(atual)
         ini = i
@@ -646,7 +646,7 @@ class Agenda:
                 passos = [Passo("1º tempo", ini)]
             if not any(p.texto == "Fim de jogo" for p in passos):
                 passos.append(Passo("Fim de jogo", bloco.fim))
-            return passos[-5:], [["dribbble", "Placar", fut.placar_texto(j)]]
+            return passos[-5:], [["ball-football", "Placar", fut.placar_texto(j)]]
         return [], []
 
     def card_casa(self, now: datetime, celular: str) -> Optional[dict]:
@@ -723,16 +723,16 @@ class Agenda:
             linha2 = f"Volta pra casa às {aprox(t1)}"
             passos = self._distribui([("Colocando a coleira", 10), ("Descendo", 10),
                                       ("Xixi do Milo" if rapidinho else "Passeando", 70), ("Subindo", 10)], t0, t1)
-            grade_extra = [["people", "Com", "Milo"]]
+            grade_extra = [["dog", "Com", "Milo"]]
         elif "academia" in low:
             titulo, linha2 = "Na academia", "Treinando"
         elif "mercado" in low:
             titulo, linha2 = "No mercado", "Fazendo as compras da semana"
-        grade = [["geo-alt", "Onde", "Botafogo"]]
+        grade = [["map-pin", "Onde", "Botafogo"]]
         if comodo:
-            grade.append(["door-open", "Cômodo", comodo])
+            grade.append(["door", "Cômodo", comodo])
         grade += grade_extra
-        grade.append(["phone", "Celular", celular])
+        grade.append(["device-mobile", "Celular", celular])
         if fim and not inicio and fim > now:              # 26/09: tinha fim e não tinha início → sem barra
             inicio = datetime.fromisoformat(snap["observed_at"])
         if inicio and fim and fim > now:

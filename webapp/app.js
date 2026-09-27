@@ -78,7 +78,8 @@ function pedidoCard(p, titulo) {
 function failIn(el, err) { el.innerHTML = `<p class="err">${esc(err.message)}</p>`; }
 
 // --------------------------------------------------------------------- telas --
-const ic = (name, cls = "") => `<i class="bi bi-${name}${cls ? " " + cls : ""}"></i>`;
+// 26/09 (Patrick): ícones do Tabler (outline), no lugar do Bootstrap Icons
+const ic = (name, cls = "") => `<i class="ti ti-${name}${cls ? " " + cls : ""}"></i>`;
 const nota = (n) => String(n).replace(".", ",");
 const abreAs = (h) => `Abre às ${String(h).padStart(2, "0")}:00`;
 
@@ -145,9 +146,9 @@ const loaders = {
       d.pedidos.forEach((p, n) => {
         if (p.dia !== dia) { dia = p.dia; html += `<div class="pd-dia">${esc(dia)}</div>`; }
         const foto = p.itens.find((i) => i.foto);
-        const logo = p.logo ? `<img class="loja-circ peq" src="/static/${esc(p.logo)}" alt="">` : `<span class="loja-circ peq">${ic("shop")}</span>`;
+        const logo = p.logo ? `<img class="loja-circ peq" src="/static/${esc(p.logo)}" alt="">` : `<span class="loja-circ peq">${ic("building-store")}</span>`;
         html += `<div class="pd-card"><div class="pd-loja">${logo}
-          <div><div class="t">${esc(p.restaurant)}</div><div class="d com-ic">${esc(p.status)}${p.concluido ? ic("check-circle-fill", "ok") : ""}</div></div></div>
+          <div><div class="t">${esc(p.restaurant)}</div><div class="d com-ic">${esc(p.status)}${p.concluido ? ic("circle-check-filled", "ok") : ""}</div></div></div>
           <div class="pd-itens"><div class="pd-lista">${p.itens.map((i) =>
             `<div class="pd-item"><span class="qtd">${i.qtd}</span><span class="nome">${esc(i.nome)}</span></div>`).join("")}</div>
           ${foto ? `<div class="pd-foto" style="background-image:url(/static/${esc(foto.foto)})"></div>` : ""}</div>
@@ -166,7 +167,7 @@ const loaders = {
       $("lj-logo").src = "/static/" + l.logo;
       $("lj-nome").textContent = l.nome;
       $("lj-info").textContent = `Entrega rastreável • ${String(l.km).replace(".", ",")} km • Min ${brl(l.minimo)}`;
-      $("lj-nota").innerHTML = `<span class="com-ic">${ic("star-fill", "estrela")}<b>${nota(l.nota)}</b><span class="muted">(${IF.aval(l.avaliacoes)} avaliações)</span></span>${ic("chevron-right", "muted")}`;
+      $("lj-nota").innerHTML = `<span class="com-ic">${ic("star-filled", "estrela")}<b>${nota(l.nota)}</b><span class="muted">(${IF.aval(l.avaliacoes)} avaliações)</span></span>${ic("chevron-right", "muted")}`;
       $("lj-entrega").innerHTML = l.aberta
         ? `<span><b>Padrão</b> • ${l.eta[0]}-${l.eta[1]} min • ${IF.taxa(l.taxa)}</span>`
         : `<span class="fechada">Loja fechada • ${abreAs(l.abre)}</span>`;
@@ -206,10 +207,10 @@ const loaders = {
     $("sc-min").innerHTML = `O pedido mínimo dessa loja é <b>${brl(c.loja.minimo)}</b> sem contar com a taxa de entrega.`;
     $("sc-itens").innerHTML = c.itens.map((x, n) => `<div class="sc-item"><div class="sc-img" style="background-image:url(/static/${esc(x.item.foto)})"></div>
       <div class="sc-txt"><div class="t">${esc(x.item.nome)}</div><div class="d dois">${esc(x.obs || x.item.desc)}</div><div class="t">${brl(x.item.preco * x.qtd)}</div></div>
-      <div class="sc-ctl"><button data-sc="menos" data-n="${n}">${x.qtd > 1 ? ic("dash-lg") : ic("trash3")}</button><span>${x.qtd}</span><button data-sc="mais" data-n="${n}">${ic("plus-lg")}</button></div></div>`).join("");
+      <div class="sc-ctl"><button data-sc="menos" data-n="${n}">${x.qtd > 1 ? ic("minus") : ic("trash")}</button><span>${x.qtd}</span><button data-sc="mais" data-n="${n}">${ic("plus")}</button></div></div>`).join("");
     const ids = new Set(c.itens.map((x) => x.item.id));
     const outros = c.loja.secoes.flatMap((s) => s.itens).filter((i) => !ids.has(i.id)).slice(0, 6);
-    $("sc-tambem").innerHTML = outros.map((i) => `<button class="car-item" data-prato="${esc(i.id)}"><div class="car-foto" style="background-image:url(/static/${esc(i.foto)})"><span class="car-mais">${ic("plus-lg")}</span></div>
+    $("sc-tambem").innerHTML = outros.map((i) => `<button class="car-item" data-prato="${esc(i.id)}"><div class="car-foto" style="background-image:url(/static/${esc(i.foto)})"><span class="car-mais">${ic("plus")}</span></div>
       <div class="t">${brl(i.preco)}</div><div class="small">${esc(i.nome)}</div></button>`).join("");
     $("sc-total").textContent = brl(IF.total());
   },
@@ -265,25 +266,42 @@ const loaders = {
       } else {
         // fora de uma etapa (em casa, dormindo…): a revisar com o Patrick (atividades em casa)
         $("ag-card").innerHTML = `<div class="ag-t">${esc(s.atividade)}</div><div class="ag-s">${esc(s.local)}</div>
-          <div class="ag-sep"></div>${grade([["phone", "Celular", s.celular], s.ciclo && ["droplet", "Ciclo", s.ciclo],
-            ...s.saude.map((x) => ["thermometer-half", "Saúde", x]), s.proximo && ["calendar-event", "Próximo", s.proximo],
-            ...s.planos.map((x) => ["calendar3", "Plano", x])].filter(Boolean))}`;
+          <div class="ag-sep"></div>${grade([["device-mobile", "Celular", s.celular], s.ciclo && ["droplet", "Ciclo", s.ciclo],
+            ...s.saude.map((x) => ["temperature", "Saúde", x]), s.proximo && ["calendar-event", "Próximo", s.proximo],
+            ...s.planos.map((x) => ["calendar", "Plano", x])].filter(Boolean))}`;
       }
-      $("ag-hoje").innerHTML = d.hoje.length ? `<ol class="linha-tempo">${d.hoje.map((h) =>
-        `<li><span class="lt-hora">${esc(h.at)}</span><span class="lt-ponto"></span><span class="lt-txt">${esc(cap(h.texto.replace(/\.$/, "")))}</span></li>`).join("")}</ol>`
+      // 26/09 (Patrick): Hoje por período, saída com o que rolou dentro, previsto em cinza; caixa que rola e abre no agora
+      const hj = d.hoje.periodos || [];
+      const hjHora = (x) => `<span class="lt-hora">${esc(x.hora)}</span>`;
+      const hjVal = (x) => `<span class="lt-val">${x.valor ? brl0(x.valor) : ""}</span>`;   // coluna sempre existe: hora alinhada
+      const hjTx = (x) => `<span class="lt-txt">${esc(x.texto)}${x.sub ? `<span class="lt-sub">${esc(x.sub)}</span>` : ""}</span>`;
+      const caixa = $("ag-hoje").querySelector(".hj-rola");
+      const rolou = caixa && caixa.dataset.mexeu ? caixa.scrollTop : null;
+      $("ag-hoje").innerHTML = hj.length ? `<div class="hj-rola">${hj.map((p) => `<div class="hj-per">${esc(p.nome)}</div>
+          <ol class="linha-tempo">${p.itens.map((x) => `<li class="${x.previsto ? "previsto" : ""}${x.aviso ? " aviso" : ""}">
+            <span class="lt-ic">${ic(x.ic)}</span>${hjTx(x)}${hjVal(x)}${hjHora(x)}</li>
+            ${x.filhos.length ? `<li class="lt-filhos"><ol>${x.filhos.map((f) => `<li class="${f.aviso ? "aviso" : ""}">
+              ${hjTx(f)}${hjVal(f)}${hjHora(f)}</li>`).join("")}</ol></li>` : ""}`).join("")}</ol>`).join("")}</div>`
         : vazio(s.dormindo ? "Ela ainda não acordou." : "Nada registrado hoje ainda.");
+      const novaCaixa = $("ag-hoje").querySelector(".hj-rola");
+      if (novaCaixa) {
+        const prev = novaCaixa.querySelector("li.previsto");
+        if (rolou !== null) { novaCaixa.scrollTop = rolou; novaCaixa.dataset.mexeu = "1"; }
+        else novaCaixa.scrollTop = prev ? prev.offsetTop - novaCaixa.clientHeight + 64 : novaCaixa.scrollHeight;
+        novaCaixa.addEventListener("scroll", () => { novaCaixa.dataset.mexeu = "1"; }, { passive: true });
+      }
 
       // Por dentro
       $("bd-corpo").innerHTML = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Tesão")).join("")
         + (e.linhas.length || e.no_clima ? `<div class="linhas sep">${e.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}
-          ${e.no_clima ? `<div class="linha"><span class="li-ic">${ic("fire")}</span><span class="li-rot">No clima agora</span></div>` : ""}</div>` : "");
+          ${e.no_clima ? `<div class="linha"><span class="li-ic">${ic("flame")}</span><span class="li-rot">No clima agora</span></div>` : ""}</div>` : "");
       // 26/09 (Patrick): unhas em seção própria — cor, barra de desgaste, Estado, Tipo, Feita
       const u = d.unhas;
       $("bd-unhas-t").hidden = $("bd-unhas").hidden = !u;
       if (u) {
         $("bd-unhas").innerHTML = `<div class="big un-cor">${u.hex ? `<span class="un-dot" style="background:${esc(u.hex)}"></span>` : ""}${esc(u.cor)}</div>
           <div class="bar un-bar${u.gasta ? " gasta" : ""}"><i style="width:${pct(u.desgaste)}%"></i></div>
-          <div class="linhas">${linha("stars", "Estado", u.estado)}${linha("droplet-half", "Tipo", u.tipo)}${linha("calendar-check", "Feita", u.feita)}</div>`;
+          <div class="linhas">${linha("sparkles", "Estado", u.estado)}${linha("droplet-half", "Tipo", u.tipo)}${linha("calendar-check", "Feita", u.feita)}</div>`;
       }
       // 26/09 (Patrick): cabelo em seção própria — penteado, quatro barras (amarela quando vence) e as linhas
       const cab = d.cabelo;
@@ -304,8 +322,8 @@ const loaders = {
 
       // Dinheiro
       $("bn-saldo").textContent = brl(g.saldo);
-      $("bn-linhas").innerHTML = [g.devendo && linha("arrow-return-left", "Deve a você", brl(g.devendo)),
-        g.pedido && linha("exclamation-circle", `Precisa de ${brl(g.pedido.valor)}`, cap(g.pedido.motivo))].filter(Boolean).join("");
+      $("bn-linhas").innerHTML = [g.devendo && linha("arrow-back-up", "Deve a você", brl(g.devendo)),
+        g.pedido && linha("alert-circle", `Precisa de ${brl(g.pedido.valor)}`, cap(g.pedido.motivo))].filter(Boolean).join("");
       $("bn-linhas").hidden = !g.devendo && !g.pedido;
       $("bn-extrato").innerHTML = g.movs.length ? g.movs.slice(0, 20).map((mv) => {
         const dt = new Date(mv.at);
@@ -402,7 +420,7 @@ const IF = {
       ${l.mais_pedido && l.aberta ? '<span class="selo-mp">Mais Pedido</span>' : ""}
       <div class="lr-nome">${esc(l.nome)}</div>
       <div class="d com-ic">${l.aberta
-        ? `${ic("star-fill", "estrela")}<span class="estrela">${nota(l.nota)}</span><span>(${IF.aval(l.avaliacoes)}) • ${l.eta[0]}-${l.eta[1]} min • ${IF.taxa(l.taxa)}</span>`
+        ? `${ic("star-filled", "estrela")}<span class="estrela">${nota(l.nota)}</span><span>(${IF.aval(l.avaliacoes)}) • ${l.eta[0]}-${l.eta[1]} min • ${IF.taxa(l.taxa)}</span>`
         : `<span>Fechada • ${abreAs(l.abre)}</span>`}</div>
       ${l.aberta && !l.taxa ? '<span class="tag-gratis">Grátis</span>' : ""}</div>${ic("heart", "coracao")}</button>`).join("")
       || `<p class="muted">Nada encontrado.</p>`;

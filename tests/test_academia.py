@@ -45,7 +45,7 @@ class AcademiaTest(unittest.TestCase):
         self.assertEqual((c["titulo"], c["linha2"]), ("Na academia", "Volta pra casa às ~16:25"))
         self.assertEqual(c["barra"]["meio"].split(" · ")[0], "há 30min")
         self.assertIsNotNone(c["barra"]["pct"])
-        self.assertIn(["phone", "Celular", "Olha nos intervalos"], c["grade"])
+        self.assertIn(["device-mobile", "Celular", "Olha nos intervalos"], c["grade"])
         atual = next(e for e in c["linha"] if e["estado"] == "agora")
         self.assertTrue(atual["passos"])
 

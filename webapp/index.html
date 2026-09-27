@@ -6,12 +6,12 @@
 <title>Marina</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <!-- 26/09 (Patrick): ícones dos apps vêm do Bootstrap Icons, nunca emoji -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.34.1/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="/static/app.css?v=__V__">
 </head>
 <body>
 <main id="app">
-  <button id="voltar" class="link" hidden><i class="bi bi-chevron-left"></i> Voltar</button>
+  <button id="voltar" class="link" hidden><i class="ti ti-chevron-left"></i> Voltar</button>
 
   <section id="v-inicio" class="view">
     <header class="top"><h1>Marina</h1></header>
@@ -54,7 +54,7 @@
   <section id="v-ifood" class="view if" hidden>
     <div class="if-top">
       <div class="if-end"><span class="muted small">Entregar em</span><span class="t">Casa da Ma</span></div>
-      <button class="if-busca-falsa" data-tab="ifbusca"><i class="bi bi-search"></i><span>Buscar lojas</span></button>
+      <button class="if-busca-falsa" data-tab="ifbusca"><i class="ti ti-search"></i><span>Buscar lojas</span></button>
       <div class="chips" id="if-chips"></div>
     </div>
     <div id="if-andamento"></div>
@@ -64,7 +64,7 @@
 
   <!-- 26/09 (Patrick, print do app real): Busca e Pedidos são abas da barra de baixo -->
   <section id="v-ifbusca" class="view if" hidden>
-    <div class="if-busca"><i class="bi bi-search"></i><input id="if-busca" type="search" placeholder="Buscar lojas"></div>
+    <div class="if-busca"><i class="ti ti-search"></i><input id="if-busca" type="search" placeholder="Buscar lojas"></div>
     <div class="chips" id="bs-chips"></div>
     <div id="bs-lojas"></div>
   </section>
@@ -76,9 +76,9 @@
   </section>
 
   <nav class="if-nav" id="if-nav" hidden>
-    <button data-tab="ifood"><i class="bi bi-house-door"></i><span>Início</span></button>
-    <button data-tab="ifbusca"><i class="bi bi-search"></i><span>Busca</span></button>
-    <button data-tab="ifpedidos"><i class="bi bi-receipt"></i><span>Pedidos</span></button>
+    <button data-tab="ifood"><i class="ti ti-home"></i><span>Início</span></button>
+    <button data-tab="ifbusca"><i class="ti ti-search"></i><span>Busca</span></button>
+    <button data-tab="ifpedidos"><i class="ti ti-receipt"></i><span>Pedidos</span></button>
   </nav>
 
   <section id="v-loja" class="view if" hidden>
@@ -107,7 +107,7 @@
       <textarea id="pr-obs" rows="2" maxlength="140" placeholder="Ex: tirar a cebola, maionese à parte etc."></textarea>
     </div>
     <div class="rodape-add">
-      <div class="stepper"><button id="pr-menos" aria-label="Menos"><i class="bi bi-dash-lg"></i></button><span id="pr-qtd">1</span><button id="pr-mais" aria-label="Mais"><i class="bi bi-plus-lg"></i></button></div>
+      <div class="stepper"><button id="pr-menos" aria-label="Menos"><i class="ti ti-minus"></i></button><span id="pr-qtd">1</span><button id="pr-mais" aria-label="Mais"><i class="ti ti-plus"></i></button></div>
       <button class="btn-vermelho" id="pr-add"><span>Adicionar</span><span id="pr-total"></span></button>
     </div>
   </section>
@@ -126,7 +126,7 @@
   <section id="v-entrega" class="view if" hidden>
     <div class="folha-top"><span></span><b>SACOLA</b><span></span></div>
     <h3 class="if-h">Entregar no portão do endereço</h3>
-    <div class="linha-end"><i class="bi bi-geo-alt ic"></i><div><div class="t">Casa da Ma</div><div class="d">Portaria · Seu Jorge recebe se ela não estiver</div></div></div>
+    <div class="linha-end"><i class="ti ti-map-pin ic"></i><div><div class="t">Casa da Ma</div><div class="d">Portaria · Seu Jorge recebe se ela não estiver</div></div></div>
     <h3 class="if-h">Opções de entrega</h3>
     <div class="opcao-entrega"><div><div class="t">Padrão</div><div class="d" id="en-eta"></div></div><div class="opcao-dir"><span id="en-taxa"></span><span class="radio on"></span></div></div>
     <div class="rodape-total"><div><b id="en-total"></b> <span class="small">• com entrega</span></div><button class="btn-vermelho" data-go="pagamento">Continuar</button></div>
@@ -136,7 +136,7 @@
     <div class="folha-top"><span></span><b>SACOLA</b><span></span></div>
     <h3 class="if-h">Pagamento pelo app</h3>
     <div class="ifood-pago"><img src="/static/marcas/ifood.svg" alt="" class="mini-if"><span class="pago">Pago</span>
-      <div class="pix-linha"><img src="/static/marcas/pix-simbolo.png" alt="" class="pixicon"><span>Pix</span><i class="bi bi-chevron-right muted"></i></div></div>
+      <div class="pix-linha"><img src="/static/marcas/pix-simbolo.png" alt="" class="pixicon"><span>Pix</span><i class="ti ti-chevron-right muted"></i></div></div>
     <h3 class="if-h">Resumo de valores</h3>
     <div class="resumo" id="pg-resumo"></div>
     <div class="err" id="pg-err"></div>
@@ -147,8 +147,8 @@
     <div class="sheet">
       <div class="sheet-alca"></div>
       <div class="sheet-titulo">Revise o seu pedido</div>
-      <div class="rv-linha"><i class="bi bi-scooter ic"></i><div><div class="t">Entrega hoje</div><div class="d" id="rv-eta"></div></div></div>
-      <div class="rv-linha"><i class="bi bi-geo-alt ic"></i><div><div class="t">No portão: Casa da Ma</div><div class="d">Portaria</div></div></div>
+      <div class="rv-linha"><i class="ti ti-moped ic"></i><div><div class="t">Entrega hoje</div><div class="d" id="rv-eta"></div></div></div>
+      <div class="rv-linha"><i class="ti ti-map-pin ic"></i><div><div class="t">No portão: Casa da Ma</div><div class="d">Portaria</div></div></div>
       <div class="rv-linha"><span class="ic"><img src="/static/marcas/pix-simbolo.png" alt="" class="pixicon grande"></span><div class="rv-flex"><div><div class="t">Pagamento pelo app</div><div class="d">Pix</div></div><span class="d" id="rv-total"></span></div></div>
       <div class="err" id="rv-err"></div>
       <button class="btn-vermelho largo" id="rv-fazer">Fazer pedido</button>

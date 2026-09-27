@@ -257,15 +257,14 @@ def gift_to_him_view(db, now: datetime) -> Optional[dict]:
             "steps": steps, "headline": headline}
 
 
-def _today_events(db, now: datetime, limit: int = 14) -> list[dict]:
-    start = datetime.combine(now.date(), datetime.min.time()).isoformat()
-    with db.get_connection() as conn:
-        rows = conn.execute(
-            """SELECT event_at, event_type, title, summary FROM life_events
-               WHERE event_at>=? AND event_at<=? ORDER BY event_at DESC LIMIT ?""",
-            (start, now.isoformat(), limit)).fetchall()
-    return [{"at": datetime.fromisoformat(r["event_at"]).strftime("%H:%M"), "tipo": r["event_type"],
-             "texto": voz_painel((r["summary"] or r["title"] or "").strip().rstrip("."))} for r in reversed(rows)]
+def _hoje(db, now: datetime) -> dict:
+    """26/09 (Patrick): linha do tempo do dia inteiro, por período, com saídas e previsto (hoje.py)."""
+    try:
+        from hoje import hoje_view
+        return hoje_view(db, now)
+    except Exception:
+        logger.exception("webapp.hoje.error")
+        return {"periodos": []}
 
 
 # ---------------------------------------------------------------------- rotas --
@@ -399,9 +398,9 @@ def emocao_view(e: dict, dormindo: bool) -> dict:
                        + (f" · acordou às {_hora(datetime.fromisoformat(str(acordou)))}" if acordou else "")])
     if e.get("hours_since_release") is not None:
         h = e["hours_since_release"]
-        linhas.append(["heart-pulse", "Último orgasmo", f"há {round(h)} h" if h < 48 else f"há {round(h / 24)} dias"])
+        linhas.append(["heartbeat", "Último orgasmo", f"há {round(h)} h" if h < 48 else f"há {round(h / 24)} dias"])
     if e.get("discomfort_why"):
-        linhas.append(["bandaid", "Desconforto", cap(e["discomfort_why"])])
+        linhas.append(["bandage", "Desconforto", cap(e["discomfort_why"])])
     sentindo = [{"texto": cap(" ".join(x for x in (f["word"], _alguem(f["target"], f["word"])) if x)),
                  "motivo": voz_dela(f["cause"]), "valor": f["value"], "vezes": f["count"], "ate_resolver": f["until_resolved"]}
                 for f in e["feelings"]]
@@ -441,7 +440,7 @@ async def api_bastidores(request: web.Request) -> web.Response:
             logger.exception("webapp.agenda.error")
             status["card"] = None
         out = {"status": status, "emocao": emocao_view(EmotionEngine(hooks.db).panel(now), status["dormindo"]),
-               "hoje": _today_events(hooks.db, now)}
+               "hoje": _hoje(hooks.db, now)}
         try:
             from unhas import Unhas                  # 26/09: unhas como status (seção própria no Por dentro)
             out["unhas"] = Unhas(hooks.db).painel(now)

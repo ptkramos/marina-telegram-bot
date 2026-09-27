@@ -48,8 +48,8 @@ class EmocaoTest(unittest.TestCase):
     def test_linhas_rotuladas(self):
         e = w.emocao_view(self.PANEL, dormindo=False)
         self.assertIn(["moon", "Sono", "dormiu 8h40 · acordou às 9h05"], e["linhas"])
-        self.assertIn(["heart-pulse", "Último orgasmo", "há 30 h"], e["linhas"])
-        self.assertIn(["bandaid", "Desconforto", "Cólica"], e["linhas"])
+        self.assertIn(["heartbeat", "Último orgasmo", "há 30 h"], e["linhas"])
+        self.assertIn(["bandage", "Desconforto", "Cólica"], e["linhas"])
         self.assertEqual(e["humor"], "Normal, nem lá nem cá")
 
     def test_sentimento_com_preposicao_e_na_voz_dela(self):

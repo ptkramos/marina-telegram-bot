@@ -7,7 +7,7 @@ description: Frente "apps" da Marina — o Mini App do Telegram (iFood, Nubank/P
 
 ## Regras do Patrick
 - **Chat é chat, app é app:** nada de notificação de sistema no chat; o app mostra, ela só "compartilha" com botão.
-- **Ícones: Bootstrap Icons, nunca emoji.** **Alinhamento impecável** (inclusive nos comprovantes em imagem).
+- **Ícones: Tabler Icons (outline, `ic("nome")` → `ti ti-nome`), nunca emoji.** **Alinhamento impecável** (inclusive nos comprovantes em imagem).
 - Ele decide texto e layout **linha a linha**: mostre mockup (show_widget) com 2–4 opções e pergunte
   (AskUserQuestion). Ele é visual.
 - Marcas reais podem (uso pessoal). Nunca raspar a API interna do iFood.

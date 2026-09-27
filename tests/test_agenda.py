@@ -83,7 +83,7 @@ class AgendaTest(unittest.TestCase):
         now = DIA.replace(hour=20, minute=30)
         c = Agenda(self.db).card(now)
         self.assertEqual((c["titulo"], c["linha2"]), ("No Quartinho", "Volta pra casa às ~22:30"))
-        self.assertEqual(c["grade"][0], ["geo-alt", "Onde", "Botafogo"])
+        self.assertEqual(c["grade"][0], ["map-pin", "Onde", "Botafogo"])
         from consumo import plan
         with self.db.get_connection() as conn:
             outing = dict(conn.execute("SELECT * FROM eventos_pendentes").fetchone())
@@ -96,7 +96,7 @@ class AgendaTest(unittest.TestCase):
     def test_volta_de_uber_com_imprevisto_curto(self):
         c = Agenda(self.db).card(DIA.replace(hour=22, minute=45))
         self.assertEqual(c["titulo"], "Voltando pra casa")
-        self.assertIn(["car-front", "Como", "Uber"], c["grade"])
+        self.assertIn(["car", "Como", "Uber"], c["grade"])
         passos = next(e for e in c["linha"] if e["estado"] == "agora")["passos"]
         self.assertIn(("Motorista errou o caminho", "aviso"), [(p["texto"], p["estado"]) for p in passos])
         self.assertTrue(any(p["valor"] for p in passos if p["texto"] == "No uber"))
@@ -149,8 +149,8 @@ class CardCasaTest(unittest.TestCase):
         self._snap(b.atividade, now)
         c = Agenda(self.db).card_casa(now + timedelta(minutes=2), "Olha com frequência")
         self.assertEqual((c["titulo"], c["linha2"]), ("Em casa", b.texto))
-        self.assertIn(["door-open", "Cômodo", b.comodo_nome], c["grade"])
-        self.assertEqual(c["grade"][0], ["geo-alt", "Onde", "Botafogo"])
+        self.assertIn(["door", "Cômodo", b.comodo_nome], c["grade"])
+        self.assertEqual(c["grade"][0], ["map-pin", "Onde", "Botafogo"])
         self.assertEqual(next(x for x in c["linha"] if x["estado"] == "agora")["texto"], b.texto)
 
     def test_refeicao_se_alimentando(self):
@@ -168,4 +168,4 @@ class CardCasaTest(unittest.TestCase):
         c = Agenda(self.db).card_casa(now + timedelta(minutes=10), "Olha de vez em quando")
         self.assertEqual(c["titulo"], "Na Enseada")
         self.assertEqual(c["linha2"], "Volta pra casa às ~09:30")
-        self.assertIn(["people", "Com", "Milo"], c["grade"])
+        self.assertIn(["dog", "Com", "Milo"], c["grade"])

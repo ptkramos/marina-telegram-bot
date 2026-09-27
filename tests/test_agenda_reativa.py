@@ -167,11 +167,11 @@ class AgendaReativaTest(unittest.TestCase):
         self.r.interromper(agora, "tedio")
         ag = Agenda(self.db)
         card = ag.card(agora + timedelta(minutes=1))           # ainda lá, saindo
-        self.assertIn(["exclamation-circle", "Motivo", "Tédio"], card["grade"])
+        self.assertIn(["alert-circle", "Motivo", "Tédio"], card["grade"])
         volta = next(e for e in ag.etapas(T.date(), agora) if e.tipo == "voltando")
         card = ag.card(volta.inicio + timedelta(minutes=1))
         self.assertEqual(card["titulo"], "Voltando pra casa")
-        self.assertIn(["exclamation-circle", "Motivo", "Tédio"], card["grade"])
+        self.assertIn(["alert-circle", "Motivo", "Tédio"], card["grade"])
         item_la = next(i for i in card["linha"] if i["texto"] == la.titulo)
         self.assertEqual(item_la["passos"][0]["estado"], "aviso")
         self.assertRegex(item_la["passos"][0]["texto"], r"^Saiu \d+min antes$")

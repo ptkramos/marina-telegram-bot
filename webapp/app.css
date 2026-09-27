@@ -232,19 +232,19 @@ button.primary:disabled { opacity: .5; }
 .sheet-titulo { text-align: center; font-size: 21px; font-weight: 700; margin-bottom: 12px; }
 
 /* ============================================ 26/09: ícones, abas e aba Pedidos */
-.bi { line-height: 1; }
+.ti { line-height: 1; }
 .com-ic { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .d.com-ic, .linha-ic { display: flex; }
 .linha-ic { gap: 10px; padding: 1px 0; flex-wrap: nowrap; align-items: flex-start; }
-.linha-ic .bi { flex: none; width: 18px; text-align: center; margin-top: .2em; }
+.linha-ic .ti { flex: none; width: 18px; text-align: center; margin-top: .2em; }
 .estrela { color: #c98a00; }
 .ok { color: var(--ok); }
-#voltar .bi { font-size: 14px; }
+#voltar .ti { font-size: 14px; }
 
 .if-busca-falsa { width: 100%; display: flex; align-items: center; gap: 10px; background: var(--bg2); color: var(--muted); border: 0;
   border-radius: 999px; padding: 11px 16px; margin: 0 0 10px; font: inherit; font-size: 16px; cursor: pointer; text-align: left; }
 .if-busca { display: flex; align-items: center; gap: 10px; background: var(--bg2); border-radius: 999px; padding: 0 16px; margin: 0 0 10px; }
-.if-busca .bi { color: var(--muted); }
+.if-busca .ti { color: var(--muted); }
 .if-busca input { flex: 1; background: none; border: 0; border-radius: 0; padding: 11px 0; margin: 0; }
 .if-busca input:focus { outline: none; }
 
@@ -253,7 +253,7 @@ button.primary:disabled { opacity: .5; }
 .if-nav[hidden] { display: none; }
 .if-nav button { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: 0;
   color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; padding: 4px 0; }
-.if-nav .bi { font-size: 22px; }
+.if-nav .ti { font-size: 22px; }
 .if-nav button.on { color: var(--fg); font-weight: 600; }
 
 .classico { flex: none; width: 136px; background: var(--bg2); border: 0; border-radius: 16px; padding: 14px 10px 12px;
@@ -275,7 +275,7 @@ button.primary:disabled { opacity: .5; }
 .pd-acoes { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); }
 .pd-acoes button { padding: 14px 0; text-align: center; }
 .vazio { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 40px 20px; }
-.vazio > .bi { font-size: 36px; color: var(--muted); }
+.vazio > .ti { font-size: 36px; color: var(--muted); }
 
 /* ============================================ 26/09: Bastidores em abas */
 .seg { position: sticky; top: 0; z-index: 4; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
@@ -293,9 +293,21 @@ button.primary:disabled { opacity: .5; }
 .li-val { min-width: 0; }
 .vazio-txt { margin: 2px 0; }
 .linha-tempo { list-style: none; margin: 0; padding: 0; }
-.linha-tempo li { display: grid; grid-template-columns: 44px 12px 1fr; gap: 8px; align-items: baseline; padding: 5px 0; font-size: 14px; }
-.lt-hora { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-.lt-ponto { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); justify-self: center; }
+/* 26/09 (Patrick): Hoje — ícone, texto, valor e hora em colunas; saída com os filhos recuados; previsto em cinza */
+.hj-rola { max-height: 340px; overflow-y: auto; position: relative; margin: -4px -6px -4px -2px; padding: 0 6px 0 2px; overscroll-behavior: contain; }
+.hj-per { font-size: 12px; color: var(--muted); margin: 10px 0 2px; }
+.hj-per:first-child { margin-top: 2px; }
+.linha-tempo > li { display: grid; grid-template-columns: 20px 1fr auto auto; gap: 8px; align-items: baseline; padding: 5px 0; font-size: 14px; }
+.lt-ic { color: var(--muted); text-align: center; }
+.lt-txt { min-width: 0; }
+.lt-sub { display: block; font-size: 12px; color: var(--muted); }
+.lt-val { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+.lt-hora { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.linha-tempo li.previsto .lt-txt, .linha-tempo li.previsto .lt-ic { color: var(--muted); }
+.linha-tempo li.aviso .lt-txt, .linha-tempo li.aviso .lt-ic { color: #b07d00; font-weight: 600; }
+.linha-tempo > li.lt-filhos { display: block; padding: 0 0 2px; }
+.lt-filhos ol { list-style: none; margin: 0 0 0 9px; padding: 0 0 0 19px; border-left: 1.5px solid var(--line); }
+.lt-filhos ol li { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: baseline; padding: 3px 0; font-size: 13.5px; }
 .feel .t { font-weight: 600; font-size: 14px; }
 .pilulas { display: flex; gap: 6px; margin-top: 5px; }
 .pilula { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }

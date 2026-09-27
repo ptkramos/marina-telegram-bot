@@ -25,19 +25,19 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 2. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber…).
 3. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
 4. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
+5. Incoerências que a linha do tempo Hoje mostrou (26/09, noite): blocos do tempo livre não respeitam saídas nem o banho ("Montou looks" até 15:11 com a academia às 14:53; Instagram dentro da academia; música atravessando o banho); "Beliscou pipoca vendo série" com ela no bar; convite da Bia registrado às 04:19.
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** "bora na frente dos apps: linha do tempo Hoje"
+**Abertura:** "bora na frente dos apps: Bastidores aba a aba"
 
-**Pronto:** iFood com abas (Início/Busca/Pedidos), Bootstrap Icons, recibos alinhados; Bastidores em abas; aba
+**Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps.
 
 **Próximo:**
-1. **Linha do tempo "Hoje"** (aba Agora) — o próximo ataque do Patrick: os acontecimentos do dia como aparecem (ex.: "Tomou banho e lavou o cabelo (08:12–08:40)", "Ficou umectando o cabelo no quarto" — ele quer melhorar). Mostrar a lista inteira de um dia real.
-2. Bastidores **aba a aba** com ele (Por dentro, Dinheiro, Mundo), como foi a Agora — ele quer ver no celular e
+1. Bastidores **aba a aba** com ele (Por dentro, Dinheiro, Mundo), como foi a Agora — ele quer ver no celular e
    ajustar palavra por palavra (PLANO_VOZ 14).
-3. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
-4. Fotos provisórias de marca e logos marcados "conferir"; redes sociais dela (Etapa 5).
+2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
+3. Fotos provisórias de marca e logos marcados "conferir"; redes sociais dela (Etapa 5).
 
 ## 3. Voz e chat — skill `frente-voz`
 **Abertura:** "bora na frente da voz"
