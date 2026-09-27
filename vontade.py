@@ -82,6 +82,7 @@ def loja(loja_id: str) -> Optional[dict]:
 class Vontade:
     def __init__(self, db):
         self.db = db
+        self._motivos: dict = {}           # 27/09: o sentimento que mais puxou cada tipo ("entediada em casa")
 
     # --------------------------------------------------------------- lugares --
     def _lugar_loja(self, l: dict) -> str:
@@ -177,8 +178,33 @@ class Vontade:
                 continue
             if tipo == "milo" and self._milo_saiu(now):
                 continue
+            if f:
+                # 27/09 (Patrick): o que ela sente escolhe — entediada sai, triste quer espairecer (açaí, orla,
+                # Milo), sem bateria foge de gente, com dor não vai longe.
+                from agenda_viva import Disposicao
+                aval = Disposicao(self.db).avaliar(tipo, now, feeling=f)
+                p *= (aval.vontade / 0.6) ** 2
+                self._motivos[tipo] = (aval.motivo(+1) or ("", ""))[1]
             pesos[tipo] = p
         return pesos
+
+    def _inquietude(self, now: datetime) -> float:
+        """27/09: quanto ela está a fim de sair de casa agora (tédio e empolgação empurram, tristeza segura)."""
+        try:
+            from emotion import EmotionEngine
+            f = EmotionEngine(self.db).feeling(now)
+        except Exception:
+            return 1.0
+        x = 1.0
+        for ep in f.episodes:
+            if ep.family == "tedio":
+                x += 1.5 * ep.intensity
+            elif ep.family == "alegria":
+                x += 0.5 * ep.intensity
+            elif ep.family == "tristeza":
+                x -= 0.4 * ep.intensity
+        x -= max(0.0, 0.4 - f.social_battery)
+        return max(0.3, min(2.5, x))
 
     def talvez(self, now: datetime) -> Optional[int]:
         """Chamado pelo mundo quando ela está livre em casa: às vezes decide sair agora."""
@@ -190,7 +216,7 @@ class Vontade:
         slot = (now.hour * 60 + now.minute) // 20
         rng = random.Random(f"marina-vontade:{now.date().isoformat()}:{slot}")
         sorteio = rng.random()
-        if sorteio >= CHANCE_BASE * 1.5:                  # barato primeiro: quase sempre para aqui
+        if sorteio >= CHANCE_BASE * 1.5 * 2.5:            # barato primeiro: quase sempre para aqui
             return None
         energia = 0.6
         try:
@@ -198,7 +224,7 @@ class Vontade:
             energia = current_energy(self.db, now)
         except Exception:
             pass
-        if sorteio >= CHANCE_BASE * (0.5 + energia) or self._na_cama(now):
+        if sorteio >= CHANCE_BASE * (0.5 + energia) * self._inquietude(now) or self._na_cama(now):
             return None
         hoje = self._hoje(now.date())
         if len(hoje) >= MAX_POR_DIA:
@@ -207,16 +233,20 @@ class Vontade:
         if not livre or livre - now < FOLGA_ANTES:
             return None
         feito = {(json.loads(r["metadata_json"] or "{}") or {}).get("tipo") for r in hoje}
-        pesos = self._pesos(now, feito)
+        pesos = {k: p for k, p in self._pesos(now, feito).items() if p > 0}
         if not pesos:
-            return None
+            return None                                   # 27/09: sem vontade de nada (vontade zero em tudo)
         tipo = rng.choices(list(pesos), weights=list(pesos.values()))[0]
         return self._sair(tipo, now, rng, livre)
 
     def _sair(self, tipo: str, now: datetime, rng: random.Random, livre: datetime) -> Optional[int]:
         s = SAIDAS[tipo]
         texto = s["texto"]
-        extra = {"motivo": s["motivo"]}
+        sentiu = self._motivos.get(tipo)
+        motivo = {"entediada em casa": "tava entediada em casa", "empolgada": "tava animada",
+                  "precisando espairecer": "precisava espairecer", "cheia de energia": "tava cheia de energia",
+                  "de bom humor": s["motivo"]}.get(sentiu, s["motivo"])
+        extra = {"motivo": motivo}
         if "categorias" in s:
             h = now.hour
             lojas = [l for l in _catalogo() if l.get("categoria") in s["categorias"] and l.get("area", "bf") == "bf"
@@ -239,7 +269,7 @@ class Vontade:
         cid = self.agendar(tipo, lugar, inicio, fim, texto, origem="vontade", decidido_em=now, chave=chave,
                            modo=s.get("modo", "a_pe"), ida_min=ida, extra=extra)
         if cid:
-            self._registra(chave, now, f"Deu vontade e foi: {texto[:1].lower() + texto[1:]} ({s['motivo']}).")
+            self._registra(chave, now, f"Deu vontade e foi: {texto[:1].lower() + texto[1:]} ({motivo}).")
             logger.info("vontade.saiu tipo=%s inicio=%s", tipo, inicio.isoformat(timespec="minutes"))
         return cid
 

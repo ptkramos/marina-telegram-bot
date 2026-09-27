@@ -743,7 +743,7 @@ class Agenda:
             linha2, comodo = act[:1].upper() + act[1:].replace(" em casa", ""), "Closet"
         elif low.startswith("dormindo") or "acordou de madrugada" in low:
             linha2, comodo = "Dormindo", "Quarto"
-        elif low.startswith("acordando"):
+        elif low.startswith(("acordando", "acabou de acordar")):
             linha2, comodo = "Acordando", "Quarto"
         elif "academia do prédio" in low:
             linha2, comodo = "Treinando", "Academia do prédio"

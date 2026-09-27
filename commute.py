@@ -90,6 +90,7 @@ class Leg:
     companion: str = ""     # amiga com quem divide o uber
     incident: str = ""
     incident_at: Optional[datetime] = None
+    origem: str = ""        # emenda (27/09): de onde ela sai, quando vai direto de um lugar pro outro ("da PUC")
 
     @property
     def how(self) -> str:
@@ -101,7 +102,7 @@ class Leg:
 
     def activity(self, now: datetime) -> str:
         how = self.how
-        where = (f"indo {self.destination}" if self.direction == "ida"
+        where = (f"indo {self.origem + ' ' if self.origem else ''}{self.destination}" if self.direction == "ida"
                  else f"voltando {self.destination} pra casa")
         text = f"{where} {how}"
         if self.incident and self.incident_at and now >= self.incident_at:
@@ -337,7 +338,26 @@ class Commute:
             legs.append(self._incident(Leg(f"commute:outing:{tag}:volta", end, end + timedelta(minutes=mins),
                                            mode, "volta", _de(place["name"]), region,
                                            driver if mode == "carona" else companion)))
-        return self._voltas_trocadas(legs)
+        return self._emendas(self._voltas_trocadas(legs))
+
+    @staticmethod
+    def _emendas(legs: list[Leg]) -> list[Leg]:
+        """27/09: rolê logo depois da aula (a volta da PUC e a ida pro bar se sobrepunham) e saída emendada
+        (da academia pro açaí): se a ida pro próximo lugar sai antes de ela chegar em casa (ou até 15 min
+        depois), ela vai direto de um lugar pro outro — a volta some e a ida parte de onde ela estava."""
+        from dataclasses import replace
+        out = sorted(legs, key=lambda l: l.start)
+        for volta in [l for l in out if l.direction == "volta"]:
+            ida = next((l for l in out if l.direction == "ida" and l.end > volta.start
+                        and l.start < volta.end + timedelta(minutes=15) and l.start >= volta.start - timedelta(hours=2)
+                        and l is not volta), None)
+            if ida is None or volta not in out:
+                continue
+            direto = replace(ida, start=volta.start, end=max(ida.end, volta.start + timedelta(minutes=5)),
+                             origem=volta.destination, incident="", incident_at=None)
+            out[out.index(ida)] = direto
+            out.remove(volta)
+        return out
 
     def _voltas_trocadas(self, legs: list[Leg]) -> list[Leg]:
         """Agenda reativa (26/09): saiu passando mal/exausta → a volta vira uber.

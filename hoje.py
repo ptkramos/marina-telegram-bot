@@ -100,6 +100,9 @@ def _curto(ev: dict) -> dict:
     s = _sem_ponto(ev.get("summary") or title)
     out = {"ic": "point", "texto": _painel(s), "sub": "", "valor": None, "aviso": False, "fim": None}
 
+    if tipo == "agenda":
+        out.update(_agenda(s))
+        return out
     if tipo == "tempo_livre" and s.startswith("Fez as unhas em casa"):
         return {**out, **_salao(s)}
     if tipo == "tempo_livre":
@@ -269,6 +272,48 @@ def _salao(s: str) -> dict:
     if m:
         return {"ic": "brush", "texto": "Fez as unhas", "sub": f"Esmalte {m.group(1)}{escolheu}"}
     return {}
+
+
+def _agenda(s: str) -> dict:
+    """27/09 (agenda viva): o que ela decidiu pelo que sentia — ação na linha, motivo embaixo."""
+    m = re.match(r"Saindo de lá, resolveu passar .+? antes de voltar \((.+)\)$", s)
+    if m:
+        return {"ic": "bolt", "motivo": f"Emendou na volta · {m.group(1)}"}
+    m = re.match(r"Desistiu de ir: (.+?) \((.+?)\)(?:\. Avisou (.+?)(?: e combinaram outro dia)?)?$", s)
+    if m:
+        sub = _cap(m.group(2)) + (f" · avisou {m.group(3)}" if m.group(3) else "")
+        return {"ic": "calendar-x", "texto": f"Desistiu de ir {_pra_onde(m.group(1))}", "sub": sub}
+    m = re.match(r"Faltou a aula de hoje \((.+?)\): (.+?)\. Vai pegar", s)
+    if m:
+        return {"ic": "school-off", "texto": "Faltou a aula", "sub": f"{m.group(1)} · {m.group(2)}"}
+    m = re.match(r"Pegou a matéria da aula que faltou \((.+?)\) com (.+?) e", s)
+    if m:
+        return {"ic": "notebook", "texto": f"Pegou a matéria com {m.group(2)}", "sub": _cap(m.group(1))}
+    m = re.match(r"Chamou (.+?) pra sair (\S+)(?: às (\d\d:\d\d) \(.+\); .+ topou|, mas .+ não podia)$", s)
+    if m:
+        topou = "topou" in s
+        quando = _cap(m.group(2)) + (f" {m.group(3)}" if m.group(3) else "")
+        return {"ic": "calendar-plus", "texto": f"Chamou {m.group(1)} pra sair",
+                "sub": f"{quando} · " + ("topou" if topou else "não podia")}
+    m = re.match(r"Remarcou pra (.+?) às (\d\d:\d\d): (.+?) \((.+)\)$", s)
+    if m:
+        return {"ic": "calendar-time", "texto": "Remarcou", "sub": f"{_cap(m.group(3))} · pra {m.group(1)} {m.group(2)}"}
+    m = re.match(r"Combinou com o Patrick: (.+?) (amanhã|segunda|terça|quarta|quinta|sexta|sábado|domingo) às (\d\d:\d\d)", s)
+    if m:
+        return {"ic": "calendar", "texto": "Combinou com você", "sub": f"{_cap(m.group(1))} · {m.group(2)} {m.group(3)}"}
+    for padrao, texto in ((r"Desistiu de treinar hoje \((.+)\)$", "Desistiu de treinar"),
+                          (r"Trocou a Bodytech pela academia do prédio \((.+)\)$", "Treinou no prédio"),
+                          (r"Deixou o passeio do Milo pra depois \((.+)\)$", "Adiou o passeio do Milo"),
+                          (r"Deixou o mercado da semana pra amanhã \((.+)\)$", "Adiou o mercado"),
+                          (r"Desistiu do mercado da semana hoje \((.+)\)$", "Desistiu do mercado"),
+                          (r"Desistiu: .+? \((.+)\)$", None)):
+        m = re.match(padrao, s)
+        if m:
+            if texto is None:
+                return {"ic": "calendar-x", **_divide(s)}
+            return {"ic": "calendar-x" if "Desistiu" in texto else "calendar-time", "texto": texto,
+                    "sub": _cap(m.group(1))}
+    return {"ic": "calendar"}
 
 
 def _decisao(s: str) -> dict:
@@ -499,7 +544,8 @@ def hoje_view(db, now: datetime) -> dict:
         itens.append(it)
 
     # 27/09: o banho interrompe o que ela fazia em casa (o Instagram 00:02–00:38 com banho às 00:31)
-    banhos = [it["at"] for it in itens if it["ic"] == "chuveiro"]
+    # e a saída também (27/09: "Montou looks" até 15:11 com a academia às 14:53)
+    banhos = [it["at"] for it in itens if it["ic"] == "chuveiro"] + [s["ini"] for s in saidas]
     for it in itens:
         corte = next((b for b in banhos if it["ic"] != "chuveiro" and it.get("fim") and it["at"] < b < it["fim"]), None)
         if corte:

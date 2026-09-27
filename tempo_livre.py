@@ -215,6 +215,7 @@ class TempoLivre:
         if aparelho == "tela" and not pelo_celular and rng.random() < 0.3:
             pelo_celular = True                           # às vezes vê deitada no celular mesmo com TV
         fim = max(inicio + timedelta(minutes=rng.randint(*mins)), inicio + timedelta(minutes=10))
+        fim = min(fim, self._ate(inicio, fim))
         faixas = leitura = None
         if chave == "musica":
             from musica import Musica
@@ -232,6 +233,48 @@ class TempoLivre:
                 chave, texto, aparelho, pelo_celular = "instagram", "Olhando o Instagram", "celular", True
         return Bloco(f"livre:{dia.isoformat()}:{i}", chave, texto, comodo, aparelho, pelo_celular, inicio,
                      fim, bool(chama_ele), faixas, leitura)
+
+    def _ate(self, inicio: datetime, fim: datetime) -> datetime:
+        """27/09 (linha do tempo de 26/09): "Montou looks" até 15:11 com a academia saindo às 14:53. O bloco
+        acaba quando começa a próxima coisa marcada: o Se arrumando de uma saída (ou de dormir) ou uma
+        refeição em casa."""
+        cortes = []
+        try:
+            from agenda import Agenda
+            cortes += [e.inicio for e in Agenda(self.db).etapas(inicio.date(), inicio)]
+        except Exception:
+            logger.exception("tempo_livre.ate.agenda")
+        try:
+            from meals import Meals
+            cortes += [s.at for s in Meals(self.db).day_plan(inicio.date()) if s.where == "casa" and not s.skipped]
+        except Exception:
+            logger.exception("tempo_livre.ate.refeicoes")
+        prox = min((c for c in cortes if inicio + timedelta(minutes=5) <= c < fim), default=fim)
+        return prox
+
+    def interrompe(self, at: datetime, now: datetime) -> bool:
+        """27/09: outra coisa começou (banho, refeição, se arrumando, saída, dormir) — o bloco que cobria
+        esse momento acaba ali (a música não atravessa o banho). Devolve se cortou."""
+        st = self._state()
+        dia = self._dia(now).isoformat()
+        cortou = False
+        for chave, g in st.get(dia, {}).items():
+            ini, fim = datetime.fromisoformat(g["inicio"]), datetime.fromisoformat(g["fim"])
+            if not (ini < at < fim) or g.get("tipo") in ("unhas", "umectacao"):
+                continue                                  # esmalte secando e touca seguem por baixo do resto
+            g["fim"] = at.isoformat()
+            if g.get("faixas"):
+                g["faixas"] = [f for f in g["faixas"] if datetime.fromisoformat(f["at"]) < at] or g["faixas"][:1]
+            cortou = True
+            b = Bloco(**{**g, "inicio": ini, "fim": at})
+            if b.tipo not in ("masturbando", "se_tocando", "unhas") and not chave.startswith("j"):
+                with self.db.get_connection() as conn:
+                    conn.execute("UPDATE life_events SET summary=? WHERE event_key=?", (self._resumo(b), b.chave))
+                    conn.commit()
+        if cortou:
+            self._save(st, now)
+            logger.info("tempo_livre.interrompido at=%s", at.isoformat(timespec="minutes"))
+        return cortou
 
     def _musica_dele(self) -> bool:
         try:
@@ -327,13 +370,25 @@ class TempoLivre:
         except Exception:
             logger.exception("tempo_livre.musica_ouviu")
 
+    @staticmethod
+    def _onde(b: Bloco) -> str:
+        return {"quarto": "no quarto", "sala": "na sala", "closet": "no closet", "varanda": "na varanda",
+                "piscina": "na piscina do prédio"}.get(b.comodo, "em casa")
+
+    def _resumo(self, b: Bloco) -> str:
+        onde, texto = self._onde(b), b.texto[:1].lower() + b.texto[1:]
+        if b.faixas:
+            nomes = [f"\"{f['nome']}\" ({f['artista']})" for f in b.faixas[:4]]
+            return f"Ficou ouvindo a playlist dela {onde}: " + ", ".join(nomes) + "."
+        if b.leitura:
+            return (f"Ficou {texto} {onde}, da página {b.leitura['pag_ini']} até a {b.leitura['pag_fim']}"
+                    + (" (terminou)." if b.leitura["terminou"] else "."))
+        return f"Ficou {texto}{' pelo celular' if b.pelo_celular and b.aparelho == 'tela' else ''} {onde}."
+
     def _registra(self, b: Bloco, now: datetime) -> None:
         """Vira acontecimento do dia (e, se for o caso, efeito no corpo)."""
-        onde = {"quarto": "no quarto", "sala": "na sala", "closet": "no closet", "varanda": "na varanda",
-                "piscina": "na piscina do prédio"}.get(b.comodo, "em casa")
-        texto = b.texto[:1].lower() + b.texto[1:]
         if b.tipo in ("masturbando", "se_tocando"):
-            return self._se_masturbou(b, now, onde)
+            return self._se_masturbou(b, now, self._onde(b))
         if b.tipo == "unhas":                             # o acontecimento sai no fim, com a cor (unhas.py)
             from unhas import Unhas
             Unhas(self.db).comecou_em_casa(b.inicio, b.fim, now, b.chave)
@@ -341,19 +396,12 @@ class TempoLivre:
         if b.tipo == "umectacao":                         # touca até o fim; lava no próximo banho (cabelo.py)
             from cabelo import Cabelo
             Cabelo(self.db).umectou(b.inicio, b.fim, now)
-        summary = f"Ficou {texto}{' pelo celular' if b.pelo_celular and b.aparelho == 'tela' else ''} {onde}."
-        if b.faixas:
-            nomes = [f"\"{f['nome']}\" ({f['artista']})" for f in b.faixas[:4]]
-            summary = f"Ficou ouvindo a playlist dela {onde}: " + ", ".join(nomes) + "."
-        elif b.leitura:
-            summary = (f"Ficou {texto} {onde}, da página {b.leitura['pag_ini']} até a {b.leitura['pag_fim']}"
-                       + (" (terminou)." if b.leitura["terminou"] else "."))
         with self.db.get_connection() as conn:
             conn.execute(
                 """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
                    autonomy_level,importance,participants_json,share_worthy,created_at)
                    VALUES (?,?,'tempo_livre',?,?,'simulated',1,0.1,?,0.3,?)""",
-                (b.chave, b.inicio.isoformat(), b.texto, summary, json.dumps(["marina"]), now.isoformat()))
+                (b.chave, b.inicio.isoformat(), b.texto, self._resumo(b), json.dumps(["marina"]), now.isoformat()))
             conn.commit()
 
     def _se_masturbou(self, b: Bloco, now: datetime, onde: str) -> None:

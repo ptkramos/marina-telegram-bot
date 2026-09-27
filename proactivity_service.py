@@ -195,6 +195,14 @@ class ProactivityService:
         except Exception:
             logger.exception("proactivity.saiu_mais_cedo")
 
+        # 27/09 (agenda viva): desistiu/faltou por algo que ela quer dividir (cansada, triste, doente) — conta pra ele.
+        try:
+            from agenda_viva import AgendaViva
+            if AgendaViva(self.db).aviso(dt):
+                return True, "agenda_mudou"
+        except Exception:
+            logger.exception("proactivity.agenda_mudou")
+
         # 26/09 (Patrick): antes de sair ou do salão, às vezes pergunta o cabelo pra ele.
         try:
             from cabelo import Cabelo

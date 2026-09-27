@@ -73,8 +73,12 @@ class WeekendInvitesTest(unittest.TestCase):
     def test_drained_she_declines_and_says_why(self):
         inv = self.plans[0]
         decide = datetime.fromisoformat(inv["decide_at"]) + timedelta(minutes=1)
-        with patch.object(self.db, "get_estado_emocional", return_value=_emo(0.1, 0.1)), \
-             patch("social_day.INVITE_BASE_YES", 0.2):
+        # 27/09: quem decide é o que ela sente (agenda_viva.Disposicao), não mais o INVITE_BASE_YES
+        from emotion import Feeling
+        esgotada = Feeling(now=decide, energy=0.15, hours_slept=5.0, awake_since=None, hunger=0.3, discomfort=0.0,
+                           discomfort_why="", cycle_phase="folicular", valence=0.35, arousal=0.4, playfulness=0.3,
+                           social_battery=0.1)
+        with patch("agenda_viva.Disposicao._feeling", return_value=esgotada):
             self.day.process_invites(decide)
         data = json.loads(self.db.get_estado_relacional()[INVITES_KEY])[inv["key"]]
         self.assertEqual(data["status"], "declined")
@@ -128,7 +132,12 @@ class ConviteAntesDoResetTest(unittest.TestCase):
                    and datetime.fromisoformat(i["start"]) > reset + timedelta(hours=1)]
         if not antigos:
             self.skipTest("sem convite antigo nesse sábado")
-        day.process_invites(reset + timedelta(minutes=5))
+        # 27/09: ela vê o convite quando acorda (antes ficava registrado às 04:19, com ela dormindo)
+        acorda = datetime(2026, 9, 26, 9, 5)
+        with patch("sleep_plan.SleepPlan.wake", return_value=acorda):
+            day.process_invites(reset + timedelta(minutes=5))
+            self.assertNotIn(antigos[0]["key"], day._invites(), "dormindo: ainda não viu")
+            day.process_invites(acorda + timedelta(minutes=5))
         guardados = day._invites()
         self.assertIn(antigos[0]["key"], guardados)
-        self.assertEqual(guardados[antigos[0]["key"]]["invite_at"], reset.isoformat())
+        self.assertEqual(guardados[antigos[0]["key"]]["invite_at"], acorda.isoformat())

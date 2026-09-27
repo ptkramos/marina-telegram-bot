@@ -1,7 +1,7 @@
 """Contexto compacto da World Bible v3.6; não usa o prompt biográfico legado."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from db import DatabaseManager
@@ -138,6 +138,9 @@ class WorldContextBuilder:
         chegada = self._chegada(now) if location_line == "Apartamento da Marina" else None
         if chegada:
             world_state_lines.append(chegada)
+        banho = self._banho(now)
+        if banho:
+            world_state_lines.append(banho)
 
         data_channel = DATA_CHANNEL_POLICY_PT if control_language == "pt-BR" else DATA_CHANNEL_POLICY_EN
         blocks = [
@@ -459,6 +462,28 @@ class WorldContextBuilder:
                 "o uber, mesmo que a conversa de antes diga outra coisa. Se prometeu avisar quando chegasse "
                 "e ainda não avisou, diga agora que chegou.")
 
+    def _banho(self, now: datetime) -> Optional[str]:
+        """27/09, 01:57: "banhou já?" → "ainda não", com banho às 00:31. O último banho (até 8 h) vira fato."""
+        import re
+        with self.db.get_connection() as conn:
+            row = conn.execute("""SELECT event_at, summary FROM life_events WHERE event_key LIKE 'banho:%'
+                                  AND event_at<=? AND event_at>=? ORDER BY event_at DESC LIMIT 1""",
+                               (now.isoformat(), (now - timedelta(hours=8)).isoformat())).fetchone()
+        if not row:
+            return None
+        ini = datetime.fromisoformat(row["event_at"])
+        m = re.search(r"–(\d{2}):(\d{2})\)", row["summary"] or "")
+        fim = ini.replace(hour=int(m.group(1)), minute=int(m.group(2))) if m else ini + timedelta(minutes=25)
+        if fim < ini:
+            fim += timedelta(days=1)
+        if fim > now:
+            return None                                   # ainda no banho: o estado atual já diz
+        mins = int((now - fim).total_seconds() // 60)
+        ha = f"há {mins} min" if mins < 60 else f"há {mins // 60}h{mins % 60:02d}"
+        cabelo = " e lavou o cabelo" if "lavou o cabelo" in (row["summary"] or "") else ""
+        return (f"[BANHO — FATO] Você já tomou banho{cabelo}: das {ini:%H:%M} às {fim:%H:%M} ({ha}). "
+                "Se o Patrick perguntar se você já tomou banho, a resposta é sim.")
+
     def _energy(self) -> float:
         from world_state import current_energy
         return current_energy(self.db)
@@ -586,6 +611,8 @@ class WorldContextBuilder:
             comida += Unhas(self.db).prompt_lines(now)
             from cabelo import Cabelo                   # 26/09: o cabelo de verdade (manda nas fotos)
             comida += Cabelo(self.db).prompt_lines(now)
+            from agenda_viva import AgendaViva          # 27/09: o que ela decidiu na agenda (desistiu, chamou a Bia…)
+            comida += AgendaViva(self.db).prompt_lines(now)
         except Exception:
             import logging
             logging.getLogger(__name__).exception("meals.prompt_lines.error")

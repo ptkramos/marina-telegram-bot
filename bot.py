@@ -4448,6 +4448,10 @@ _PROACTIVE_INSTRUCTIONS = {
     'saiu_mais_cedo': ("{detail} Avise o Patrick agora, do seu jeito e curto: que não tá bem e tá indo pra "
                        "casa de uber. Pode reclamar um pouco, como quem conta pra namorado. Não peça dinheiro nem pix; "
                        "se ele se oferecer pra pagar o uber, aceita com carinho. Não invente acontecimento novo."),
+    # 27/09 (agenda viva): ela desistiu/faltou por algo que quer dividir — conta pra ele, querendo colo.
+    'agenda_mudou': ("{detail} Conte pro Patrick, do seu jeito e curto, como quem desabafa com o namorado: o que "
+                     "você decidiu e por quê. Não peça permissão nem se justifique demais. Não invente "
+                     "acontecimento novo."),
     # 26/09 (Patrick): antes de fazer as unhas, às vezes ela pede a opinião dele sobre a cor.
     'unhas_cor': ("{detail} Pergunte pro Patrick qual das duas cores você faz, do seu jeito e curto (ex.: "
                   "'vermelho ou nude? escolhe vc'). Só as duas cores, sem explicar demais. Não invente "
@@ -4577,6 +4581,15 @@ async def _autonomous_routine_v36(application: Application):
             candidate = dict(candidate, reason='saiu_mais_cedo', event_id=None, loop_id=None,
                              detail=f"Você acabou de sair mais cedo {aviso.get('onde', 'de onde estava')}: {porque}.")
             reativa.marca_aviso_enviado(now)
+        if why == 'agenda_mudou':
+            from agenda_viva import AgendaViva
+            viva = AgendaViva(memory_manager.db)
+            aviso_agenda = viva.aviso(now)
+            if not aviso_agenda:
+                return
+            candidate = dict(candidate, reason='agenda_mudou', event_id=None, loop_id=None,
+                             detail=viva.detalhe_aviso(aviso_agenda))
+            viva.marca_aviso_enviado(now)
         if why == 'unhas_cor':
             from unhas import Unhas
             unhas = Unhas(memory_manager.db)
@@ -4654,6 +4667,8 @@ async def _autonomous_routine_v36(application: Application):
                 fallback = f"Fiquei pensando naquilo que a gente conversou sobre {detail}. Como você está vendo isso agora?"
             elif reason == 'saiu_mais_cedo':
                 fallback = "amor tô indo pra casa, não tô legal… peguei um uber"
+            elif reason == 'agenda_mudou':
+                fallback = "amor desisti… não tô no clima hoje"
             elif reason == 'sexting_solo':
                 fallback = "Amor… tô aqui me tocando pensando em você. Vem cá?"
             elif reason == 'unhas_cor':

@@ -4,12 +4,12 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 27/09/2026, 12:20 (auditoria de funcionamento, rodada 1)._
+_Atualizado em 27/09/2026, tarde (frente do mundo: bugs limpos e agenda viva)._
 
 ---
 
 ## 1. Mundo e agenda — skill `frente-mundo`
-**Abertura:** "bora na frente do mundo: limpar os bugs do banco e da agenda e fechar a agenda inteligente hoje"
+**Abertura:** "bora na frente do mundo: agenda viva no uso real e revisão dos textos"
 
 **Pronto (26/09):** agenda única (planejado, vontade, convite → mesma agenda com etapas); academia e passeio do
 Milo decididos uma vez por dia; mercado e médico como itens (Bradesco Saúde, Samaritano/Novamed); tempo livre
@@ -20,13 +20,14 @@ no meio, tesão como emergência — `agenda_reativa.py`); **unhas** (26/09, noi
 desgaste; Ophicina do Cabelo na rotina/evento/mimo, R$ 180 do saldo; em casa entediada; pergunta a cor às vezes;
 foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo** (26/09, noite — `cabelo.py`: lava dia sim, dia não no banho, penteado de agora, corte/luzes/hidratação, Ophicina junta o vencido e cobra do saldo, pergunta penteado e corte/cor, sugestão dele vira mudança, cabelo de agora em toda foto, seção Cabelo no Por dentro; textos revisados com ele na mesma noite).
 
+**Pronto (27/09, tarde):** bugs abertos do mundo limpos (belisco × portaria, banho como fato no prompt, acordar sem café inventado, bloco em casa cortado por academia/banho/saída, convite visto ao acordar) e **agenda viva** (`agenda_viva.py`): o que ela sente decide — repensa rolê/academia/aula/mercado antes de sair (fura, adia, falta e corre atrás da matéria, conta pro Patrick quando o motivo é de dividir), emenda uma parada na volta, chama amiga pra sair à noite, vontade e convites pelo humor, conversa mexendo em qualquer item dos próximos 3 dias; rolê logo depois da aula vai direto (trecho emendado).
+
 **Próximo, nesta ordem:**
-1. **Hoje (27/09), pedido do Patrick:** limpar os bugs abertos do banco e da agenda (seção 5: belisco × entrega na portaria, banho recente como fato no prompt, acordou "tomando café" antes do café; e os do item 6 abaixo) e fechar o que falta pra agenda ficar inteligente e maleável em tempo real com as emoções e decisões dela (vontade, humor, energia, tesão, conversa mexendo em tudo, não só nos itens de hoje).
-2. Conflito: rolê em dia de aula que começa antes da aula acabar sobrepõe volta e ida.
-3. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber…).
+1. Ver a agenda viva no uso real (primeira desistência, primeira emenda, primeira amiga chamada) e calibrar os pesos com ele se algo soar forçado.
+2. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber… e agora "Agenda viva").
+3. Salão (Ophicina) ainda não é repensado pelo humor nem remarcado pela conversa (tem estado próprio em `unhas.py`/`cabelo.py`).
 4. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
 5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
-6. Incoerências que a linha do tempo Hoje mostrou (26/09, noite), ainda abertas: "Montou looks" até 15:11 com a academia às 14:53; música atravessando o banho; convite da Bia registrado às 04:19. (Pipoca no bar, bloco antes da chegada e bloco por cima do banho: corrigidos na frente de bugs, 27/09.)
 
 ## 2. Apps (Mini App) — skill `frente-apps`
 **Abertura:** "bora na frente dos apps: Bastidores aba a aba"
@@ -84,10 +85,12 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
 4. ✅ **Milo desce duas vezes de manhã (auditoria, 27/09)** — corrigido. Xixi rapidinho 09:28 e passeio planejado saindo 09:41 (26/09: 09:15 e 09:36); o Hoje mostrava "Foi pra calçada" e "Foi pra Enseada" colados. Passeio até 90 min depois do xixi substitui o xixi. Camada: mundo (`milo.py`).
 5. ✅ **Almoço engolia o Se arrumando (auditoria, 27/09)** — corrigido antes de acontecer. Almoço em casa planejado 13:50–14:29 e saída pro cinema às 14:20: a agenda deixa ela comer antes de se arrumar, então o Se arrumando sumia do card, e o almoço atravessava o trajeto. Agora refeição em casa acaba antes do preparo de uma saída do dia (75 min antes, 110 à noite); se não cabe, come quando voltar (saída curta) ou por lá. Camada: mundo (`meals.py`).
 
-**Abertos:**
-1. **Belisco com o sanduíche na portaria (26/09, 16:40).** Chegou da academia com fome 1.0 e beliscou um chocolate; o sanduíche que o Patrick mandou estava na portaria desde 16:26 e ela pegou às 16:41. Belisco não olha a entrega esperando. Camada: mundo (`meals.py` × `delivery.py`). Pequeno.
-2. **"Banhou já?" → "Ainda não" (27/09, 01:57)** com três banhos no mundo (00:31, 01:20, 01:35). A causa (o card mandando outro banho) foi corrigida no item 2; falta ver se o banho recente aparece como fato no prompt, como a chegada do item 1. Camada: prompt.
-3. **Acordou "tomando café" e o café da manhã veio 1h30 depois (27/09).** O estado de acordar diz "acordando e tomando café" (09:12) e o café planejado foi 10:37–11:27; às 09:32 ela disse "tô aqui no café". Camada: mundo (texto do `light_day_wake`).
+6. ✅ **Belisco com o sanduíche na portaria (26/09, 16:40)** — corrigido em 27/09 na frente do mundo: presente na portaria ou pedido dela chegando seguram o belisco (`meals._comida_chegando`).
+7. ✅ **"Banhou já?" → "Ainda não" (27/09, 01:57)** — corrigido: "[BANHO — FATO]" no prompt (`world_context._banho`).
+8. ✅ **Acordou "tomando café" com o café 1h30 depois (27/09)** — corrigido: sem café agora, "acabou de acordar, ainda de pijama… (o café fica pra umas 10:37)".
+9. ✅ **Linha do tempo (26/09):** "Montou looks" × academia e música × banho (o bloco em casa é cortado quando outra coisa começa) e convite às 04:19 (visto ao acordar). `tests/test_bug_mundo_2709.py`.
+
+**Abertos:** nenhum.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** "bora na frente de imagens: tenho poses pra mandar"

@@ -499,6 +499,8 @@ class Meals:
         proxima = next((s for s in self.day_plan(now.date()) if s.at > now and not s.skipped), None)
         if proxima and proxima.at - now < timedelta(minutes=60):
             return 0                                      # segura pra próxima refeição
+        if self._comida_chegando(now):
+            return 0
         with self.db.get_connection() as conn:
             row = conn.execute("SELECT MAX(event_at) FROM life_events WHERE event_type IN ('meal','snack') "
                                "AND event_at<=?", (now.isoformat(),)).fetchone()
@@ -517,6 +519,24 @@ class Meals:
             self._start_eating(slot, slot.at, sac["fim"], now)
         logger.info("meal.belisco dish=%s", slot.dish)
         return 1
+
+    def _comida_chegando(self, now: datetime) -> bool:
+        """26/09, 16:40: chegou da academia com fome e beliscou um chocolate, com o sanduíche que o Patrick
+        mandou esperando na portaria desde 16:26 (pegou às 16:41). Presente na portaria ela pega ao subir;
+        o pedido dela a caminho (até 45 min) ela espera."""
+        try:
+            import delivery
+            cur = delivery.open_order(self.db)
+        except Exception:
+            return False
+        if not cur:
+            return False
+        if cur.get("by") == "patrick":
+            return cur.get("status") == "portaria" and cur.get("eats", True)
+        try:
+            return datetime.fromisoformat(cur["eta_at"]) - now <= timedelta(minutes=45)
+        except (KeyError, TypeError, ValueError):
+            return False
 
     # ----------------------------------------------------------- promessa --
     def observe_marina_line(self, text: str, now: datetime) -> Optional[dict]:

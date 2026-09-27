@@ -47,7 +47,9 @@ class AgendaReativaTest(unittest.TestCase):
         for alvo, kw in (("academia.Academia.plano", {"return_value": None}),
                          ("academia.PasseioMilo.plano", {"return_value": None}),
                          ("meals.Meals.day_plan", {"return_value": []}),
-                         ("sleep_plan.SleepPlan.in_bed", {"return_value": False})):
+                         ("sleep_plan.SleepPlan.in_bed", {"return_value": False}),
+                         # 27/09: o random.random()=0 dos testes sorteava uma virose (agenda viva: doente só farmácia)
+                         ("emotion.EmotionEngine._discomfort", {"return_value": (0.0, "")})):
             p = patch(alvo, **kw)
             p.start()
             self.addCleanup(p.stop)

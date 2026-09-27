@@ -21,7 +21,7 @@ import json
 import logging
 import random
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,10 @@ LUGAR_PLANEJADO = {"academia": "bodytech_sao_clemente", "milo": "enseada_botafog
 # gate barato antes do modelo: a fala dela tem cara de plano?
 PLANO_RE = re.compile(
     r"\b(?:vou|vo|t[oô]\s+(?:indo|saindo|descendo|voltando|me\s+trocando)|j[aá]\s+vou|partiu|bora|desisti|"
-    r"n[aã]o\s+vou\s+mais|embora|me\s+trocar|t[aá]\s+bom|t[aá]\s+certo|fechou|topo|topei|ok\s+ok|beleza)\b",
+    r"n[aã]o\s+vou\s+mais|embora|me\s+trocar|t[aá]\s+bom|t[aá]\s+certo|fechou|topo|topei|ok\s+ok|beleza|"
+    # 27/09 (agenda viva): outros dias, rolês, aula
+    r"amanh[aã]|s[aá]bado|domingo|segunda|ter[cç]a|quarta|quinta|sexta|faltar|matar\s+aula|desmarc\w*|"
+    r"remarc\w*|cancel\w*|marquei|combinei|furar|furei)\b",
     re.IGNORECASE)
 # combinado de uber com o Patrick (27/09): ele pede, ela topa
 UBER_PEDIDO_RE = re.compile(r"\buber\b|\bn[aã]o\s+(?:quero|vai)\s+(?:(?:que\s+)?(?:voc[eê]|vc)\s+)?(?:andando|ir|voltar)\s+a\s+p[eé]",
@@ -483,22 +486,69 @@ class AgendaReativa:
         if acao == "vai_embora":
             c = self._atual(now)
             return self.interromper(now, "conversa", texto=motivo or "resolveu ir embora", c=c) if c else None
+        # 27/09 (agenda viva): a conversa mexe em qualquer item dos próximos dias (rolê, convite, aula…)
+        item = self._item(decisao.get("item"))
+        if item is not None:
+            from agenda_viva import AgendaViva
+            return AgendaViva(self.db).pela_conversa(item, acao, self._quando(decisao.get("quando"), now), motivo, now)
+        if acao == "desistiu" and tipo == "aula":
+            from agenda_viva import AgendaViva
+            aula = next((i for i in self._lista if i["tipo"] == "aula"), None)
+            return AgendaViva(self.db).pela_conversa(aula, acao, now, motivo, now) if aula else None
         if tipo not in TIPOS_CONVERSA:
             return None
         if acao == "desistiu":
             return self._desiste(tipo, now, motivo)
         if acao == "vai_fazer":
-            return self._vai(tipo, self._quando(decisao.get("quando"), now), now, motivo)
+            quando = self._quando(decisao.get("quando"), now)
+            if quando.date() > now.date():
+                from agenda_viva import AgendaViva
+                return AgendaViva(self.db).marca_outro_dia(tipo, quando, motivo, now)
+            return self._vai(tipo, quando, now, motivo)
         return None
 
-    @staticmethod
-    def _quando(valor, now: datetime) -> datetime:
-        if isinstance(valor, str) and re.fullmatch(r"\d{1,2}:\d{2}", valor.strip()):
-            h, m = (int(x) for x in valor.strip().split(":"))
-            if 0 <= h < 24 and 0 <= m < 60:
-                at = now.replace(hour=h, minute=m, second=0, microsecond=0)
+    _lista: list = []
+
+    def _item(self, n) -> Optional[dict]:
+        try:
+            n = int(n)
+        except (TypeError, ValueError):
+            return None
+        return self._lista[n - 1] if 1 <= n <= len(self._lista) else None
+
+    DIAS = ("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")
+
+    @classmethod
+    def _quando(cls, valor, now: datetime) -> datetime:
+        """"agora", "HH:MM", "amanhã HH:MM", "sábado HH:MM" ou "AAAA-MM-DD HH:MM"."""
+        if not isinstance(valor, str):
+            return now
+        v = valor.strip().casefold().replace("amanha", "amanhã").replace("sabado", "sábado").replace("terca", "terça")
+        dia = now.date()
+        m = re.match(r"(\d{4}-\d{2}-\d{2})\s*", v)
+        if m:
+            try:
+                dia = date.fromisoformat(m.group(1))
+            except ValueError:
+                return now
+            v = v[m.end():]
+        elif v.startswith("amanhã"):
+            dia, v = dia + timedelta(days=1), v[len("amanhã"):].strip()
+        else:
+            for i, nome in enumerate(cls.DIAS):
+                if v.startswith(nome):
+                    dia = dia + timedelta(days=(i - dia.weekday()) % 7 or 7)
+                    v = v[len(nome):].strip()
+                    break
+        m = re.fullmatch(r"(?:às\s*)?(\d{1,2})(?::|h)?(\d{2})?", v.strip())
+        if m:
+            h, mi = int(m.group(1)), int(m.group(2) or 0)
+            if 0 <= h < 24 and 0 <= mi < 60:
+                at = datetime.combine(dia, time(h, mi))
                 if at > now:
                     return at
+        elif dia != now.date():
+            return datetime.combine(dia, now.time().replace(second=0, microsecond=0))
         return now
 
     def _classifica(self, fala: str, msg_dele: str, now: datetime, *, llm=None) -> Optional[dict]:
@@ -510,20 +560,40 @@ class AgendaReativa:
             agora = (row["activity"] if row else "") or agora
         except Exception:
             pass
+        # 27/09 (agenda viva): a lista do que vem nos próximos 3 dias, pra conversa mexer em qualquer item
+        self._lista = []
+        try:
+            from agenda_viva import AgendaViva
+            self._lista = AgendaViva(self.db).lista_para_conversa(now)
+        except Exception:
+            logger.exception("agenda_reativa.lista")
+        dias = ("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")
+        agenda = "\n".join(
+            f"{n}. {i['texto']} — {('hoje' if i['inicio'].date() == now.date() else 'amanhã' if (i['inicio'].date() - now.date()).days == 1 else dias[i['inicio'].weekday()])} {i['inicio']:%H:%M}"
+            + (" (convite ainda sem resposta)" if i["tipo"] == "convite" else "")
+            for n, i in enumerate(self._lista, 1)) or "(nada marcado)"
         prompt = (
-            "Você lê um trecho de conversa entre a Marina e o namorado (Patrick) e diz se a Marina COMBINOU AGORA "
-            "fazer alguma coisa fora de casa, desistiu de algo que ia fazer, ou está indo embora de onde está.\n"
-            f"Hora: {now:%H:%M}. O que ela está fazendo: {agora}.\n"
+            "Você lê um trecho de conversa entre a Marina e o namorado (Patrick) e diz se a Marina DECIDIU AGORA "
+            "mexer na agenda dela: fazer alguma coisa fora de casa (hoje ou outro dia), desistir ou remarcar algo "
+            "que estava marcado, aceitar um convite, faltar aula, ou ir embora de onde está.\n"
+            f"Hoje é {dias[now.weekday()]}, {now:%Y-%m-%d}, {now:%H:%M}. O que ela está fazendo: {agora}.\n"
+            f"Agenda dela (próximos dias):\n{agenda}\n\n"
             f"Patrick: \"{(msg_dele or '')[:400]}\"\nMarina: \"{fala[:400]}\"\n\n"
-            "Responda só JSON: {\"acao\": \"vai_fazer\"|\"desistiu\"|\"vai_embora\"|\"nenhuma\", "
-            "\"tipo\": \"academia\"|\"milo\"|\"cafe\"|\"acai\"|\"orla\"|\"shopping\"|\"praia\"|\"mercado\"|\"farmacia\"|null, "
-            "\"quando\": \"agora\"|\"HH:MM\"|null, \"motivo\": \"frase curta em 3ª pessoa\"}.\n"
-            "Regras: vai_fazer só se ela decidiu de verdade (\"tá bom, vou\", \"vou descer com o Milo\", \"vou lá "
-            "no mercado\"); hipótese, pergunta, brincadeira ou \"talvez\" é nenhuma. Passear/descer com o cachorro = "
-            "milo; treinar = academia; sorvete = acai; caminhar = orla. vai_embora é ela saindo de onde está AGORA "
-            "(\"vou embora\", \"tô indo pra casa\"). Resposta curta dela a uma pergunta ou convite dele vale: o "
-            "assunto vem da mensagem dele (\"vai pra academia hoje?\" → \"vou às 18h\" é vai_fazer academia 18:00). "
-            "motivo = POR QUE ela decidiu (\"o Patrick convenceu\", \"o Milo tava pedindo\"), vazio se não disse."
+            "Responda só JSON: {\"acao\": \"vai_fazer\"|\"desistiu\"|\"remarcou\"|\"vai_embora\"|\"nenhuma\", "
+            "\"item\": número da agenda acima ou null, "
+            "\"tipo\": \"academia\"|\"milo\"|\"cafe\"|\"acai\"|\"orla\"|\"shopping\"|\"praia\"|\"mercado\"|\"farmacia\"|\"aula\"|null, "
+            "\"quando\": \"agora\"|\"HH:MM\"|\"amanhã HH:MM\"|\"<dia da semana> HH:MM\"|null, "
+            "\"motivo\": \"frase curta em 3ª pessoa\"}.\n"
+            "Regras: só vale decisão de verdade (\"tá bom, vou\", \"vou descer com o Milo\", \"desmarquei com a "
+            "Bia\", \"amanhã vou na academia às 7\"); hipótese, pergunta, brincadeira ou \"talvez\" é nenhuma. Se a "
+            "decisão é sobre algo da agenda, use o item (desistiu = não vai mais; remarcou = mesma coisa em outro "
+            "horário, com quando; vai_fazer num convite sem resposta = aceitou; desistiu num convite = recusou). "
+            "Faltar/matar aula = desistiu com tipo aula. Coisa nova fora da agenda: item null, com tipo e quando. "
+            "Passear/descer com o cachorro = milo; treinar = academia; sorvete = acai; caminhar = orla. vai_embora "
+            "é ela saindo de onde está AGORA (\"vou embora\", \"tô indo pra casa\"). Resposta curta dela a uma "
+            "pergunta ou convite dele vale: o assunto vem da mensagem dele (\"vai pra academia hoje?\" → \"vou às "
+            "18h\" é vai_fazer academia 18:00). motivo = POR QUE ela decidiu (\"o Patrick convenceu\", \"tava "
+            "cansada\"), vazio se não disse."
         )
         try:
             if llm is None:
@@ -539,9 +609,9 @@ class AgendaReativa:
         except Exception:
             logger.exception("agenda_reativa.classifica")
             return None
-        logger.info("agenda_reativa.classificou acao=%s tipo=%s quando=%s", data.get("acao"), data.get("tipo"),
-                    data.get("quando"))
-        return data if data.get("acao") in ("vai_fazer", "desistiu", "vai_embora") else None
+        logger.info("agenda_reativa.classificou acao=%s item=%s tipo=%s quando=%s", data.get("acao"), data.get("item"),
+                    data.get("tipo"), data.get("quando"))
+        return data if data.get("acao") in ("vai_fazer", "desistiu", "remarcou", "vai_embora") else None
 
     def _vai(self, tipo: str, quando: datetime, now: datetime, motivo: str) -> Optional[dict]:
         from vontade import PREP_MIN, SAIDAS, Vontade

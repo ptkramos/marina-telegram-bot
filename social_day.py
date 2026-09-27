@@ -544,7 +544,23 @@ class SocialDay:
         return out
 
     def _willing(self, invite: dict, now: datetime) -> tuple[bool, str]:
-        """Ela vai? Decidido na hora pelo estado dela (determinístico por convite)."""
+        """Ela vai? 27/09 (Patrick): pelo que ela sente na hora (agenda_viva.Disposicao), sem sorteio."""
+        try:
+            from agenda_viva import Disposicao, PESO, MELHOR_AMIGA, _jitter
+            aval = Disposicao(self.db).avaliar("role", now, com=tuple(invite["friends"]))
+            peso = PESO["convite"] - (0.05 if MELHOR_AMIGA in invite["friends"] else 0.0)
+            same_day = [i for i in self._invites().values()
+                        if i["start"][:10] == invite["start"][:10] and i["status"] == "accepted"]
+            if same_day:
+                peso += 0.2
+            if aval.vontade + _jitter(invite["key"]) >= peso:
+                return True, ""
+            if same_day:
+                return False, "já tinha outro rolê no dia"
+            neg = sorted((x for x in aval.fatores if x[2] < 0), key=lambda x: x[2])[:2]
+            return False, " e ".join(t for _, t, _ in neg) or "quis ficar de boa em casa"
+        except Exception:
+            logger.exception("social_day.willing.disposicao")
         p, reasons = INVITE_BASE_YES, []
         try:
             emo = {k: v["valor"] for k, v in self.db.get_estado_emocional(now).items()}
@@ -591,8 +607,11 @@ class SocialDay:
                     # registrada (ela vê ao acordar); o que já passou continua não existindo.
                     if datetime.fromisoformat(inv["start"]) <= now + timedelta(hours=1):
                         continue
-                    inv = {**inv, "invite_at": floor.isoformat(),
-                           "decide_at": max(inv["decide_at"], floor.isoformat())}
+                    visto = self._visto_ao_acordar(floor, datetime.fromisoformat(inv["start"]))
+                    if visto > now:
+                        continue                  # ela ainda não acordou: vê depois
+                    inv = {**inv, "invite_at": visto.isoformat(),
+                           "decide_at": max(inv["decide_at"], visto.isoformat())}
                 data[inv["key"]] = inv
                 who = inv["friends"][0]
                 nome = short_name(who)
@@ -626,6 +645,17 @@ class SocialDay:
         if changed:
             self._save_invites(data, now)
         return changed
+
+    def _visto_ao_acordar(self, floor: datetime, start: datetime) -> datetime:
+        """27/09: o convite do Quartinho ficou registrado às 04:19 (a hora do reset), com ela dormindo.
+        O convite que chegou antes do início da vida registrada ela vê quando acorda."""
+        try:
+            from sleep_plan import SleepPlan
+            wake = SleepPlan(self.db).wake(floor.date())
+        except Exception:
+            wake = None
+        visto = max(floor, wake) if wake else floor
+        return min(visto, start - timedelta(hours=1))
 
     def pending_invites(self, now: datetime) -> list[dict]:
         return [i for i in self._invites().values()

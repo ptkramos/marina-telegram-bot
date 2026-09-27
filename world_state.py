@@ -137,6 +137,20 @@ class RoutineEngine:
         "sleep": ("dormindo", "marina_apartment"),
     }
 
+    def _acordando(self, now: datetime) -> str:
+        """27/09: acordou 09:12 "acordando e tomando café" e o café planejado foi 10:37 — às 09:32 ela disse
+        "tô aqui no café". Sem café agora, é só acordar com calma (o café vem na hora dele)."""
+        try:
+            from meals import Meals
+            cafe = next((s for s in Meals(self.db).day_plan(now.date()) if s.kind == "cafe" and not s.skipped), None)
+        except Exception:
+            return "acordando e tomando café"
+        if cafe and cafe.at - timedelta(minutes=10) <= now:
+            return "acordando e tomando café"
+        if cafe:
+            return f"acabou de acordar, ainda de pijama, com calma (o café da manhã fica pra umas {cafe.at:%H:%M})"
+        return "acabou de acordar, ainda de pijama, com calma"
+
     def __init__(self, db: DatabaseManager, rng: Optional[random.Random] = None):
         self.db = db
         self.rng = rng or random.Random()
@@ -242,7 +256,7 @@ class RoutineEngine:
                 if not (wake <= now < end):
                     continue
                 activity = ("se arrumando pra faculdade (banho, skincare, cabelo, café)" if leave
-                            else "acordando e tomando café")
+                            else self._acordando(now))
                 result.append(RoutineCandidate(activity, "marina_apartment", float(row["probability"]),
                                                row["canonical_key"], routine_type="wake"))
                 continue
@@ -760,6 +774,17 @@ class WorldStateManager:
             Watching(self.db).materialize(now)
         except Exception:
             logger.exception("watch.materialize.error")
+        if not force:
+            try:
+                # 27/09 (Patrick): a agenda é dela e o que ela sente decide — repensar o que vem (rolê, academia,
+                # aula), emendar uma parada na volta e, à noite, chamar uma amiga pra sair.
+                from agenda_viva import AgendaViva
+                viva = AgendaViva(self.db)
+                viva.reconsidera(now)
+                viva.emenda(now)
+                viva.planeja(now)
+            except Exception:
+                logger.exception("agenda_viva.error")
         pausa = None
         try:
             # 26/09 (Patrick): tudo pode ser interrompido se houver motivo — antes de ler o compromisso,
@@ -937,6 +962,18 @@ class WorldStateManager:
             if bloco:
                 chosen = {**chosen, "activity": bloco.atividade, "place_key": "marina_apartment"}
                 slot_end = bloco.fim
+        else:
+            # 27/09 (linha do tempo de 26/09): "Montou looks" até 15:11 com a academia às 14:53 e a música
+            # atravessando o banho — o que começou agora encerra o bloco em casa que ainda estava aberto.
+            try:
+                from tempo_livre import TempoLivre
+                corte = now
+                if chosen.get("start_at"):
+                    ini = datetime.fromisoformat(str(chosen["start_at"]))
+                    corte = min(now, ini.replace(tzinfo=now.tzinfo) if ini.tzinfo != now.tzinfo else ini)
+                TempoLivre(self.db).interrompe(corte, now)
+            except Exception:
+                logger.exception("tempo_livre.interrompe.error")
         if reason == "announced_transition" and previous and not force:
             # 26/09: a mesma transição (refeição, belisco, banho) não vira um retrato novo a cada turno
             try:
