@@ -1560,3 +1560,12 @@ Bugs do uso real agora têm frente própria: skill `frente-bugs` (capturar banco
 `tests/test_bug_volta_quartinho.py`, 5 testes com as falas e horários do caso.
 
 Frente de imagens (27/09): skill `frente-imagens` e seção 6 do painel, pra cadeia pose → prompt → motor.
+
+## Bug: Hoje desconexo do card (27/09)
+Às 01:05 o card, o Hoje e o mundo contavam três histórias. Correção:
+- `agenda.etapas` (Se arrumando pra dormir): banho real (`life_events` `banho:*`) depois da volta e até `BANHO_DORMIR_JANELA` (90 min) antes da cama vira o primeiro passo ("Tomando banho [e lavando o cabelo]"), e os outros passos vêm depois dele. Banho mais cedo tira o passo de banho. Fecha o risco de `rituals._banho_prep` dar um segundo banho.
+- `hoje.hoje_view`: item com fim no futuro fica no presente (`presente` do bloco ou `_presente`), com a hora em aberto; o banho corta o bloco em casa que passava por cima dele.
+- `tempo_livre.agora`: o bloco não começa antes da chegada (`Commute.ultima_volta` em até 15 min).
+- `meals.materialize`: refeição em casa com ela fora espera ela voltar, mesmo passada a janela (antes caía no "chegou, come agora" com ela ainda no bar).
+
+`tests/test_bug_hoje_card.py`, 6 testes com os horários do caso.

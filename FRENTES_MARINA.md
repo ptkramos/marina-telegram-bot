@@ -72,6 +72,12 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
      - O histórico ("te aviso quando chegar em casa") venceu o fato.
      - Ela também não avisou que chegou quando chegou (00:05): a promessa das 21:39 não foi gravada, porque a volta começava fora da janela de 90 min do `arrival_promise`. Camada: mundo.
 
+2. ✅ **Hoje desconexo do card (27/09, 01:05)** — corrigido em 27/09 (`tests/test_bug_hoje_card.py`).
+   - **Dois banhos.** O card "Se arrumando" (pra dormir) marcava banho às 01:00, com o banho de chegada (ritual `banho_rua`) rolando 00:31–01:12. Às 01:14 o passo ainda ativo podia disparar um segundo banho de verdade. Agora o banho de chegada até 90 min antes da cama vira o banho do card (decisão do Patrick: "um card só"); banho mais cedo só tira o passo. Camada: mundo.
+   - **Passado no que ainda acontece.** O Hoje mostrava "Tomou banho e lavou o cabelo 00:31–01:12" às 01:05. O que ainda não acabou fica no presente, com a hora em aberto ("Tomando banho e lavando o cabelo 00:31–"). Camada: app.
+   - **Instagram fora de hora.** O bloco em casa recuava 5 min e começou às 00:02, com ela no uber até 00:05, e ia até 00:38 passando por cima do banho. O bloco não começa antes da chegada, e o Hoje corta o bloco quando o banho começa. Camada: mundo e app.
+   - **Pipoca no bar.** O lanchinho planejado das 21:07 ("pipoca vendo série") foi registrado com ela no Quartinho: passada a janela, a refeição em casa não conferia se ela tinha voltado. Agora espera ela estar em casa. Camada: mundo.
+
 **Abertos:** nenhum.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`

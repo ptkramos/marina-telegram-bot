@@ -302,13 +302,23 @@ class TempoLivre:
             ini = b.fim
         else:
             return None
-        b = self._escolhe(now, chave, max(ini, now - timedelta(minutes=5)), fim_slot, registrar)
+        b = self._escolhe(now, chave, max(ini, now - timedelta(minutes=5), self._chegou(now)), fim_slot, registrar)
         if not registrar:
             return b
         st.setdefault(dia, {})[chave] = {**b.__dict__, "inicio": b.inicio.isoformat(), "fim": b.fim.isoformat()}
         self._save(st, now)
         self._registra(b, now)
         return b
+
+    def _chegou(self, now: datetime) -> datetime:
+        """27/09: o bloco em casa não começa antes de ela chegar (o Instagram "no quarto" às 00:02, com ela
+        no uber até 00:05)."""
+        try:
+            from commute import Commute
+            volta = Commute(self.db).ultima_volta(now, timedelta(minutes=15))
+        except Exception:
+            volta = None
+        return volta.end if volta else datetime.min
 
     def _ouviu(self, b: Bloco, now: datetime) -> None:
         try:

@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import random
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Optional
@@ -62,6 +63,7 @@ PREP_MIN = {"milo": (3, 5), "cafe": (8, 12), "acai": (6, 10), "farmacia": (5, 8)
             "orla": (8, 12), "shopping": (20, 30), "mercado_semana": (8, 12), "medico": (12, 18),
             "pronto_atendimento": (8, 12), "manicure": (8, 12), "cabelo": (8, 12),
             "academia": (10, 15), "noite": (60, 90), "encontro": (30, 45), "jogo": (40, 55), "freela": (40, 55), "praia": (15, 20), "dormir": (30, 45)}
+BANHO_DORMIR_JANELA = timedelta(minutes=90)     # banho de chegada tão perto da cama vira o banho do Se arrumando
 # o que acontece lá (quando não é consumo nem aula)
 LA_PASSOS = {
     "milo": (("Passeando", 70), ("Xixi do Milo", 30)),
@@ -322,10 +324,41 @@ class Agenda:
                 rng = _rng(day, "prep:dormir")
                 inicio = max(ultimo_fim + timedelta(minutes=5), bed - timedelta(minutes=rng.randint(*PREP_MIN["dormir"])))
                 passos = PREP["dormir"] if teve_make else PREP["dormir"][1:]
+                lista = self._distribui(list(passos), inicio, bed)
+                banho = next(iter(self._banhos(ultimo_fim, bed)), None)
+                if banho:
+                    # 27/09 (Patrick, "um card só"): chegou do rolê e foi pro banho — é o banho do Se arrumando,
+                    # não um segundo (antes o card marcava outro às 01:00 e o ritual podia dar mais um banho).
+                    b_ini, b_fim, lavou = banho
+                    resto = [p for p in passos if p[0] != "Tomando banho"]
+                    if b_ini >= bed - BANHO_DORMIR_JANELA:
+                        inicio = min(inicio, b_ini)
+                        lista = [Passo("Tomando banho e lavando o cabelo" if lavou else "Tomando banho", b_ini)]
+                        if resto and b_fim < bed - timedelta(minutes=5):
+                            lista += self._distribui(resto, b_fim, bed)
+                    else:
+                        lista = self._distribui(resto, inicio, bed)
                 out.append(Etapa("arrumando", "Se arrumando", inicio, bed, linha2=f"Vai dormir às {aprox(bed)}",
                                  lugar_key="marina_apartment", celular=CELULAR["arrumando"],
-                                 passos=self._distribui(list(passos), inicio, bed), chave=f"prep:dormir:{day}",
-                                 prep_tipo="dormir"))
+                                 passos=lista, chave=f"prep:dormir:{day}", prep_tipo="dormir"))
+        return out
+
+    def _banhos(self, ini: datetime, fim: datetime) -> list[tuple[datetime, datetime, bool]]:
+        """Banhos de verdade (rituals.start_shower) que começaram entre `ini` e `fim`."""
+        with self.db.get_connection() as conn:
+            rows = conn.execute("""SELECT event_at, summary FROM life_events WHERE event_key LIKE 'banho:%'
+                                   AND event_at>=? AND event_at<? ORDER BY event_at""",
+                                (ini.isoformat(), fim.isoformat())).fetchall()
+        out = []
+        for r in rows:
+            m = re.search(r"\((\d\d):(\d\d)–(\d\d):(\d\d)\)", r["summary"] or "")
+            if not m:
+                continue
+            b_ini = datetime.fromisoformat(r["event_at"])
+            b_fim = b_ini.replace(hour=int(m.group(3)), minute=int(m.group(4)), second=0, microsecond=0)
+            if b_fim < b_ini:
+                b_fim += timedelta(days=1)
+            out.append((b_ini, b_fim, "lavou o cabelo" in (r["summary"] or "")))
         return out
 
     def _refeicoes_em_casa(self, day: date) -> list:

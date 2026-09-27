@@ -417,8 +417,10 @@ class Meals:
             base_kind = slot.key.split(":")[2]
             if base_kind != "lanche" and self._logged(now.date(), base_kind):
                 continue      # já comeu (promessa antecipou)
-            if slot.where == "casa" and not slot.skipped and not self._at_home() and now < slot.end:
-                continue      # fora de casa na hora: espera ela voltar (a janela ainda está aberta)
+            if slot.where == "casa" and not slot.skipped and not self._at_home():
+                # fora de casa: espera ela voltar. 27/09: passada a janela, a pipoca "vendo série" das 21:07
+                # era registrada com ela no Quartinho Bar.
+                continue
             if slot.where == "casa" and not slot.skipped and self._away_at(slot.at):
                 # 26/09: o chocolate das 16:39 foi registrado com ela voltando da academia a pé.
                 # Chegou em casa: come agora (lanche que passou de 1 h da hora não acontece mais).

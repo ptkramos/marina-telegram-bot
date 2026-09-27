@@ -494,7 +494,21 @@ def hoje_view(db, now: datetime) -> dict:
         it = {"at": at, "key": ev["event_key"], **curto(ev)}
         if ev["event_type"] == "tempo_livre" and ev["event_key"] in fins:
             it["fim"] = fins[ev["event_key"]]
+            if ev.get("title"):
+                it["presente"] = _cap(ev["title"])
         itens.append(it)
+
+    # 27/09: o banho interrompe o que ela fazia em casa (o Instagram 00:02–00:38 com banho às 00:31)
+    banhos = [it["at"] for it in itens if it["ic"] == "chuveiro"]
+    for it in itens:
+        corte = next((b for b in banhos if it["ic"] != "chuveiro" and it.get("fim") and it["at"] < b < it["fim"]), None)
+        if corte:
+            it["fim"] = corte
+    # 27/09: o que ainda está acontecendo fica no presente ("Tomando banho 00:31–"), não "Tomou banho 00:31–01:12"
+    for it in itens:
+        if it.get("fim") and it["fim"] > now:
+            it["texto"] = it.get("presente") or _presente(it["texto"])
+            it["fim"], it["agora"] = None, True
 
     # blocos iguais em seguida viram um só ("Montando looks no closet" 13:59 e 14:38)
     juntos: list[dict] = []
@@ -542,9 +556,21 @@ def hoje_view(db, now: datetime) -> dict:
     return {"periodos": [{"nome": n, "itens": periodos[n]} for n in ordem]}
 
 
+PRESENTE = (("Tomou banho e lavou o cabelo", "Tomando banho e lavando o cabelo"), ("Tomou banho", "Tomando banho"),
+            ("Tomou café", "Tomando café"), ("Almoçou", "Almoçando"), ("Jantou", "Jantando"), ("Lanchou", "Lanchando"),
+            ("Comeu", "Comendo"))
+
+
+def _presente(texto: str) -> str:
+    for antes, agora in PRESENTE:
+        if texto.startswith(antes):
+            return agora + texto[len(antes):]
+    return texto
+
+
 def _linha(it: dict) -> dict:
     fim = it.get("fim")
-    em_curso = it.get("saida") and not fim
+    em_curso = (it.get("saida") or it.get("agora")) and not fim
     hora = _hm(it["at"]) + ("–" + _hm(fim) if fim and _hm(fim) != _hm(it["at"]) else "–" if em_curso else "")
     return {"ic": it["ic"], "texto": it["texto"], "sub": it.get("sub") or "", "hora": hora,
             "valor": it.get("valor"), "aviso": it.get("aviso", False), "previsto": False,
