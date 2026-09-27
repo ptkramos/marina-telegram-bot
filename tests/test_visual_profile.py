@@ -145,7 +145,7 @@ class TestVisualProfile(unittest.TestCase):
         from visual_profile import FRIENDS_VISUAL, HAIR_COLOR
         import civitai_images as ci
         from pathlib import Path
-        self.assertLessEqual({"carol_menezes", "julia_azevedo"}, set(FRIENDS_VISUAL))
+        self.assertLessEqual({"carol_menezes", "julia_azevedo", "theo_martins"}, set(FRIENDS_VISUAL))
         for key, friend in FRIENDS_VISUAL.items():
             with self.subTest(key):
                 self.assertTrue(friend["en"] and friend["pt"] and len(friend["style"]) == 2)
@@ -175,6 +175,9 @@ class TestVisualProfile(unittest.TestCase):
         self.assertEqual((step["model"], step["operation"], step["loras"]), ("edit", "editImage", {}))
         self.assertEqual(len(step["images"]), 2)
         self.assertFalse(body["allowMatureContent"])
+        self.assertIn("Give the woman on the right", step["prompt"])
+        man = ci.friend_edit_body(b"a", b"b", side="left", who="the man", width=400, height=600, noun="man")
+        self.assertIn("the exact face of the man in the second image", man["steps"][0]["input"]["prompt"])
 
 
 if __name__ == "__main__":

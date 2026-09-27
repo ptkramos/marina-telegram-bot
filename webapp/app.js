@@ -343,7 +343,9 @@ const loaders = {
       }).join("") : vazio("Nenhuma movimentação ainda.");
 
       // Mundo
-      $("bm-pessoas").innerHTML = m.pessoas.map((p) => `<div class="pessoa"><span class="avatar-ini">${esc(p.iniciais)}</span>
+      $("bm-pessoas").innerHTML = m.pessoas.map((p) => `<div class="pessoa">${p.foto
+        ? `<img class="avatar-ini avatar-foto" src="/static/${esc(p.foto)}" alt="">`
+        : `<span class="avatar-ini">${esc(p.iniciais)}</span>`}
         <div class="ps-txt"><div class="t">${esc(p.nome)}</div><div class="d">${esc(cap(p.quem))}</div></div>
         <div class="ps-dir"><div class="d">${p.falaram ? esc(p.falaram) : "Sem contato ainda"}</div>
         ${p.vezes_30d ? `<div class="d">${p.vezes_30d} ${p.vezes_30d > 1 ? "vezes" : "vez"} no mês</div>` : ""}</div></div>`).join("")

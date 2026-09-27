@@ -103,6 +103,12 @@ class MundoTest(unittest.TestCase):
             self.assertEqual(por_nome["Seu Jorge Almeida"]["iniciais"], "JA")
             self.assertEqual(por_nome["Dona Neide Souza"]["vezes_30d"], 0, "'weekly' do cânone não é contagem")
             self.assertTrue(all(p["quem"] for p in m["pessoas"]))
+            # 28/09: foto de perfil das amigas com RG; quem não tem fica nas iniciais
+            for nome, key in (("Bia Andrade", "bia_andrade"), ("Carol Menezes", "carol_menezes"),
+                              ("Júlia Azevedo", "julia_azevedo"), ("Theo Martins", "theo_martins")):
+                self.assertEqual(por_nome[nome]["foto"], f"avatars/{key}.jpg")
+                self.assertTrue((Path(__file__).resolve().parents[1] / "webapp" / por_nome[nome]["foto"]).is_file())
+            self.assertIsNone(por_nome["Seu Jorge Almeida"]["foto"])
 
 
 if __name__ == "__main__":

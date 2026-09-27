@@ -409,3 +409,5 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 **Carol (28/09):** rosto fixo por foto-RG, como a Bia (frente de imagens). Nada no Mini App ainda.
 
 **Júlia (28/09):** rosto fixo por foto-RG, como a Bia e a Carol (frente de imagens). Nada no Mini App ainda.
+
+**Fotos de perfil no Mundo (28/09):** Bia, Carol, Júlia e Theo aparecem com foto (círculo de 38px no lugar das iniciais) na lista de Pessoas do Bastidores. `social_day.world_panel` manda `foto: "avatars/<chave>.jpg"` quando o arquivo existe em `webapp/avatars/`; sem arquivo, continua nas iniciais. A foto é o recorte no rosto de uma foto de perfil gerada sobre o RG de cada um (frente de imagens).

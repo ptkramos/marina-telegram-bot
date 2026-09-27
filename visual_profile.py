@@ -155,6 +155,17 @@ FRIENDS_VISUAL = {
                   "delineado gatinho, gargantilha de cordão preto, regata canelada preta, peças de brechó, câmera "
                   "analógica na alça"),
     },
+    "theo_martins": {   # RG: a nº 2 (28/09; o Patrick deixou a escolha comigo) — rosto de frente, meio sorriso debochado
+        "en": ("a handsome young Brazilian man of mixed race with warm light-brown skin, short dark brown tight curls "
+               "on top with low-faded sides, dark brown eyes with long lashes, thick dark eyebrows, a sharp jawline "
+               "with a neatly trimmed light stubble, and a slim tall build"),
+        "pt": ("pardo de pele morena clara, cachos curtos castanho-escuros no topo com a lateral baixa em degradê, "
+               "olhos castanho-escuros de cílio comprido, sobrancelha grossa, maxilar marcado com barba rala aparada, "
+               "magro e alto"),
+        "style": ("oversized linen shirts open at the collar, a small silver stud earring, silver rings, fashion-forward outfits",
+                  "camisa de linho larga com a gola aberta, brinquinho de prata, anéis de prata, roupa de quem entende de moda"),
+        "noun": "man",
+    },
 }
 KREA2_ZOOM_OPEN = {
     "close": "A close photo of",

@@ -32,11 +32,14 @@ import logging
 import random
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
+from pathlib import Path
 from typing import Optional
 
 from db import DatabaseManager
 
 logger = logging.getLogger("SocialDay")
+# 28/09 (Patrick): foto de perfil das amigas no Mundo do Bastidores (Krea 2 Edit sobre a foto-RG, recorte no rosto).
+AVATARS_DIR = Path(__file__).resolve().parent / "webapp" / "avatars"
 
 # Nome curto, como a Marina chamaria.
 SHORT_NAME = {
@@ -1012,6 +1015,7 @@ class SocialDay:
                 nome = " ".join([apelido] + nome.split(") ")[1].split()) if ") " in nome else apelido
             last = datetime.fromisoformat(p["last_interaction_at"]) if p["last_interaction_at"] else None
             pessoas.append({"nome": nome, "iniciais": "".join(w[0] for w in nome.replace("Dona ", "").replace("Seu ", "").split()[:2]).upper(),
+                            "foto": f"avatars/{key}.jpg" if (AVATARS_DIR / f"{key}.jpg").is_file() else None,
                             "quem": quem,
                             "novo": novo, "falaram": self._quando_curto(last, now) if last else None,
                             "vezes_30d": p["contact_frequency"] if isinstance(p["contact_frequency"], int) else 0, "_last": last or datetime.min})

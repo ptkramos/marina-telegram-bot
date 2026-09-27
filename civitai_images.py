@@ -390,9 +390,9 @@ async def _run_workflow(session: aiohttp.ClientSession, headers: dict, body: dic
 # só o rosto da amiga pelo da foto-RG dela (rosto fixo em toda foto). O editor refaz a imagem inteira e
 # deixa a textura "crocante": da edição fica só o lado da amiga, colado na original com a emenda suavizada.
 FRIEND_RG = {"bia_andrade": "data/amigas/bia_rg.jpg", "carol_menezes": "data/amigas/carol_rg.jpg",
-             "julia_azevedo": "data/amigas/julia_rg.jpg"}
-FRIEND_EDIT_PROMPT = ("Give the woman on the {side}, {who}, the exact face of the woman in the second image: her "
-                      "face shape, eyes, eyebrows, nose, lips and skin tone. Keep the other woman, both poses, the "
+             "julia_azevedo": "data/amigas/julia_rg.jpg", "theo_martins": "data/amigas/theo_rg.jpg"}
+FRIEND_EDIT_PROMPT = ("Give the {noun} on the {side}, {who}, the exact face of the {noun} in the second image: "
+                      "the face shape, eyes, eyebrows, nose, lips and skin tone. Keep the other woman, both poses, the "
                       "clothes, the accessories, the hair, the background and the lighting exactly as they are in "
                       "the first image.")
 FRIEND_SEAM = 0.56      # a emenda fica no ombro da amiga (ela ocupa a metade do lado dela)
@@ -400,14 +400,14 @@ FRIEND_SEAM_BLUR = 28
 
 
 def friend_edit_body(image: bytes, rg: bytes, *, side: str, who: str, width: int, height: int,
-                     is_nsfw: bool = False, seed: Optional[int] = None) -> dict:
+                     is_nsfw: bool = False, seed: Optional[int] = None, noun: str = "woman") -> dict:
     import base64
 
     def url(data: bytes) -> str:
         return "data:image/jpeg;base64," + base64.b64encode(data).decode()
 
     step = {"engine": "comfy", "ecosystem": "krea2", "model": "edit", "operation": "editImage",
-            "prompt": FRIEND_EDIT_PROMPT.format(side=side, who=who), "images": [url(image), url(rg)],
+            "prompt": FRIEND_EDIT_PROMPT.format(side=side, who=who, noun=noun), "images": [url(image), url(rg)],
             "width": width, "height": height, "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
             "quantity": 1, "loras": {}}
     body = {"steps": [{"$type": "imageGen", "input": step}], "allowMatureContent": bool(is_nsfw)}
@@ -440,8 +440,10 @@ async def swap_friend_face(image: bytes, friend: str, *, side: str = "right", wh
     rg = (Path(__file__).resolve().parent / rg_path).read_bytes()
     from PIL import Image
     w, h = Image.open(io.BytesIO(image)).size
-    body = friend_edit_body(image, rg, side=side, who=who or "the other woman", width=w, height=h,
-                            is_nsfw=is_nsfw, seed=seed)
+    from visual_profile import FRIENDS_VISUAL
+    noun = FRIENDS_VISUAL.get(friend, {}).get("noun", "woman")
+    body = friend_edit_body(image, rg, side=side, who=who or f"the other {noun}", width=w, height=h,
+                            is_nsfw=is_nsfw, seed=seed, noun=noun)
     headers = {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json", "User-Agent": USER_AGENT}
     async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT_S + 30)) as session:
         try:
