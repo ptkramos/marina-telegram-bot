@@ -4,12 +4,12 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 27/09/2026, madrugada._
+_Atualizado em 27/09/2026, 12:20 (auditoria de funcionamento, rodada 1)._
 
 ---
 
 ## 1. Mundo e agenda — skill `frente-mundo`
-**Abertura:** "bora na frente do mundo: conflito do rolê em dia de aula"
+**Abertura:** "bora na frente do mundo: limpar os bugs do banco e da agenda e fechar a agenda inteligente hoje"
 
 **Pronto (26/09):** agenda única (planejado, vontade, convite → mesma agenda com etapas); academia e passeio do
 Milo decididos uma vez por dia; mercado e médico como itens (Bradesco Saúde, Samaritano/Novamed); tempo livre
@@ -21,11 +21,12 @@ desgaste; Ophicina do Cabelo na rotina/evento/mimo, R$ 180 do saldo; em casa ent
 foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo** (26/09, noite — `cabelo.py`: lava dia sim, dia não no banho, penteado de agora, corte/luzes/hidratação, Ophicina junta o vencido e cobra do saldo, pergunta penteado e corte/cor, sugestão dele vira mudança, cabelo de agora em toda foto, seção Cabelo no Por dentro; textos revisados com ele na mesma noite).
 
 **Próximo, nesta ordem:**
-1. Conflito: rolê em dia de aula que começa antes da aula acabar sobrepõe volta e ida.
-2. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber…).
-3. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
-4. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
-5. Incoerências que a linha do tempo Hoje mostrou (26/09, noite), ainda abertas: "Montou looks" até 15:11 com a academia às 14:53; música atravessando o banho; convite da Bia registrado às 04:19. (Pipoca no bar, bloco antes da chegada e bloco por cima do banho: corrigidos na frente de bugs, 27/09.)
+1. **Hoje (27/09), pedido do Patrick:** limpar os bugs abertos do banco e da agenda (seção 5: belisco × entrega na portaria, banho recente como fato no prompt, acordou "tomando café" antes do café; e os do item 6 abaixo) e fechar o que falta pra agenda ficar inteligente e maleável em tempo real com as emoções e decisões dela (vontade, humor, energia, tesão, conversa mexendo em tudo, não só nos itens de hoje).
+2. Conflito: rolê em dia de aula que começa antes da aula acabar sobrepõe volta e ida.
+3. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber…).
+4. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
+5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
+6. Incoerências que a linha do tempo Hoje mostrou (26/09, noite), ainda abertas: "Montou looks" até 15:11 com a academia às 14:53; música atravessando o banho; convite da Bia registrado às 04:19. (Pipoca no bar, bloco antes da chegada e bloco por cima do banho: corrigidos na frente de bugs, 27/09.)
 
 ## 2. Apps (Mini App) — skill `frente-apps`
 **Abertura:** "bora na frente dos apps: Bastidores aba a aba"
@@ -124,6 +125,8 @@ O Patrick está achando muitos bugs no uso real: o dia 26/09 teve ~50 commits em
 8. Imagens (27/09): câmera segue a situação, catálogo de poses, unha e cabelo nas fotos.
 
 Bug achado vira item na seção 5 (Bugs), com a correção feita aqui mesmo se for pequena.
+
+**Status:** rodada 1 feita e no ar (`5332280`). Próxima rodada quando o "não exercitado" abaixo acontecer no uso real (academia em dia útil, vontade, Ophicina, fotos).
 
 **Rodada 1 (27/09, 11:40) — resultado:**
 - Deploy: os 3 commits fora da VPS (`499bf82`, `f69d2d4`, `d3b0c95`) só mexiam em relatório e skill; nada de código parado. Log de 26–27/09 limpo (dois erros de rede do Telegram às 22:11; robôs tentando `/.env` no Mini App, barrados).
