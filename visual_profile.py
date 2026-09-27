@@ -127,6 +127,19 @@ FRIENDS_VISUAL = {
         "style": ("dramatic black winged eyeliner, gold hoop earrings, black chokers, black night-out outfits",
                   "delineado gatinho marcado, argolas douradas, chokers pretas, roupa preta de balada"),
     },
+    "carol_menezes": {   # RG: a nº 5 (Patrick, 28/09) — rosto da nº 1, físico da nº 4, pele branca rosada
+        "en": ("a gorgeous young Brazilian woman with long voluminous honey-blonde hair in loose tousled waves with "
+               "darker roots, bright light blue eyes framed by long dark lashes, thick groomed brown eyebrows, a round "
+               "face with full cheeks, full pink lips and a wide bright smile, fair rosy white skin with a natural "
+               "pink flush on her cheeks, clear smooth even-toned skin, a fit curvy body with toned abs, and a "
+               "black-ink floral and skull tattoo sleeve on her left arm"),
+        "pt": ("loira de cabelo mel comprido e volumoso, ondas soltas com a raiz mais escura, olhos azul-claros, "
+               "sobrancelha grossa desenhada, rosto redondo de bochecha cheia, sorriso largo, pele branca rosada, "
+               "corpo definido de academia com curvas e barriga trincada, braço esquerdo fechado de tatuagem "
+               "(flores e caveira)"),
+        "style": ("ribbed crop tops, high-waisted leggings, glossy pink lip gloss, hair up in a high ponytail at the gym",
+                  "cropped canelado, legging de cintura alta, gloss rosa, rabo alto na academia"),
+    },
 }
 KREA2_ZOOM_OPEN = {
     "close": "A close photo of",

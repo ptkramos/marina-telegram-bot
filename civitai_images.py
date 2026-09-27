@@ -389,7 +389,7 @@ async def _run_workflow(session: aiohttp.ClientSession, headers: dict, body: dic
 # pro dela (teste 27/09) — então a foto sai com a amiga descrita de um lado e depois o Krea 2 Edit troca
 # só o rosto da amiga pelo da foto-RG dela (rosto fixo em toda foto). O editor refaz a imagem inteira e
 # deixa a textura "crocante": da edição fica só o lado da amiga, colado na original com a emenda suavizada.
-FRIEND_RG = {"bia_andrade": "data/amigas/bia_rg.jpg"}
+FRIEND_RG = {"bia_andrade": "data/amigas/bia_rg.jpg", "carol_menezes": "data/amigas/carol_rg.jpg"}
 FRIEND_EDIT_PROMPT = ("Give the woman on the {side}, {who}, the exact face of the woman in the second image: her "
                       "face shape, eyes, eyebrows, nose, lips and skin tone. Keep the other woman, both poses, the "
                       "clothes, the accessories, the hair, the background and the lighting exactly as they are in "

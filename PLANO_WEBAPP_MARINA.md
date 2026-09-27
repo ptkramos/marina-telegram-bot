@@ -405,3 +405,5 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 **Bia (28/09, frente de imagens):** aparência canônica decidida (morena carioca, só texto). Nada no Mini App ainda; entra quando houver Instagram.
 
 **Bia (28/09):** rosto fixo por foto-RG e troca de rosto nas fotos de grupo (frente de imagens). Nada no Mini App ainda.
+
+**Carol (28/09):** rosto fixo por foto-RG, como a Bia (frente de imagens). Nada no Mini App ainda.

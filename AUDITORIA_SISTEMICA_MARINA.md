@@ -1560,7 +1560,7 @@ Bugs do uso real agora têm frente própria: skill `frente-bugs` (capturar banco
 `tests/test_bug_volta_quartinho.py`, 5 testes com as falas e horários do caso.
 
 Frente de imagens (27/09): skill `frente-imagens` e seção 6 do painel, pra cadeia pose → prompt → motor.
-Primeira rodada (27–28/09): amigas só por texto (LoRA de rosto mistura com o da Marina); Bia com foto-RG (`data/amigas/bia_rg.jpg`) e troca de rosto pelo Krea 2 Edit na foto de grupo (`civitai_images.swap_friend_face`), 28/09. FinePorn v5 em A/B contra a v4 (fica a v4); 18 poses de referência no catálogo (`photo_director`), zoom `torso` (`visual_profile`), plug de coração no mundo (`intimacy`). Achado: roupa descrita *sendo tirada* + nudez faz o Krea 2 recusar (imagem de ruído com letras, sem erro na API) — a roupa puxada se escreve parada. `tests/test_photo_director.test_reference_poses_27_09`.
+Primeira rodada (27–28/09): amigas só por texto (LoRA de rosto mistura com o da Marina); Bia com foto-RG (`data/amigas/bia_rg.jpg`) e troca de rosto pelo Krea 2 Edit na foto de grupo (`civitai_images.swap_friend_face`), 28/09; Carol pelo mesmo caminho (`data/amigas/carol_rg.jpg`), 28/09, e o teste de `FRIENDS_VISUAL` passa a valer pra toda amiga com RG. FinePorn v5 em A/B contra a v4 (fica a v4); 18 poses de referência no catálogo (`photo_director`), zoom `torso` (`visual_profile`), plug de coração no mundo (`intimacy`). Achado: roupa descrita *sendo tirada* + nudez faz o Krea 2 recusar (imagem de ruído com letras, sem erro na API) — a roupa puxada se escreve parada. `tests/test_photo_director.test_reference_poses_27_09`.
 
 ## Bug: Hoje desconexo do card (27/09)
 Às 01:05 o card, o Hoje e o mundo contavam três histórias. Correção:

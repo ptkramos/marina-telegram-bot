@@ -143,15 +143,18 @@ class TestVisualProfile(unittest.TestCase):
     def test_friends_visual_contrasts_with_marina(self):
         """28/09: amiga só por texto, com contraste de estrutura e sem os traços da Marina."""
         from visual_profile import FRIENDS_VISUAL, HAIR_COLOR
-        bia = FRIENDS_VISUAL["bia_andrade"]
-        self.assertTrue(bia["en"] and bia["pt"])
-        for trait in ("amber", "freckles", HAIR_COLOR, KREA2_TRIGGER):
-            self.assertNotIn(trait, bia["en"])
-        self.assertNotRegex(bia["en"], r"\b(no|not|without)\b")
-        self.assertNotIn("choker", bia["en"], "acessório é estilo, não quem ela é")
         import civitai_images as ci
         from pathlib import Path
-        self.assertTrue((Path(ci.__file__).resolve().parent / ci.FRIEND_RG["bia_andrade"]).is_file())
+        self.assertIn("carol_menezes", FRIENDS_VISUAL)
+        for key, friend in FRIENDS_VISUAL.items():
+            with self.subTest(key):
+                self.assertTrue(friend["en"] and friend["pt"] and len(friend["style"]) == 2)
+                for trait in ("amber", "freckles", HAIR_COLOR, KREA2_TRIGGER):
+                    self.assertNotIn(trait, friend["en"])
+                self.assertNotRegex(friend["en"], r"\b(no|not|without)\b")
+                self.assertTrue((Path(ci.__file__).resolve().parent / ci.FRIEND_RG[key]).is_file())
+        self.assertNotIn("choker", FRIENDS_VISUAL["bia_andrade"]["en"], "acessório é estilo, não quem ela é")
+        self.assertNotIn("gloss", FRIENDS_VISUAL["carol_menezes"]["en"], "maquiagem é estilo")
 
     def test_friend_face_swap_keeps_marina_side(self):
         """28/09: da edição fica só o lado da amiga; o lado da Marina é o original, pixel a pixel."""
