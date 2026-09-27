@@ -5315,7 +5315,7 @@ def _ig_pode_tentar(chave: str) -> bool:
 def _ig_shot(plano: dict, now: datetime, feeling):
     """A foto nova do post: pose do motivo, sempre vestida (nível 0), roupa de sair quando é rolê/look."""
     import photo_director
-    from photo_director import WARDROBE, HOME
+    from photo_director import HOME
     rng = random.Random(f"ig:shot:{plano['chave']}")
     motivo = plano["motivo"]
     fora = motivo in ("role", "role_amiga", "praia", "salao", "milo", "treino")
@@ -5324,21 +5324,21 @@ def _ig_shot(plano: dict, now: datetime, feeling):
     ctx = SimpleNamespace(place_key=place if fora else HOME, presence_assertable=True,
                           present_people=(plano["amiga"],) if plano.get("amiga") else (), activity="",
                           sublocation="", weather=None, snapshot_id=None)
-    roupa = None
-    if motivo in ("role", "role_amiga", "look"):
-        roupa = rng.choice(WARDROBE["sair"] if motivo == "look" or now.hour >= 18 else WARDROBE["fora"])
-    elif motivo == "vista":
-        roupa = rng.choice(WARDROBE["fora"])
+    import instagram
+    # 27/09 (Patrick): guarda-roupa do Instagram, sem repetir roupa; praia é de biquíni (a amiga também)
+    ocasiao = instagram.ocasiao_da_roupa(motivo, now.hour)
+    roupa = instagram.escolher_roupa(memory_manager.db, ocasiao, rng) if ocasiao else None
+    dela = instagram.escolher_roupa(memory_manager.db, ocasiao, rng, evitar=(roupa,))         if ocasiao and plano.get("amiga") else None
     return photo_director.direct(memory_manager.db, now, camera_ctx=ctx, feeling=feeling,
                                  turn=SimpleNamespace(state="cut", arousal=0.0), rng=rng,
-                                 force_pose=plano.get("pose"), outfit_override=roupa,
+                                 force_pose=plano.get("pose"), outfit_override=roupa, friend_outfit_override=dela,
                                  expression_override="a natural confident smile, looking great for an Instagram post")
 
 
 def _ig_comentarios(pid: int, now: datetime, autores: list) -> None:
     import instagram
     p = instagram.post(memory_manager.db, pid)
-    textos = instagram.resposta_json(_ig_texto(instagram.pedido_comentarios(p, autores)))
+    textos = instagram.resposta_json(_ig_texto(instagram.pedido_comentarios(memory_manager.db, p, autores)))
     instagram.agendar_comentarios(memory_manager.db, pid, now, {a: textos.get(a, "") for a in autores})
 
 
@@ -5347,6 +5347,7 @@ async def _ig_post(plano: dict, now: datetime, feeling) -> None:
     db = memory_manager.db
     marcados = [plano["amiga"]] if plano.get("amiga") else []
     desc = plano["descricao"]
+    roupa = pose = None
     if plano["fonte"] == "chat":
         with db.get_connection() as conn:
             f = dict(conn.execute("SELECT * FROM ig_fotos_chat WHERE id=?", (plano["foto_chat"],)).fetchone())
@@ -5362,14 +5363,13 @@ async def _ig_post(plano: dict, now: datetime, feeling) -> None:
             return
         imagem = instagram.salvar_imagem(gen.image.getvalue())
         marcados = [shot.friend] if shot.friend else marcados
+        roupa, pose = shot.outfit, shot.pose_id
     local = plano.get("local") or ""
-    legenda = await asyncio.to_thread(
-        _ig_fala, f"Você vai postar no seu Instagram (@masalles) uma foto: {desc}"
-        + (f", em {local}" if local else "") + ". Escreva só a legenda do post, do seu jeito no Insta: curtinha "
-        "(até 8 palavras), pode ser só um emoji ou uma frase solta, sem hashtag, sem aspas, sem marcar ninguém.")
+    legenda = instagram._limpa(await asyncio.to_thread(
+        _ig_fala, instagram.pedido_legenda(db, "marina", desc + (f" (roupa: {roupa})" if roupa else ""), local)))
     pid = instagram.publicar(db, autor="marina", now=now, imagem=imagem, legenda=legenda, local=local,
                              marcados=marcados, motivo=plano["motivo"], motivo_chave=plano["chave"],
-                             fonte=plano["fonte"], descricao=desc)
+                             fonte=plano["fonte"], descricao=desc, roupa=roupa, pose=pose)
     if pid:
         logger.info("instagram.post id=%s motivo=%s fonte=%s", pid, plano["motivo"], plano["fonte"])
         await asyncio.to_thread(_ig_comentarios, pid, now,
@@ -5405,7 +5405,6 @@ async def _ig_story(plano: dict, now: datetime) -> None:
 async def _ig_post_amiga(plano: dict, now: datetime) -> None:
     import instagram
     import civitai_images
-    from social_day import short_name
     db = memory_manager.db
     amiga = plano["amiga"]
     if plano["fonte"] == "grupo":
@@ -5419,9 +5418,7 @@ async def _ig_post_amiga(plano: dict, now: datetime) -> None:
             return
         imagem, marcados = instagram.salvar_imagem(dados, "a"), []
     legenda = instagram._limpa(await asyncio.to_thread(
-        _ig_texto, f"Escreva a legenda que {short_name(amiga)} ({instagram.JEITO[amiga]}) poria num post do "
-        f"Instagram dela. A foto: {plano['descricao']}. Curtinha (até 8 palavras), português informal, pode ter "
-        "1 emoji, sem hashtag. Responda só com a legenda.", 60))
+        _ig_texto, instagram.pedido_legenda(db, amiga, plano["descricao"], plano.get("local", "")), 60))
     pid = instagram.publicar(db, autor=amiga, now=now, imagem=imagem, legenda=legenda, local=plano.get("local", ""),
                              marcados=marcados, motivo=plano.get("tema", "grupo"), motivo_chave=plano["chave"],
                              fonte=plano["fonte"], descricao=plano["descricao"])

@@ -118,6 +118,47 @@ class PostTest(Base):
                          ("brand-instagram", "Postou uma foto no Instagram", "sábado é sagrado"))
 
 
+class VariedadeTest(Base):
+    """27/09 (Patrick): roupa repetida no feed, praia sem biquíni e comentários repetitivos."""
+
+    def test_nao_repete_roupa_e_praia_e_de_biquini(self):
+        rng = __import__("random").Random(3)
+        usadas = []
+        for n in range(len(ig.ROUPAS["dia"])):
+            r = ig.escolher_roupa(self.db, "dia", rng)
+            self.assertNotIn(r, usadas)
+            usadas.append(r)
+            ig.publicar(self.db, autor="marina", now=T - timedelta(days=30 - n), motivo_chave=f"r{n}", descricao="x",
+                        roupa=r)
+        self.assertEqual(ig.ocasiao_da_roupa("praia", 11), "praia")
+        self.assertTrue(all("bikini" in r for r in ig.ROUPAS["praia"]))
+        self.assertEqual(ig.ocasiao_da_roupa("role", 21), "noite")
+        self.assertIsNone(ig.ocasiao_da_roupa("treino", 9))
+
+    def test_nao_repete_pose_e_com_amiga_e_pose_das_duas(self):
+        from photo_director import BY_ID, GROUP_POSES
+        rng = __import__("random").Random(1)
+        ig.publicar(self.db, autor="marina", now=T - timedelta(days=2), motivo_chave="a", descricao="x",
+                    pose="fora_amiga_rindo")
+        for _ in range(20):
+            self.assertNotEqual(ig.escolher_pose(self.db, "role", rng), "fora_amiga_rindo")
+        self.assertIn(ig.escolher_pose(self.db, "praia", rng, "carol_menezes"), GROUP_POSES)
+        self.assertTrue(all(p in BY_ID for ps in ig.POSES.values() for p in ps))
+
+    def test_pedido_de_comentario_leva_o_que_a_pessoa_ja_escreveu_e_sem_bordao(self):
+        velho = ig.publicar(self.db, autor="marina", now=T - timedelta(days=3), motivo_chave="v", descricao="x")
+        ig.comentar(self.db, velho, "bia_andrade", "amiga tu tá um absurdo", T - timedelta(days=3))
+        pid = ig.publicar(self.db, autor="marina", now=T, motivo_chave="n", descricao="você na praia",
+                          roupa="a lime green bandeau bikini")
+        pedido = ig.pedido_comentarios(self.db, ig.post(self.db, pid), ["bia_andrade", "lu.mendes"])
+        self.assertIn("amiga tu tá um absurdo", pedido)
+        self.assertIn("a Marina na praia", pedido)
+        self.assertIn("lime green bandeau bikini", pedido)
+        for bordao in ("repara na luz", "fala de treino", "amiga/gata"):
+            self.assertNotIn(bordao, pedido)
+        self.assertEqual(ig._limpa("“Carro alugado, autoestima em dia 😎”"), "Carro alugado, autoestima em dia 😎")
+
+
 class StoryTest(Base):
     def test_musica_tocando_vira_story_uma_vez_e_no_maximo_dois_por_dia(self):
         faixa = {"nome": "Houdini", "artista": "Dua Lipa", "at": (T - timedelta(minutes=2)).isoformat(), "id": 1}

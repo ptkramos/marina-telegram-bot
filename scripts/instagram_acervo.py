@@ -1,13 +1,15 @@
 """Acervo inicial do Instagram (27/09, decidido com o Patrick: "9 fotos de acervo geradas").
 
-Roda UMA vez na VPS (as fotos ficam em data/instagram/ e os posts no banco de lá):
-    venv/bin/python scripts/instagram_acervo.py            # mostra o plano e o custo, não gera nada
-    venv/bin/python scripts/instagram_acervo.py --gerar    # gera o que falta (rodar de novo só completa)
+Roda na VPS (as fotos ficam em data/instagram/ e os posts no banco de lá):
+    venv/bin/python scripts/instagram_acervo.py              # mostra o plano e o custo, não gera nada
+    venv/bin/python scripts/instagram_acervo.py --gerar      # gera o que falta (rodar de novo só completa)
+    venv/bin/python scripts/instagram_acervo.py --refoto 5   # refaz a foto do post 5 (pose e roupa novas)
+    venv/bin/python scripts/instagram_acervo.py --textos     # apaga e refaz legendas e comentários de todos
 
 - Foto de perfil da Ma (retrato vestido, recortado quadrado).
-- 9 posts dela nos últimos ~2 meses (look, Milo, vista, PUC, rolê com a Bia, praia com a Carol, espelho, café,
-  unhas), com legenda do jeito dela e comentários das amigas (e ela respondendo algumas).
-- 2 posts de cada amiga (foto nova sobre o RG). Foto já gerada no teste pode entrar por --usar amiga=arquivo.
+- 9 posts dela nos últimos ~2 meses e 2 de cada amiga (foto nova sobre o RG).
+- 27/09 (Patrick): roupa sem repetir (guarda-roupa do Instagram), praia de biquíni, fora de casa quase sempre
+  alguém tirando a foto; textos com a pessoa (não bordão) e o que ela já escreveu, pra não repetir.
 Custo: ~20 Buzz por foto; foto com amiga ~61 (troca de rosto). Nada disso entra no Hoje (fonte "acervo").
 """
 from __future__ import annotations
@@ -26,25 +28,21 @@ sys.path.insert(0, str(ROOT))
 
 import instagram as ig  # noqa: E402
 
-PERSONA = ("Você é a Marina Salles (@masalles), 20 anos, paulista morando em Botafogo, estudante de Design de Moda na "
-           "PUC-Rio e modelo freelance, dona do Milo (um Shih Tzu). No Instagram você escreve curtinho, em caixa "
-           "baixa, às vezes só um emoji, sem hashtag.")
-
-# (dias atrás, hora, motivo, pose, lugar, amiga, roupa, local, o que a foto mostra)
+# (dias atrás, hora, motivo, pose, lugar, amiga, local, o que a foto mostra)
 MARINA = (
-    (2, "17:40", "vista", "varanda_parapeito", "", "", "fora", "Botafogo, Rio de Janeiro",
-     "selfie sua na varanda com a enseada atrás"),
-    (5, "22:10", "role_amiga", "fora_selfie_amiga_abraco", "quartinho_bar", "bia_andrade", "sair", "Quartinho Bar",
+    (2, "17:40", "vista", "varanda_parapeito", "", "", "Botafogo, Rio de Janeiro", "selfie sua na varanda com a enseada atrás"),
+    (5, "22:10", "role_amiga", "fora_selfie_amiga_abraco", "quartinho_bar", "bia_andrade", "Quartinho Bar",
      "você e a Bia abraçadas no Quartinho Bar"),
-    (9, "16:20", "look", "closet_look_giro", "", "", "sair", "", "você girando pra mostrar o look no closet"),
-    (13, "08:50", "milo", "pov_milo_rua", "enseada_botafogo", "", "", "Enseada de Botafogo", "o Milo no passeio da manhã"),
-    (18, "12:30", "puc", "fora_selfie", "puc_rio", "", "fora", "PUC-Rio", "selfie sua na PUC entre uma aula e outra"),
-    (24, "11:15", "praia", "fora_selfie_amiga", "ipanema_beach", "carol_menezes", "fora", "Praia de Ipanema",
-     "você e a Carol na praia de Ipanema"),
-    (31, "20:05", "look", "espelho_corpo", "", "", "sair", "", "você no espelho do closet pronta pra sair"),
-    (40, "15:30", "cafe", "fora_selfie", "starbucks_shopping_gavea", "", "fora", "Starbucks Shopping da Gávea",
-     "selfie sua com o café gelado no Starbucks da Gávea"),
-    (52, "19:00", "unhas", "pov_unhas", "", "", "", "", "a sua mão com as unhas recém-feitas"),
+    (9, "16:20", "look", "closet_look_andando", "", "", "", "você desfilando o look no closet"),
+    (13, "08:50", "milo", "pov_milo_rua", "enseada_botafogo", "", "Enseada de Botafogo", "o Milo no passeio da manhã"),
+    (18, "12:30", "puc", "fora_amiga_encostada", "puc_rio", "", "PUC-Rio",
+     "você na PUC entre uma aula e outra, uma amiga tirando"),
+    (24, "11:15", "praia", "fora_amigas_alguem_tirando", "ipanema_beach", "carol_menezes", "Praia de Ipanema",
+     "você e a Carol de biquíni na praia de Ipanema"),
+    (31, "20:05", "look", "espelho_corpo", "", "", "", "você no espelho do closet pronta pra sair"),
+    (40, "15:30", "cafe", "fora_amiga_sentada", "starbucks_shopping_gavea", "", "Starbucks Shopping da Gávea",
+     "você sentada com o café gelado no Starbucks da Gávea, uma amiga tirando"),
+    (52, "19:00", "unhas", "pov_unhas", "", "", "", "a sua mão com as unhas recém-feitas"),
 )
 # (amiga, índice do tema em instagram.TEMAS, dias atrás, hora)
 AMIGAS = (("bia_andrade", 1, 7, "18:10"), ("bia_andrade", 2, 33, "21:40"),
@@ -68,40 +66,112 @@ def llm(prompt: str, max_tokens: int = 300) -> str:
     return (res.choices[0].message.content or "").strip()
 
 
-def comentarios_do_acervo(db, pid: int, at: datetime, rng: random.Random) -> None:
-    """Comentários das amigas (no passado, logo depois do post) e a Marina respondendo uma ou duas."""
-    p = ig.post(db, pid)
+async def foto_marina(db, n: int, at: datetime, pose: str = ""):
+    """A foto do post n do acervo dela: pose do plano (ou a pedida), roupa do guarda-roupa sem repetir."""
+    import photo_director
+    from photo_director import HOME
+    from sd_client import sd_client
+    _, _, motivo, pose_plano, lugar, amiga, _, _ = MARINA[n]
+    rng = random.Random(f"acervo:marina:{n}:{pose or pose_plano}:{datetime.now():%H%M}")
+    ctx = SimpleNamespace(place_key=lugar or HOME, presence_assertable=True,
+                          present_people=(amiga,) if amiga else (), activity="", sublocation="", weather=None,
+                          snapshot_id=None)
+    ocasiao = ig.ocasiao_da_roupa(motivo, at.hour)
+    roupa = ig.escolher_roupa(db, ocasiao, rng) if ocasiao else None
+    dela = ig.escolher_roupa(db, ocasiao, rng, evitar=(roupa,)) if ocasiao and amiga else None
+    shot = photo_director.direct(db, at, camera_ctx=ctx, turn=SimpleNamespace(state="cut", arousal=0.0), rng=rng,
+                                 force_pose=pose or pose_plano, outfit_override=roupa, friend_outfit_override=dela,
+                                 expression_override="a natural confident smile, looking great for an Instagram post")
+    gen = await sd_client.generate_directed(shot)
+    return shot, gen.image
+
+
+def textos_do_post(db, p: dict, rng: random.Random, *, legenda: bool = True) -> None:
+    """Legenda (com a memória de quem posta) e comentários no passado, logo depois do post."""
+    pid, at = p["id"], datetime.fromisoformat(p["criado_em"])
+    if legenda:
+        foto = p["descricao"] + (f" (roupa: {p['roupa']})" if p.get("roupa") else "")
+        nova = ig._limpa(llm(ig.pedido_legenda(db, p["autor"], foto, p["local"]), 80))
+        ig._exec(db, "UPDATE ig_posts SET legenda=? WHERE id=?", (nova, pid))
+        p = ig.post(db, pid)
     marcados = json.loads(p["marcados_json"] or "[]")
-    autores = (ig.quem_comenta(pid, marcados) if p["autor"] == "marina"
-               else [a for a in ig.AMIGAS if a != p["autor"] and rng.random() < 0.5] + ["marina"]
-               + rng.sample(ig.DE_FORA, 1))
-    pedido = ig.pedido_comentarios(p, [a for a in autores if a != "marina"])
-    textos = ig.resposta_json(llm(pedido))
-    if "marina" in autores:
-        textos["marina"] = ig._limpa(llm(f"{PERSONA} A {ig.PERFIS[p['autor']]['nome'].split()[0]} postou uma foto: "
-                                         f"{p['descricao']} (legenda \"{p['legenda']}\"). Escreva só o seu comentário, "
-                                         "curtinho (até 8 palavras), pode ter 1 emoji.", 60))
-    n = at.isoformat()
-    for autor, texto in textos.items():
-        if autor not in autores or not texto:
+    if p["autor"] == "marina":
+        autores = ig.quem_comenta(pid, marcados, rng)
+    else:
+        autores = [a for a in ig.AMIGAS if a != p["autor"] and rng.random() < 0.4] + rng.sample(ig.DE_FORA, rng.randint(0, 1))
+        if rng.random() < 0.6:
+            autores.append("marina")
+    textos = ig.resposta_json(llm(ig.pedido_comentarios(db, p, autores)))
+    respostas = 0
+    for autor in autores:
+        texto = textos.get(autor, "")
+        if not texto:
             continue
         c_at = at + timedelta(minutes=rng.randint(3, 300))
         cid = ig.comentar(db, pid, autor, texto, c_at)
         ig._exec(db, "UPDATE ig_comentarios SET visto_marina_em=?, curtido_marina_em=? WHERE id=?",
                  (c_at.isoformat(), c_at.isoformat() if autor in ig.AMIGAS else None, cid))
-        if p["autor"] == "marina" and autor in ig.AMIGAS and rng.random() < 0.5:
-            resp = ig._limpa(llm(f"{PERSONA} Na sua foto ({p['descricao']}), {ig.PERFIS[autor]['nome'].split()[0]} "
-                                 f"comentou \"{texto}\". Escreva só a sua resposta, curtinha (até 8 palavras), "
-                                 "sem @, pode ter 1 emoji.", 60))
+        if p["autor"] == "marina" and autor in ig.AMIGAS and respostas < 2 and rng.random() < 0.35:
+            quem = ig.PERFIS[autor]["nome"].split()[0]
+            resp = ig._limpa(llm(f"Quem responde: {ig.QUEM_ESCREVE['marina']}. Na sua foto ({p['descricao']}; "
+                                 f"legenda \"{p['legenda']}\"), {quem} comentou \"{texto}\". Escreva só a sua "
+                                 "resposta, curtinha (até 8 palavras), sem @, no máximo 1 emoji."
+                                 + ig._nao_repita(db, "marina"), 80))
             if resp:
                 ig.comentar(db, pid, "marina", resp, c_at + timedelta(minutes=rng.randint(5, 90)), pai_id=cid)
+                respostas += 1
+    n = at.isoformat()
     ig._exec(db, "UPDATE ig_posts SET visto_marina_em=?, curtido_marina_em=? WHERE id=?", (n, n, pid))
+
+
+async def refoto(db, pid: int, pose: str) -> None:
+    import civitai_images
+    p = ig.post(db, pid)
+    chave = p["motivo_chave"] or ""
+    at = datetime.fromisoformat(p["criado_em"])
+    if chave.startswith("acervo:marina:"):
+        n = int(chave.rsplit(":", 1)[1])
+        shot, img = await foto_marina(db, n, at, pose)
+        if not img:
+            print("falhou")
+            return
+        nome = ig.salvar_imagem(img.getvalue())
+        ig._exec(db, "UPDATE ig_posts SET imagem=?, roupa=?, pose=?, marcados_json=?, descricao=? WHERE id=?",
+                 (nome, shot.outfit, shot.pose_id, json.dumps([shot.friend] if shot.friend else []),
+                  MARINA[n][7], pid))
+    else:
+        amiga, tema_i = next((a, t) for i, (a, t, _, _) in enumerate(AMIGAS) if chave == f"acervo:{a}:{i}")
+        dados = await civitai_images.friend_scene(amiga, ig.TEMAS[amiga][tema_i][1])
+        if not dados:
+            print("falhou")
+            return
+        nome = ig.salvar_imagem(dados, "a")
+        ig._exec(db, "UPDATE ig_posts SET imagem=? WHERE id=?", (nome, pid))
+    print(f"FOTO {nome}")
+
+
+def refazer_textos(db) -> None:
+    """Apaga legendas e comentários e refaz tudo em ordem de data (a memória de não repetir vai se formando)."""
+    ig._exec(db, "DELETE FROM ig_comentarios")
+    ig._exec(db, "UPDATE ig_posts SET legenda='' WHERE tipo='feed' AND fonte='acervo'")
+    for p in ig._rows(db, "SELECT * FROM ig_posts WHERE tipo='feed' ORDER BY criado_em"):
+        rng = random.Random(f"textos:{p['id']}")
+        if p["fonte"] == "acervo":
+            textos_do_post(db, p, rng)
+        else:
+            # post de verdade: legenda fica; comentários como a rotina faz (chegam espalhados, ela vê ao abrir)
+            autores = ig.quem_comenta(p["id"], json.loads(p["marcados_json"] or "[]"), rng)
+            textos = ig.resposta_json(llm(ig.pedido_comentarios(db, p, autores)))
+            ig.agendar_comentarios(db, p["id"], datetime.fromisoformat(p["criado_em"]),
+                                   {a: textos.get(a, "") for a in autores})
+        p = ig.post(db, p["id"])
+        print(f"{p['id']:>3} {p['autor']:<14} {p['legenda']}")
+        for c in ig._rows(db, "SELECT autor, texto, pai_id FROM ig_comentarios WHERE post_id=? ORDER BY id", (p["id"],)):
+            print(f"      {'  ↳ ' if c['pai_id'] else ''}{c['autor']}: {c['texto']}")
 
 
 async def main(gerar: bool, usar: dict) -> None:
     from db import DatabaseManager
-    import photo_director
-    from photo_director import WARDROBE, HOME
     from sd_client import sd_client
     import civitai_images
     db = DatabaseManager()
@@ -117,8 +187,7 @@ async def main(gerar: bool, usar: dict) -> None:
             if recorte:
                 ig.DIR.mkdir(parents=True, exist_ok=True)
                 avatar.write_bytes(recorte.getvalue())
-                print("  ok")
-    for n, (dias, hora, motivo, pose, lugar, amiga, roupa, local, desc) in enumerate(MARINA):
+    for n, (dias, hora, motivo, pose, lugar, amiga, local, desc) in enumerate(MARINA):
         chave = f"acervo:marina:{n}"
         if chave in feitos:
             continue
@@ -127,26 +196,14 @@ async def main(gerar: bool, usar: dict) -> None:
         print(f"Ma {at:%d/%m %H:%M} {motivo} ({pose})")
         if not gerar:
             continue
-        rng = random.Random(chave)
-        fora = bool(lugar)
-        ctx = SimpleNamespace(place_key=lugar if fora else HOME, presence_assertable=True,
-                              present_people=(amiga,) if amiga else (), activity="", sublocation="", weather=None,
-                              snapshot_id=None)
-        shot = photo_director.direct(db, at, camera_ctx=ctx, turn=SimpleNamespace(state="cut", arousal=0.0), rng=rng,
-                                     force_pose=pose, outfit_override=rng.choice(WARDROBE[roupa]) if roupa else None,
-                                     expression_override="a natural confident smile, looking great for an Instagram post")
-        gen = await sd_client.generate_directed(shot)
-        if not gen.image:
+        shot, img = await foto_marina(db, n, at)
+        if not img:
             print("  falhou (rode de novo depois)")
             continue
-        imagem = ig.salvar_imagem(gen.image.getvalue())
-        legenda = ig._limpa(llm(f"{PERSONA} Você vai postar uma foto: {desc}" + (f", em {local}" if local else "")
-                                + ". Escreva só a legenda: curtinha (até 8 palavras), pode ser só um emoji.", 60))
-        pid = ig.publicar(db, autor="marina", now=at, imagem=imagem, legenda=legenda, local=local,
+        pid = ig.publicar(db, autor="marina", now=at, imagem=ig.salvar_imagem(img.getvalue()), local=local,
                           marcados=(shot.friend,) if shot.friend else (), motivo=motivo, motivo_chave=chave,
-                          fonte="acervo", descricao=desc)
-        comentarios_do_acervo(db, pid, at, rng)
-        print(f"  ok: {legenda}")
+                          fonte="acervo", descricao=desc, roupa=shot.outfit, pose=shot.pose_id)
+        textos_do_post(db, ig.post(db, pid), random.Random(chave))
     for n, (amiga, tema_i, dias, hora) in enumerate(AMIGAS):
         chave = f"acervo:{amiga}:{n}"
         if chave in feitos:
@@ -155,22 +212,16 @@ async def main(gerar: bool, usar: dict) -> None:
         arquivo = usar.get(f"{amiga}:{tema}")
         custo += 0 if arquivo else 20
         at = quando(dias, hora, hoje)
-        print(f"{amiga} {at:%d/%m %H:%M} {tema}" + (" (foto do teste)" if arquivo else ""))
+        print(f"{amiga} {at:%d/%m %H:%M} {tema}")
         if not gerar:
             continue
         dados = Path(arquivo).read_bytes() if arquivo else await civitai_images.friend_scene(amiga, cena)
         if not dados:
             print("  falhou (rode de novo depois)")
             continue
-        imagem = ig.salvar_imagem(dados, "a")
-        nome = ig.PERFIS[amiga]["nome"].split()[0]
-        legenda = ig._limpa(llm(f"Escreva a legenda que {nome} ({ig.JEITO[amiga]}) poria num post do Instagram. "
-                                f"A foto: {foto}. Curtinha (até 8 palavras), português informal, pode ter 1 emoji, "
-                                "sem hashtag. Responda só com a legenda.", 60))
-        pid = ig.publicar(db, autor=amiga, now=at, imagem=imagem, legenda=legenda, motivo=tema, motivo_chave=chave,
-                          fonte="acervo", descricao=foto)
-        comentarios_do_acervo(db, pid, at, random.Random(chave))
-        print(f"  ok: {legenda}")
+        pid = ig.publicar(db, autor=amiga, now=at, imagem=ig.salvar_imagem(dados, "a"), motivo=tema,
+                          motivo_chave=chave, fonte="acervo", descricao=foto)
+        textos_do_post(db, ig.post(db, pid), random.Random(chave))
     print(f"custo {'gasto' if gerar else 'previsto'}: ~{custo} Buzz")
 
 
@@ -178,5 +229,16 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--gerar", action="store_true")
     ap.add_argument("--usar", action="append", default=[], help="amiga:tema=arquivo (foto já gerada)")
+    ap.add_argument("--refoto", type=int, help="id do post: refaz a foto")
+    ap.add_argument("--pose", default="", help="com --refoto: pose do catálogo")
+    ap.add_argument("--textos", action="store_true", help="apaga e refaz legendas e comentários")
     a = ap.parse_args()
-    asyncio.run(main(a.gerar, dict(x.split("=", 1) for x in a.usar)))
+    if a.refoto or a.textos:
+        from db import DatabaseManager
+        banco = DatabaseManager()
+        if a.refoto:
+            asyncio.run(refoto(banco, a.refoto, a.pose))
+        else:
+            refazer_textos(banco)
+    else:
+        asyncio.run(main(a.gerar, dict(x.split("=", 1) for x in a.usar)))

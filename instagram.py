@@ -53,14 +53,55 @@ AMIGAS = ("bia_andrade", "carol_menezes", "julia_azevedo", "theo_martins")
 DE_FORA = ("lu.mendes", "nanda.rocha", "pedroh.lima", "carolinabastos", "rafa.nogueira", "duda.lins")
 
 # quanto cada um comenta nos posts dela (a marcada sempre comenta)
-COMENTA = {"bia_andrade": 0.85, "theo_martins": 0.6, "julia_azevedo": 0.5, "carol_menezes": 0.45}
+# 27/09 (Patrick): "as amigas ficaram absurdamente repetitivas". A descrição antiga tinha assunto e bordão
+# embutidos ("repara na luz", "fala de treino", "chama de amiga/gata") e virou fórmula. Agora é a pessoa — quem
+# ela é e como escreve —, e cada pedido leva o que ela já escreveu, pra não repetir.
+COMENTA = {"bia_andrade": 0.7, "theo_martins": 0.45, "julia_azevedo": 0.35, "carol_menezes": 0.35}
 JEITO = {
-    "bia_andrade": "melhor amiga, intensa e exagerada, fala em caixa baixa, chama a Marina de amiga/gata, "
-                   "emoji de fogo e de choro de rir",
-    "theo_martins": "amigo gay da faculdade de moda, sarcástico e engraçado, repara na roupa, zoa com carinho",
-    "julia_azevedo": "amiga da faculdade, artista e distraída, repara na luz e na foto, fala curtinho",
-    "carol_menezes": "amiga da academia, prática e carinhosa, elogia direto, às vezes fala de treino ou comida",
+    "bia_andrade": "a Bia, 20 anos, melhor amiga da Marina, de Laranjeiras; intensa, exagerada, impulsiva e muito "
+                   "carinhosa, solteira e namoradeira; escreve rápido, em caixa baixa, do jeito que fala",
+    "theo_martins": "o Theo, 21 anos, amigo da Marina da faculdade de moda, gay, da Glória; observador, sarcástico e "
+                    "leal; humor seco, escreve bem e sem exagero",
+    "julia_azevedo": "a Júlia, 20 anos, colega de faculdade da Marina, do Jardim Botânico; artista, fotógrafa amadora, "
+                     "meio distraída; escreve pouco e de um jeito doce",
+    "carol_menezes": "a Carol, 22 anos, amiga da Marina da academia, estudante de nutrição, de Botafogo; prática, "
+                     "organizada e carinhosa; escreve direto, com pontuação certinha",
 }
+QUEM_ESCREVE = {"marina": "a Marina (@masalles), 20 anos, paulista morando em Botafogo, estudante de Design de Moda "
+                          "na PUC-Rio e modelo freelance, dona do Milo (Shih Tzu); no Insta escreve curtinho, em "
+                          "caixa baixa", **JEITO}
+
+
+def ja_escreveu(db, autor: str, n: int = 10) -> list[str]:
+    """O que essa pessoa escreveu por último no Instagram (legendas e comentários), do mais novo pro mais velho."""
+    rows = _rows(db, """SELECT texto, criado_em FROM ig_comentarios WHERE autor=?
+                        UNION ALL SELECT legenda, criado_em FROM ig_posts WHERE autor=? AND legenda!=''
+                        ORDER BY criado_em DESC LIMIT ?""", (autor, autor, n))
+    return [r["texto"] for r in rows]
+
+
+def _nao_repita(db, autor: str) -> str:
+    feitos = ja_escreveu(db, autor)
+    if not feitos:
+        return ""
+    return (" O que já escreveu por último no Instagram (não repita palavra marcante, emoji, começo nem estrutura "
+            "dessas): " + " / ".join(f"\"{t}\"" for t in feitos) + ".")
+
+
+def _foto_pros_outros(p: dict) -> str:
+    """A foto descrita de fora (a descrição guardada fala com a Marina: "você com a Bia")."""
+    foto = re.sub(r"\bvocê\b", "a Marina", re.sub(r"\b(sua|seu)\b", "da Marina", p["descricao"]))
+    if p.get("roupa"):
+        foto += f" (roupa dela: {p['roupa']})"
+    return foto
+
+
+def pedido_legenda(db, autor: str, foto: str, local: str = "") -> str:
+    """Prompt da legenda de um post (da Marina ou de uma amiga)."""
+    return (f"Quem posta: {QUEM_ESCREVE[autor]}. Vai postar no próprio Instagram uma foto: {foto}"
+            + (f", em {local}" if local else "") + ". Escreva só a legenda, como essa pessoa escreveria: curta "
+            "(até 8 palavras), pode ser só um emoji ou uma frase solta, sem hashtag, sem aspas, sem falar com "
+            "ninguém." + _nao_repita(db, autor))
 
 FEED_GAP_H = 36          # entre dois posts dela
 LIMIAR = 1.0             # vontade de postar (motivo + dias sem postar + como ela está)
@@ -75,11 +116,15 @@ OLHA_GAP_MIN = {"alto": 75, "medio": 150, "depois_de_postar": 30}
 FONE_ALTO = {"HOME_RELAXING", "COMMUTE", "OUT_SOLO", "UNKNOWN"}
 FONE_MEDIO = {"SOCIAL", "MEAL", "GETTING_READY", "WAKING", "PET_WALK", "HOME_BUSY", "MICRO_WAKE", "MANICURE"}
 
-# motivo → pose do catálogo (photo_director) e como a foto vai no texto
+# motivo → pose do catálogo (photo_director). 27/09 (Patrick): fora de casa ela quase sempre está com gente,
+# então a foto costuma ser tirada por alguém; selfie é uma entre várias. Não repete a pose dos últimos posts.
+FORA_ALGUEM = ("fora_amiga_corpo", "fora_amiga_andando", "fora_amiga_rindo", "fora_amiga_sentada",
+               "fora_amiga_encostada", "fora_amiga_costas")
 POSES = {
-    "role_amiga": ("fora_selfie_amiga", "fora_selfie_amiga_abraco"),
-    "role": ("fora_amiga_corpo", "fora_amiga_andando", "fora_selfie"),
-    "praia": ("fora_amiga_corpo", "fora_selfie"),
+    "role_amiga": ("fora_amigas_alguem_tirando", "fora_amigas_alguem_tirando", "fora_selfie_amiga",
+                   "fora_selfie_amiga_abraco"),
+    "role": FORA_ALGUEM + ("fora_selfie",),
+    "praia": ("fora_amiga_corpo", "fora_amiga_andando", "fora_amiga_rindo", "fora_amiga_costas"),
     "salao": ("salao_cabelo", "cabelo_espelho"),
     "unhas": ("pov_unhas", "unhas_selfie"),
     "look": ("closet_look_frente", "closet_look_giro", "closet_look_andando", "closet_look_poltrona"),
@@ -87,6 +132,71 @@ POSES = {
     "milo": ("pov_milo_rua",),
     "vista": ("varanda_parapeito", "pov_vista", "espelho_corpo", "sala_vinho_selfie"),
 }
+# 27/09 (Patrick): roupa repetida no feed incomoda (4 regatas pretas em 9 fotos) e praia é de biquíni.
+# Guarda-roupa do Instagram por ocasião; ela não repete roupa dos últimos ROUPA_MEMORIA posts.
+ROUPAS = {
+    "dia": ("a sage green linen button-up shirt tied at the waist and white wide-leg trousers",
+            "a butter yellow ribbed knit top and light-wash straight jeans",
+            "a white broderie anglaise sundress with thin straps",
+            "an oversized blue and white striped shirt worn as a dress with a thin brown belt",
+            "a terracotta cropped cardigan buttoned up and high-waisted cream shorts",
+            "a lilac satin midi skirt and a fitted white baby tee",
+            "a red gingham summer dress with puff sleeves",
+            "a light blue halter-neck top and beige linen pants",
+            "a cropped olive utility jacket over a white tank top and dark jeans",
+            "a chocolate brown slip skirt and a cream knit vest",
+            "a mint green wrap top and a white denim mini skirt",
+            "a pale pink polo shirt and a pleated grey mini skirt"),
+    "noite": ("an emerald green satin slip dress",
+              "a cherry red one-shoulder mini dress",
+              "a dusty rose corset top and flared dark jeans",
+              "a cobalt blue satin halter top and white tailored trousers",
+              "a leopard print midi skirt and a fitted chocolate brown tee",
+              "a champagne satin cowl-neck top and black tailored trousers",
+              "a lavender knit mini dress",
+              "a gold metallic camisole and wide-leg ivory pants",
+              "a burgundy velvet mini dress",
+              "an orange floral silk wrap dress",
+              "a white linen co-ord set with a cropped blazer",
+              "a silver sequined mini skirt and a soft grey fitted top"),
+    "praia": ("a terracotta triangle bikini with a sheer white sarong tied at her hip",
+              "a lime green bandeau bikini",
+              "a baby blue ribbed bikini with an open white crochet cover-up",
+              "a leopard print bikini and gold hoop earrings",
+              "a cherry red string bikini",
+              "a white bikini and a wide straw hat",
+              "a lilac scrunch bikini and denim cutoff shorts",
+              "a brown ribbed bikini and a colorful printed sarong"),
+}
+ROUPA_MEMORIA = 12
+
+
+def escolher_roupa(db, ocasiao: str, rng: random.Random, evitar: tuple = ()) -> str:
+    usadas = {r["roupa"] for r in _rows(db, "SELECT roupa FROM ig_posts WHERE autor='marina' AND roupa IS NOT NULL "
+                                            "ORDER BY criado_em DESC LIMIT ?", (ROUPA_MEMORIA,))}
+    opcoes = [r for r in ROUPAS[ocasiao] if r not in usadas and r not in evitar] or list(ROUPAS[ocasiao])
+    return rng.choice(opcoes)
+
+
+def ocasiao_da_roupa(motivo: str, hora: int) -> Optional[str]:
+    """Que roupa a foto pede (None: a pose decide — academia, Milo, unhas, salão)."""
+    if motivo == "praia":
+        return "praia"
+    if motivo == "look":
+        return "noite" if hora >= 17 else "dia"
+    if motivo in ("role", "role_amiga", "puc", "cafe", "vista"):
+        return "noite" if hora >= 18 else "dia"
+    return None
+
+
+def escolher_pose(db, motivo: str, rng: random.Random, amiga: str = "") -> str:
+    """Pose do motivo, sem repetir a dos últimos 3 posts dela. Com amiga de RG, pose das duas."""
+    opcoes = POSES["role_amiga"] if amiga and motivo in ("role_amiga", "praia") else POSES.get(motivo, POSES["vista"])
+    recentes = {r["pose"] for r in _rows(db, "SELECT pose FROM ig_posts WHERE autor='marina' AND pose IS NOT NULL "
+                                             "ORDER BY criado_em DESC LIMIT 3")}
+    return rng.choice([p for p in opcoes if p not in recentes] or list(opcoes))
+
+
 PESO = {"role_amiga": 0.9, "role": 0.7, "praia": 0.85, "salao": 0.75, "unhas": 0.45, "look": 0.5, "treino": 0.4,
         "milo": 0.35, "chat": 0.45, "vista": 0.25}
 
@@ -140,18 +250,19 @@ def _exec(db, sql: str, args: tuple = ()) -> int:
 def publicar(db, *, autor: str, now: datetime, tipo: str = "feed", imagem: Optional[str] = None,
              legenda: str = "", local: str = "", marcados: tuple = (), motivo: str = "",
              motivo_chave: Optional[str] = None, fonte: str = "", descricao: str = "",
-             story: Optional[dict] = None, alcance: Optional[float] = None) -> Optional[int]:
+             story: Optional[dict] = None, alcance: Optional[float] = None, roupa: Optional[str] = None,
+             pose: Optional[str] = None) -> Optional[int]:
     """Grava o post (ou story). None se esse acontecimento já tinha virado post desse autor."""
     rng = random.Random(f"ig:alcance:{autor}:{motivo_chave or now.isoformat()}")
     alcance = alcance if alcance is not None else (rng.uniform(0.05, 0.11) if tipo == "feed" else 0)
     expira = (now + timedelta(hours=STORY_TTL_H)).isoformat() if tipo == "story" else None
     try:
         pid = _exec(db, """INSERT INTO ig_posts(autor,tipo,criado_em,expira_em,imagem,legenda,local,marcados_json,
-                               motivo,motivo_chave,fonte,descricao,story_json,alcance)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                               motivo,motivo_chave,fonte,descricao,story_json,alcance,roupa,pose)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (autor, tipo, now.isoformat(), expira, imagem, legenda.strip(), local,
                      json.dumps(list(marcados)), motivo, motivo_chave, fonte, descricao,
-                     json.dumps(story, ensure_ascii=False) if story else None, alcance))
+                     json.dumps(story, ensure_ascii=False) if story else None, alcance, roupa, pose))
     except Exception as exc:
         if "UNIQUE" in str(exc):
             return None
@@ -336,8 +447,9 @@ def plano_post(db, now: datetime, m: Momento) -> Optional[dict]:
         if foto:
             plano.update(fonte="chat", foto_chat=foto)
         else:
-            plano.update(fonte="grupo" if mot["motivo"] == "role_amiga" else "nova",
-                         pose=rng.choice(POSES.get(mot["motivo"], POSES["vista"])))
+            pose = escolher_pose(db, mot["motivo"], rng, mot.get("amiga", ""))
+            from photo_director import GROUP_POSES
+            plano.update(fonte="grupo" if pose in GROUP_POSES else "nova", pose=pose)
         return plano
     return None
 
@@ -466,7 +578,7 @@ def quem_comenta(pid: int, marcados: list[str], rng: Optional[random.Random] = N
     rng = rng or random.Random(f"ig:quem:{pid}")
     out = [a for a in marcados if a in AMIGAS]
     out += [a for a, p in COMENTA.items() if a not in out and rng.random() < p]
-    out += rng.sample(DE_FORA, rng.randint(1, 2))
+    out += rng.sample(DE_FORA, rng.randint(0, 2))
     return out
 
 
@@ -485,23 +597,24 @@ def agendar_comentarios(db, pid: int, now: datetime, textos: dict[str, str]) -> 
         comentar(db, pid, autor, texto, at)
 
 
-def pedido_comentarios(p: dict, autores: list[str]) -> str:
+def pedido_comentarios(db, p: dict, autores: list[str]) -> str:
     """Prompt (texto interno) pra gerar os comentários de todo mundo de uma vez, em JSON."""
     from social_day import short_name
     dona = "da Marina (@masalles)" if p["autor"] == "marina" else f"de {short_name(p['autor'])}"
     linhas = []
     for a in autores:
-        if a in JEITO:
-            linhas.append(f"- \"{a}\": {short_name(a)} — {JEITO[a]}")
+        if a in QUEM_ESCREVE:
+            linhas.append(f"- \"{a}\": {QUEM_ESCREVE[a]}.{_nao_repita(db, a)}")
         else:
-            linhas.append(f"- \"{a}\": seguidor(a) de fora, conhece de vista; elogio curtinho")
-    foto = re.sub(r"\bvocê\b", "a Marina", re.sub(r"\b(sua|seu)\b", "da Marina", p["descricao"]))
-    return (f"Post no Instagram {dona}. A foto: {foto}. Legenda: \"{p['legenda']}\"."
+            linhas.append(f"- \"{a}\": seguidor(a) de fora, conhece de vista; comentário curtinho")
+    return (f"Post no Instagram {dona}. A foto: {_foto_pros_outros(p)}. Legenda: \"{p['legenda']}\"."
             + (f" Local: {p['local']}." if p["local"] else "")
-            + " Escreva o comentário de cada pessoa abaixo, do jeito dela, como gente real comenta no Instagram "
-              "no Brasil: curto (2 a 12 palavras), português informal carioca, pode ter 1 emoji, sem hashtag, "
-              "sem repetir o que o outro disse, sem narrar a foto. O Patrick (@ptkramos) é o namorado da Marina; "
-              "às vezes a amiga brinca com isso.\n" + "\n".join(linhas)
+            + " Escreva o comentário de cada pessoa abaixo, como gente de verdade comenta no Instagram de uma "
+              "amiga: curto (2 a 12 palavras), português informal, no máximo 1 emoji e só se ela usaria, sem "
+              "hashtag. Cada um reage a algo diferente e concreto desta foto, desta legenda ou da vida delas; "
+              "o jeito da pessoa aparece em como ela escreve, não em assunto fixo. Ninguém repete o que o outro "
+              "disse nem o que já escreveu antes. O Patrick (@ptkramos) é o namorado da Marina; dá pra citar ele "
+              "de vez em quando, não sempre.\n" + "\n".join(linhas)
             + "\nResponda só com um JSON: {\"chave\": \"comentário\", ...}")
 
 
@@ -511,7 +624,7 @@ def resposta_json(texto: str) -> dict[str, str]:
         data = json.loads(m.group(0)) if m else {}
     except (TypeError, ValueError):
         return {}
-    return {str(k): str(v).strip().strip('"') for k, v in data.items() if isinstance(v, (str, int, float)) and str(v).strip()}
+    return {str(k): _limpa(str(v)) for k, v in data.items() if isinstance(v, (str, int, float)) and str(v).strip()}
 
 
 # ------------------------------------------------------------ ela olha o Insta --
@@ -576,14 +689,14 @@ def marina_olha(db, now: datetime, fala: Callable[[str], str], rng: Optional[ran
         curte = c["autor"] == "patrick" or c["autor"] in AMIGAS or rng.random() < 0.5
         if curte:
             _exec(db, "UPDATE ig_comentarios SET curtido_marina_em=? WHERE id=?", (n, c["id"]))
-        responde = c["autor"] == "patrick" or (c["autor"] in AMIGAS and respostas < 2 and rng.random() < 0.6)
+        responde = c["autor"] == "patrick" or (c["autor"] in AMIGAS and respostas < 2 and rng.random() < 0.35)
         linha = f"{quem} comentou \"{c['texto']}\" {onde}"
         if responde:
             texto = _limpa(fala(
                 f"Você abriu o Instagram e viu que {quem} comentou \"{c['texto']}\" {onde}"
                 + (f" (legenda: \"{c['legenda']}\")" if c["legenda"] else "")
                 + ". Escreva só a sua resposta a esse comentário, como você responderia no Instagram: curtinha "
-                  "(até 10 palavras), sem aspas, sem @, pode ter 1 emoji."))
+                  "(até 10 palavras), sem aspas, sem @, no máximo 1 emoji." + _nao_repita(db, "marina")))
             if texto:
                 comentar(db, c["post_id"], "marina", texto, now + timedelta(minutes=rng.randint(1, 3)),
                          pai_id=c["pai_id"] or c["id"])
@@ -601,7 +714,7 @@ def marina_olha(db, now: datetime, fala: Callable[[str], str], rng: Optional[ran
                 f"Você abriu o Instagram e viu que {short_name(p['autor'])} postou uma foto: {p['descricao']}"
                 + (f", legenda \"{p['legenda']}\"" if p["legenda"] else "")
                 + ". Escreva só o seu comentário no post dela, curtinho (até 8 palavras), do jeito que você fala "
-                  "com ela, sem aspas, pode ter 1 emoji."))
+                  "com ela, sem aspas, no máximo 1 emoji." + _nao_repita(db, "marina")))
             if texto:
                 comentar(db, p["id"], "marina", texto, now + timedelta(minutes=rng.randint(1, 4)))
                 linha += f" e comentou \"{texto}\""
@@ -619,7 +732,7 @@ def marina_olha(db, now: datetime, fala: Callable[[str], str], rng: Optional[ran
 
 
 def _limpa(txt: str) -> str:
-    txt = (txt or "").strip().strip('"').strip("'").strip()
+    txt = (txt or "").strip().strip("\"'“”‘’").strip()
     txt = re.sub(r"^@\S+\s*", "", txt)
     return txt.split("\n")[0][:220]
 

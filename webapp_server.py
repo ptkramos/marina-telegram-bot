@@ -765,10 +765,11 @@ async def _ig_amiga_entra(hooks: Hooks, pid: int, cid: int, texto: str, now: dat
             return
         p = instagram.post(hooks.db, pid)
         resp = instagram._limpa(await asyncio.to_thread(
-            hooks.ig_texto, f"No Instagram, num post da Marina ({p['descricao']}; legenda \"{p['legenda']}\"), o "
-            f"Patrick, namorado dela, comentou \"{texto}\". Escreva a resposta de {short_name(amiga)} "
-            f"({instagram.JEITO[amiga]}) a esse comentário: curtinha (até 10 palavras), brincando com ele, português "
-            "informal, pode ter 1 emoji. Responda só com o comentário."))
+            hooks.ig_texto, f"No Instagram, num post da Marina ({instagram._foto_pros_outros(p)}; legenda "
+            f"\"{p['legenda']}\"), o Patrick, namorado dela, comentou \"{texto}\". Quem responde: "
+            f"{instagram.QUEM_ESCREVE[amiga]}. Escreva a resposta de {short_name(amiga)} a esse comentário, do jeito "
+            "dela: curtinha (até 10 palavras), português informal, no máximo 1 emoji. Responda só com o comentário."
+            + instagram._nao_repita(hooks.db, amiga)))
         if resp:
             at = now + timedelta(minutes=random.Random(f"ig:entra:quando:{cid}").randint(15, 180))
             instagram.comentar(hooks.db, pid, amiga, resp, at, pai_id=cid)

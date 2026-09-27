@@ -364,6 +364,18 @@ POSES: tuple[Pose, ...] = (
          "standing relaxed with her weight on one leg, one hand holding the strap of her bag"),
     Pose("fora_amiga_andando", "andando em direção à câmera, uma amiga tirando", ("fora",), (0, 1),
          "three_quarter", "friend", "walking toward the camera mid-step, one hand tucking her hair behind her ear"),
+    # 27/09 (Patrick, Instagram): fora de casa ela quase sempre está com gente — não precisa ser sempre selfie
+    Pose("fora_amiga_rindo", "rindo olhando pro lado, uma amiga tirando sem ela posar", ("fora",), (0, 1),
+         "three_quarter", "friend", "caught mid-laugh looking off to the side at someone out of frame, candid and "
+         "unposed, one hand near her collarbone"),
+    Pose("fora_amiga_sentada", "sentada à mesa, uma amiga tirando do outro lado", ("fora",), (0, 1),
+         "three_quarter", "friend", "sitting at a small table, leaning forward a little with her chin resting on one "
+         "hand, a drink in front of her, smiling at the person taking the photo"),
+    Pose("fora_amiga_encostada", "encostada na parede, uma amiga tirando", ("fora",), (0, 1), "full", "friend",
+         "leaning back against a wall with one foot resting flat against it, arms relaxed, looking at the camera"),
+    Pose("fora_amiga_costas", "indo embora e olhando por cima do ombro, uma amiga tirando", ("fora",), (0, 1),
+         "three_quarter", "friend", "walking away from the camera and glancing back over her shoulder with a smile",
+         angle="side"),
     # 28/09: foto de grupo — a amiga do rolê entra do lado direito e o rosto dela vem da foto-RG
     # (civitai_images.swap_friend_face). Só quando quem está com ela tem RG (FRIEND_RG). Cabeças um pouco
     # separadas (Patrick, 28/09): a costura da troca sempre tem um vão de fundo pra passar.
@@ -373,8 +385,11 @@ POSES: tuple[Pose, ...] = (
     Pose("fora_selfie_amiga_abraco", "selfie com a amiga, abraçadas", ("fora",), (0, 1), "close", "selfie",
          "taking a selfie together with her friend, her right arm stretched toward the camera, her friend's arm "
          "around her shoulders, both smiling at the camera, their heads a little apart"),
+    Pose("fora_amigas_alguem_tirando", "com a amiga, alguém tirando a foto das duas", ("fora",), (0, 1),
+         "three_quarter", "friend", "standing side by side with her friend, arms around each other's waists, both "
+         "smiling at the person taking the photo, with a little space between their heads"),
 )
-GROUP_POSES = ("fora_selfie_amiga", "fora_selfie_amiga_abraco")
+GROUP_POSES = ("fora_selfie_amiga", "fora_selfie_amiga_abraco", "fora_amigas_alguem_tirando")
 GROUP_SIDE = "right"   # a amiga fica do lado direito; a troca de rosto cola só esse lado
 _GROUP_ASK = re.compile(r"\b(?:com (?:a|o) (?:bia|carol|j[uú]lia|theo)|voc[eê]s duas|voc[eê]s dois|n[oó]s duas|"
                         r"as duas|os dois|juntas|juntos|com (?:a|sua|tua) amiga|foto de grupo)\b", re.IGNORECASE)
@@ -695,7 +710,8 @@ def _pick_beat(pose: Pose, request: str, turn, session: Optional[dict]) -> Optio
 def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_ctx=None, turn=None,
            feeling=None, her_initiative: bool = False, chooser: Optional[Callable] = None,
            rng: Optional[random.Random] = None, fertile: bool = False, force_pose: Optional[str] = None,
-           expression_override: str = "", outfit_override: Optional[str] = None) -> DirectedShot:
+           expression_override: str = "", outfit_override: Optional[str] = None,
+           friend_outfit_override: Optional[str] = None) -> DirectedShot:
     """Decide a foto inteira e devolve o prompt pronto pro Krea 2."""
     from visual_profile import krea2_zoom_prompt
     rng = rng or random.Random()
@@ -789,7 +805,8 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     in_photo = friend if pose.id in GROUP_POSES else ""
     friend_outfit = ""
     if in_photo:
-        friend_outfit = ((session or {}).get("friend_outfit") if keep else None) or _friend_outfit(outfit, rng)
+        friend_outfit = (friend_outfit_override or ((session or {}).get("friend_outfit") if keep else None)
+                         or _friend_outfit(outfit, rng))
     if re.search(r"transparente|de vidro|\bclear\b", f"{request} {her_line}", re.IGNORECASE):
         action = action.replace(DILDO_TEXT, DILDO_CLEAR_TEXT)    # os dois dildos dela: rosa e transparente
     weather = getattr(camera_ctx, "weather", None) if camera_ctx else None

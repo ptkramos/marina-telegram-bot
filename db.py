@@ -318,6 +318,8 @@ class DatabaseManager:
                             # Auditoria #7: a coluna existia só pelo ALTER avulso
                             # do startup; bancos antigos já a têm.
                             20: ('reminders', {'offer_message_id'}),
+                            # 27/09: roupa e pose do post do Instagram
+                            32: ('ig_posts', {'roupa', 'pose'}),
                         }
                         target = replayable.get(version_num)
                         if target is None or "duplicate column name" not in str(e).lower():
