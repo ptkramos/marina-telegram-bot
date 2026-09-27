@@ -86,10 +86,10 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
 Cadeia única: pose de referência → prompt no jeito da casa (`photo_director.Pose`) → motor (Civitai Krea 2, LoRA `marinaX`).
 O *quando* ela manda foto continua na frente da voz.
 
-**Pronto:** pilha oficial decidida foto a foto (24/09); catálogo de 28 poses por cômodo com faixa de nível; sessão com seed; foto sem ela (comida, Milo, vista); unha e cabelo de agora em toda foto.
+**Pronto:** pilha oficial decidida foto a foto (24/09); catálogo por cômodo com faixa de nível (52 → 70 poses em 27/09, com as 18 referências do Patrick); sessão com seed; foto sem ela (comida, Milo, vista); unha e cabelo de agora em toda foto; FinePorn v5 testada em A/B e **mantida a v4** (27/09); plug de coração como 3º brinquedo da gaveta.
 
 **Próximo:**
-1. Poses que o Patrick mandar: resgatar o prompt (metadado do arquivo → texto do site → descrição) e virar pose do catálogo (PLANO_VOZ 1).
-2. Ângulo dela sem rosto (de trás, por cima do ombro): sempre sai selfie de frente; quem puxa é o prompt (PLANO_VOZ 1d).
-3. Fatores do gozo especial (PLANO_VOZ 1e); FinePorn v5 quando voltar ao Civitai (1g); acompanhar o slider de peso (9).
+1. Poses que o Patrick mandar: resgatar o prompt (metadado do arquivo → texto do site → descrição) e virar pose do catálogo (PLANO_VOZ 1). Lição de 27/09: roupa *sendo tirada* + nudez = recusa do Krea 2 (ruído de letras); escrever a roupa parada.
+2. Ângulo de trás: o espelho de perfil (`espelho_perfil_costas`) funcionou; falta o de costas sem espelho (PLANO_VOZ 1d).
+3. Fatores do gozo especial (PLANO_VOZ 1e); acompanhar o slider de peso (9).
 4. Do Patrick: trocar a chave do Civitai (vazou em 24/09).

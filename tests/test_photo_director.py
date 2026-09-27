@@ -148,6 +148,20 @@ class DirectorTest(unittest.TestCase):
         self.assertEqual(s.room, "quarto")
         self.assertNotIn("espelho_costas", pd.BY_ID)
 
+    def test_reference_poses_27_09(self):
+        """27/09: poses das referências — roupa puxada leva o corpo canônico, o sem-rosto corta na boca, o plug."""
+        hot = IntimacyTurn(state="active", arousal=0.9)
+        s = self.shot("manda nude", turn=hot, force_pose="cozinha_blusa_levantada")
+        self.assertTrue(s.is_nsfw)
+        self.assertIn("bunched up high on her chest", s.prompt)
+        self.assertIn("Light pink nipples", s.prompt)
+        self.assertIn("cutting across her mouth", s.prompt)
+        self.assertNotIn("completely naked", s.prompt)
+        s = self.shot("mostra o plug", turn=hot, force_pose="poltrona_curvada_plug")
+        self.assertEqual(s.beat, "plug")
+        self.assertIn(pd.PLUG_TEXT, s.prompt)
+        self.assertEqual(self.shot("de costas no espelho", send=False).pose_id, "espelho_perfil_costas")
+
     def test_after_she_comes_the_photo_is_the_aftermath(self):
         s = self.shot("", turn=IntimacyTurn(state="climax", arousal=0.95), her_initiative=True,
                       her_line="Tô gozando... tô gozando muito em você agora")

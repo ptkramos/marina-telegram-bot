@@ -90,7 +90,7 @@ _NOT_A_PHOTO = re.compile(r"\b(photo[- ]?realistic|hyper[- ]?realistic|ultra[- ]
 # primeiro e ganha mais palavras. Close/três-quartos: ela primeiro, o cômodo numa linha
 # desfocada. Corpo inteiro/cômodo: o cômodo abre o prompt e o rosto fica com pouca palavra
 # (o LoRA segura o rosto). Parte do corpo encostada no cenário ("pés no tapete") entra no quadro.
-ZOOMS = ("close", "three_quarter", "full", "room")
+ZOOMS = ("close", "three_quarter", "torso", "full", "room")
 # Regras pra quem escreve a ação/roupa da cena (o diretor da C.1b). Patrick, 24/09, vendo as
 # fotos do apê. Sempre em frase positiva: com CFG 1 negação vira pedido.
 KREA2_DIRECTOR_RULES = (
@@ -113,11 +113,17 @@ KREA2_IDENTITY_SHORT = f"a young Brazilian woman with {HAIR_COLOR} and light amb
 KREA2_ZOOM_OPEN = {
     "close": "A close photo of",
     "three_quarter": "A three-quarter photo, framed from just above her head down to her thighs, of",
+    # 27/09 (Patrick): pose "sem rosto" das referências. Sem rosto no quadro o LoRA dela puxa o rosto
+    # pra frente (24/09) — o corte fica na boca, que segura quem ela é.
+    "torso": "A close photo, framed from her lips down to her upper thighs with the top edge of the frame "
+             "cutting across her mouth, of",
 }
 
 
 def _body_parts(is_nsfw: bool, focus_angle: str, outfit: Optional[str]) -> list[str]:
     """Roupa dita pelo diretor (lingerie, toalha…) ou os blocos de sempre (vestida/nua)."""
+    if outfit and is_nsfw:   # 27/09: roupa puxada/levantada — o que aparece é o corpo canônico
+        return [f"She is wearing {outfit}.", KREA2_BODY_NSFW, KREA2_BODY_CANON]
     if outfit:
         return [f"She is wearing {outfit}.", KREA2_BODY_SFW]
     if is_nsfw:
@@ -138,7 +144,7 @@ def krea2_zoom_prompt(action: str, *, zoom: str, setting: str, backdrop: str, is
     if expression:
         action = f"{action}, {expression.strip(' ,.')}"
     head = f"{KREA2_TRIGGER}, {KREA2_EMOTIONS_TRIGGER}."
-    if zoom in ("close", "three_quarter"):
+    if zoom in KREA2_ZOOM_OPEN:
         identity = KREA2_IDENTITY.split(" of ", 1)[1]
         parts = [head, f"{KREA2_ZOOM_OPEN[zoom]} {identity}, {action}."]
         parts += _body_parts(is_nsfw, focus_angle, outfit)

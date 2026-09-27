@@ -63,6 +63,8 @@ class Pose:
 
 DILDO_TEXT = "a realistic pink silicone dildo with a veined shaft"
 DILDO_CLEAR_TEXT = "a clear transparent glass-like dildo"
+# 27/09 (Patrick): o 3º brinquedo da gaveta, da pose de referência da cadeira.
+PLUG_TEXT = "a small silver metal butt plug with a red heart-shaped jewel on its base"
 
 
 def _beats(where: str, hand: str, other: str = "") -> tuple:
@@ -155,6 +157,50 @@ POSES: tuple[Pose, ...] = (
          (4, 4), "three_quarter", "timer", "kneeling on the bed seen from behind, her chest low and her ass up "
          "toward the camera, looking back over her shoulder, her left forearm resting on the pillow",
          angle="behind", beats=_beats("from behind, her ass up toward the camera", "right")),
+    # 27/09 — poses de referência do Patrick (references/poses): só a pose; rosto, cabelo e luz são dela.
+    Pose("chao_abracando_joelhos", "sentada no chão encostada na cama, abraçando os joelhos (timer)", ("quarto",),
+         (0, 3), "full", "timer", "sitting on the light wood floor with her back against the side of the bed, her "
+         "knees pulled up together and her feet apart, hugging her legs with both arms, her body leaning slightly "
+         "toward the camera, glancing away and biting her lower lip"),
+    Pose("cama_brucos_selfie", "de bruços na cama, queixo na mão e pés pro alto (selfie)", ("quarto",), (0, 3),
+         "close", "selfie", "lying on her stomach on the bed, her chin resting on her left hand, her feet raised "
+         "and crossed in the air behind her, her right arm stretched toward the camera taking the selfie from "
+         "slightly above"),
+    Pose("inclinada_pra_camera", "de pé, inclinada pra frente em direção à câmera (timer)", ("quarto", "closet"),
+         (1, 3), "three_quarter", "timer", "standing and leaning forward toward the camera, her arms straight down "
+         "in front of her with her hands together between her knees, her body leaning in, glancing to the side and "
+         "biting her lower lip"),
+    Pose("coracao_maos", "ajoelhada na beira da cama fazendo coração com as mãos (timer)", ("quarto",), (0, 3),
+         "three_quarter", "timer", "kneeling at the edge of the bed leaning slightly toward the camera, her hands "
+         "together in front of her chest making a heart shape, her thumbs and index fingers touching, looking at "
+         "the camera through the heart"),
+    Pose("beira_cama_de_baixo", "sentada na beira da cama, selfie de baixo, entre as coxas", ("quarto",), (1, 4),
+         "three_quarter", "selfie", "sitting on the edge of the bed with her legs spread apart, her right arm "
+         "stretched down between her thighs taking the selfie from an extreme low angle, looking down at the "
+         "camera over her body, a playful smirk with one eyebrow raised"),
+    Pose("chao_pernas_pro_alto", "deitada no chão, pernas pro alto e abertas (timer)", ("quarto",), (4, 4),
+         "three_quarter", "timer", "lying on her back on the floor beside the bed, her legs raised high and spread "
+         "wide toward the camera, her hands holding the backs of her thighs, looking at the camera between her "
+         "legs, sunlight through the sheer curtains casting soft stripes of light across her body"),
+    Pose("cama_de_lado_bunda", "deitada de lado, bunda em primeiro plano, olhando pra trás (timer)", ("quarto",),
+         (2, 3), "three_quarter", "timer", "lying on her side on the bed seen from behind at a low angle close to "
+         "the mattress, her hip and ass in the foreground, her top arm resting along her body, looking back at "
+         "the camera over her shoulder", angle="behind"),
+    Pose("cama_empinada_celular", "de bruços com o quadril empinado, mexendo no celular (timer)", ("quarto",),
+         (2, 3), "three_quarter", "timer", "side view photo, lying face-down on the bed with her hips raised high "
+         "and her ass up, her chest and cheek low on the white sheets, holding a light pink smartphone in both "
+         "hands in front of her face and looking at its screen", angle="side"),
+    Pose("em_pe_quadril", "de pé perto da cama, quadril pro lado (timer)", ("quarto",), (1, 3), "full", "timer",
+         "standing beside the bed with her hip pushed out to one side and her weight on one leg, one arm relaxed "
+         "along her body, looking straight at the camera"),
+    Pose("cama_perna_pra_camera", "deitada de moletom largo, uma perna esticada pra câmera (timer)", ("quarto",),
+         (1, 2), "three_quarter", "timer", "lying on her back on the bed, one leg raised high and stretched "
+         "straight toward the camera with the sole of her foot close to the lens, her other leg bent, one hand "
+         "near her mouth", outfit="an oversized light blue hoodie and black cotton panties"),
+    Pose("cabeceira_perna_alto", "encostada na cabeceira, uma perna pro alto (timer)", ("quarto",), (4, 4),
+         "three_quarter", "timer", "sitting back against the rattan headboard facing the camera, one leg raised "
+         "high and bent at the knee, her other leg spread open on the sheets",
+         beats=_beats("one leg raised high, her legs spread", "right", _SQUEEZE_LEFT)),
     # ---------------------------------------------------------------- closet --
     Pose("espelho_corpo", "de pé na frente do espelho grande do closet", ("closet",), (0, 3), "full", "mirror",
          "standing barefoot in front of the tall mirror, her weight on one leg, her free hand resting on her hip"),
@@ -180,6 +226,20 @@ POSES: tuple[Pose, ...] = (
     Pose("poltrona_aberta", "na poltrona de frente pro espelho, perna no braço (timer)", ("closet",), (4, 4),
          "full", "timer", "sitting in the cream armchair facing the camera, one leg hooked over the armrest and "
          "her legs spread", beats=_beats("her leg hooked over the armrest", "right", _SQUEEZE_LEFT)),
+    # 27/09 (Patrick): o plug entrou no mundo com esta pose. De costas, olhando pra trás (o rosto segura o LoRA).
+    # Teste 27/09: roupa SENDO tirada ("lifting", "pulled up/down") + nudez = recusa do Krea 2 (ruído de letras).
+    # A roupa das poses de roupa puxada é escrita parada, no lugar onde ficou.
+    Pose("poltrona_curvada_plug", "curvada na poltrona com a saia levantada, de costas (timer)", ("closet",), (4, 4),
+         "three_quarter", "timer", "bent forward over the cream armchair seen from behind, her right hand resting "
+         "on her lower back, looking back at the camera over her shoulder", angle="behind",
+         outfit="a short brown skirt bunched up around her waist and a black cotton t-shirt",
+         beats=(("plug", f"{PLUG_TEXT} inserted in her ass, the heart-shaped jewel resting flush against her skin"),
+                ("climax", f"right after she came, her legs trembling, {PLUG_TEXT} still inserted in her ass"))),
+    Pose("torso_alcas", "blusinha levantada, puxando as alças da calcinha pra cima (sem o rosto)", ("closet",),
+         (3, 3), "torso", "timer", "standing against the wall facing the camera, both hands at her hips holding the "
+         "thin side straps of her thong high on her hips",
+         outfit="a light pink cropped t-shirt bunched up high on her chest with her breasts out, and a light pink "
+                "ribbed thong"),
     # -------------------------------------------------------------- banheiro --
     Pose("banheiro_espelho", "na pia, de frente pro espelho redondo", ("banheiro",), (0, 3), "three_quarter",
          "mirror", "standing at the vanity facing the round mirror, her free hand pushing her damp hair back"),
@@ -192,6 +252,11 @@ POSES: tuple[Pose, ...] = (
     Pose("chuveiro_tocando", "encostada no azulejo, no chuveiro (timer)", ("banheiro",), (4, 4), "three_quarter",
          "timer", "leaning her back against the tiled wall under the shower, water running over her body, her "
          "legs apart", beats=_beats("water running down her body", "right", _SQUEEZE_LEFT)),
+    # 27/09 (referência): de costas no espelho com o rosto de perfil — o "ângulo de trás" que o timer não dá (1d).
+    Pose("espelho_perfil_costas", "de costas pro espelho, olhando por cima do ombro", ("banheiro", "closet"), (1, 3),
+         "three_quarter", "mirror", "standing in side profile to the mirror with her body turned so her back and "
+         "her ass face the mirror, looking over her shoulder at the phone screen, her free hand resting on her "
+         "lower back", angle="behind"),
     # ------------------------------------------------------------------ sala --
     Pose("sofa_selfie", "encolhida no sofá, selfie", ("sala",), (0, 2), "close", "selfie",
          "curled up on the sofa with her head resting on a cushion, her right arm stretched toward the camera taking the selfie"),
@@ -200,6 +265,9 @@ POSES: tuple[Pose, ...] = (
     Pose("sala_janela", "de perfil no janelão, olhando pra câmera (timer)", ("sala",), (1, 3), "full", "timer",
          "standing by the big window in side profile, one hand resting on the window frame, looking back at the "
          "camera", angle="side"),
+    Pose("sala_vinho_selfie", "selfie com uma taça de vinho no janelão", ("sala",), (0, 1), "three_quarter",
+         "selfie", "standing by the big window holding a glass of red wine in her left hand, her right arm "
+         "stretched toward the camera taking the selfie from slightly above"),
     # --------------------------------------------------------------- cozinha --
     Pose("cozinha_cafe", "encostada na bancada com o café", ("cozinha",), (0, 1), "three_quarter", "selfie",
          "leaning her hip against the countertop, holding a cup of coffee in her left hand, her right arm "
@@ -207,6 +275,11 @@ POSES: tuple[Pose, ...] = (
     Pose("cozinha_bancada", "sentada na bancada (timer)", ("cozinha",), (1, 3), "full", "timer",
          "sitting on the edge of the white countertop, her hands resting on the counter beside her hips, her feet "
          "dangling"),
+    Pose("cozinha_blusa_levantada", "na cozinha, blusa levantada e legging abaixada (sem o rosto)", ("cozinha",),
+         (3, 3), "torso", "selfie", "standing by the countertop, her left hand resting on the waistband of her "
+         "leggings at her thighs, her right arm stretched toward the camera taking the selfie",
+         outfit="a black long-sleeved top bunched up high on her chest with her breasts out, and black leggings "
+                "sitting low around her upper thighs"),
     # --------------------------------------------------------------- varanda --
     Pose("varanda_cadeira", "na cadeira suspensa da varanda (timer)", ("varanda",), (0, 2), "full", "timer",
          "sitting in the hanging chair, her bare feet on the wood deck, her hands resting on the chair's rim"),
@@ -217,9 +290,18 @@ POSES: tuple[Pose, ...] = (
     Pose("academia_espelho", "no espelho da academia do prédio", ("academia",), (0, 1), "three_quarter", "mirror",
          "standing in front of the mirrored wall after a workout, her free hand resting on her hip, a light glow "
          "of sweat on her skin", outfit="black leggings and a soft unpadded black sports top"),
+    Pose("academia_espelho_perfil", "de perfil no espelho da academia, mão no quadril", ("academia",), (0, 1),
+         "full", "mirror", "standing in side profile to the mirrored wall, looking at the phone screen, her free "
+         "hand resting on her hip, one knee slightly bent", angle="side",
+         outfit="black high-waisted booty shorts and a soft unpadded maroon sports top, black sneakers"),
     Pose("piscina_espreguicadeira", "deitada na espreguiçadeira da piscina (timer)", ("piscina",), (0, 1), "full",
          "timer", "lying on a white lounger with one knee raised, her hands behind her head",
          outfit="a small soft triangle bikini in light blue"),
+    # 27/09 (referência): na piscina do prédio é de biquíni — lugar de todo mundo.
+    Pose("piscina_empinada_selfie", "de bruços na espreguiçadeira, empinada, língua pra fora (selfie)", ("piscina",),
+         (1, 1), "close", "selfie", "lying on her stomach on a white lounger with her hips raised and her back "
+         "arched, her right arm stretched toward the camera taking the selfie at a low angle, sticking her tongue "
+         "out playfully", outfit="a small soft triangle bikini in light blue"),
     # Depois de gozar (Patrick, 24/09: "adoro ver como você fica depois que goza").
     Pose("pos_gozo", "jogada na cama logo depois de gozar, selfie de cima", ("quarto",), (3, 4), "close",
          "selfie", "lying on her back on the messy white sheets right after she came, her hair tangled over the "
@@ -283,8 +365,14 @@ BY_ID = {p.id: p for p in POSES}
 # A posição que eles escreveram manda na pose (24/09: ela disse "de quatro na cama" e o sorteio
 # mandou de costas no espelho). Em ordem de preferência; vale a primeira que aceita o nível.
 POSE_WORDS = (
-    (r"de quatro|empinad", ("cama_de_quatro", "cama_costas_dedando")),
-    (r"de costas|por tr[aá]s", ("cama_costas_dedando", "cama_de_quatro")),
+    (r"\bplug\b", ("poltrona_curvada_plug",)),
+    (r"(de costas|por tr[aá]s).{0,25}espelho|espelho.{0,25}(de costas|por tr[aá]s)", ("espelho_perfil_costas",)),
+    (r"cora[cç][aã]o com as m[aã]os|cora[cç][aã]ozinho com a m[aã]o", ("coracao_maos",)),
+    (r"abra[cç]ando (os|as) (joelhos|pernas)", ("chao_abracando_joelhos",)),
+    (r"ta[cç]a|vinho", ("sala_vinho_selfie",)),
+    (r"de quatro|empinad", ("cama_de_quatro", "cama_costas_dedando", "cama_empinada_celular",
+                            "piscina_empinada_selfie")),
+    (r"de costas|por tr[aá]s", ("cama_costas_dedando", "cama_de_quatro", "cama_de_lado_bunda")),
     (r"(boquete|chupa\w*) de lado|dildo (preso|em p[eé]) na cama", ("boquete_de_lado",)),
     (r"boquete|mamada|chupa(ndo)? (o|esse|teu|seu) (dildo|consolo|brinquedo)", ("boquete_dildo", "boquete_de_lado")),
     (r"cavalga|quica|rebola|deitada pra tr[aá]s", ("cavalgando_reclinada", "sentando_dildo")),
@@ -293,7 +381,8 @@ POSE_WORDS = (
     (r"chuveiro|no box|no banho", ("chuveiro_tocando", "chuveiro", "banheiro_toalha", "banheiro_espelho")),
     (r"poltrona", ("poltrona_aberta", "poltrona_pernas")),
     (r"apertando (os|meus) (seios|peitos)", ("cama_apertando",)),
-    (r"de bru[cç]os", ("cama_de_brucos",)),
+    (r"de bru[cç]os", ("cama_de_brucos", "cama_brucos_selfie")),
+    (r"pernas? pro alto|pernas? pra cima", ("chao_pernas_pro_alto", "cabeceira_perna_alto", "cama_perna_pra_camera")),
     (r"ajoelhad|de joelhos", ("cama_ajoelhada",)),
     (r"espelho", ("espelho_corpo", "banheiro_espelho", "academia_espelho")),
     (r"sof[aá]", ("sofa_timer", "sofa_selfie")),
@@ -378,7 +467,7 @@ WARDROBE = {
 # Pedido dele → degrau. O mais alto que aparecer vale.
 _ASK = (
     (4, r"buceta|xota|xoxota|pussy|se toca|te toca|tocando|siririca|masturb|dedo|dedinho|enfia|abre (a|as|pra)|"
-        r"dildo|consolo|brinquedo|"
+        r"dildo|consolo|brinquedo|\bplug\b|"
         r"abrindo|goza|gozando|gozei|molhadinha"),
     (3, r"pelad|\bnua\b|nude|sem roupa|peit|seio|mamilo|bunda|raba|tira a roupa|tira tudo"),
     (2, r"calcinha|suti[aã]|lingerie|langerie|renda|fio dental|de toalha"),
@@ -389,7 +478,7 @@ _POSE_CHANGE = re.compile(r"\b(deita|deitada|vira|virada|de quatro|de costas|sen
                           r"em p[eé]|ajoelha|outra posi[cç][aã]o|muda (a|de) posi|no chuveiro|no espelho|na cama|"
                           r"no sof[aá]|na poltrona|na bancada)\b")
 _CLIMAX = re.compile(r"\b(goza pra mim|goza comigo|gozei|gozando|vou gozar|gozar junto|goza)\b")
-_BEAT_ASK = (("dildo", r"dildo|consolo|brinquedo|vibrador"), ("lick", r"lamb|chupa (o|os) dedo"),
+_BEAT_ASK = (("plug", r"\bplug\b"), ("dildo", r"dildo|consolo|brinquedo|vibrador"), ("lick", r"lamb|chupa (o|os) dedo"),
              ("spread", r"abre|abrindo"),
              ("fingers", r"enfia|dedo dentro|dedos dentro|dedinho"), ("touch", r"se toca|te toca|tocando|siririca"))
 
@@ -656,7 +745,8 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         lora_weights[civitai_images.KREA2_CREAMY] = creamy
         if beat != "climax":            # no gozo o gatilho já entra pelo "right after she came"
             action = f"{action}, creamy wetness around her fingers, creamythings, creamy vagina"
-    nude = level >= 3 and outfit is None
+    # Pose com roupa fixa no nível 3+ é roupa puxada/levantada (27/09): vale o corpo canônico junto.
+    nude = level >= 3 and (outfit is None or outfit == pose.outfit)
     prompt = krea2_zoom_prompt(action, zoom=pose.zoom, setting=setting, backdrop=backdrop,
                                is_nsfw=nude, focus_angle=pose.angle, framing=pose.framing,
                                outfit=outfit, expression=expression_override or expression(feeling, turn))

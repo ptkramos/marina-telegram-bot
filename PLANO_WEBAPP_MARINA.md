@@ -379,3 +379,5 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 **Bug corrigido (27/09):** a aba Agora mostrou certo, em casa às 00:07 depois da volta de uber às 00:05, enquanto no chat ela dizia que estava no bar. O bug era da fala, não do app (FRENTES_MARINA.md, seção 5). Efeito no app: quando ele combina "vai e volta de uber" e ela topa, os trechos da saída na aba Agora passam a mostrar uber (e o tempo de uber).
 
 **Organização (27/09):** frentes novas de bugs (seção 5) e imagens (seção 6) no `FRENTES_MARINA.md`.
+
+**Frente de imagens (27/09):** nada mudou no Mini App. As fotos dela ganharam 18 poses novas e o plug de coração entrou na gaveta (PLANO_VOZ, "Poses de referência").
