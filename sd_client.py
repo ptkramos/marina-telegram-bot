@@ -106,6 +106,17 @@ class ImageGeneratorClient:
             img = await civitai_images.generate(shot.prompt, is_nsfw=shot.is_nsfw, focus_angle=shot.focus_angle,
                                                 seed=shot.seed, lora_weights=shot.lora_weights,
                                                 pov=getattr(shot, "pov", False))
+            friend = getattr(shot, "friend", "")
+            if img is not None and friend:
+                # 28/09: foto de grupo — o rosto da amiga vira o da foto-RG dela (Krea 2 Edit, só o lado dela).
+                # Se a troca falhar, vai a foto como saiu (a amiga descrita no texto, com ar de parente).
+                swapped = await civitai_images.swap_friend_face(img.getvalue(), friend,
+                                                                side=getattr(shot, "friend_side", "right"),
+                                                                is_nsfw=shot.is_nsfw)
+                if swapped:
+                    img = io.BytesIO(swapped)
+                else:
+                    logger.warning("foto de grupo sem a troca de rosto (%s)", friend)
         return PhotoGenerationResult(image=img, full_prompt=shot.prompt, scene_tags=shot.pose_id,
                                      is_nsfw=shot.is_nsfw, focus_angle=shot.focus_angle,
                                      place_key=shot.place_key, world_snapshot_id=world_snapshot_id)

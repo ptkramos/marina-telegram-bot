@@ -179,6 +179,27 @@ class TestVisualProfile(unittest.TestCase):
         man = ci.friend_edit_body(b"a", b"b", side="left", who="the man", width=400, height=600, noun="man")
         self.assertIn("the exact face of the man in the second image", man["steps"][0]["input"]["prompt"])
 
+    def test_friend_seam_goes_where_both_images_agree(self):
+        """28/09: o editor redesenha a amiga mais pro lado/embaixo; a costura não pode cortar o rosto novo
+        (a emenda fixa em 56% deixava um olho fantasma). O que mudou a partir de 50% vem inteiro da edição."""
+        import io
+        from PIL import Image, ImageDraw
+        import civitai_images as ci
+
+        def jpg(img):
+            out = io.BytesIO()
+            img.save(out, "JPEG", quality=100)
+            return out.getvalue()
+        orig = Image.new("RGB", (400, 600), (120, 120, 120))
+        ed = orig.copy()
+        ImageDraw.Draw(ed).rectangle([200, 0, 399, 599], fill=(30, 30, 200))   # a amiga nova começa em 50%
+        for side, probe_ed, probe_orig in (("right", (208, 300), (150, 300)), ("left", (191, 300), (249, 300))):
+            src = ed if side == "right" else ed.transpose(Image.FLIP_LEFT_RIGHT)
+            merged = Image.open(io.BytesIO(ci.paste_side(jpg(orig), jpg(src), side)))
+            self.assertGreater(merged.getpixel(probe_ed)[2], 180, side)
+            self.assertLess(abs(merged.getpixel(probe_orig)[0] - 120), 12, side)
+            self.assertGreater(merged.getpixel((probe_ed[0], 598))[2], 180, "a costura vai até o pé da foto")
+
 
 if __name__ == "__main__":
     unittest.main()

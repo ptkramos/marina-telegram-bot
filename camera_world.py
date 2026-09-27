@@ -205,6 +205,8 @@ class CameraWorldBuilder:
                 weather = self._weather_from_snapshot(snapshot)
             else:
                 snapshot_id = None
+            if not people and commitment.get('people'):   # 28/09: a amiga do rolê vem da agenda
+                people = self._people(json.dumps(commitment['people']))
         elif snapshot:
             source = json.loads(snapshot.get('source_json') or '{}')
             reason = source.get('reason') or 'inferred_routine'

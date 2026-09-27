@@ -395,8 +395,13 @@ FRIEND_EDIT_PROMPT = ("Give the {noun} on the {side}, {who}, the exact face of t
                       "the face shape, eyes, eyebrows, nose, lips and skin tone. Keep the other woman, both poses, the "
                       "clothes, the accessories, the hair, the background and the lighting exactly as they are in "
                       "the first image.")
-FRIEND_SEAM = 0.56      # a emenda fica no ombro da amiga (ela ocupa a metade do lado dela)
-FRIEND_SEAM_BLUR = 28
+# 28/09 (1ª foto pelo código): o editor não só troca o rosto — redesenha as duas pessoas um pouco mais
+# embaixo (o fundo fica parado). Emenda fixa no meio passava em cima do rosto da amiga e deixava um "olho
+# fantasma". A costura agora é o caminho, linha a linha, onde a original e a edição mais concordam
+# (cabelo com cabelo, fundo com fundo), dentro da faixa entre as duas.
+FRIEND_SEAM_BAND = (0.44, 0.66)   # fração da largura, medida a partir do lado da Marina
+FRIEND_SEAM_SCALE = 4             # a costura é achada em 1/4 da resolução
+FRIEND_SEAM_BLUR = 6
 
 
 def friend_edit_body(image: bytes, rg: bytes, *, side: str, who: str, width: int, height: int,
@@ -416,15 +421,49 @@ def friend_edit_body(image: bytes, rg: bytes, *, side: str, who: str, width: int
     return body
 
 
+def seam_path(orig, ed, side: str) -> list[int]:
+    """x da costura em cada faixa de FRIEND_SEAM_SCALE linhas: o caminho vertical de menor diferença
+    (programação dinâmica; a cada linha anda no máximo uma coluna pro lado)."""
+    from PIL import Image, ImageChops, ImageFilter
+    f = FRIEND_SEAM_SCALE
+    w, h = max(1, orig.width // f), max(1, orig.height // f)
+    diff = ImageChops.difference(orig.resize((w, h), Image.BILINEAR), ed.resize((w, h), Image.BILINEAR))
+    px = diff.convert("L").filter(ImageFilter.GaussianBlur(2)).load()
+    a, b = FRIEND_SEAM_BAND
+    lo, hi = (int(w * a), int(w * b)) if side == "right" else (int(w * (1 - b)), int(w * (1 - a)))
+    cols = range(lo, max(hi, lo + 1))
+    n = len(cols)
+    cost = [float(px[x, 0]) for x in cols]
+    back = []
+    for y in range(1, h):
+        row, brow = [], []
+        for i, x in enumerate(cols):
+            j = min((k for k in (i - 1, i, i + 1) if 0 <= k < n), key=lambda k: cost[k])
+            row.append(cost[j] + px[x, y])
+            brow.append(j)
+        cost = row
+        back.append(brow)
+    i = min(range(n), key=lambda k: cost[k])
+    path = [i]
+    for brow in reversed(back):
+        i = brow[i]
+        path.append(i)
+    return [(lo + i) * f for i in reversed(path)]
+
+
 def paste_side(original: bytes, edited: bytes, side: str) -> bytes:
-    """Cola só o lado da amiga (da foto editada) na original, com a emenda suavizada."""
+    """Cola só o lado da amiga (da foto editada) na original, pela costura onde as duas concordam."""
     from PIL import Image, ImageDraw, ImageFilter
     orig = Image.open(io.BytesIO(original)).convert("RGB")
     ed = Image.open(io.BytesIO(edited)).convert("RGB").resize(orig.size, Image.LANCZOS)
     w, h = orig.size
+    f = FRIEND_SEAM_SCALE
     mask = Image.new("L", orig.size, 0)
-    box = [int(w * FRIEND_SEAM), 0, w, h] if side == "right" else [0, 0, int(w * (1 - FRIEND_SEAM)), h]
-    ImageDraw.Draw(mask).rectangle(box, fill=255)
+    draw = ImageDraw.Draw(mask)
+    for row, x in enumerate(seam_path(orig, ed, side)):
+        top = row * f
+        bottom = h - 1 if row == h // f - 1 else top + f - 1   # a última faixa vai até o pé da foto
+        draw.rectangle([x, top, w, bottom] if side == "right" else [0, top, x, bottom], fill=255)
     out = io.BytesIO()
     Image.composite(ed, orig, mask.filter(ImageFilter.GaussianBlur(FRIEND_SEAM_BLUR))).save(out, "JPEG", quality=93)
     return out.getvalue()

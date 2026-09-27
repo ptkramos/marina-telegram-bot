@@ -59,6 +59,7 @@ class Pose:
     angle: str = "frontal"
     outfit: Optional[str] = None  # roupa fixa da pose (toalha, biquíni, academia)
     beats: tuple = ()             # (marca, ação) em ordem; a última é o gozo
+    face: str = ""                # cara que é o charme da pose (vale no lugar da cara do humor)
 
 
 DILDO_TEXT = "a realistic pink silicone dildo with a veined shaft"
@@ -168,8 +169,10 @@ POSES: tuple[Pose, ...] = (
          "slightly above"),
     Pose("inclinada_pra_camera", "de pé, inclinada pra frente em direção à câmera (timer)", ("quarto", "closet"),
          (1, 3), "three_quarter", "timer", "standing and leaning forward toward the camera, her arms straight down "
-         "in front of her with her hands together between her knees, her body leaning in, glancing to the side and "
-         "biting her lower lip"),
+         "in front of her with her hands together between her knees, her body leaning in, her head turned to one "
+         "side and her eyes looking away from the camera toward the side",
+         # 28/09 (teste com o Patrick): o "meio sorriso" do humor fechava a boca — a boca entreaberta é o charme
+         face="biting her lower lip with her mouth slightly open, her upper teeth showing, a sultry half-lidded look"),
     Pose("coracao_maos", "ajoelhada na beira da cama fazendo coração com as mãos (timer)", ("quarto",), (0, 3),
          "three_quarter", "timer", "kneeling at the edge of the bed leaning slightly toward the camera, her hands "
          "together in front of her chest making a heart shape, her thumbs and index fingers touching, looking at "
@@ -359,7 +362,20 @@ POSES: tuple[Pose, ...] = (
          "standing relaxed with her weight on one leg, one hand holding the strap of her bag"),
     Pose("fora_amiga_andando", "andando em direção à câmera, uma amiga tirando", ("fora",), (0, 1),
          "three_quarter", "friend", "walking toward the camera mid-step, one hand tucking her hair behind her ear"),
+    # 28/09: foto de grupo — a amiga do rolê entra do lado direito e o rosto dela vem da foto-RG
+    # (civitai_images.swap_friend_face). Só quando quem está com ela tem RG (FRIEND_RG). Cabeças um pouco
+    # separadas (Patrick, 28/09): a costura da troca sempre tem um vão de fundo pra passar.
+    Pose("fora_selfie_amiga", "selfie com a amiga, lado a lado", ("fora",), (0, 1), "close", "selfie",
+         "taking a selfie together with her friend, her right arm stretched toward the camera, the two of them "
+         "standing side by side, shoulder to shoulder, with a little space between their heads"),
+    Pose("fora_selfie_amiga_abraco", "selfie com a amiga, abraçadas", ("fora",), (0, 1), "close", "selfie",
+         "taking a selfie together with her friend, her right arm stretched toward the camera, her friend's arm "
+         "around her shoulders, both smiling at the camera, their heads a little apart"),
 )
+GROUP_POSES = ("fora_selfie_amiga", "fora_selfie_amiga_abraco")
+GROUP_SIDE = "right"   # a amiga fica do lado direito; a troca de rosto cola só esse lado
+_GROUP_ASK = re.compile(r"\b(?:com (?:a|o) (?:bia|carol|j[uú]lia|theo)|voc[eê]s duas|voc[eê]s dois|n[oó]s duas|"
+                        r"as duas|os dois|juntas|juntos|com (?:a|sua|tua) amiga|foto de grupo)\b", re.IGNORECASE)
 BY_ID = {p.id: p for p in POSES}
 
 # A posição que eles escreveram manda na pose (24/09: ela disse "de quatro na cama" e o sorteio
@@ -501,6 +517,38 @@ class DirectedShot:
     lora_weights: dict = field(default_factory=dict)   # pesos decididos aqui (Creamy pela excitação)
     special: bool = False                              # gozo especial (esguicho) → depois vai a selfie molinha
     pov: bool = False                                  # 26/09: do ponto de vista dela, sem ela (sem o LoRA dela)
+    friend: str = ""                                   # 28/09: amiga na foto (chave do FRIEND_RG) → troca de rosto
+    friend_side: str = GROUP_SIDE
+
+
+def _group_friend(camera_ctx, request: str = "") -> str:
+    """A amiga que pode entrar na foto: quem está com ela e tem foto-RG (a citada no pedido primeiro)."""
+    from civitai_images import FRIEND_RG
+    people = [p for p in (getattr(camera_ctx, "present_people", ()) or ()) if p in FRIEND_RG]
+    low = (request or "").lower()
+    for key in people:
+        if re.search(rf"\b{key.split('_')[0]}\b", low):
+            return key
+    return people[0] if people else ""
+
+
+def _friend_sentence(friend: str, outfit: str) -> str:
+    """A amiga numa frase só dela, depois da roupa da Marina (senão a expressão e o "She" grudam nela)."""
+    from visual_profile import FRIENDS_VISUAL
+    noun = FRIENDS_VISUAL[friend].get("noun", "woman")
+    return (f"On the {GROUP_SIDE} side of the photo, beside her, is her friend, "
+            f"{FRIENDS_VISUAL[friend]['en']}, wearing {outfit}; the two {'women' if noun == 'woman' else 'friends'} "
+            f"look clearly different from each other.")
+
+
+_GARMENTS = re.compile(r"tank top|crop top|tee\b|t-shirt|dress|jeans|skirt|shorts|top\b")
+
+
+def _friend_outfit(marina_outfit: Optional[str], rng: random.Random) -> str:
+    """Roupa de sair da amiga, sem repetir a peça da Marina (duas de regata preta parecem uniforme)."""
+    hers = set(_GARMENTS.findall(marina_outfit or ""))
+    options = [o for o in WARDROBE["sair"] if o != marina_outfit and not hers & set(_GARMENTS.findall(o))]
+    return rng.choice(options or [o for o in WARDROBE["sair"] if o != marina_outfit])
 
 
 def asked_level(text: str) -> Optional[int]:
@@ -670,8 +718,15 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         current = BY_ID.get((session or {}).get("pose", ""))
         if not (current and current.beats):          # sem cena com "momentos" rolando: foto do depois
             worded = BY_ID["pos_gozo"]
+    friend = _group_friend(camera_ctx, request) if not at_home and level <= 1 else ""
+    if friend and not worded and _GROUP_ASK.search(f"{request} {her_line}"):
+        worded = BY_ID[GROUP_POSES[0]]
     if force_pose in BY_ID:
         worded = BY_ID[force_pose]
+    if worded and worded.id in GROUP_POSES and not friend:
+        worded = None                                # ninguém com ela (ou sem RG): não tem com quem
+    if session and session.get("pose") in GROUP_POSES and session.get("friend") != friend:
+        session = None                               # a amiga foi embora: a sessão da foto de grupo acabou
     change = bool(_POSE_CHANGE.search((request or "").lower())) or bool(
         worded and session and worded.id != session.get("pose"))
     room_asked = apartamento.room_for(request) if at_home else None
@@ -704,6 +759,8 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
                       and p.framing != "pov" and p.id != "mostrando_comida"]   # comida só se o assunto é comida
         if not at_home and not getattr(camera_ctx, "present_people", ()):
             candidates = [p for p in candidates if p.framing != "friend"]
+        if not friend:
+            candidates = [p for p in candidates if p.id not in GROUP_POSES]
         if not candidates and at_home:                       # o cômodo não tem pose desse nível: vai pro quarto
             room = "quarto"
             candidates = [p for p in POSES if "quarto" in p.rooms and p.levels[0] <= level <= p.levels[1]]
@@ -727,6 +784,10 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     if beat:
         action = f"{pose.action}, {action}"
     action = action.replace("{food}", food or _food(session.get("food", "") if session else "") or "her snack")
+    in_photo = friend if pose.id in GROUP_POSES else ""
+    friend_outfit = ""
+    if in_photo:
+        friend_outfit = ((session or {}).get("friend_outfit") if keep else None) or _friend_outfit(outfit, rng)
     if re.search(r"transparente|de vidro|\bclear\b", f"{request} {her_line}", re.IGNORECASE):
         action = action.replace(DILDO_TEXT, DILDO_CLEAR_TEXT)    # os dois dildos dela: rosa e transparente
     weather = getattr(camera_ctx, "weather", None) if camera_ctx else None
@@ -749,7 +810,12 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     nude = level >= 3 and (outfit is None or outfit == pose.outfit)
     prompt = krea2_zoom_prompt(action, zoom=pose.zoom, setting=setting, backdrop=backdrop,
                                is_nsfw=nude, focus_angle=pose.angle, framing=pose.framing,
-                               outfit=outfit, expression=expression_override or expression(feeling, turn))
+                               outfit=outfit,
+                               expression=expression_override or pose.face or expression(feeling, turn))
+    if in_photo:
+        friend_line = _friend_sentence(in_photo, friend_outfit)
+        prompt = (prompt.replace("Behind her, ", f"{friend_line} Behind them, ", 1) if "Behind her, " in prompt
+                  else f"{prompt} {friend_line}")
     # Gozo especial: se dedilhando (pose com o momento "fingers"), às vezes — o dobro no período fértil.
     special = (beat == "climax" and "fingers" in dict(pose.beats) and room in apartamento.ROOMS
                and rng.random() < SPECIAL_CLIMAX_CHANCE * (2 if fertile else 1))
@@ -771,10 +837,14 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     facts = f"lugar: {where}; pose: {pose.pt}; roupa: {outfit or 'pelada'}"
     if beat:
         facts += f"; momento: {beat}"
+    if in_photo:
+        from social_day import short_name
+        facts += f"; na foto junto com você: {short_name(in_photo)}"
     if declined:
         facts += "; ela está fora de casa e não dá pra mandar foto mais ousada daqui — provoca prometendo pra depois"
     new_session = {"place": place or HOME, "room": room, "pose": pose.id, "level": level, "outfit": outfit,
-                   "beat": beat, "seed": seed, "at": now.isoformat(), "food": f"{request} {her_line}" if food else ""}
+                   "beat": beat, "seed": seed, "at": now.isoformat(), "food": f"{request} {her_line}" if food else "",
+                   "friend": in_photo, "friend_outfit": friend_outfit}
     # Calcinha/toalha em foto "normal" o moderador do Civitai barra: vai como adulta (Buzz amarelo).
     adult = level >= 2 or bool(outfit and re.search(r"panties|thong|towel", outfit))
     if pose.framing == "pov":
@@ -790,7 +860,7 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     return DirectedShot(prompt=prompt, is_nsfw=adult, focus_angle=pose.angle, place_key=place or "",
                         room=room, pose_id=pose.id, level=level, beat=beat, outfit=outfit, seed=seed,
                         facts=facts + ("; gozo especial: esguichou forte" if special else ""), declined=declined,
-                        session=new_session, lora_weights=lora_weights, special=special)
+                        session=new_session, lora_weights=lora_weights, special=special, friend=in_photo)
 
 
 _HAIR_DA_POSE = re.compile(r"\b(?:wet|damp|tangled|spread)\b", re.IGNORECASE)

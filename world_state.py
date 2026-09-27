@@ -993,6 +993,7 @@ class WorldStateManager:
             "activity": chosen["activity"],
             "energy_level": energy,
             "weather_context_json": dict(weather) if weather else None,
+            "active_people_json": list(chosen.get("people") or []) or None,
             "current_plan_json": dict(chosen) if reason in (
                 "confirmed_commitment", "explicit_plan", "announced_transition",
             ) else None,

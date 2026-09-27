@@ -183,9 +183,17 @@ class CalendarWorld:
             else:
                 activity = 'em um compromisso'
             place_key = row['location_key'] or 'marina_apartment'
-            return {'activity': activity, 'place_key': place_key,
-                    'start_at': row['event_at'], 'end_at': row['end_at'],
-                    'calendar_event_id': row['id'], 'source_key': row['source_key']}
+            out = {'activity': activity, 'place_key': place_key,
+                   'start_at': row['event_at'], 'end_at': row['end_at'],
+                   'calendar_event_id': row['id'], 'source_key': row['source_key']}
+            # 28/09: quem está com ela no rolê (a câmera põe a amiga na foto de grupo)
+            try:
+                friends = json.loads(row.get('metadata_json') or '{}').get('friends') or []
+            except (TypeError, ValueError, AttributeError):
+                friends = []
+            if friends:
+                out['people'] = [str(f) for f in friends if f]
+            return out
         if not include_academic:
             return None
         from academic_life import AcademicLife
