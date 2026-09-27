@@ -191,6 +191,16 @@ class Krea2Test(unittest.TestCase):
         sfw_grab = ci.build_workflow_krea2("holding her breasts", is_nsfw=False, stack="n3")["steps"][0]["input"]
         self.assertNotIn(ci.KREA2_SQUEEZE, sfw_grab["loras"], "LoRA de apertar os seios só na foto adulta")
 
+    def test_lip_bite_lora_when_she_bites_her_lip(self):
+        """28/09: só texto a boca abria; o Lip Bite em 0.65 morde de verdade — vestida ou nua."""
+        for nsfw, stack in ((True, "e"), (False, "n3")):
+            inp = ci.build_workflow_krea2("standing, heavy-lidded lustful eyes and parted lips, biting her lower lip",
+                                          is_nsfw=nsfw, stack=stack)["steps"][0]["input"]
+            self.assertEqual(inp["loras"][ci.KREA2_LIPBITE], 0.65, stack)
+            self.assertIn("She bites her lip.", inp["prompt"])
+        plain = ci.build_workflow_krea2("a soft natural expression", is_nsfw=False, stack="n3")["steps"][0]["input"]
+        self.assertNotIn(ci.KREA2_LIPBITE, plain["loras"])
+
     def test_body_follows_her_weight(self):
         self.assertEqual(ci.weight_slider(54.0), ci.WEIGHT_AT_BASE)
         self.assertGreater(ci.weight_slider(56.5), ci.weight_slider(54.0), "mais pesada = mais cheinha (positivo)")

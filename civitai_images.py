@@ -96,6 +96,7 @@ KREA2_NIPPLE = "urn:air:krea2:lora:civitai:2554559@3191856"
 KREA2_PUBES = "urn:air:krea2:lora:civitai:2617090@3136749"
 KREA2_ASS = "urn:air:krea2:lora:civitai:2554616@3207249"
 KREA2_REAL_FAKE = "urn:air:krea2:lora:civitai:2554586@3192618"   # Real/Fake Breast Slider (negativo = natural)
+KREA2_LIPBITE = "urn:air:krea2:lora:civitai:2151575@3089332"     # Lip Bite (gatilho "she bites her lip")
 # Corpo dela em toda foto (vestida ou nua: o corpo não muda entre as fotos).
 # 28/09 (Patrick): real/fake −1.0 — peito natural mas ainda durinho (−2.0 caía demais); vestida também, contra o
 # bojo que fazia "peitão".
@@ -178,6 +179,10 @@ CONDITIONAL = (
     (KREA2_GRIPPY, 1.0, ("dildo", "consolo"), True, "GrippyPussy's vulva tightly gripping the dildo shaft"),
     (KREA2_SUCK, 0.5, ("sucking it", "lips tightly wrapped", "boquete", "chupando o dildo"), True, "sucking"),
     (KREA2_POVBJ, 0.8, ("sucking it", "lips tightly wrapped", "boquete", "chupando o dildo"), True, ""),
+    # 28/09 (Patrick): mordida no lábio. Só texto a boca abria e a mordida sumia (5 textos, mesma seed); o Lip Bite
+    # em 0.65 prende o lábio com os dentes e o rosto continua o dela (o autor: 0.55–0.75; 1.0 mexe nas feições).
+    (KREA2_LIPBITE, 0.65, ("biting her lower lip", "biting her lip", "bites her lip", "bites her lower lip",
+                           "mordendo o lábio", "morde o lábio"), False, "she bites her lip"),
     # Molhada só de ÁGUA (banho, chuva, piscina, mar). Molhada de excitação ficou melhor SEM o slider
     # (teste do Patrick, 24/09) — aí quem descreve é o texto do prompt.
     (KREA2_WETNESS, 1.2, ("shower", "bath", "bathtub", "rain", "pool", "swimming", "in the sea", "ocean", "beach water",
