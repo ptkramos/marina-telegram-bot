@@ -399,6 +399,24 @@ async def _run_workflow(session: aiohttp.ClientSession, headers: dict, body: dic
 # deixa a textura "crocante": da edição fica só o lado da amiga, colado na original com a emenda suavizada.
 FRIEND_RG = {"bia_andrade": "data/amigas/bia_rg.jpg", "carol_menezes": "data/amigas/carol_rg.jpg",
              "julia_azevedo": "data/amigas/julia_rg.jpg", "theo_martins": "data/amigas/theo_rg.jpg"}
+# 27/09 (Instagram): o editor copiava a roupa do RG (a regata branca da Carol por cima do biquíni, duas vezes).
+# Vai só o rosto: o RG cortado logo abaixo do queixo (fração da altura, medida em cada foto-RG).
+FRIEND_RG_FACE = {"bia_andrade": 0.62, "carol_menezes": 0.47, "julia_azevedo": 0.6, "theo_martins": 0.66}
+
+
+def _rg_rosto(friend: str) -> Optional[bytes]:
+    from pathlib import Path
+    from PIL import Image
+    rg_path = FRIEND_RG.get(friend)
+    if not rg_path:
+        return None
+    im = Image.open(Path(__file__).resolve().parent / rg_path).convert("RGB")
+    w, h = im.size
+    out = io.BytesIO()
+    im.crop((0, 0, w, int(h * FRIEND_RG_FACE.get(friend, 0.6)))).save(out, "JPEG", quality=95)
+    return out.getvalue()
+
+
 FRIEND_EDIT_PROMPT = ("Give the {noun} on the {side}, {who}, the exact face of the {noun} in the second image: "
                       "the face shape, eyes, eyebrows, nose, lips and skin tone. Keep the other woman, both poses, the "
                       "clothes, the accessories, the hair, the background and the lighting exactly as they are in "
@@ -484,7 +502,7 @@ async def swap_friend_face(image: bytes, friend: str, *, side: str = "right", wh
     rg_path = FRIEND_RG.get(friend)
     if not rg_path or not available():
         return None
-    rg = (Path(__file__).resolve().parent / rg_path).read_bytes()
+    rg = _rg_rosto(friend)
     from PIL import Image
     w, h = Image.open(io.BytesIO(image)).size
     from visual_profile import FRIENDS_VISUAL
@@ -519,7 +537,7 @@ async def friend_scene(friend: str, scene: str, *, width: int = 896, height: int
     rg_path = FRIEND_RG.get(friend)
     if not rg_path or not available():
         return None
-    rg = (Path(__file__).resolve().parent / rg_path).read_bytes()
+    rg = _rg_rosto(friend)
     from visual_profile import FRIENDS_VISUAL
     noun = FRIENDS_VISUAL.get(friend, {}).get("noun", "woman")
     step = {"engine": "comfy", "ecosystem": "krea2", "model": "edit", "operation": "editImage",

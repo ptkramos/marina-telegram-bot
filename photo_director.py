@@ -386,7 +386,7 @@ POSES: tuple[Pose, ...] = (
          "taking a selfie together with her friend, her right arm stretched toward the camera, her friend's arm "
          "around her shoulders, both smiling at the camera, their heads a little apart"),
     Pose("fora_amigas_alguem_tirando", "com a amiga, alguém tirando a foto das duas", ("fora",), (0, 1),
-         "three_quarter", "friend", "standing side by side with her friend, arms around each other's waists, both "
+         "full", "friend", "standing side by side with her friend, arms around each other's waists, both "
          "smiling at the person taking the photo a few steps away, nobody in the photo holding a phone, with a "
          "little space between their heads"),
 )
