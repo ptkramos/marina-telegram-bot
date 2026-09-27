@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 27/09/2026, tarde (frente do mundo: bugs limpos e agenda viva)._
+_Atualizado em 27/09/2026, tarde (frente de imagens: rosto fixo da Bia e troca de rosto na foto de grupo)._
 
 ---
 
@@ -93,19 +93,19 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
 **Abertos:** nenhum.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
-**Abertura:** "bora na frente de imagens: tenho poses pra mandar"
+**Abertura:** "bora na frente de imagens: rosto das amigas (Carol, Júlia, Theo)"
 
 Cadeia única: pose de referência → prompt no jeito da casa (`photo_director.Pose`) → motor (Civitai Krea 2, LoRA `marinaX`).
 O *quando* ela manda foto continua na frente da voz.
 
-**Pronto:** pilha oficial decidida foto a foto (24/09); catálogo por cômodo com faixa de nível (52 → 70 poses em 27/09, com as 18 referências do Patrick); sessão com seed; foto sem ela (comida, Milo, vista); unha e cabelo de agora em toda foto; FinePorn v5 testada em A/B e **mantida a v4** (27/09); plug de coração como 3º brinquedo da gaveta.
+**Pronto:** pilha oficial decidida foto a foto (24/09); catálogo por cômodo com faixa de nível (70 poses, com as 18 referências do Patrick em 27/09); sessão com seed; foto sem ela (comida, Milo, vista); unha e cabelo de agora em toda foto; FinePorn v5 em A/B, **mantida a v4** (27/09); plug de coração como 3º brinquedo da gaveta; **Bia com rosto fixo** (28/09): foto-RG `data/amigas/bia_rg.jpg` + `visual_profile.FRIENDS_VISUAL` (quem ela é + estilo) + foto de grupo pela troca de rosto (`civitai_images.swap_friend_face`: Krea 2 Edit, 41 Buzz, cola só o lado dela; Marina intacta).
 
 **Próximo:**
-1. Poses que o Patrick mandar: resgatar o prompt (metadado do arquivo → texto do site → descrição) e virar pose do catálogo (PLANO_VOZ 1). Lição de 27/09: roupa *sendo tirada* + nudez = recusa do Krea 2 (ruído de letras); escrever a roupa parada.
-2. Ângulo de trás: o espelho de perfil (`espelho_perfil_costas`) funcionou; falta o de costas sem espelho (PLANO_VOZ 1d).
-3. Fatores do gozo especial (PLANO_VOZ 1e); acompanhar o slider de peso (9).
-5. **Aparência das amigas (pro Instagram):** ✅ **Bia (28/09):** rosto = foto-RG `data/amigas/bia_rg.jpg` (a nº 4 que o Patrick escolheu; morena de pele oliva, ondas castanhas com mechas, sobrancelha grossa); texto em `visual_profile.FRIENDS_VISUAL` (quem ela é + estilo: delineado, argolas, chokers — acessório varia). Foto de grupo = gera com o LoRA da Marina e a amiga de um lado → `civitai_images.swap_friend_face` (Krea 2 Edit troca o rosto pelo do RG, 41 Buzz) → cola só o lado dela na original (Marina intacta). Provado em teste manual; a função ainda não rodou de ponta a ponta. Falta: Carol, Júlia e Theo (mesmo caminho: 4 rostos → Patrick escolhe o RG) e ligar nas fotos quando o Instagram existir.
-4. Do Patrick: trocar a chave do Civitai (vazou em 24/09).
+1. **Rosto das outras amigas:** Carol, Júlia e Theo pelo caminho da Bia — o Patrick manda uma foto de referência (se tiver), gero 4 rostos (~80 Buzz), ele escolhe o RG; texto em `FRIENDS_VISUAL` (fixo x estilo). Lições: LoRA de rosto da amiga mistura com o da Marina; só texto sai com as feições da Marina; contraste de estrutura com a Marina.
+2. `swap_friend_face` ainda não rodou de ponta a ponta (o teste foi o script manual) — rodar 1 vez quando for usar; ligar nas fotos quando o Instagram existir.
+3. Poses que o Patrick mandar (PLANO_VOZ 1). Lição: roupa *sendo tirada* + nudez = recusa do Krea 2 (ruído de letras); escrever a roupa parada.
+4. Ângulo de trás sem espelho (PLANO_VOZ 1d); fatores do gozo especial (1e); acompanhar o slider de peso (9).
+5. Do Patrick: trocar a chave do Civitai (vazou em 24/09).
 
 ## 7. Auditoria de funcionamento — skill `frente-auditoria`
 **Abertura:** "bora na auditoria de funcionamento: tudo o que fizemos em 26/09"
