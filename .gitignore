@@ -68,3 +68,6 @@ Desktop.ini
 
 # Referências pessoais do Patrick (prints com endereço, dataset do LoRA): nunca vão pro git
 references/
+
+# Instagram da Marina (fotos geradas; ficam só na VPS)
+data/instagram/

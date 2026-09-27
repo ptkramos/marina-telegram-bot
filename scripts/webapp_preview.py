@@ -84,10 +84,14 @@ async def _serve(db, port: int, status, fixo) -> None:
         print("comprovante:", url)
         return True
 
+    async def story_reply(story: dict, texto: str, query_id) -> None:
+        print("resposta ao story:", story["id"], texto)
+
     relogio = {"t": fixo}                      # /dev/agora?t=2026-09-25T21:20 troca o horário sem reiniciar
     hooks = webapp_server.Hooks(db=db, bot_token=TOKEN, allowed_user_id=USER, status=status, pix=pix,
                                 post_receipt=post_receipt, public_url=f"http://127.0.0.1:{port}",
-                                now=lambda: relogio["t"] or datetime.now())
+                                now=lambda: relogio["t"] or datetime.now(),
+                                ig_texto=lambda prompt: "kkkk tá de olho hein", ig_story_reply=story_reply)
     original_make = webapp_server.make_app
 
     async def dev_agora(request):

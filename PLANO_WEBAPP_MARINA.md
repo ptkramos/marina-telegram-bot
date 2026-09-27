@@ -108,7 +108,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 | 3 Delivery pra ela | ✅ 25/09 |
 | 4 Presentes, datas, aposentar comandos | ⬜ |
 | iFood realista (layout do app real + cardápio com lojas reais) | 🟡 26/09: **64 lojas reais, todas com logo real** (43 Botafogo, 21 Campo Grande). Restaurantes de bairro voltaram com logo pelo Google Imagens; 3 saíram (Galeteria Botafogo, Ben Ali, Tacos & Wraps: o Google só trazia outras lojas) e 3 ficam marcadas pra conferir (Cake & Co., Mr. Wong, Rei da Picanha: nome repetido em outras cidades). Logos do Wikimedia, dos sites, recortados dos prints dele e, pros mercados e farmácias dela (Zona Sul, Hortifruti, Pão de Açúcar, Mundial, Droga Raia), do Google Imagens. **Cardápios feitos** (`scripts/ifood_cardapios.py`: 212 pratos + 27 produtos de mercado + 14 de farmácia; `scripts/ifood_build.py` → `webapp/catalogo.json`, 567 itens com tempo/taxa pela distância real). **Fotos: 227 de 227** — 28 do Google (produtos oficiais das redes) e o resto do Pexels (API oficial, chave do Patrick, busca em inglês; `scripts/ifood_fotos.py`, créditos em `webapp/fotos/creditos.json`). Itens de marca com foto genérica ficam marcados `provisoria` pra trocar pela oficial devagar pelo Google. **Layout feito (26/09):** lista com filtros e busca, página da loja (capa, nota, aberta/fechada, Destaques, seções), prato (observação 0/140, quantidade), sacola de vários itens (mínimo, Peça também), entrega, pagamento (iFood Pago · Pix, taxa de serviço R$ 0,99) e "Revise o seu pedido"; a observação dos pratos vira o bilhete dela. Conferido em `scripts/webapp_preview.py` (pré-visualização local). **Abas Início/Busca/Pedidos e histórico como o app real (26/09, 07:30).** Faltam: iFood da Ma nos Bastidores, pedidos dela no catálogo novo, farmácia/mercado dela |
-| 5 Redes sociais (Instagram e X) | 💡 ideia 26/09 |
+| 5 Redes sociais (Instagram e X) | 🟡 27/09: **Instagram construído** (feed, perfil, post, stories, atividade; ela posta pelo dia dela, amigas comentam e postam; detalhe em "Etapa 5 — Instagram" abaixo). Falta: acervo gerado na VPS e acompanhar no uso real. X fica pra depois |
 
 ### Como ficou (25/09)
 - **Arquivos:**
@@ -413,3 +413,38 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 **Fotos de perfil no Mundo (28/09):** Bia, Carol, Júlia e Theo aparecem com foto (círculo de 38px no lugar das iniciais) na lista de Pessoas do Bastidores. `social_day.world_panel` manda `foto: "avatars/<chave>.jpg"` quando o arquivo existe em `webapp/avatars/`; sem arquivo, continua nas iniciais. A foto é o recorte no rosto de uma foto de perfil gerada sobre o RG de cada um (frente de imagens).
 
 **Foto de grupo (28/09):** quando ela está num rolê com uma amiga de RG, a foto pode sair com as duas (selfie juntas, rosto da amiga trocado pelo do RG). Chega pelo chat como qualquer foto; nada no Mini App ainda — é a matéria-prima do Instagram (Etapa 5). Na foto de grupo as cabeças ficam um pouco separadas (lado a lado ou abraçadas). O peito dela sai mais natural em toda foto (slider real/fake −1.0), o que vale também pro feed do Instagram; e a mordidinha no lábio sai de verdade quando a foto pede (LoRA Lip Bite em 0.6).
+
+
+### Etapa 5 — Instagram (27/09, frente dos apps) 🟡
+
+**Decidido com o Patrick (mockups e perguntas, 27/09):**
+- Só Instagram agora; o X fica pra uma etapa própria depois.
+- **Foto do post, mista:** as fotos vestidas que ela manda no chat ficam guardadas e podem virar post ou story (custo zero). Foto nova só em momento de post (rolê, look, vista, Milo…), ~20 Buzz; com amiga, ~61.
+- **Feed pelo dia dela, ~2 por semana**, no máximo 1 por dia. **Stories sem foto nova:** música que está tocando (capa do iTunes), foto do chat e texto sobre fundo; somem em 24 h.
+- **Ela só fica sabendo quando abre o Insta** (bloco "Olhando o Instagram", uber, tempo livre com o celular): responde lá e às vezes puxa no chat. Nada de aviso do sistema.
+- **Amigas comentam, aparecem marcadas e postam** (~2 posts por semana somando as quatro).
+- **Ele:** curte e comenta os posts, responde e curte comentários, reage aos stories. A resposta ao story vira mensagem dele no chat (a foto do story com o texto, "via @bot") e ela responde lá.
+- **Namoro discreto, mas na bio:** ela não posta foto dele (não existe foto dele no mundo); a bio tem ♡ @ptkramos.
+- **Perfil:** @masalles, "Ma Salles / moda, croqui e café gelado / mãe do @milooshi / ♡ @ptkramos", ~4 mil seguidores.
+- **Abre no feed** (stories no topo, posts dela e das amigas por hora); o perfil dela fica na barra de baixo.
+- Quando ela posta: linha no Hoje ("Postou uma foto no Instagram", a legenda embaixo), vai pro prompt dela, e bolinha vermelha no ícone do Instagram na tela inicial.
+- **Acervo inicial:** 9 posts dela dos últimos 2 meses e 2 de cada amiga, gerados uma vez (~400 Buzz).
+
+**Como ficou (código):**
+- `instagram.py` — as regras. Motivos de post vêm do que aconteceu de verdade (`life_events`): encontro com amiga numa saída (`social_contact …:saida`, com a amiga de RG vira foto de grupo), praia, salão, unhas, looks, academia, passeio do Milo, foto do chat; sem nada, a selfie em casa. **Vontade de postar** = peso do motivo + 0,1 por dia sem postar (até 6) + (valence − 0,6) + (energia − 0,5) × 0,3; posta com ≥ 1,0, 36 h depois do último post, 20–120 min depois do acontecimento, com o celular livre (em casa à toa, uber, sozinha na rua, bloco do Instagram), das 9:30 à 0:40 e fora da conversa com ele (a trava do Civitai é uma só). Triste (valence < 0,45) não posta story.
+- **Quando ela abre o app:** no bloco do Instagram a cada 20 min; com o celular livre a cada 75 min (30 min nas 3 h depois de postar, vendo as curtidas); ocupada-mas-dá (refeição, rolê, se arrumando) a cada 150 min. Ela curte e responde todo comentário dele (e curte a curtida); das amigas, curte todos e responde até 2; de fora, curte metade. Post de amiga: curte e comenta metade das vezes. O que viu nas últimas 24 h vai pro prompt como fato ("[SEU INSTAGRAM (@masalles) — aconteceu de verdade]").
+- **Curtidas:** seguidores × alcance (5–11%) × (1 − e^(−horas/4)), mais a dele.
+- **Comentários das amigas:** gerados todos de uma vez (um JSON) quando o post sai, e chegam espalhados: a marcada em 4–40 min, o resto em até 8 h (de madrugada, não). Quem comenta: a marcada sempre, Bia 85%, Theo 60%, Júlia 50%, Carol 45%, e 1–2 seguidores de fora. Quando ele comenta, 35% de chance de uma amiga (a marcada ou a Bia) responder ele em 15 min–3 h.
+- **Post das amigas:** um sorteio por dia (2/7), hora entre 11h e 21h; se a Marina postou foto de grupo com ela nas últimas 30 h, a amiga reposta a mesma foto (sem custo); senão, foto nova pelo Krea 2 Edit sobre o RG (`civitai_images.friend_scene`, 20 Buzz — teste da Bia na praia e do Theo no carro aprovado pelo rosto). No máximo 2 tentativas de foto por acontecimento.
+- `bot.py`: `instagram_routine` a cada 5 min (ela olha, story, post, amiga), `_guardar_pro_insta` nas fotos do chat (vestida: nível 0, ou nível 1 na rua), `_ig_shot` (pose do motivo, nível 0, roupa de sair em rolê/look), `_ig_responder_story`.
+- `webapp_server.py`: `/api/ig`, `/api/ig/perfil/{autor}`, `/api/ig/post/{id}`, `/api/ig/atividade`, `/api/ig/curtir`, `/api/ig/comentar`, `/api/ig/story`, `/ig/{arquivo}` (fotos em `data/instagram/`, nome impossível de adivinhar, fora do git); `insta_novo` na `/api/inicio`.
+- Front: `webapp/insta.js` (feed, perfil com abas publicações/marcações, post com comentários encadeados e "pela autora", atividade, visualizador de story com barras, toque duplo curte), estilos no fim do `app.css`, logos do Instagram do Wikimedia (`webapp/marcas/instagram*.svg`).
+- Banco: `migrations/031_instagram.sql` (`ig_posts`, `ig_comentarios`, `ig_fotos_chat`).
+- Acervo: `scripts/instagram_acervo.py` (roda na VPS; sem `--gerar` só mostra o plano e o custo).
+- `tests/test_instagram.py` (23 testes). Conferido na pré-visualização (`miniapp-insta`) em tamanho de celular: feed, comentários, perfil, marcações, stories de música e de texto.
+
+**Textos que decidi sozinho (revisar com o Patrick):**
+- Perfis das amigas: **@bia.andrade** "Laranjeiras · RJ / sexta é sagrada" (2.387 seguidores); **@carolmenezes** "nutri em formação / treino e comida de verdade" (1.652); **@juazevedo** "design · PUC-Rio / fotografo tudo em 35 mm" (934); **@theomartins** "moda · PUC-Rio / Glória" (1.428). Seguidores de fora que comentam: lu.mendes, nanda.rocha, pedroh.lima, carolinabastos, rafa.nogueira, duda.lins.
+- O que cada amiga posta: Bia (festa na Lapa, praia de Ipanema no pôr do sol, espelho de roupa preta), Carol (espelho da academia, bowl num café de Botafogo, corrida no Aterro), Júlia (exposição de fotografia, câmera analógica no Jardim Botânico, café com caderno), Theo (espelho de look, rooftop à noite, encostado no carro na Glória).
+- Telas: "Nada postado ainda / Os posts da Ma e das amigas aparecem aqui", "Nenhuma publicação ainda", "Atividade nos seus comentários / Quando responderem ou curtirem o que você comentou, aparece aqui", "Adicione um comentário para masalles…", "Respondendo a …", "pela autora", "Enviar mensagem", "Mensagem enviada", atividade "respondeu: …", "curtiu seu comentário: …", "marcou a masalles numa publicação". Botão "Mensagem" no perfil dela fecha o app (a conversa com ela é o chat).
+- Na tela inicial ficaram 5 quadrados (Nubank, iFood, Instagram, Presentes e Datas "em breve"): o último sobra sozinho numa linha.

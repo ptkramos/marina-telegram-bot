@@ -1606,3 +1606,15 @@ Abertos (FRENTES seção 5): belisco com entrega na portaria; banho recente como
 - Conversa (`agenda_reativa`): o gate pega outros dias, desmarcar/remarcar/faltar; o classificador recebe a lista numerada dos próximos 3 dias (`lista_para_conversa`: rolês, convites sem resposta, academia, Milo, aula, mercado, vontade) e devolve `item` + `acao` (vai_fazer/desistiu/remarcou) + `quando` ("amanhã 07:00", "sábado 21:00", data). `pela_conversa` aceita/recusa convite, desiste (sem aviso: ele está na conversa) ou remarca; `marca_outro_dia` põe academia/Milo no plano do dia ou cria o item da vontade daquele dia.
 - Prompt: bloco "[SUA AGENDA — o que você decidiu]" (últimas 18 h) no dia social. Hoje: linhas próprias pro tipo `agenda` (`hoje._agenda`).
 - `tests/test_agenda_viva.py` (23 testes).
+
+
+## Frente dos apps (27/09, noite): Instagram da Marina
+
+Etapa 5 do PLANO_WEBAPP, decidida com o Patrick por mockup (formato, bio, abertura, acervo). O que mexe no sistema:
+- **Mundo → Instagram:** `instagram.py` lê os acontecimentos de verdade (`life_events`) e decide o post pela vontade dela (motivo + dias sem postar + valence/energia, sem sorteio), com o celular livre (perfil de disponibilidade) e nunca durante a conversa com ele (a foto nova disputa a trava única do `sd_client`). O post dela vira `life_events` tipo `instagram` (linha no Hoje com o logo). Acervo não entra no Hoje.
+- **Instagram → voz:** bloco "[SEU INSTAGRAM (@masalles) — aconteceu de verdade]" no dia social (`world_context._social_day_block`): último post, stories no ar e o que ela viu nas últimas 24 h. Ela só vê quando o mundo põe o celular na mão dela (bloco do Instagram, uber, tempo livre).
+- **Fotos do chat:** foto vestida mandada pro Patrick (nível 0, ou 1 na rua; nunca adulta) é guardada em `data/instagram/` pra virar post ou story sem custo (`bot._guardar_pro_insta`, nos dois caminhos de envio: turno e promessa).
+- **Resposta ao story:** vai pro chat como mensagem dele (`answerWebAppQuery`, a foto do story com o texto) e vira turno dele pelo fluxo normal (sem furar a disponibilidade dela). O app fecha, como no Pix.
+- **Custo:** foto nova de post ~20 Buzz (com amiga ~61), post de amiga 20 (Krea 2 Edit sobre o RG, confirmado no teste), no máximo 2 tentativas por acontecimento. Ritmo: ~2 posts dela e ~2 das amigas por semana → ~200 Buzz/mês. Acervo inicial ~400 Buzz, uma vez.
+- **Achado de passagem:** o `app.js` criava um `setInterval` de recarga do Bastidores a cada Pix ou pedido feito (colado dentro do `try`); tirado, fica só o do fim do arquivo.
+- Migration 031 (`ig_posts`, `ig_comentarios`, `ig_fotos_chat`), com as três tabelas na lista CLEAR do `bootstrap_v36` (vida dela: some numa largada limpa); `tests/test_instagram.py` (23 testes). Suíte inteira: 1.235 testes, verde depois disso.

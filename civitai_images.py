@@ -504,6 +504,43 @@ async def swap_friend_face(image: bytes, friend: str, *, side: str = "right", wh
     return None
 
 
+# 27/09 (Instagram): post da amiga sozinha. O editor parte da foto-RG (o rosto fica o dela) e monta a cena.
+FRIEND_SCENE_PROMPT = ("The same {noun} from the image, with the exact same face, eyes, eyebrows, nose, lips, skin tone "
+                       "and hair, now {scene}, wearing clothes that fit this new scene (not the clothes from the "
+                       "image). A candid Instagram photo taken with a smartphone, natural light, realistic skin "
+                       "texture, vertical 4:5 framing.")
+
+
+async def friend_scene(friend: str, scene: str, *, width: int = 896, height: int = 1120,
+                       seed: Optional[int] = None) -> Optional[bytes]:
+    """Foto nova da amiga numa cena (Krea 2 Edit sobre a foto-RG). None se não der."""
+    from pathlib import Path
+    import base64
+    rg_path = FRIEND_RG.get(friend)
+    if not rg_path or not available():
+        return None
+    rg = (Path(__file__).resolve().parent / rg_path).read_bytes()
+    from visual_profile import FRIENDS_VISUAL
+    noun = FRIENDS_VISUAL.get(friend, {}).get("noun", "woman")
+    step = {"engine": "comfy", "ecosystem": "krea2", "model": "edit", "operation": "editImage",
+            "prompt": FRIEND_SCENE_PROMPT.format(noun=noun, scene=scene),
+            "images": ["data:image/jpeg;base64," + base64.b64encode(rg).decode()],
+            "width": width, "height": height, "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
+            "quantity": 1, "loras": {}}
+    body = {"steps": [{"$type": "imageGen", "input": step}], "allowMatureContent": False}
+    headers = {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json", "User-Agent": USER_AGENT}
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT_S + 30)) as session:
+        try:
+            wf = await _run_workflow(session, headers, body, False)
+            for img in _images(wf or {}):
+                data = await _download(session, headers, img)
+                if data:
+                    return data
+        except Exception as exc:
+            logger.error("civitai.friend_scene_error %s: %s", type(exc).__name__, exc)
+    return None
+
+
 def _crop_bottom(data: bytes, frac: float) -> bytes:
     """Tira a faixa de baixo (a marca d'água que o POV Blowjob desenha no canto)."""
     try:

@@ -103,6 +103,10 @@ def _curto(ev: dict) -> dict:
     if tipo == "agenda":
         out.update(_agenda(s))
         return out
+    if tipo == "instagram":     # 27/09 (Patrick): o post dela no Hoje, a legenda embaixo
+        acao, _, legenda = s.partition(": ")
+        out.update(ic="brand-instagram", texto=acao, sub=legenda)
+        return out
     if tipo == "tempo_livre" and s.startswith("Fez as unhas em casa"):
         return {**out, **_salao(s)}
     if tipo == "tempo_livre":

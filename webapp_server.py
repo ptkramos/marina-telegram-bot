@@ -78,6 +78,9 @@ class Hooks:
     # comprovante no chat como mensagem DELE (answerWebAppQuery): (query_id, url da imagem) -> ok
     post_receipt: Optional[Callable[[str, str], Awaitable[bool]]] = None
     public_url: str = ""
+    # 27/09 (Instagram): texto das amigas (sync, roda numa thread) e a resposta dele a um story (vira chat)
+    ig_texto: Optional[Callable[[str], str]] = None
+    ig_story_reply: Optional[Callable[[dict, str, Optional[str]], Awaitable[None]]] = None
 
 
 # Comprovantes (opção B): a imagem fica aqui alguns minutos, num endereço impossível de adivinhar,
@@ -146,7 +149,7 @@ async def _auth(request: web.Request, handler):
 # -------------------------------------------------------------------- estáticos --
 async def _index(request: web.Request) -> web.StreamResponse:
     # O webview do Telegram guarda app.js/app.css em cache: a versão no link força o novo após um deploy.
-    version = str(int(max((STATIC_DIR / f).stat().st_mtime for f in ("app.js", "app.css"))))
+    version = str(int(max((STATIC_DIR / f).stat().st_mtime for f in ("app.js", "app.css", "insta.js"))))
     html = (STATIC_DIR / "index.html").read_text(encoding="utf-8").replace("__V__", version)
     return web.Response(text=html, content_type="text/html", headers={"Cache-Control": "no-cache"})
 
@@ -275,8 +278,10 @@ async def api_inicio(request: web.Request) -> web.Response:
     import delivery
     import pedido_dela
     # 26/09 (Patrick): o pedido dele não aparece na tela inicial, só no iFood (Pedidos).
+    import instagram
     return _json({"agora": {k: snap.get(k) for k in ("now", "atividade", "local", "disponivel")},
-                  "pra_voce": gift_to_him_view(hooks.db, now)})
+                  "pra_voce": gift_to_him_view(hooks.db, now),
+                  "insta_novo": instagram.feed_novo(hooks.db, now)})   # 27/09: bolinha no ícone
 
 
 # --------------------------------------------- Bastidores: textos (Patrick, 26/09) --
@@ -599,6 +604,244 @@ async def api_delivery_pedir(request: web.Request) -> web.Response:
     return _json({"ok": True, "pedido": order_view(order, now), "comprovante": await _post_receipt(request, jpeg)})
 
 
+# ----------------------------------------------- Instagram (27/09, Etapa 5) --
+MESES = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
+
+
+def ig_quando(at: datetime, now: datetime) -> str:
+    """Como o Instagram mostra: agora, 5 min, 3 h, 2 d, 12 de set."""
+    s = (now - at).total_seconds()
+    if s < 60:
+        return "agora"
+    if s < 3600:
+        return f"{int(s // 60)} min"
+    if s < 86400:
+        return f"{int(s // 3600)} h"
+    if s < 7 * 86400:
+        return f"{int(s // 86400)} d"
+    return f"{at.day} de {MESES[at.month - 1]}"
+
+
+def ig_autor(autor: str) -> dict:
+    import instagram
+    p = instagram.PERFIS.get(autor)
+    if not p:
+        return {"chave": autor, "handle": autor, "nome": "", "avatar": "", "iniciais": autor[:2].upper(), "perfil": False}
+    av = p.get("avatar", "")
+    if av.startswith("ig/"):
+        av = f"/{av}" if instagram.caminho(av[3:]) else ""
+    elif av:
+        av = f"/{av}"
+    nome = p["nome"]
+    iniciais = "PR" if autor == "patrick" else "".join(w[0] for w in nome.split()[:2]).upper()
+    return {"chave": autor, "handle": p["handle"], "nome": nome, "avatar": av, "perfil": autor != "patrick",
+            "iniciais": iniciais}
+
+
+def ig_post_view(db, p: dict, now: datetime) -> dict:
+    import instagram
+    coms = instagram.comentarios(db, p["id"], now)
+    story = json.loads(p.get("story_json") or "null")
+    return {"id": p["id"], "tipo": p["tipo"], "autor": ig_autor(p["autor"]),
+            "imagem": f"/ig/{p['imagem']}" if p.get("imagem") else "", "story": story,
+            "legenda": p["legenda"], "local": p["local"], "quando": ig_quando(datetime.fromisoformat(p["criado_em"]), now),
+            "curtidas": instagram.curtidas(p, now), "curtiu": bool(p.get("curtido_patrick_em")),
+            "marcados": [ig_autor(a) for a in json.loads(p["marcados_json"] or "[]")],
+            "n_comentarios": len(coms), "visto": bool(p.get("visto_patrick_em")),
+            "curtido_por": "masalles" if p["autor"] != "marina" and p.get("curtido_marina_em") else ""}
+
+
+def ig_comentarios_view(db, pid: int, now: datetime) -> list[dict]:
+    import instagram
+    coms = instagram.comentarios(db, pid, now)
+    raiz: dict[int, dict] = {}
+    out = []
+    for c in coms:
+        v = {"id": c["id"], "autor": ig_autor(c["autor"]), "texto": c["texto"],
+             "quando": ig_quando(datetime.fromisoformat(c["criado_em"]), now),
+             "curtidas": (1 if c.get("curtido_marina_em") else 0) + (1 if c.get("curtido_patrick_em") else 0),
+             "curtiu": bool(c.get("curtido_patrick_em")), "dela": bool(c.get("curtido_marina_em")),
+             "seu": c["autor"] == "patrick", "respostas": []}
+        pai = c.get("pai_id")
+        while pai and pai not in raiz and any(x["id"] == pai for x in coms):   # resposta de resposta: fica na raiz
+            pai = next(x["pai_id"] for x in coms if x["id"] == pai)
+        if pai and pai in raiz:
+            raiz[pai]["respostas"].append(v)
+        else:
+            raiz[c["id"]] = v
+            out.append(v)
+    return out
+
+
+def ig_stories_view(db, now: datetime) -> list[dict]:
+    import instagram
+    grupos: dict[str, list] = {}
+    for s in instagram.stories_ativos(db, now):
+        grupos.setdefault(s["autor"], []).append(ig_post_view(db, s, now))
+    ordem = ["marina", *instagram.AMIGAS]
+    return [{"autor": ig_autor(a), "itens": grupos[a], "visto": all(x["visto"] for x in grupos[a])}
+            for a in ordem if a in grupos]
+
+
+async def api_ig(request: web.Request) -> web.Response:
+    hooks: Hooks = request.app["hooks"]
+    import instagram
+    now = hooks.now()
+    posts = instagram._rows(hooks.db, "SELECT * FROM ig_posts WHERE tipo='feed' AND criado_em<=? "
+                                      "ORDER BY criado_em DESC LIMIT 40", (now.isoformat(),))
+    instagram.patrick_abriu(hooks.db, now)
+    return _json({"stories": ig_stories_view(hooks.db, now), "posts": [ig_post_view(hooks.db, p, now) for p in posts],
+                  "atividade_nova": bool(ig_atividade(hooks.db, now, so_novas=True))})
+
+
+async def api_ig_perfil(request: web.Request) -> web.Response:
+    hooks: Hooks = request.app["hooks"]
+    import instagram
+    autor = request.match_info["autor"]
+    perfil = instagram.PERFIS.get(autor)
+    if not perfil or autor == "patrick":
+        return _error("perfil não encontrado", 404)
+    now = hooks.now()
+    posts = instagram.posts_feed(hooks.db, autor, now)
+    marcadas = [p for p in instagram._rows(hooks.db, "SELECT * FROM ig_posts WHERE tipo='feed' AND criado_em<=? "
+                                                     "AND autor!=? ORDER BY criado_em DESC", (now.isoformat(), autor))
+                if autor in json.loads(p["marcados_json"] or "[]")]
+    return _json({"autor": ig_autor(autor), "bio": perfil["bio"], "seguidores": perfil["seguidores"],
+                  "seguindo": perfil["seguindo"], "n_posts": len(posts),
+                  "stories": [s for s in ig_stories_view(hooks.db, now) if s["autor"]["chave"] == autor],
+                  "posts": [ig_post_view(hooks.db, p, now) for p in posts],
+                  "marcadas": [ig_post_view(hooks.db, p, now) for p in marcadas]})
+
+
+async def api_ig_post(request: web.Request) -> web.Response:
+    hooks: Hooks = request.app["hooks"]
+    import instagram
+    now = hooks.now()
+    p = instagram.post(hooks.db, int(request.match_info["id"]))
+    if not p or datetime.fromisoformat(p["criado_em"]) > now:
+        return _error("post não encontrado", 404)
+    return _json({**ig_post_view(hooks.db, p, now), "comentarios": ig_comentarios_view(hooks.db, p["id"], now)})
+
+
+async def api_ig_curtir(request: web.Request) -> web.Response:
+    hooks: Hooks = request.app["hooks"]
+    import instagram
+    body = await request.json()
+    on = bool(body.get("on"))
+    if body.get("comentario"):
+        instagram.curtir_comentario(hooks.db, int(body["comentario"]), hooks.now(), on)
+    elif body.get("post"):
+        instagram.curtir_post(hooks.db, int(body["post"]), hooks.now(), on)
+    else:
+        return _error("nada pra curtir", 400)
+    return _json({"ok": True})
+
+
+async def api_ig_comentar(request: web.Request) -> web.Response:
+    hooks: Hooks = request.app["hooks"]
+    import instagram
+    body = await request.json()
+    texto = str(body.get("texto") or "").strip()[:300]
+    pid = int(body.get("post") or 0)
+    p = instagram.post(hooks.db, pid)
+    if not texto or not p:
+        return _error("Escreva um comentário", 400)
+    pai = int(body["pai"]) if body.get("pai") else None
+    now = hooks.now()
+    cid = instagram.comentar(hooks.db, pid, "patrick", texto, now, pai_id=pai)
+    if hooks.ig_texto:
+        asyncio.create_task(_ig_amiga_entra(hooks, pid, cid, texto, now))
+    return _json({"ok": True, "id": cid})
+
+
+async def _ig_amiga_entra(hooks: Hooks, pid: int, cid: int, texto: str, now: datetime) -> None:
+    """Às vezes uma amiga responde o comentário dele (a marcada, ou a Bia), minutos ou horas depois."""
+    import instagram
+    import random
+    from social_day import short_name
+    try:
+        amiga = instagram.resposta_de_amiga(hooks.db, pid, cid)
+        if not amiga:
+            return
+        p = instagram.post(hooks.db, pid)
+        resp = instagram._limpa(await asyncio.to_thread(
+            hooks.ig_texto, f"No Instagram, num post da Marina ({p['descricao']}; legenda \"{p['legenda']}\"), o "
+            f"Patrick, namorado dela, comentou \"{texto}\". Escreva a resposta de {short_name(amiga)} "
+            f"({instagram.JEITO[amiga]}) a esse comentário: curtinha (até 10 palavras), brincando com ele, português "
+            "informal, pode ter 1 emoji. Responda só com o comentário."))
+        if resp:
+            at = now + timedelta(minutes=random.Random(f"ig:entra:quando:{cid}").randint(15, 180))
+            instagram.comentar(hooks.db, pid, amiga, resp, at, pai_id=cid)
+    except Exception:
+        logger.exception("webapp.ig.amiga_entra")
+
+
+async def api_ig_story(request: web.Request) -> web.Response:
+    """Story: visto, coração ou resposta (a resposta vai pro chat como mensagem dele)."""
+    hooks: Hooks = request.app["hooks"]
+    import instagram
+    body = await request.json()
+    s = instagram.post(hooks.db, int(body.get("id") or 0))
+    if not s or s["tipo"] != "story":
+        return _error("story não encontrado", 404)
+    now = hooks.now()
+    acao = body.get("acao")
+    if acao == "visto":
+        instagram._exec(hooks.db, "UPDATE ig_posts SET visto_patrick_em=COALESCE(visto_patrick_em, ?) WHERE id=?",
+                        (now.isoformat(), s["id"]))
+    elif acao == "coracao":
+        instagram.curtir_post(hooks.db, s["id"], now, bool(body.get("on", True)))
+    elif acao == "responder":
+        texto = str(body.get("texto") or "").strip()[:300]
+        if not texto:
+            return _error("Escreva uma mensagem", 400)
+        if s["autor"] != "marina" or not hooks.ig_story_reply:
+            return _error("Só dá pra responder os stories da Ma", 400)
+        await hooks.ig_story_reply(s, texto, request.get("query_id"))
+        return _json({"ok": True, "chat": bool(request.get("query_id"))})
+    return _json({"ok": True})
+
+
+def ig_atividade(db, now: datetime, *, so_novas: bool = False) -> list[dict]:
+    """O coração: quem respondeu e quem curtiu os comentários dele."""
+    import instagram
+    viu = db.get_estado_relacional("ig_patrick_viu_atividade") or ""
+    n = now.isoformat()
+    out = []
+    for c in instagram._rows(db, """SELECT r.*, c.texto AS dele FROM ig_comentarios r
+                                    JOIN ig_comentarios c ON c.id=r.pai_id
+                                    WHERE c.autor='patrick' AND r.autor!='patrick' AND r.criado_em<=?""", (n,)):
+        out.append({"at": c["criado_em"], "autor": ig_autor(c["autor"]), "post": c["post_id"],
+                    "texto": f"respondeu: {c['texto']}"})
+    for c in instagram._rows(db, """SELECT * FROM ig_comentarios WHERE autor='patrick' AND curtido_marina_em<=?""", (n,)):
+        out.append({"at": c["curtido_marina_em"], "autor": ig_autor("marina"), "post": c["post_id"],
+                    "texto": f"curtiu seu comentário: {c['texto']}"})
+    for p in instagram._rows(db, """SELECT * FROM ig_posts WHERE autor!='marina' AND tipo='feed' AND criado_em<=?
+                                    AND marcados_json LIKE '%marina%'""", (n,)):
+        out.append({"at": p["criado_em"], "autor": ig_autor(p["autor"]), "post": p["id"],
+                    "texto": "marcou a masalles numa publicação"})
+    out.sort(key=lambda x: x["at"], reverse=True)
+    if so_novas:
+        return [x for x in out if x["at"] > viu]
+    return [{**x, "quando": ig_quando(datetime.fromisoformat(x["at"]), now), "nova": x["at"] > viu} for x in out[:40]]
+
+
+async def api_ig_atividade(request: web.Request) -> web.Response:
+    hooks: Hooks = request.app["hooks"]
+    now = hooks.now()
+    itens = ig_atividade(hooks.db, now)
+    hooks.db.set_estado_relacional("ig_patrick_viu_atividade", now.isoformat())
+    return _json({"itens": itens})
+
+
+async def _ig_file(request: web.Request) -> web.StreamResponse:
+    import instagram
+    p = instagram.caminho(request.match_info["nome"])
+    if not p:
+        raise web.HTTPNotFound()
+    return web.FileResponse(p, headers={"Cache-Control": "public, max-age=604800"})
+
+
 def make_app(hooks: Hooks) -> web.Application:
     app = web.Application(middlewares=[_auth], client_max_size=64 * 1024)
     app["hooks"] = hooks
@@ -612,6 +855,14 @@ def make_app(hooks: Hooks) -> web.Application:
     app.router.add_get("/api/ifood", api_ifood)
     app.router.add_get("/api/ifood/loja/{id}", api_ifood_loja)
     app.router.add_post("/api/delivery", api_delivery_pedir)
+    app.router.add_get("/api/ig", api_ig)                       # 27/09: Instagram da Ma
+    app.router.add_get("/api/ig/perfil/{autor}", api_ig_perfil)
+    app.router.add_get("/api/ig/post/{id}", api_ig_post)
+    app.router.add_get("/api/ig/atividade", api_ig_atividade)
+    app.router.add_post("/api/ig/curtir", api_ig_curtir)
+    app.router.add_post("/api/ig/comentar", api_ig_comentar)
+    app.router.add_post("/api/ig/story", api_ig_story)
+    app.router.add_get("/ig/{nome}", _ig_file)                  # fotos: nome impossível de adivinhar
     app.router.add_static("/static/", STATIC_DIR, show_index=False)
     return app
 

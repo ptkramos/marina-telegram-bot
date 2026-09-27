@@ -18,6 +18,7 @@
     <div class="tiles">
       <button class="tile" data-go="nubank"><img src="/static/marcas/nubank.svg" alt="" class="logo"><span>Nubank</span></button>
       <button class="tile" data-go="ifood"><img src="/static/marcas/ifood.svg" alt="" class="logo"><span>iFood</span></button>
+      <button class="tile" data-go="ig"><span class="ig-tile"><img src="/static/marcas/instagram.svg" alt="" class="logo"><span class="bolinha" id="ig-bolinha" hidden></span></span><span>Instagram</span></button>
       <button class="tile off" disabled><span>Presentes</span><span class="soon">em breve</span></button>
       <button class="tile off" disabled><span>Datas</span><span class="soon">em breve</span></button>
     </div>
@@ -156,6 +157,40 @@
     </div>
   </div>
 
+  <!-- 27/09 (Patrick): Instagram da Ma — abre no feed (stories no topo), perfil dela, post com comentários -->
+  <section id="v-ig" class="view ig" hidden>
+    <header class="ig-top"><img src="/static/marcas/instagram-nome.svg" alt="Instagram" class="ig-nome"></header>
+    <div class="ig-stories" id="ig-stories"></div>
+    <div id="ig-feed"></div>
+  </section>
+  <section id="v-igperfil" class="view ig" hidden><div id="ig-perfil"></div></section>
+  <section id="v-igpost" class="view ig" hidden>
+    <div id="ig-post"></div>
+    <div class="ig-escrever">
+      <div class="ig-respondendo" id="ig-respondendo" hidden><span id="ig-resp-txt"></span><button id="ig-resp-x" aria-label="Cancelar resposta"><i class="ti ti-x"></i></button></div>
+      <div class="ig-escrever-linha"><span class="ig-av pq" id="ig-eu-av">PR</span>
+        <input id="ig-coment" type="text" maxlength="300" placeholder="Adicione um comentário…">
+        <button class="ig-publicar" id="ig-publicar">Publicar</button></div>
+    </div>
+  </section>
+  <section id="v-igativ" class="view ig" hidden>
+    <header class="ig-top"><b class="ig-titulo">Atividade</b></header>
+    <div id="ig-ativ"></div>
+  </section>
+  <nav class="ig-nav" id="ig-nav" hidden>
+    <button data-tab="ig" aria-label="Início"><i class="ti ti-home"></i></button>
+    <button data-tab="igativ" aria-label="Atividade"><i class="ti ti-heart"></i><span class="bolinha" id="ig-ativ-bolinha" hidden></span></button>
+    <button data-tab="igperfil" aria-label="Perfil da Ma"><span class="ig-av pq" id="ig-nav-av"></span></button>
+  </nav>
+  <div class="igs-fundo" id="igs" hidden>
+    <div class="igs-barras" id="igs-barras"></div>
+    <div class="igs-topo"><span id="igs-quem"></span><button id="igs-fechar" aria-label="Fechar"><i class="ti ti-x"></i></button></div>
+    <div class="igs-conteudo" id="igs-conteudo"></div>
+    <button class="igs-lado esq" id="igs-ant" aria-label="Anterior"></button><button class="igs-lado dir" id="igs-prox" aria-label="Próximo"></button>
+    <div class="igs-rodape" id="igs-rodape"><input id="igs-msg" type="text" maxlength="300" placeholder="Enviar mensagem">
+      <button id="igs-cor" aria-label="Curtir"><i class="ti ti-heart"></i></button><button id="igs-enviar" aria-label="Enviar"><i class="ti ti-send"></i></button></div>
+  </div>
+
   <!-- 26/09 (Patrick): Bastidores em abas; rótulos falam como painel, sentimento fala do jeito dela -->
   <section id="v-bastidores" class="view" hidden>
     <header class="top"><h1>Bastidores</h1><p class="sub">Só você vê isso</p></header>
@@ -188,5 +223,6 @@
   <div id="toast" hidden></div>
 </main>
 <script src="/static/app.js?v=__V__"></script>
+<script src="/static/insta.js?v=__V__"></script>
 </body>
 </html>

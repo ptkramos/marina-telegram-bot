@@ -40,11 +40,14 @@ function concluido(msgForaDoTelegram) {
 
 // ------------------------------------------------------------------ navegação --
 const stack = ["inicio"];
-const TABS = ["ifood", "ifbusca", "ifpedidos"];       // abas da barra de baixo do iFood
+const IF_TABS = ["ifood", "ifbusca", "ifpedidos"];    // abas da barra de baixo do iFood
+const IG_TABS = ["ig", "igativ", "igperfil"];          // 27/09: e do Instagram
+const TABS = [...IF_TABS, ...IG_TABS];
 function show(view, push = true) {
   document.querySelectorAll(".view").forEach((v) => (v.hidden = v.id !== "v-" + view));
-  $("if-nav").hidden = !TABS.includes(view);
-  document.querySelectorAll("#if-nav [data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === view));
+  $("if-nav").hidden = !IF_TABS.includes(view);
+  $("ig-nav").hidden = !IG_TABS.includes(view);
+  document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === view));
   if (push) stack.push(view);
   if (nativeBack) (stack.length > 1 ? tg.BackButton.show() : tg.BackButton.hide());
   else $("voltar").hidden = stack.length <= 1;
@@ -56,7 +59,11 @@ function tab(view) {
   if (TABS.includes(stack[stack.length - 1])) stack.pop();
   show(view);
 }
-function back() { if (!$("rv-fundo").hidden) { $("rv-fundo").hidden = true; return; } if (stack.length > 1) { stack.pop(); show(stack[stack.length - 1], false); } }
+function back() {
+  if (!$("rv-fundo").hidden) { $("rv-fundo").hidden = true; return; }
+  if (!$("igs").hidden) { IG.fecharStory(); return; }
+  if (stack.length > 1) { stack.pop(); show(stack[stack.length - 1], false); }
+}
 if (nativeBack) tg.BackButton.onClick(back);
 $("voltar").addEventListener("click", back);
 
@@ -92,6 +99,7 @@ const loaders = {
     try {
       const d = await api("/api/inicio");
       $("inicio-presente").innerHTML = pedidoCard(d.pra_voce, "Presente da Ma");
+      $("ig-bolinha").hidden = !d.insta_novo;
     } catch (e) { failIn($("inicio-presente"), e); }
   },
 
@@ -386,10 +394,6 @@ $("pix-confirmar").addEventListener("click", async () => {
     $("pix-valor").value = ""; $("pix-recado").value = "";
     concluido("Transferência feita");
     stack.length = 1; show("inicio", false);
-// 26/09 (Patrick): o que ela sente atualiza em tempo real — Bastidores aberto se recarrega sozinho
-setInterval(() => {
-  if (stack[stack.length - 1] === "bastidores" && !document.hidden) loaders.bastidores();
-}, 60000);
   } catch (err) { $("rev-err").textContent = err.message; }
   finally { btn.disabled = false; }
 });
@@ -551,10 +555,6 @@ $("rv-fazer").addEventListener("click", async () => {
     $("rv-fundo").hidden = true;
     concluido("Pedido feito");
     stack.length = 1; show("inicio", false);
-// 26/09 (Patrick): o que ela sente atualiza em tempo real — Bastidores aberto se recarrega sozinho
-setInterval(() => {
-  if (stack[stack.length - 1] === "bastidores" && !document.hidden) loaders.bastidores();
-}, 60000);
   } catch (err) { $("rv-err").textContent = err.message; }
   finally { btn.disabled = false; }
 });

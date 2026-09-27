@@ -4149,6 +4149,7 @@ async def process_incoming_batch(
                 # Sessão e continuidade só depois do send_photo confirmado (message_id).
                 if getattr(sent_photo, 'message_id', None):
                     photo_director.confirm_sent(memory_manager.db, shot)
+                    _guardar_pro_insta(shot, foto_stream, now_foto)
                     import promessa_foto
                     promessa_foto.close(memory_manager.db, "cumprida")   # a foto de agora vale a promessa
                     if foto_dela:
@@ -5112,11 +5113,12 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
         shots.append(photo_director.direct(db, now, her_line=p["said"], camera_ctx=camera_ctx, feeling=feeling,
                                            her_initiative=True))
         o_que = "a foto que você prometeu"
-    images = []
+    images, feitos = [], []
     for shot in shots:
         gen = await sd_client.generate_directed(shot, world_snapshot_id=camera_ctx.snapshot_id)
         if gen.image:
             images.append(gen.image)
+            feitos.append((shot, gen.image))
     if not images:
         logger.warning("promessa_foto.sem_imagem")
         return                                   # tenta de novo no próximo minuto (até expirar)
@@ -5149,6 +5151,8 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
     if ok:
         for shot in shots:
             photo_director.confirm_sent(db, shot)
+        for shot, img in feitos:
+            _guardar_pro_insta(shot, img, now)
         memory_manager.db.registrar_iniciativa_marina(f"[{len(images)} foto(s): {o_que}] {legenda}",
                                                       media_type='photo')
         if p["kind"] == "looks" and part < len(outfits):
@@ -5227,6 +5231,256 @@ async def _delivery_gift_routine(application: Application):
         logger.error('Erro no delivery do Patrick: %s', exc, exc_info=True)
 
 
+# --- INSTAGRAM (27/09, Etapa 5 do PLANO_WEBAPP) ---
+# As regras moram no instagram.py; aqui só o que precisa de rede (foto, texto) e do mundo de agora.
+IG_TENTATIVAS_KEY = "ig_tentativas_json"
+
+
+def _nome_do_lugar(place_key: str) -> str:
+    if not place_key:
+        return ""
+    with memory_manager.db.get_connection() as conn:
+        row = conn.execute("SELECT name FROM world_places WHERE canonical_key=?", (place_key,)).fetchone()
+    return row["name"] if row else ""
+
+
+def _guardar_pro_insta(shot, img, now: datetime) -> None:
+    """Foto vestida que ela mandou no chat fica guardada pra ela poder postar (Patrick, 27/09: foto mista)."""
+    try:
+        if shot is None or img is None or shot.is_nsfw or not (shot.level == 0 or shot.room == "fora"):
+            return
+        import instagram
+        import photo_director
+        pose = photo_director.BY_ID.get(shot.pose_id)
+        lugar = _nome_do_lugar(shot.place_key) if shot.room == "fora" else ""
+        desc = (pose.pt if pose else "uma foto sua") + (f" ({lugar})" if lugar else "")
+        instagram.guardar_foto_do_chat(memory_manager.db, img.getvalue(), now, descricao=desc,
+                                       pose=shot.pose_id, lugar=lugar)
+    except Exception:
+        logger.exception("instagram.guardar_foto.error")
+
+
+def _ig_fala(instrucao: str) -> str:
+    """Texto dela (legenda, resposta a comentário) com a voz e o contexto de sempre."""
+    from chat_naturalness import strip_closing_periods
+    txt = generate_dynamic_speech(instrucao, max_tokens=60, temperature=0.8) or ""
+    if _is_policy_refusal(txt):
+        return ""
+    return strip_closing_periods(limpar_fala_marina(txt)).strip()
+
+
+def _ig_texto(prompt: str, max_tokens: int = 400) -> str:
+    """Texto dos outros (comentários das amigas, legenda da amiga): uma chamada simples."""
+    try:
+        res = llm_client.chat.completions.create(
+            model=settings.LLM_MODEL, messages=[{"role": "user", "content": prompt}],
+            **llm_kwargs(max_tokens, model=settings.LLM_MODEL), temperature=0.9)
+        return (res.choices[0].message.content or "").strip()
+    except Exception as exc:
+        logger.warning("instagram.llm_error %s", exc)
+        return ""
+
+
+def _ig_momento(now: datetime):
+    import instagram
+    from sleep_plan import SleepPlan
+    from tempo_livre import TempoLivre
+    from emotion import EmotionEngine
+    db = memory_manager.db
+    act_code = availability_service.policy._resolve_activity(now)[0]
+    with db.get_connection() as conn:
+        last = conn.execute("SELECT max(timestamp) AS t FROM conversas WHERE role='user'").fetchone()["t"]
+    try:
+        ativo = bool(last) and now - datetime.fromisoformat(str(last).replace("Z", "")) < timedelta(minutes=10)
+    except ValueError:
+        ativo = False
+    return instagram.Momento(asleep=SleepPlan(db).is_asleep(now), act_code=act_code,
+                             bloco=TempoLivre(db).atual(now), patrick_ativo=ativo,
+                             feeling=EmotionEngine(db).feeling(now))
+
+
+def _ig_pode_tentar(chave: str) -> bool:
+    """No máximo duas tentativas de foto por acontecimento (foto que falha não queima Buzz sem fim)."""
+    try:
+        st = json.loads(memory_manager.db.get_estado_relacional(IG_TENTATIVAS_KEY) or "{}")
+    except (TypeError, ValueError):
+        st = {}
+    if st.get(chave, 0) >= 2:
+        return False
+    st[chave] = st.get(chave, 0) + 1
+    memory_manager.db.set_estado_relacional(IG_TENTATIVAS_KEY, json.dumps(dict(list(st.items())[-60:])))
+    return True
+
+
+def _ig_shot(plano: dict, now: datetime, feeling):
+    """A foto nova do post: pose do motivo, sempre vestida (nível 0), roupa de sair quando é rolê/look."""
+    import photo_director
+    from photo_director import WARDROBE, HOME
+    rng = random.Random(f"ig:shot:{plano['chave']}")
+    motivo = plano["motivo"]
+    fora = motivo in ("role", "role_amiga", "praia", "salao", "milo", "treino")
+    place = plano.get("place_key") or {"salao": "ophicina_do_cabelo_botafogo", "milo": "enseada_botafogo",
+                                       "treino": "bodytech_sao_clemente", "praia": "ipanema_beach"}.get(motivo, "")
+    ctx = SimpleNamespace(place_key=place if fora else HOME, presence_assertable=True,
+                          present_people=(plano["amiga"],) if plano.get("amiga") else (), activity="",
+                          sublocation="", weather=None, snapshot_id=None)
+    roupa = None
+    if motivo in ("role", "role_amiga", "look"):
+        roupa = rng.choice(WARDROBE["sair"] if motivo == "look" or now.hour >= 18 else WARDROBE["fora"])
+    elif motivo == "vista":
+        roupa = rng.choice(WARDROBE["fora"])
+    return photo_director.direct(memory_manager.db, now, camera_ctx=ctx, feeling=feeling,
+                                 turn=SimpleNamespace(state="cut", arousal=0.0), rng=rng,
+                                 force_pose=plano.get("pose"), outfit_override=roupa,
+                                 expression_override="a natural confident smile, looking great for an Instagram post")
+
+
+def _ig_comentarios(pid: int, now: datetime, autores: list) -> None:
+    import instagram
+    p = instagram.post(memory_manager.db, pid)
+    textos = instagram.resposta_json(_ig_texto(instagram.pedido_comentarios(p, autores)))
+    instagram.agendar_comentarios(memory_manager.db, pid, now, {a: textos.get(a, "") for a in autores})
+
+
+async def _ig_post(plano: dict, now: datetime, feeling) -> None:
+    import instagram
+    db = memory_manager.db
+    marcados = [plano["amiga"]] if plano.get("amiga") else []
+    desc = plano["descricao"]
+    if plano["fonte"] == "chat":
+        with db.get_connection() as conn:
+            f = dict(conn.execute("SELECT * FROM ig_fotos_chat WHERE id=?", (plano["foto_chat"],)).fetchone())
+        imagem, desc = f["imagem"], f["descricao"] or desc
+        instagram.usar_foto_chat(db, f["id"], now)
+    else:
+        if not _ig_pode_tentar(plano["chave"]):
+            return
+        shot = await asyncio.to_thread(_ig_shot, plano, now, feeling)
+        gen = await sd_client.generate_directed(shot)
+        if not gen.image:
+            logger.warning("instagram.post.sem_foto motivo=%s", plano["motivo"])
+            return
+        imagem = instagram.salvar_imagem(gen.image.getvalue())
+        marcados = [shot.friend] if shot.friend else marcados
+    local = plano.get("local") or ""
+    legenda = await asyncio.to_thread(
+        _ig_fala, f"Você vai postar no seu Instagram (@masalles) uma foto: {desc}"
+        + (f", em {local}" if local else "") + ". Escreva só a legenda do post, do seu jeito no Insta: curtinha "
+        "(até 8 palavras), pode ser só um emoji ou uma frase solta, sem hashtag, sem aspas, sem marcar ninguém.")
+    pid = instagram.publicar(db, autor="marina", now=now, imagem=imagem, legenda=legenda, local=local,
+                             marcados=marcados, motivo=plano["motivo"], motivo_chave=plano["chave"],
+                             fonte=plano["fonte"], descricao=desc)
+    if pid:
+        logger.info("instagram.post id=%s motivo=%s fonte=%s", pid, plano["motivo"], plano["fonte"])
+        await asyncio.to_thread(_ig_comentarios, pid, now,
+                                instagram.quem_comenta(pid, marcados))
+
+
+async def _ig_story(plano: dict, now: datetime) -> None:
+    import instagram
+    db = memory_manager.db
+    capa, texto = "", ""
+    if plano["tipo"] == "musica":
+        tid = plano["faixa"].get("id")
+        if tid:
+            from musica import _get_json
+            data = await asyncio.to_thread(_get_json, f"https://itunes.apple.com/lookup?id={tid}&country=BR")
+            art = ((data or {}).get("results") or [{}])[0].get("artworkUrl100", "")
+            capa = art.replace("100x100bb", "600x600bb")
+    elif plano["tipo"] == "texto":
+        texto = await asyncio.to_thread(
+            _ig_fala, "Você vai postar um story de texto no Instagram sobre como você está agora ou algo do seu "
+            "dia. Escreva só o texto do story: curtinho (até 10 palavras), do seu jeito, sem aspas, sem hashtag.")
+        if not texto:
+            return
+    elif random.Random(plano["chave"]).random() < 0.5:
+        texto = await asyncio.to_thread(
+            _ig_fala, f"Você vai postar no story do Instagram uma foto: {plano['descricao']}. Escreva só um texto "
+            "curtinho pra ir em cima da foto (até 5 palavras), sem aspas, sem hashtag. Pode ser só um emoji.")
+    pid = instagram.publicar_story(db, now, plano, texto=texto, capa=capa)
+    if pid:
+        logger.info("instagram.story id=%s tipo=%s", pid, plano["tipo"])
+
+
+async def _ig_post_amiga(plano: dict, now: datetime) -> None:
+    import instagram
+    import civitai_images
+    from social_day import short_name
+    db = memory_manager.db
+    amiga = plano["amiga"]
+    if plano["fonte"] == "grupo":
+        imagem, marcados = plano["imagem"], ["marina"]
+    else:
+        if not _ig_pode_tentar(plano["chave"]):
+            return
+        dados = await civitai_images.friend_scene(amiga, plano["cena"])
+        if not dados:
+            logger.warning("instagram.amiga.sem_foto %s", amiga)
+            return
+        imagem, marcados = instagram.salvar_imagem(dados, "a"), []
+    legenda = instagram._limpa(await asyncio.to_thread(
+        _ig_texto, f"Escreva a legenda que {short_name(amiga)} ({instagram.JEITO[amiga]}) poria num post do "
+        f"Instagram dela. A foto: {plano['descricao']}. Curtinha (até 8 palavras), português informal, pode ter "
+        "1 emoji, sem hashtag. Responda só com a legenda.", 60))
+    pid = instagram.publicar(db, autor=amiga, now=now, imagem=imagem, legenda=legenda, local=plano.get("local", ""),
+                             marcados=marcados, motivo=plano.get("tema", "grupo"), motivo_chave=plano["chave"],
+                             fonte=plano["fonte"], descricao=plano["descricao"])
+    if pid:
+        logger.info("instagram.amiga id=%s %s fonte=%s", pid, amiga, plano["fonte"])
+        rng = random.Random(f"ig:quem:{pid}")
+        autores = [a for a in instagram.AMIGAS if a != amiga and rng.random() < 0.4]
+        autores += rng.sample(instagram.DE_FORA, rng.randint(1, 2))
+        await asyncio.to_thread(_ig_comentarios, pid, now, autores)
+
+
+async def instagram_routine(application: Application):
+    """A cada 5 min: ela abre o Insta (vê, curte, responde), posta story/post quando dá, e as amigas postam."""
+    if not settings.TARGET_CHAT_ID or not getattr(settings, "WEBAPP_ENABLED", False):
+        return
+    import instagram
+    db = memory_manager.db
+    now = datetime.now()
+    try:
+        m = await asyncio.to_thread(_ig_momento, now)
+        if instagram.olha_agora(db, now, m):
+            vistos = await asyncio.to_thread(instagram.marina_olha, db, now, _ig_fala)
+            if vistos:
+                logger.info("instagram.olhou n=%d", len(vistos))
+        plano = instagram.plano_story(db, now, m)
+        if plano:
+            await _ig_story(plano, now)
+        plano = instagram.plano_post(db, now, m)
+        if plano:
+            await _ig_post(plano, now, m.feeling)
+        plano = instagram.plano_amiga(db, now)
+        if plano and not m.patrick_ativo:
+            await _ig_post_amiga(plano, now)
+    except Exception as exc:
+        logger.error("Erro no Instagram: %s", exc, exc_info=True)
+
+
+async def _ig_responder_story(application: Application, story: dict, texto: str, query_id: Optional[str]) -> None:
+    """A resposta dele ao story vira mensagem DELE no chat (a foto do story com o texto), e ela responde."""
+    import instagram
+    import uuid
+    if query_id:
+        try:
+            from telegram import InlineQueryResultPhoto, InlineQueryResultArticle, InputTextMessageContent
+            sj = json.loads(story.get("story_json") or "{}")
+            foto = (f"{settings.WEBAPP_URL.rstrip('/')}/ig/{story['imagem']}" if story.get("imagem")
+                    else sj.get("capa") or "")
+            legenda = f"Respondeu ao seu story: {texto}"
+            result = (InlineQueryResultPhoto(id=uuid.uuid4().hex, photo_url=foto, thumbnail_url=foto, caption=legenda)
+                      if foto else InlineQueryResultArticle(id=uuid.uuid4().hex, title="Story",
+                                                            input_message_content=InputTextMessageContent(legenda)))
+            await application.bot.answer_web_app_query(web_app_query_id=query_id, result=result)
+        except Exception as exc:
+            logger.warning("instagram.story_reply.post_error %s", exc)
+    fake_update, fake_context = _fake_turn(application)
+    turno = f"[Respondeu ao seu story do Instagram — {story['descricao']}] {texto}"
+    asyncio.create_task(process_incoming_batch(fake_update, fake_context, turno))
+
+
 async def _ignore_own_via_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Mensagem dele postada pelo Mini App (comprovante, "via @bot"): fica no chat, mas a Marina
     não lê nem responde — o pix e o pedido chegam pra ela pelo sistema."""
@@ -5267,7 +5521,9 @@ async def _start_webapp(application: Application):
             db=memory_manager.db, bot_token=settings.TELEGRAM_BOT_TOKEN,
             allowed_user_id=settings.TARGET_CHAT_ID, status=_status_snapshot,
             pix=lambda valor, nota: _webapp_pix(application, valor, nota),
-            post_receipt=post_receipt, public_url=settings.WEBAPP_URL)
+            post_receipt=post_receipt, public_url=settings.WEBAPP_URL,
+            ig_texto=_ig_texto,
+            ig_story_reply=lambda story, texto, qid: _ig_responder_story(application, story, texto, qid))
         application.bot_data["webapp_runner"] = await webapp_server.start(hooks, port=settings.WEBAPP_PORT)
     except OSError as exc:
         logger.warning("webapp.not_started: %s", exc)     # porta ocupada (ex.: outra instância): o bot segue
@@ -5384,6 +5640,8 @@ async def post_init(application: Application):
 
     if getattr(settings, "WEBAPP_ENABLED", False):
         scheduler.add_job(delivery_gift_routine, 'interval', seconds=60, args=[application],
+                          max_instances=1, coalesce=True)
+        scheduler.add_job(instagram_routine, 'interval', seconds=300, args=[application],   # 27/09: Instagram
                           max_instances=1, coalesce=True)
         await _start_webapp(application)
 

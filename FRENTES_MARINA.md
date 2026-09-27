@@ -36,10 +36,10 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 Agora decidida linha a linha (card layout D); tela inicial só com os apps.
 
 **Próximo:**
-0. **Instagram da Marina** (Etapa 5 do PLANO_WEBAPP), pedido do Patrick em 27/09: a matéria-prima já existe — rosto
-   fixo das quatro amigas, foto de perfil delas (`webapp/avatars`) e foto de grupo com troca de rosto
-   (`photo_director.GROUP_POSES`, `sd_client.generate_directed`). Decidir com ele por mockup: perfil, feed, stories,
-   o que ela posta (e quando), comentários das amigas. Cada foto nova custa ~20 Buzz (de grupo, ~61).
+0. 🟡 **Instagram da Marina** (Etapa 5 do PLANO_WEBAPP): **construído em 27/09** (@masalles, feed, stories,
+   comentários, amigas postando; `instagram.py`, `webapp/insta.js`). Falta: gerar o acervo na VPS
+   (`scripts/instagram_acervo.py --gerar`, ~400 Buzz), acompanhar o 1º post/story/comentário no uso real e revisar
+   com ele os textos que decidi sozinho (lista no fim da seção "Etapa 5 — Instagram" do PLANO_WEBAPP).
 1. Bastidores **aba a aba** com ele (Por dentro, Dinheiro, Mundo), como foi a Agora — ele quer ver no celular e
    ajustar palavra por palavra (PLANO_VOZ 14).
 2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.

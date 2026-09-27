@@ -13,7 +13,7 @@ from pathlib import Path
 from uuid import uuid4
 
 
-CLEAR = ('reminders', 'open_loops', 'eventos_pendentes', 'conversas',
+CLEAR = ('ig_comentarios', 'ig_posts', 'ig_fotos_chat', 'reminders', 'open_loops', 'eventos_pendentes', 'conversas',
          'fatos_patrick', 'gostos_marina', 'resumos_conversa', 'momentos_marcantes',
          'feedbacks', 'estilo_linguagem', 'estado_relacional', 'estado_emocional',
          'knowledge_subject_aliases', 'knowledge_subjects',

@@ -613,6 +613,8 @@ class WorldContextBuilder:
             comida += Cabelo(self.db).prompt_lines(now)
             from agenda_viva import AgendaViva          # 27/09: o que ela decidiu na agenda (desistiu, chamou a Bia…)
             comida += AgendaViva(self.db).prompt_lines(now)
+            from instagram import prompt_lines as instagram_lines   # 27/09: o Insta dela (post, stories, o que viu)
+            comida += instagram_lines(self.db, now)
         except Exception:
             import logging
             logging.getLogger(__name__).exception("meals.prompt_lines.error")
