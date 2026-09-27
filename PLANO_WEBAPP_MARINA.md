@@ -385,3 +385,5 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 **Amigas (27/09, frente de imagens):** pensando no Instagram, a Bia ganhou um LoRA de rosto (teste: sozinha funciona, junto da Marina os rostos se misturam; em grupo, a amiga vai só por prompt). Nada no Mini App ainda.
 
 **Auditoria de funcionamento (27/09):** o Mini App entra no roteiro da frente nova (FRENTES_MARINA.md, seção 7): card Agora × Hoje × mundo, iFood (sacola, checkout, pedidos), Bastidores e comprovantes, com prova na produção.
+
+**Auditoria, rodada 1 (27/09, 11:40):** Hoje e card batem com o mundo nas saídas; o Hoje deixa de mostrar "Foi pra calçada" colado no "Foi pra Enseada" (xixi do Milo some quando o passeio vem logo depois) e o card volta a ter o Se arrumando antes de uma saída de tarde (o almoço sai antes do preparo). Dinheiro: o pix de presente com rolê no dia não vira mais "Usou o pix do Patrick: comprou…" no Hoje. Decidido com o Patrick: o previsto de saída mostra a hora em que ela chega lá ("~15:00 No Shopping da Gávea com a Bia"), não a de sair de casa. O saldo dela foi consertado na produção (R$ 865) e a compra fantasma de R$ 236 saiu do Hoje.

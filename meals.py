@@ -98,6 +98,15 @@ MENU = {
 }
 
 
+SAIDA_PREFIXOS = ("outing", "freela", "vontade", "mercado", "medico", "unhas", "cabelo")
+SAIDA_ANTES = timedelta(minutes=75)         # caminho (~40) + se arrumar (~35): a refeição acaba antes disso
+SAIDA_ANTES_NOITE = timedelta(minutes=110)  # rolê à noite: arrumação longa (60–90)
+SAIDA_VOLTA = timedelta(minutes=40)
+SAIDA_CURTA = timedelta(minutes=90)
+REFEICAO_INTERVALO = timedelta(minutes=60)
+REFEICAO_PISO = {"almoco": time(11, 0), "jantar": time(18, 0)}   # mais cedo que isso não é almoço/jantar
+
+
 @dataclass(frozen=True)
 class MealSlot:
     kind: str             # cafe | almoco | jantar | lanche
@@ -283,7 +292,50 @@ class Meals:
             night = at + timedelta(minutes=rng.randint(80, 150))
             slots.append(MealSlot("lanche", f"meal:{iso}:lanche:2", night, dur("lanche", rng), "casa",
                                   rng.choice(["pipoca vendo série", "um chocolate", "um açaí pequeno"])))
-        return sorted(slots, key=lambda s: s.at)
+        return self._antes_das_saidas(day, sorted(slots, key=lambda s: s.at), wake)
+
+    def _saidas(self, day: date) -> list[tuple[datetime, datetime]]:
+        """Saídas confirmadas do dia (rolê, freela, vontade, mercado, médico, salão): (início lá, fim lá)."""
+        iso = day.isoformat()
+        try:
+            with self.db.get_connection() as conn:
+                rows = conn.execute(
+                    """SELECT event_at, end_at FROM eventos_pendentes WHERE confirmed=1 AND status != 'cancelled'
+                       AND end_at IS NOT NULL AND (""" + " OR ".join("source_key LIKE ?" for _ in SAIDA_PREFIXOS)
+                    + ")", [f"{p}:{iso}%" for p in SAIDA_PREFIXOS]).fetchall()
+            return sorted((datetime.fromisoformat(r["event_at"]), datetime.fromisoformat(r["end_at"])) for r in rows)
+        except Exception:
+            return []
+
+    def _antes_das_saidas(self, day: date, slots: list[MealSlot], wake: datetime) -> list[MealSlot]:
+        """27/09 (auditoria): o almoço em casa das 13:50–14:29 atravessava a saída das 14:20 pro cinema das 15:00
+        e o Se arrumando sumia do card. Refeição em casa sai antes do preparo; se não cabe, ela come quando
+        voltar (saída curta) ou come por lá (o consumo do rolê)."""
+        saidas = self._saidas(day)
+        if not saidas:
+            return slots
+        from dataclasses import replace
+        out: list[MealSlot] = []
+        for s in slots:
+            if s.where != "casa" or s.skipped:
+                out.append(s)
+                continue
+            for ini, fim in saidas:
+                sai = ini - (SAIDA_ANTES_NOITE if ini.hour >= 18 else SAIDA_ANTES)
+                volta = fim + SAIDA_VOLTA
+                if not (s.at < volta and s.end > sai):
+                    continue
+                piso = (out[-1].end + REFEICAO_INTERVALO) if out else wake + timedelta(minutes=15)
+                antes = sai - timedelta(minutes=s.minutes)
+                if antes >= piso and antes.time() >= REFEICAO_PISO.get(s.kind, time(0)):
+                    s = replace(s, at=antes)                                     # come antes de se arrumar
+                elif fim - ini <= SAIDA_CURTA:
+                    s = replace(s, at=volta)                                     # saída curta: come quando voltar
+                else:
+                    s = replace(s, skipped=True)                                 # come por lá
+                break
+            out.append(s)
+        return sorted(out, key=lambda s: s.at)
 
     # ----------------------------------------------------------- registros --
     def eaten_today(self, now: datetime) -> list[dict]:

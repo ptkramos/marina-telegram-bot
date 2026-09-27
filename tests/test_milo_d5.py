@@ -36,7 +36,9 @@ class MiloTest(_Base):
     def test_two_or_three_outings_every_day(self):
         for d in self.days:
             keys = {p["key"].split(":")[2] for p in self.milo.day_plan(d)}
-            self.assertIn("manha", keys)
+            passeio = self.milo._passeio(d)
+            if not passeio or passeio["inicio"] - self.milo._wake(d) > timedelta(minutes=115):
+                self.assertIn("manha", keys)       # 27/09: passeio logo depois de acordar substitui o xixi
             self.assertIn("noite", keys)
             walker = "passeador" in keys
             engine = RoutineEngine(self.db)

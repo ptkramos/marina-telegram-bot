@@ -27,6 +27,7 @@ WALKER_CHANCE_TIRED = 0.35      # noite curta
 WALKER_EXTRA_LOW_ENERGY = 0.2
 HEAT_BLOCK = (time(11, 30), time(15, 30))
 ANTICS_CHANCE = 0.25
+XIXI_ANTES_DO_PASSEIO = timedelta(minutes=90)   # passeio mais perto que isso do xixi: só o passeio
 ANTICS = ("roubou uma meia e saiu correndo pela casa", "latiu pro entregador do iFood",
           "fez manha pedindo colo a noite toda", "deitou em cima da roupa que ela ia usar",
           "ficou encarando ela até ganhar um petisco", "fez xixi no tapete do banheiro",
@@ -86,13 +87,25 @@ class Milo:
         except Exception:
             return datetime.combine(day, time(23, 30))
 
+    def _passeio(self, day: date) -> Optional[dict]:
+        try:
+            from academia import PasseioMilo
+            return PasseioMilo(self.db).plano(day)
+        except Exception:
+            return None
+
     def day_plan(self, day: date) -> list[dict]:
         iso = day.isoformat()
         plan = []
         rng = _rng(day, "manha")
         at = self._wake(day) + timedelta(minutes=rng.randint(5, 25))
-        plan.append({"key": f"milo:{iso}:manha", "at": at, "minutes": rng.randint(10, 15), "state": False,
-                     "summary": "Desceu rapidinho com o Milo pro xixi da manhã."})
+        minutes = rng.randint(10, 15)
+        passeio = self._passeio(day)
+        # 27/09 (auditoria): o xixi rapidinho saía 09:28 e o passeio planejado 09:41 — duas descidas em
+        # 13 min. Com o passeio logo depois de acordar, o passeio é a saída da manhã.
+        if not (passeio and passeio["inicio"] - at < XIXI_ANTES_DO_PASSEIO):
+            plan.append({"key": f"milo:{iso}:manha", "at": at, "minutes": minutes, "state": False,
+                         "summary": "Desceu rapidinho com o Milo pro xixi da manhã."})
         if self.walker_today(day):
             rng = _rng(day, "passeador_hora")
             at = datetime.combine(day, time(17, 0)) + timedelta(minutes=rng.randint(0, 90))

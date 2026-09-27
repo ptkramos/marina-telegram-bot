@@ -454,8 +454,8 @@ def _previstos(db, dia: date, now: datetime, saidas: list[dict]) -> list[dict]:
     except Exception:
         logger.exception("hoje.previsto.refeicoes")
     for s in saidas:
-        if s["ini"] > now:
-            out.append({"at": s["ini"], "ic": s["ic"], "texto": s["previsto"]})
+        if s["ini"] > now:                      # 27/09 (Patrick): "~15:00 No Shopping da Gávea" — a hora em que chega lá
+            out.append({"at": s["la"].inicio, "ic": s["ic"], "texto": s["previsto"]})
     try:
         from watch import Watching
         plano = Watching(db).night_plan(dia)

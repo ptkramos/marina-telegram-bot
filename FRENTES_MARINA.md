@@ -78,7 +78,15 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
    - **Instagram fora de hora.** O bloco em casa recuava 5 min e começou às 00:02, com ela no uber até 00:05, e ia até 00:38 passando por cima do banho. O bloco não começa antes da chegada, e o Hoje corta o bloco quando o banho começa. Camada: mundo e app.
    - **Pipoca no bar.** O lanchinho planejado das 21:07 ("pipoca vendo série") foi registrado com ela no Quartinho: passada a janela, a refeição em casa não conferia se ela tinha voltado. Agora espera ela estar em casa. Camada: mundo.
 
-**Abertos:** nenhum.
+3. ✅ **Pix pago duas vezes (achado na auditoria, 27/09)** — corrigido em 27/09 (`tests/test_bug_auditoria_2609.py`).
+   O pix de R$ 300 das 20:17 ("pra curtir") pagou os dois gins e o uber do Quartinho (consumo), e às 10:17 de 27/09 o presente ainda "comprou uma saída com as meninas" (R$ 236): saldo 629 em vez de 865. Agora pix de presente com saída marcada no dia é pro rolê (o prompt diz "pra curtir o rolê de hoje…"), sem segunda compra. Camada: mundo (`financas.py`).
+4. ✅ **Milo desce duas vezes de manhã (auditoria, 27/09)** — corrigido. Xixi rapidinho 09:28 e passeio planejado saindo 09:41 (26/09: 09:15 e 09:36); o Hoje mostrava "Foi pra calçada" e "Foi pra Enseada" colados. Passeio até 90 min depois do xixi substitui o xixi. Camada: mundo (`milo.py`).
+5. ✅ **Almoço engolia o Se arrumando (auditoria, 27/09)** — corrigido antes de acontecer. Almoço em casa planejado 13:50–14:29 e saída pro cinema às 14:20: a agenda deixa ela comer antes de se arrumar, então o Se arrumando sumia do card, e o almoço atravessava o trajeto. Agora refeição em casa acaba antes do preparo de uma saída do dia (75 min antes, 110 à noite); se não cabe, come quando voltar (saída curta) ou por lá. Camada: mundo (`meals.py`).
+
+**Abertos:**
+1. **Belisco com o sanduíche na portaria (26/09, 16:40).** Chegou da academia com fome 1.0 e beliscou um chocolate; o sanduíche que o Patrick mandou estava na portaria desde 16:26 e ela pegou às 16:41. Belisco não olha a entrega esperando. Camada: mundo (`meals.py` × `delivery.py`). Pequeno.
+2. **"Banhou já?" → "Ainda não" (27/09, 01:57)** com três banhos no mundo (00:31, 01:20, 01:35). A causa (o card mandando outro banho) foi corrigida no item 2; falta ver se o banho recente aparece como fato no prompt, como a chegada do item 1. Camada: prompt.
+3. **Acordou "tomando café" e o café da manhã veio 1h30 depois (27/09).** O estado de acordar diz "acordando e tomando café" (09:12) e o café planejado foi 10:37–11:27; às 09:32 ela disse "tô aqui no café". Camada: mundo (texto do `light_day_wake`).
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** "bora na frente de imagens: tenho poses pra mandar"
@@ -116,4 +124,11 @@ O Patrick está achando muitos bugs no uso real: o dia 26/09 teve ~50 commits em
 8. Imagens (27/09): câmera segue a situação, catálogo de poses, unha e cabelo nas fotos.
 
 Bug achado vira item na seção 5 (Bugs), com a correção feita aqui mesmo se for pequena.
+
+**Rodada 1 (27/09, 11:40) — resultado:**
+- Deploy: os 3 commits fora da VPS (`499bf82`, `f69d2d4`, `d3b0c95`) só mexiam em relatório e skill; nada de código parado. Log de 26–27/09 limpo (dois erros de rede do Telegram às 22:11; robôs tentando `/.env` no Mini App, barrados).
+- Quebrou e foi corrigido: Pix pago duas vezes, Milo duas vezes de manhã, almoço × cinema (seção 5, itens 3–5). Linha antiga com título quebrado ("presencial com a Gabi) Freitas", de antes da correção das 13:19 de 26/09).
+- Funciona: etapas da saída do Quartinho (se arrumando 19:56 → a pé 20:48 → lá 21:02 → uber dividido → casa 00:05), passeio do Milo com preparo/ida/volta (27/09), tempo livre concreto, consumo e uber no saldo, portaria conta como contato com o Seu Jorge, pessoas novas por proximidade (Gabi, Bruno), peso na academia, saciedade ("ficou estufada"), lavagem do cabelo no banho, uma iniciativa por vez (depois das 17:40), ponto vira balão (log: 3 linhas → 5 balões), playlist com faixas reais, ESPN, iFood do Patrick pelo app, convite de antes do reset, migração 027, feedbacks preservados.
+- Não exercitado ainda: academia com preparo e ida (26/09 começou antes do deploy), vontade/mercado/médico, Ophicina (unhas/cabelo), masturbação e convite pro sexting, música que ele manda, leitura, fotos (nenhuma foto em 26–27/09), agenda reativa ("vai de uber" corrigido na madrugada).
+- Decidido com o Patrick: o previsto de saída no Hoje mostra a hora em que ela chega lá ("~15:00 No Shopping da Gávea com a Bia"). Banco da produção consertado (backup `marin_memory.pre_auditoria_2709.db`): saldo 629 → 865, a linha dos R$ 236 saiu do extrato e do Hoje, título da Gabi corrigido.
 

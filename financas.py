@@ -126,10 +126,11 @@ def materialize(db, now: datetime) -> int:
         changed += 1
     gift = st.get("presente")
     if gift and datetime.fromisoformat(gift["usar_em"]) <= now:
-        at = datetime.fromisoformat(gift["usar_em"])
-        _mov(st, at, -int(gift["gasto"]), f"presente do Patrick: {gift['uso']}")
-        _event(db, f"financas:{at:%Y-%m-%dT%H%M}:presente_usado", at,
-               f"Usou o pix do Patrick: comprou {gift['uso']} (R$ {gift['gasto']}).", now, 0.8)
+        if not gift.get("no_role"):                # no rolê: os pedidos e o uber já saíram do saldo
+            at = datetime.fromisoformat(gift["usar_em"])
+            _mov(st, at, -int(gift["gasto"]), f"presente do Patrick: {gift['uso']}")
+            _event(db, f"financas:{at:%Y-%m-%dT%H%M}:presente_usado", at,
+                   f"Usou o pix do Patrick: comprou {gift['uso']} (R$ {gift['gasto']}).", now, 0.8)
         st["presente"] = None
         changed += 1
     _save(db, st)
@@ -246,18 +247,39 @@ def receive_pix(db, valor: int, nota: str, now: datetime) -> dict:
         st["pedido"] = None if valor >= int(pedido["valor"]) else {**pedido, "valor": int(pedido["valor"]) - valor}
     else:
         kind = "presente"
-        uso = next(u for limite, u in GIFT_USES if valor <= limite)
-        if nota:
-            uso = f"{uso} (ele disse: {nota})"
-        rng = random.Random(f"pix:{now.isoformat()}")
-        st["presente"] = {"valor": valor, "gasto": min(valor, max(20, int(valor * rng.uniform(0.7, 1.0)))),
-                          "uso": uso, "usar_em": (now + timedelta(hours=rng.randint(2, 20))).isoformat()}
+        saida = _saida_de_hoje(db, now)
+        if saida:
+            # 27/09 (auditoria): o pix de R$ 300 "pra curtir" o Quartinho pagou os gins e o uber (consumo.py)
+            # e na manhã seguinte ainda "comprou uma saída com as meninas" (R$ 236) — o rolê saiu duas vezes.
+            # Pix com saída marcada no dia é pro rolê: o que ela consome lá já sai do saldo.
+            uso = f"o rolê de hoje ({saida['description']})" + (f" (ele disse: {nota})" if nota else "")
+            st["presente"] = {"valor": valor, "gasto": 0, "uso": uso, "usar_em": saida["end_at"], "no_role": True}
+        else:
+            uso = next(u for limite, u in GIFT_USES if valor <= limite)
+            if nota:
+                uso = f"{uso} (ele disse: {nota})"
+            rng = random.Random(f"pix:{now.isoformat()}")
+            st["presente"] = {"valor": valor, "gasto": min(valor, max(20, int(valor * rng.uniform(0.7, 1.0)))),
+                              "uso": uso, "usar_em": (now + timedelta(hours=rng.randint(2, 20))).isoformat()}
     _event(db, f"financas:{now:%Y-%m-%dT%H%M%S}:pix", now,
            f"O Patrick fez um pix de R$ {valor} pra ela" + (f" ('{nota}')" if nota else "") +
            (" pra cobrir o aperto." if kind == "emprestimo" else " de presente."), now, 0.7)
     _save(db, st)
     logger.info("financas.pix valor=%s kind=%s saldo=%s", valor, kind, st["saldo"])
     return {"kind": kind, "saldo": st["saldo"]}
+
+
+def _saida_de_hoje(db, now: datetime) -> Optional[dict]:
+    """A saída confirmada do dia que ainda não acabou (o rolê pra onde o pix vai)."""
+    try:
+        with db.get_connection() as conn:
+            row = conn.execute(
+                """SELECT description, end_at FROM eventos_pendentes WHERE source_key LIKE ? AND confirmed=1
+                   AND status != 'cancelled' AND end_at > ? ORDER BY event_at LIMIT 1""",
+                (f"outing:{now.date().isoformat()}:%", now.isoformat())).fetchone()
+    except Exception:
+        return None
+    return dict(row) if row else None
 
 
 def spend(db, valor: int, desc: str, now: datetime) -> Optional[int]:
@@ -296,6 +318,9 @@ def prompt_lines(db, now: datetime) -> list[str]:
     if devendo:
         lines.append(f"Você deve R$ {devendo} ao Patrick; devolve quando cair o próximo cachê.")
     gift = st.get("presente")
-    if gift:
+    if gift and gift.get("no_role"):
+        lines.append(f"O Patrick te deu R$ {gift['valor']} de presente pra curtir {gift['uso']}: o que você "
+                     "consumir lá (drinks, comida, uber) sai daí.")
+    elif gift:
         lines.append(f"O Patrick te deu R$ {gift['valor']} de presente; você vai usar em {gift['uso']}.")
     return lines

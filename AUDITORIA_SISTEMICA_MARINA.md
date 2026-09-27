@@ -1573,3 +1573,12 @@ Primeira rodada (27/09): amigas com LoRA de rosto (Bia = RLY Roxy; sozinha ok; e
 
 ## Frente de auditoria de funcionamento (27/09)
 O Patrick está achando muitos bugs depois do 26/09 (~50 commits em várias conversas). Frente nova, skill `frente-auditoria` e seção 7 do `FRENTES_MARINA.md`: conferir entrega por entrega, com prova na produção, se funciona e está amarrada com o resto, e se falta deploy. Ponto de partida: VPS em `afd81fd`, `main` em `f69d2d4` (dois commits da frente de imagens sem deploy).
+
+### Rodada 1 da auditoria de funcionamento (27/09, 11:40)
+Prova na produção (47 acontecimentos, 224 estados do mundo, 81 mensagens de 26–27/09, journal). Nada de código ficou sem deploy. Três desamarrações corrigidas, com os horários reais em `tests/test_bug_auditoria_2609.py`:
+- `financas.receive_pix`: pix de presente com saída confirmada no dia vira "pro rolê" (`no_role`), sem compra separada — o consumo do rolê já sai do saldo. Antes o Quartinho foi pago pelo consumo (R$ 75) e de novo pelo presente (R$ 236).
+- `milo.day_plan`: o xixi da manhã sai quando o passeio planejado (`academia.PasseioMilo`) começa até 90 min depois dele.
+- `meals.day_plan` → `_antes_das_saidas`: refeição em casa termina 75 min (110 à noite) antes de uma saída confirmada do dia (`eventos_pendentes`: outing, freela, vontade, mercado, médico, unhas, cabelo); se não cabe, vai pra volta (saída de até 90 min) ou é por lá. Lê `eventos_pendentes` direto: pedir os trajetos (`Commute.legs_on`) criaria laço academia → energia → fome → refeições.
+- `hoje._previstos`: a saída prevista usa o início do "Lá" (decisão do Patrick).
+- Banco da produção: saldo 629 → 865, `financas:2026-09-27T1017:presente_usado` apagado, título da Gabi corrigido (backup antes).
+Abertos (FRENTES seção 5): belisco com entrega na portaria; banho recente como fato no prompt; "acordando e tomando café" antes do café planejado.
