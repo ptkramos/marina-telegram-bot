@@ -4006,6 +4006,12 @@ async def process_incoming_batch(
         except Exception:
             logger.exception("arrival_promise.observe.error")
         try:
+            # 27/09: "vai e volta de uber" + "pode deixar" troca o jeito de ir de verdade.
+            from agenda_reativa import AgendaReativa
+            AgendaReativa(memory_manager.db).combinar_uber(fala_limpa, texto_usuario, datetime.now())
+        except Exception:
+            logger.exception("agenda_reativa.combinar_uber.error")
+        try:
             # 24/09 (Patrick): o gozo segue o que ela escreve, não uma contagem de turnos.
             from intimacy import observe_marina_line as intimacy_observe_marina
             if intimacy_observe_marina(memory_manager.db, fala_limpa, datetime.now()):

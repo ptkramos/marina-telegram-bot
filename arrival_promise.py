@@ -25,11 +25,15 @@ FORGOT_KEY = "arrival_promise_forgot_at"
 NO_FORGET_AFTER = timedelta(days=7)
 LATE_MIN = (2, 6)                 # tira o sapato, larga a bolsa, aí avisa
 LOOKAHEAD = timedelta(minutes=90)  # perna que ainda vai começar
+# 27/09 (volta do Quartinho): "te aviso quando chegar em casa" às 21:39, com a volta só às 23:59 —
+# ficava fora dos 90 min e a promessa não era gravada. A volta pra casa vale até o fim da noite.
+LOOKAHEAD_HOME = timedelta(hours=12)
 
 _PROMISE_RE = re.compile(r"\b(?:te\s+)?aviso\b|\bte\s+(?:mando|dou)\s+(?:um\s+)?(?:sinal|not[ií]cia)", re.I)
 _ARRIVE_RE = re.compile(r"\bcheg(?:ar|o|ue|uei|ando)\b", re.I)
 _HOME_RE = re.compile(r"\b(?:casa|ap[eê]|apartamento)\b", re.I)
 _ARRIVED_RE = re.compile(r"\bcheguei\b", re.I)
+_OTHER_RE = re.compile(r"\bcheg\w*\s+n[oa]s?\s+(?!casa\b|ap[eê]\b|apartamento\b)\w+", re.I)
 
 
 def observe(db, her_line: str, his_last: str, now: Optional[datetime] = None) -> Optional[dict]:
@@ -38,7 +42,9 @@ def observe(db, her_line: str, his_last: str, now: Optional[datetime] = None) ->
     text = her_line or ""
     if not _PROMISE_RE.search(text) or not (_ARRIVE_RE.search(text) or _ARRIVE_RE.search(his_last or "")):
         return None
-    leg = _target_leg(db, now, home=bool(_HOME_RE.search(text) or _HOME_RE.search(his_last or "")))
+    # a fala dela manda: "chegar no shopping" não vira casa só porque ele escreveu "casa"
+    home = bool(_HOME_RE.search(text)) or (not _OTHER_RE.search(text) and bool(_HOME_RE.search(his_last or "")))
+    leg = _target_leg(db, now, home=home)
     if leg is None:
         return None
     rng = random.Random(f"aviso:{leg.key}")
@@ -61,7 +67,9 @@ def _target_leg(db, now: datetime, *, home: bool):
         return None
     live = [leg for leg in legs if leg.end > now and leg.start <= now + LOOKAHEAD]
     if home:
-        live = [leg for leg in live if leg.direction == "volta"] or live
+        voltas = [leg for leg in legs if leg.direction == "volta" and leg.end > now
+                  and leg.start <= now + LOOKAHEAD_HOME]
+        live = voltas or live
     return min(live, key=lambda leg: leg.end) if live else None
 
 

@@ -72,7 +72,8 @@ class WorldContextBuilder:
             "confirmed_commitment": "compromisso confirmado que você aceitou",
             "explicit_plan": "plano explícito que você combinou",
             "announced_transition": "atividade já em andamento no seu dia (é fato)",
-            "post_event_recovery": "acabou de terminar o compromisso anterior, ainda em casa relaxando",
+            # 27/09 (volta do Quartinho): "ainda em casa" soava como se ela nem tivesse saído.
+            "post_event_recovery": "já voltou do compromisso anterior e está em casa (é fato)",
         }
         certainty = certainty_map.get(reason, "inferência de rotina (probabilística)")
         binding = reason in ("confirmed_commitment", "explicit_plan", "announced_transition")
@@ -104,9 +105,9 @@ class WorldContextBuilder:
             )
         elif reason == "post_event_recovery":
             world_state_lines.append(
-                "Você acabou de terminar o compromisso anterior; ainda está em casa "
-                "relaxando/decantando. Se o Patrick perguntar, é natural dizer "
-                "\"acabou agora, tô aqui em casa ainda\" — não invente que já saiu."
+                "Você já voltou do compromisso anterior e está em casa, se "
+                "recuperando. Se o Patrick perguntar, diga que já chegou — não "
+                "diga que ainda está na rua nem que vai sair de novo."
             )
         else:
             # Patch 030: o disclaimer de "provavelmente ainda em casa" era aplicado
@@ -133,6 +134,10 @@ class WorldContextBuilder:
                     "\"saí pra X agorinha\", \"tô na rua, voltando já\") em vez de "
                     "fingir que está no apartamento."
                 )
+
+        chegada = self._chegada(now) if location_line == "Apartamento da Marina" else None
+        if chegada:
+            world_state_lines.append(chegada)
 
         data_channel = DATA_CHANNEL_POLICY_PT if control_language == "pt-BR" else DATA_CHANNEL_POLICY_EN
         blocks = [
@@ -438,6 +443,21 @@ class WorldContextBuilder:
         with self.db.get_connection() as conn:
             row = conn.execute("SELECT source_key FROM eventos_pendentes WHERE id=?", (event_id,)).fetchone()
         return bool(row and (row["source_key"] or "").startswith("outing:"))
+
+    def _chegada(self, now: datetime) -> Optional[str]:
+        """27/09 (volta do Quartinho): em casa desde 00:05, ela disse às 00:19 "vou pedir o Uber pra voltar"
+        — o histórico ("te aviso quando chegar") venceu o fato. A volta que terminou há pouco vira fato."""
+        try:
+            from commute import Commute
+            volta = Commute(self.db).ultima_volta(now)
+        except Exception:
+            return None
+        if not volta:
+            return None
+        return (f"[CHEGADA — FATO] Você voltou {volta.destination} {volta.how} e chegou em casa às "
+                f"{volta.end:%H:%M}. Você JÁ ESTÁ EM CASA: não diga que ainda está na rua, lá ou esperando "
+                "o uber, mesmo que a conversa de antes diga outra coisa. Se prometeu avisar quando chegasse "
+                "e ainda não avisou, diga agora que chegou.")
 
     def _energy(self) -> float:
         from world_state import current_energy

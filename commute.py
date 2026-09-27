@@ -340,7 +340,8 @@ class Commute:
         return self._voltas_trocadas(legs)
 
     def _voltas_trocadas(self, legs: list[Leg]) -> list[Leg]:
-        """Agenda reativa (26/09): saiu passando mal/exausta → a volta vira uber."""
+        """Agenda reativa (26/09): saiu passando mal/exausta → a volta vira uber.
+        27/09: o combinado com o Patrick ("vai e volta de uber") troca a ida também."""
         try:
             from agenda_reativa import AgendaReativa
             r = AgendaReativa(self.db)
@@ -348,11 +349,16 @@ class Commute:
             return legs
         out = []
         for leg in legs:
-            t = r.volta_trocada(leg.key) if leg.direction == "volta" else None
+            t = r.volta_trocada(leg.key)
             if t:
                 from dataclasses import replace
-                leg = replace(leg, mode=t["mode"], end=leg.start + timedelta(minutes=t["mins"]), companion="",
-                              incident="", incident_at=None)
+                mins = timedelta(minutes=t["mins"])
+                if leg.direction == "ida":           # chega na mesma hora, sai mais tarde
+                    leg = replace(leg, mode=t["mode"], start=leg.end - mins, companion="",
+                                  incident="", incident_at=None)
+                else:
+                    leg = replace(leg, mode=t["mode"], end=leg.start + mins, companion="",
+                                  incident="", incident_at=None)
             out.append(leg)
         return out
 
@@ -386,6 +392,12 @@ class Commute:
                 if leg.start <= now < leg.end:
                     return leg
         return None
+
+    def ultima_volta(self, now: datetime, janela: timedelta = timedelta(minutes=60)) -> Optional[Leg]:
+        """A volta pra casa que terminou há pouco (27/09: ela chegou do bar e o chat não sabia)."""
+        feitas = [leg for day in (now.date(), now.date() - timedelta(days=1)) for leg in self.legs_on(day)
+                  if leg.direction == "volta" and leg.end <= now and now - leg.end <= janela]
+        return max(feitas, key=lambda leg: leg.end) if feitas else None
 
     # ------------------------------------------------------------ memória --
     def materialize(self, now: datetime) -> int:

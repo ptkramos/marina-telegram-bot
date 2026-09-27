@@ -1552,4 +1552,11 @@ Backup: `backups/pre_audit2b_memory_20260923_012559.db`.
 ## Frente de bugs (27/09)
 Bugs do uso real agora têm frente própria: skill `frente-bugs` (capturar banco, mundo e log antes que mudem; diagnosticar por camada: mundo → prompt → fala) e seção 5 do `FRENTES_MARINA.md`. O primeiro caso é a volta do Quartinho Bar: o mundo estava certo e a fala contradisse o estado `post_event_recovery`.
 
+**Correção (27/09), três camadas:**
+- **Prompt:** `world_context._chegada` — em casa e com uma volta terminada há ≤ 60 min (`Commute.ultima_volta`), entra "[CHEGADA — FATO] Você voltou {de onde} {como} e chegou em casa às HH:MM. Você JÁ ESTÁ EM CASA…". O `post_event_recovery` deixou de dizer "ainda em casa relaxando" (soava como se ela nem tivesse saído).
+- **Promessa:** `arrival_promise` só olhava trechos que começavam em até 90 min; "te aviso quando chegar em casa" às 21:39 com a volta às 23:59 não era gravado. Promessa de casa agora olha a volta das próximas 12 h. A fala dela manda no destino ("chegar no shopping" não vira casa só porque ele escreveu "casa").
+- **Mundo:** `AgendaReativa.combinar_uber` — ele pede uber (ou "não quero você andando a pé") e ela topa: os próximos trechos da saída (ida, volta ou os dois, pelo texto) viram uber, gravados em `voltas` com `combinado`. `_voltas_trocadas` agora troca a ida também (chega na mesma hora, sai mais tarde).
+
+`tests/test_bug_volta_quartinho.py`, 5 testes com as falas e horários do caso.
+
 Frente de imagens (27/09): skill `frente-imagens` e seção 6 do painel, pra cadeia pose → prompt → motor.

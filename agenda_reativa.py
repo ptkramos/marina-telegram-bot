@@ -60,6 +60,18 @@ PLANO_RE = re.compile(
     r"\b(?:vou|vo|t[oô]\s+(?:indo|saindo|descendo|voltando|me\s+trocando)|j[aá]\s+vou|partiu|bora|desisti|"
     r"n[aã]o\s+vou\s+mais|embora|me\s+trocar|t[aá]\s+bom|t[aá]\s+certo|fechou|topo|topei|ok\s+ok|beleza)\b",
     re.IGNORECASE)
+# combinado de uber com o Patrick (27/09): ele pede, ela topa
+UBER_PEDIDO_RE = re.compile(r"\buber\b|\bn[aã]o\s+(?:quero|vai)\s+(?:(?:que\s+)?(?:voc[eê]|vc)\s+)?(?:andando|ir|voltar)\s+a\s+p[eé]",
+                            re.IGNORECASE)
+TOPOU_RE = re.compile(r"\b(?:pode\s+deixar|t[aá]\s+bom|t[aá]\s+certo|combinado|fechado|fechou|beleza|prometo|"
+                      r"ok|vou\s+de\s+uber|volto\s+de\s+uber|vou\s+sim|pode\s+ficar\s+tranquilo)\b", re.IGNORECASE)
+RECUSA_RE = re.compile(r"\bn[aã]o\s+precisa\b|\bexagero\b|\bvou\s+a\s+p[eé]\s+(?:sim|mesmo)\b|"
+                       r"\bn[aã]o\s+(?:quero|vou)\s+(?:ir\s+|pegar\s+)?(?:de\s+)?uber\b", re.IGNORECASE)
+IDA_E_VOLTA_RE = re.compile(r"\b(?:vai\s+e\s+volta|ida\s+e\s+volta|indo\s+e\s+voltando|vou\s+e\s+volto)\b",
+                            re.IGNORECASE)
+IDA_RE = re.compile(r"\b(?:vai|vou|ir|indo|a\s+ida)\s+de\s+uber\b|\bna\s+ida\b", re.IGNORECASE)
+VOLTA_RE = re.compile(r"\b(?:volt\w*)\b|\bna\s+volta\b", re.IGNORECASE)
+COMBINADO_JANELA = timedelta(hours=12)
 TIPOS_CONVERSA = ("academia", "milo", "cafe", "acai", "orla", "shopping", "praia", "mercado", "farmacia")
 
 
@@ -202,6 +214,41 @@ class AgendaReativa:
             st.pop("uber_pix", None)
             self._save(st, now)
         return u
+
+    def combinar_uber(self, fala: str, msg_dele: str, now: datetime) -> list[str]:
+        """27/09 (volta do Quartinho): ele pediu "vai e volta de uber", ela prometeu e a ida saiu a pé.
+        Se ele pede uber e ela topa, os próximos trechos da saída (ida, volta ou os dois) viram uber.
+        Devolve as chaves dos trechos trocados."""
+        if not UBER_PEDIDO_RE.search(msg_dele or "") or not TOPOU_RE.search(fala or "") \
+                or RECUSA_RE.search(fala or ""):
+            return []
+        texto = f"{msg_dele} {fala}"
+        if IDA_E_VOLTA_RE.search(texto) or not (VOLTA_RE.search(texto) or IDA_RE.search(texto)):
+            direcoes = ("ida", "volta")
+        else:
+            direcoes = tuple(d for d, rx in (("ida", IDA_RE), ("volta", VOLTA_RE)) if rx.search(texto))
+        from commute import ROUTES, Commute
+        c = Commute(self.db)
+        legs = [leg for day in (now.date(), now.date() + timedelta(days=1)) for leg in c.legs_on(day)
+                if leg.start > now and leg.start - now <= COMBINADO_JANELA]
+        if not legs:
+            return []
+        saida = min(legs, key=lambda leg: leg.start).key.rsplit(":", 1)[0]   # a próxima saída, ida e volta
+        st = self._state()
+        trocados = []
+        for leg in legs:
+            if (leg.key.rsplit(":", 1)[0] != saida or leg.direction not in direcoes
+                    or leg.mode in ("uber", "uber_dividido", "carona")):
+                continue
+            atual = int((leg.end - leg.start).total_seconds() // 60)
+            mins = (ROUTES.get(leg.region) or {}).get("uber") or max(5, round(atual / 2))
+            st.setdefault("voltas", {})[leg.key] = {"mode": "uber", "mins": mins, "at": now.isoformat(),
+                                                    "combinado": True}
+            trocados.append(leg.key)
+        if trocados:
+            self._save(st, now)
+            logger.info("agenda_reativa.uber_combinado trechos=%s", ",".join(trocados))
+        return trocados
 
     def _nome(self, place: str) -> str:
         from agenda import Agenda
