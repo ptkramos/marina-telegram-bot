@@ -140,6 +140,21 @@ FRIENDS_VISUAL = {
         "style": ("ribbed crop tops, high-waisted leggings, glossy pink lip gloss, hair up in a high ponytail at the gym",
                   "cropped canelado, legging de cintura alta, gloss rosa, rabo alto na academia"),
     },
+    # RG (Patrick, 28/09): a menina de franja da foto de grupo do teste da Bia (27/09), editada por partes no
+    # Krea 2 Edit — olho levemente japonês, íris verde, nariz de ponte baixa — e colada só olho e nariz.
+    "julia_azevedo": {
+        "en": ("a pretty young Japanese-Brazilian woman with straight glossy jet-black hair falling just past her "
+               "shoulders and thick blunt bangs, gently almond-shaped clear green eyes, a small soft nose with a low "
+               "flat bridge and a small round tip, a soft round face, fair porcelain skin with rosy cheeks, soft pink "
+               "lips, a slim body, and a small fine-line crescent moon tattoo on her inner right forearm"),
+        "pt": ("nipo-brasileira de cabelo preto liso e brilhante passando do ombro, franja reta e cheia, olhos "
+               "verdes levemente amendoados, nariz pequeno de ponte baixa, rosto redondinho, pele de porcelana com "
+               "bochecha corada, magra, tatuagem fininha de lua no antebraço direito"),
+        "style": ("black winged eyeliner, a thin black cord choker, black ribbed tank tops, thrifted vintage pieces, "
+                  "a film camera on a strap",
+                  "delineado gatinho, gargantilha de cordão preto, regata canelada preta, peças de brechó, câmera "
+                  "analógica na alça"),
+    },
 }
 KREA2_ZOOM_OPEN = {
     "close": "A close photo of",

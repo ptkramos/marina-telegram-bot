@@ -145,7 +145,7 @@ class TestVisualProfile(unittest.TestCase):
         from visual_profile import FRIENDS_VISUAL, HAIR_COLOR
         import civitai_images as ci
         from pathlib import Path
-        self.assertIn("carol_menezes", FRIENDS_VISUAL)
+        self.assertLessEqual({"carol_menezes", "julia_azevedo"}, set(FRIENDS_VISUAL))
         for key, friend in FRIENDS_VISUAL.items():
             with self.subTest(key):
                 self.assertTrue(friend["en"] and friend["pt"] and len(friend["style"]) == 2)
@@ -155,6 +155,7 @@ class TestVisualProfile(unittest.TestCase):
                 self.assertTrue((Path(ci.__file__).resolve().parent / ci.FRIEND_RG[key]).is_file())
         self.assertNotIn("choker", FRIENDS_VISUAL["bia_andrade"]["en"], "acessório é estilo, não quem ela é")
         self.assertNotIn("gloss", FRIENDS_VISUAL["carol_menezes"]["en"], "maquiagem é estilo")
+        self.assertNotIn("eyeliner", FRIENDS_VISUAL["julia_azevedo"]["en"], "maquiagem é estilo")
 
     def test_friend_face_swap_keeps_marina_side(self):
         """28/09: da edição fica só o lado da amiga; o lado da Marina é o original, pixel a pixel."""
