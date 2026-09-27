@@ -110,6 +110,21 @@ KREA2_DIRECTOR_RULES = (
     "hand holds the phone, so she holds at most one other object, in her free hand.",
 )
 KREA2_IDENTITY_SHORT = f"a young Brazilian woman with {HAIR_COLOR} and light amber-hazel eyes"
+
+# Aparência canônica das amigas (Patrick, 28/09), pro Instagram e fotos de rolê. Só texto, sem LoRA:
+# LoRA de rosto da amiga junto do LoRA da Marina mistura as duas (teste 27/09). O contraste com a Marina
+# vem de estrutura (pele, textura do cabelo, rosto) e o "crachá" (piercing, argolas) segura quem ela é.
+# Na foto em grupo a amiga fica de um lado, com "two very different-looking young women" no começo.
+FRIENDS_VISUAL = {
+    "bia_andrade": {
+        "en": ("a young Brazilian woman with warm golden-brown skin, big voluminous black curly hair with tight "
+               "curls falling past her shoulders, dark brown almond-shaped eyes, thick dark eyebrows, high "
+               "cheekbones, full lips with berry-red lipstick, a small gold nose stud and large gold hoop earrings"),
+        "pt": ("morena de pele dourada, cabelo preto cacheado e volumoso abaixo dos ombros, olhos castanho-escuros "
+               "amendoados, sobrancelha grossa, maçãs do rosto altas, boca carnuda de batom vermelho-frutado, "
+               "piercing dourado pequeno no nariz e argolas douradas grandes"),
+    },
+}
 KREA2_ZOOM_OPEN = {
     "close": "A close photo of",
     "three_quarter": "A three-quarter photo, framed from just above her head down to her thighs, of",

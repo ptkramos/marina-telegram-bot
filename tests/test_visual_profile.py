@@ -140,6 +140,16 @@ class TestVisualProfile(unittest.TestCase):
         self.assertIn("bedroom", prompt2, "Deve manter o mesmo ambiente (bedroom)")
         self.assertIn(KREA2_NUDE["behind"], prompt2, "Deve usar o bloco de costas")
 
+    def test_friends_visual_contrasts_with_marina(self):
+        """28/09: amiga só por texto, com contraste de estrutura e sem os traços da Marina."""
+        from visual_profile import FRIENDS_VISUAL, HAIR_COLOR
+        bia = FRIENDS_VISUAL["bia_andrade"]
+        self.assertTrue(bia["en"] and bia["pt"])
+        for trait in ("amber", "freckles", HAIR_COLOR, KREA2_TRIGGER):
+            self.assertNotIn(trait, bia["en"])
+        self.assertIn("nose stud", bia["en"])
+        self.assertNotRegex(bia["en"], r"\b(no|not|without)\b")
+
 
 if __name__ == "__main__":
     unittest.main()
