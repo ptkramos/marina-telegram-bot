@@ -216,6 +216,9 @@ class Krea2Test(unittest.TestCase):
         self.assertEqual((sfw[ci.KREA2_ASS], nude[ci.KREA2_ASS]), (2.5, 2.5), "bunda igual vestida e nua")
         self.assertEqual((sfw[ci.KREA2_REAL_FAKE], nude[ci.KREA2_REAL_FAKE]), (-1.0, -1.0),
                          "peito natural vestida e nua (contra o bojo)")
+        # Patrick (28/09): vestida, do peito só o tamanho e a naturalidade — aréola e bico só na nua
+        self.assertFalse({ci.KREA2_AREOLA, ci.KREA2_NIPPLE} & set(sfw), "vestida sem aréola/bico")
+        self.assertLessEqual({ci.KREA2_AREOLA, ci.KREA2_NIPPLE}, set(nude))
         self.assertEqual(nude[ci.KREA2_GENITAL_COLOR], -3.0)
         self.assertEqual((nude[ci.KREA2_AREOLA], nude[ci.KREA2_NIPPLE], nude[ci.KREA2_PUBES]), (-2.0, -1.0, -2.0))
         self.assertFalse(set(ci.NUDE_SLIDERS) & set(sfw), "partes íntimas só na foto adulta")

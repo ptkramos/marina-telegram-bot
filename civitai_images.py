@@ -179,8 +179,8 @@ CONDITIONAL = (
     (KREA2_GRIPPY, 1.0, ("dildo", "consolo"), True, "GrippyPussy's vulva tightly gripping the dildo shaft"),
     (KREA2_SUCK, 0.5, ("sucking it", "lips tightly wrapped", "boquete", "chupando o dildo"), True, "sucking"),
     (KREA2_POVBJ, 0.8, ("sucking it", "lips tightly wrapped", "boquete", "chupando o dildo"), True, ""),
-    # 28/09 (Patrick): mordida no lábio, fixa em 0.6. Só texto a boca abria e a mordida sumia (5 textos, mesma seed); o Lip Bite
-    # em 0.65 prende o lábio com os dentes e o rosto continua o dela (o autor: 0.55–0.75; 1.0 mexe nas feições).
+    # 28/09 (Patrick): mordida no lábio. Só texto a boca abria e a mordida sumia (5 textos, mesma seed); o Lip Bite
+    # em 0.65 prende o lábio com os dentes e o rosto continua o dela; fixo em 0.6 (Patrick; o autor: 0.55–0.75).
     (KREA2_LIPBITE, 0.6, ("biting her lower lip", "biting her lip", "bites her lip", "bites her lower lip",
                            "mordendo o lábio", "morde o lábio"), False, "she bites her lip"),
     # Molhada só de ÁGUA (banho, chuva, piscina, mar). Molhada de excitação ficou melhor SEM o slider
