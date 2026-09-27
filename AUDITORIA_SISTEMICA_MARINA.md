@@ -1560,7 +1560,7 @@ Bugs do uso real agora têm frente própria: skill `frente-bugs` (capturar banco
 `tests/test_bug_volta_quartinho.py`, 5 testes com as falas e horários do caso.
 
 Frente de imagens (27/09): skill `frente-imagens` e seção 6 do painel, pra cadeia pose → prompt → motor.
-Primeira rodada (27/09): amigas com LoRA de rosto (Bia = RLY Roxy; sozinha ok, em grupo os rostos se misturam — pendente). FinePorn v5 em A/B contra a v4 (fica a v4); 18 poses de referência no catálogo (`photo_director`), zoom `torso` (`visual_profile`), plug de coração no mundo (`intimacy`). Achado: roupa descrita *sendo tirada* + nudez faz o Krea 2 recusar (imagem de ruído com letras, sem erro na API) — a roupa puxada se escreve parada. `tests/test_photo_director.test_reference_poses_27_09`.
+Primeira rodada (27/09): amigas com LoRA de rosto (Bia = RLY Roxy; sozinha ok; em grupo o LoRA mistura os rostos, só prompt funciona). FinePorn v5 em A/B contra a v4 (fica a v4); 18 poses de referência no catálogo (`photo_director`), zoom `torso` (`visual_profile`), plug de coração no mundo (`intimacy`). Achado: roupa descrita *sendo tirada* + nudez faz o Krea 2 recusar (imagem de ruído com letras, sem erro na API) — a roupa puxada se escreve parada. `tests/test_photo_director.test_reference_poses_27_09`.
 
 ## Bug: Hoje desconexo do card (27/09)
 Às 01:05 o card, o Hoje e o mundo contavam três histórias. Correção:
