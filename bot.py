@@ -4658,7 +4658,8 @@ async def _autonomous_routine_v36(application: Application):
                 from cabelo import ESTILOS, MUDANCAS
                 ops = (pergunta or {}).get('opcoes') or ('natural', 'coque')
                 a, b = ((ESTILOS[o][0] if o in ESTILOS else MUDANCAS[o][0]).lower() for o in ops)
-                fallback = f"{a} ou {b}? escolhe vc"
+                fallback = (f"vou sair, {a} ou {b}? escolhe vc" if (pergunta or {}).get('campo') == 'saida'
+                            else f"tô indo no salão, {a} ou {b}? vc decide")
             else:
                 # A thought of Patrick is not evidence of a new world event.
                 options = (

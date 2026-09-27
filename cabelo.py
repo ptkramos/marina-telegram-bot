@@ -48,15 +48,15 @@ FOTO_SOZINHA_CHANCE = 0.25
 CAPA = ("a black hairdresser cape fastened at her neck and draped over her shoulders and body, "
         "a white ribbed tank top underneath")
 
-# serviço → (nome no acontecimento, preço, minutos, passo no card)
+# serviço → (nome no acontecimento, preço, minutos, passo no card — curto, revisado com o Patrick em 26/09)
 SERVICOS = {
-    "loira": ("luzes no cabelo todo", 650, 220, "Fazendo as luzes"),
-    "retoque": ("retoque das luzes", 450, 150, "Retocando as luzes"),
-    "tonalizar": ("tonalização das pontas", 250, 80, "Lavando e tonalizando as pontas"),
-    "rosa": ("pontas rosa", 220, 80, "Pintando as pontas de rosa"),
-    "hidratacao": ("hidratação", 120, 35, "Fazendo hidratação"),
-    "corte": ("corte", 150, 40, "Cortando as pontas"),
-    "escova": ("escova", 70, 40, "Fazendo escova"),
+    "loira": ("luzes no cabelo todo", 650, 220, "Luzes"),
+    "retoque": ("retoque das luzes", 450, 150, "Retoque das luzes"),
+    "tonalizar": ("tonalização", 250, 80, "Tonalização"),
+    "rosa": ("pontas rosa", 220, 80, "Pontas rosa"),
+    "hidratacao": ("hidratação", 120, 35, "Hidratação"),
+    "corte": ("corte", 150, 40, "Corte das pontas"),
+    "escova": ("escova", 70, 40, "Escova"),
 }
 ORDEM = ("loira", "retoque", "tonalizar", "rosa", "hidratacao", "corte", "escova")
 
@@ -105,10 +105,10 @@ _EVENTO_RE = re.compile(r"anivers|festa|casamento|formatura|balada", re.IGNORECA
 
 # penteado → (nome no painel/prompt, como vai no prompt da foto)
 ESTILOS = {
-    "natural": ("Solto, ondulado natural", "semi-straight with soft waves at the ends"),
+    "natural": ("Solto natural", "semi-straight with soft waves at the ends"),
     "babyliss": ("Solto com babyliss", "styled in loose glossy curls made with a curling iron"),
     "escova": ("Escova lisa", "blow-dried smooth and straight with a glossy finish"),
-    "secador": ("Escovado com secador", "blow-dried smooth with soft volume"),
+    "secador": ("Escovado", "blow-dried smooth with soft volume"),
     "rabo_alto": ("Rabo alto", "pulled back in a sleek high ponytail"),
     "rabo_baixo": ("Rabo baixo", "tied back in a low ponytail"),
     "coque": ("Coque despojado", "tied up in an effortless low bun with a few loose strands framing her face"),
@@ -118,10 +118,10 @@ ESTILOS = {
     "coque_oleoso": ("Preso num coque", "tied up in a messy bun, slightly greasy at the roots"),
     "coque_frouxo": ("Coque frouxo", "tied up in a loose messy bun"),
     "academia": ("Rabo de cavalo", "pulled back in a high ponytail"),
-    "touca": ("Preso com touca, umectando", "tied up in a bun under a clear plastic shower cap, glossy with hair oil"),
-    "molhado": ("Molhado, secando natural", "damp and air-drying, slightly wavy"),
-    "secando": ("Secando com secador", "half-dry, being blow-dried"),
-    "banho": ("Molhado, no banho", "soaking wet from the shower"),
+    "touca": ("Umectando", "tied up in a bun under a clear plastic shower cap, glossy with hair oil"),
+    "molhado": ("Secando natural", "damp and air-drying, slightly wavy"),
+    "secando": ("No secador", "half-dry, being blow-dried"),
+    "banho": ("No banho", "soaking wet from the shower"),
 }
 PENTEADO_SAIDA = {
     "noite": ("babyliss", "escova", "rabo_alto", "meio_preso", "coque"),
@@ -508,8 +508,7 @@ class Cabelo:
         st["salao_dia"] = now.date().isoformat()
         st["sessao"] = s
         self._save(st)
-        v._registra(chave, now, f"Marcou o cabelo na {SALAO_NOME} ({why}): "
-                    + ", ".join(SERVICOS[x][0] for x in sv) + ".")
+        v._registra(chave, now, f"Marcou o cabelo na Ophicina: {why}.")
         logger.info("cabelo.salao motivo=%s servicos=%s mudanca=%s", motivo, sv, mudanca)
         return cid
 
@@ -523,10 +522,10 @@ class Cabelo:
     @staticmethod
     def _passo(servico: str, mudanca: Optional[str]) -> str:
         if servico == "corte":
-            return {"repicado": "Repicando o cabelo", "cortina": "Cortando a franja cortina",
-                    "franja": "Cortando a franja", "reto": "Cortando reto"}.get(mudanca or "", "Cortando as pontas")
+            return {"repicado": "Repicado", "cortina": "Franja cortina", "franja": "Franja",
+                    "reto": "Corte reto"}.get(mudanca or "", "Corte das pontas")
         if servico == "tonalizar" and mudanca == "bege":
-            return "Tonalizando as pontas de bege"
+            return "Pontas bege"
         return SERVICOS[servico][3]
 
     def _opcoes(self, st: dict, now: datetime, mudanca: Optional[str]) -> list[str]:
@@ -685,9 +684,7 @@ class Cabelo:
             return feitos
         self._aplica_salao(st, s, fim)
         s["finalizada"] = True
-        escolha = " — o que o Patrick escolheu" if s.get("quem") == "patrick" and s.get("mudanca") else ""
-        summary = (f"Arrumou o cabelo na {SALAO_NOME}: " + ", ".join(SERVICOS[x][0] for x in s["servicos"])
-                   + (f" ({self._descricao(s)}{escolha})" if s.get("mudanca") else "") + f" (R$ {s['preco']}).")
+        summary = f"Cabelo na Ophicina: {self._feito(s)} · R$ {s['preco']}."
         with self.db.get_connection() as conn:
             conn.execute(
                 """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
@@ -721,6 +718,18 @@ class Cabelo:
             st.update(hidratado_em=quando, hidratado_onde="salao")
         st.update(lavado_em=quando, secagem="escova_salao" if "escova" in sv else "secador", molhado_ate=None,
                   lavar=False, umectando_ate=None)
+
+    def _feito(self, s: dict) -> str:
+        """"repicado (o Patrick escolheu), tonalização e escova" — a mudança primeiro, depois o resto."""
+        m = s.get("mudanca")
+        itens = [SERVICOS[x][0] for x in s["servicos"]
+                 if not (m and ((x == "corte" and m in CORTE_MUDANCAS) or x == m or (x == "tonalizar" and m in ("bege", "dourado"))))]
+        if m:
+            nome = {"repicado": "repicado", "cortina": "franja cortina", "franja": "franja", "reto": "corte reto",
+                    "bege": "pontas bege", "dourado": "pontas douradas", "rosa": "pontas rosa",
+                    "loira": "luzes no cabelo todo"}[m]
+            itens = [nome + (" (o Patrick escolheu)" if s.get("quem") == "patrick" else "")] + itens
+        return itens[0] if len(itens) == 1 else ", ".join(itens[:-1]) + " e " + itens[-1]
 
     def _descricao(self, s: dict) -> str:
         m = s.get("mudanca")
@@ -813,17 +822,26 @@ class Cabelo:
 
         s = self.sessao(now)
         if s and datetime.fromisoformat(s["inicio"]) <= now:
-            penteado = f"No salão, {SALAO_NOME}"
+            penteado = "No salão"
         else:
             penteado = ESTILOS[self.penteado(now)][0]
         lav = self._dia_lavagem(st, now)
         seca = {"natural": "secou natural", "secador": "secou no secador",
-                "escova_salao": f"escova na {SALAO_NOME}"}.get(st.get("secagem") or "", "")
+                "escova_salao": "escova no salão"}.get(st.get("secagem") or "", "")
         lavou = ("Hoje" if lav <= 0 else "Ontem" if lav == 1 else f"Há {lav} dias") + (f", {seca}" if seca else "")
         return {"penteado": penteado, "hex": ROSA_HEX if c["rosa"] == "viva" else tom[3], "barras": barras,
                 "linhas": [["droplet", "Lavou", lavou],
                            ["scissors", "Corte", f"{CORTES[c['corte']][0]}, {quando('cortado_em').lower()}"],
-                           ["palette", "Luzes", f"{tom[0]}, {quando('tonalizado_em').lower()}"]]}
+                           ["palette", "Luzes", f"{tom[0]}, {quando('tonalizado_em').lower()}"]]
+                + ([["brush", "Rosa", self._linha_rosa(st, now, quando)]] if c["rosa"] else [])}
+
+    def _linha_rosa(self, st: dict, now: datetime, quando) -> str:
+        """Rosa em linha própria (Patrick, 26/09): quando pintou e quanto falta pra sair."""
+        d = self._dias(st, "rosa_em", now)
+        if d >= ROSA_NOVO:
+            return f"{quando('rosa_em')}, desbotando"
+        semanas = max(1, round((ROSA_SOME - d) / 7))
+        return f"{quando('rosa_em')}, desbota em ~{semanas} semana{'s' if semanas > 1 else ''}"
 
     def prompt_lines(self, now: datetime) -> list[str]:
         c = self.condicao(now)

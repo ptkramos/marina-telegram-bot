@@ -45,7 +45,7 @@ class CabeloTest(unittest.TestCase):
         c = self.c.condicao(T)
         self.assertEqual((c["lavagem"], c["pontas"], c["corte"], c["tom"]), ("2º dia", "Boas", "reto", "dourado"))
         p = self.c.painel(T)
-        self.assertEqual(p["penteado"], "Solto, ondulado natural")
+        self.assertEqual(p["penteado"], "Solto natural")
         self.assertEqual([b["label"] for b in p["barras"]], ["Lavagem", "Pontas", "Luzes", "Hidratação"])
         self.assertEqual(p["linhas"][1][2], "Reto, há 5 semanas")
         cor, estilo = self.c.visual(T)
@@ -97,7 +97,7 @@ class CabeloTest(unittest.TestCase):
         self.c.materialize(fim + timedelta(minutes=1))
         with self.db.get_connection() as conn:
             ev = conn.execute("SELECT summary FROM life_events WHERE event_key=?", (f"compra:{s['chave']}",)).fetchone()
-        self.assertIn(f"(R$ {s['preco']})", ev["summary"])
+        self.assertIn(f"· R$ {s['preco']}", ev["summary"])
         c = self.c.condicao(fim + timedelta(minutes=2))
         self.assertEqual((c["pontas"], c["luzes"], c["lavagem"]), ("Boas", "Nova", "Lavado hoje"))
         self.assertEqual(self.c.penteado(fim + timedelta(minutes=2)), "escova")
@@ -122,6 +122,13 @@ class CabeloTest(unittest.TestCase):
         self.assertTrue(promete.call_args.kwargs["pediu"])
         self.c.materialize(fim + timedelta(minutes=1))
         self.assertEqual(self.c.condicao(fim + timedelta(minutes=2))["corte"], "repicado")
+        with self.db.get_connection() as conn:
+            ev = conn.execute("SELECT summary FROM life_events WHERE event_key=?", (f"compra:{s['chave']}",)).fetchone()
+        self.assertEqual(ev["summary"], "Cabelo na Ophicina: repicado (o Patrick escolheu) e escova · R$ 220.")
+        linhas = self.c.painel(fim + timedelta(minutes=2))["linhas"]
+        self.assertEqual(linhas[0][2], "Hoje, escova no salão")
+        self._set(rosa_em=3)
+        self.assertEqual(self.c.painel(T)["linhas"][-1], ["brush", "Rosa", "Há 3 dias, desbota em ~3 semanas"])
 
     def test_sugestao_dele_vira_mudanca(self):
         self.assertEqual(self.c.observe_patrick("vc ficaria linda de franja sabia", T), "franja")

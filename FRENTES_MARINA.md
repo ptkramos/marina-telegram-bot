@@ -9,7 +9,7 @@ _Atualizado em 26/09/2026, noite._
 ---
 
 ## 1. Mundo e agenda — skill `frente-mundo`
-**Abertura:** "bora na frente do mundo: textos do cabelo"
+**Abertura:** "bora na frente do mundo: conflito do rolê em dia de aula"
 
 **Pronto (26/09):** agenda única (planejado, vontade, convite → mesma agenda com etapas); academia e passeio do
 Milo decididos uma vez por dia; mercado e médico como itens (Bradesco Saúde, Samaritano/Novamed); tempo livre
@@ -18,26 +18,26 @@ peso; mídia real (música iTunes, leitura com compra, Botafogo pela ESPN, Last.
 **agenda reativa** (26/09, noite: conversa vira compromisso/remarca/cancela, sair mais cedo por motivo, aula largada
 no meio, tesão como emergência — `agenda_reativa.py`); **unhas** (26/09, noite — `unhas.py`: cor, gel/esmalte,
 desgaste; Ophicina do Cabelo na rotina/evento/mimo, R$ 180 do saldo; em casa entediada; pergunta a cor às vezes;
-foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo** (26/09, noite — `cabelo.py`: lava dia sim, dia não no banho, penteado de agora, corte/luzes/hidratação, Ophicina junta o vencido e cobra do saldo, pergunta penteado e corte/cor, sugestão dele vira mudança, cabelo de agora em toda foto, seção Cabelo no Por dentro).
+foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo** (26/09, noite — `cabelo.py`: lava dia sim, dia não no banho, penteado de agora, corte/luzes/hidratação, Ophicina junta o vencido e cobra do saldo, pergunta penteado e corte/cor, sugestão dele vira mudança, cabelo de agora em toda foto, seção Cabelo no Por dentro; textos revisados com ele na mesma noite).
 
 **Próximo, nesta ordem:**
-1. Revisar com ele os textos do cabelo que decidi sozinho (lista no PLANO_WEBAPP, "Cabelo — como ficou").
-2. Conflito: rolê em dia de aula que começa antes da aula acabar sobrepõe volta e ida.
-3. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber…).
-4. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
-5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
+1. Conflito: rolê em dia de aula que começa antes da aula acabar sobrepõe volta e ida.
+2. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber…).
+3. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
+4. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** "bora na frente dos apps: Bastidores aba a aba"
+**Abertura:** "bora na frente dos apps: linha do tempo Hoje"
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), Bootstrap Icons, recibos alinhados; Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps.
 
 **Próximo:**
-1. Bastidores **aba a aba** com ele (Por dentro, Dinheiro, Mundo), como foi a Agora — ele quer ver no celular e
+1. **Linha do tempo "Hoje"** (aba Agora) — o próximo ataque do Patrick: os acontecimentos do dia como aparecem (ex.: "Tomou banho e lavou o cabelo (08:12–08:40)", "Ficou umectando o cabelo no quarto" — ele quer melhorar). Mostrar a lista inteira de um dia real.
+2. Bastidores **aba a aba** com ele (Por dentro, Dinheiro, Mundo), como foi a Agora — ele quer ver no celular e
    ajustar palavra por palavra (PLANO_VOZ 14).
-2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
-3. Fotos provisórias de marca e logos marcados "conferir"; redes sociais dela (Etapa 5).
+3. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
+4. Fotos provisórias de marca e logos marcados "conferir"; redes sociais dela (Etapa 5).
 
 ## 3. Voz e chat — skill `frente-voz`
 **Abertura:** "bora na frente da voz"
