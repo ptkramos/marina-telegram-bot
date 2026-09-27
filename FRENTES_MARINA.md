@@ -46,7 +46,7 @@ Agora decidida linha a linha (card layout D); tela inicial só com os apps.
 dividindo balão; vocabulário da masturbação; música que ele manda por link.
 
 **Próximo:**
-1. Regras das fotos por promessa (PLANO_VOZ 15) e auditoria do prompt (PLANO_VOZ 16).
+1. Regras das fotos por promessa (PLANO_VOZ 15: quando ela cumpre) e auditoria do prompt do chat (PLANO_VOZ 16).
 2. Observar coerência entre turnos e qualidade das iniciativas no uso real (PLANO_VOZ 12, com /bom e /ruim).
 3. Técnicas antigas (PLANO_VOZ 13).
 
@@ -71,3 +71,17 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
      - `post_event_recovery` não é `binding` em `world_context.py`, e o texto ("acabou de terminar o compromisso anterior, ainda em casa relaxando") não diz de onde ela voltou nem como.
      - O histórico ("te aviso quando chegar em casa") venceu o fato.
      - Ela também não avisou que chegou quando chegou (00:05): a promessa não virou gatilho.
+
+## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
+**Abertura:** "bora na frente de imagens: tenho poses pra mandar"
+
+Cadeia única: pose de referência → prompt no jeito da casa (`photo_director.Pose`) → motor (Civitai Krea 2, LoRA `marinaX`).
+O *quando* ela manda foto continua na frente da voz.
+
+**Pronto:** pilha oficial decidida foto a foto (24/09); catálogo de 28 poses por cômodo com faixa de nível; sessão com seed; foto sem ela (comida, Milo, vista); unha e cabelo de agora em toda foto.
+
+**Próximo:**
+1. Poses que o Patrick mandar: resgatar o prompt (metadado do arquivo → texto do site → descrição) e virar pose do catálogo (PLANO_VOZ 1).
+2. Ângulo dela sem rosto (de trás, por cima do ombro): sempre sai selfie de frente; quem puxa é o prompt (PLANO_VOZ 1d).
+3. Fatores do gozo especial (PLANO_VOZ 1e); FinePorn v5 quando voltar ao Civitai (1g); acompanhar o slider de peso (9).
+4. Do Patrick: trocar a chave do Civitai (vazou em 24/09).

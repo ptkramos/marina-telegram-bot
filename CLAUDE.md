@@ -18,9 +18,10 @@ ser "praticamente humana" — um mundo vivo onde tudo o que ela faz acontece de 
 |---|---|---|
 | Mundo e agenda (vida dela, corpo, rotina, saídas) | `frente-mundo` | PLANO_WEBAPP (aba Agora, etapas), PLANO_VOZ |
 | Apps (Mini App: iFood, Nubank, Bastidores) | `frente-apps` | PLANO_WEBAPP |
-| Voz e chat (como ela fala, balões, fotos, proatividade) | `frente-voz` | PLANO_VOZ, AUDITORIA |
+| Voz e chat (como ela fala, balões, quando manda foto, proatividade) | `frente-voz` | PLANO_VOZ, AUDITORIA |
 | Infra (VPS, deploy, desempenho, testes) | `frente-infra` | AUDITORIA |
 | Bugs do uso real (capturar, diagnosticar, corrigir) | `frente-bugs` | FRENTES_MARINA.md (seção 5) |
+| Imagens (poses de referência, prompts de foto, motor Civitai/LoRA) | `frente-imagens` | PLANO_VOZ ("Fotos pelo Civitai") |
 | Encerrar/trocar de conversa | `passagem-de-bastao` | FRENTES_MARINA.md |
 
 **Quando sugerir conversa nova (regra pra você, Claude):** ao terminar um item grande do painel; quando o assunto

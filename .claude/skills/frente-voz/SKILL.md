@@ -22,5 +22,6 @@ description: Frente "voz e chat" da Marina — como ela fala e responde no Teleg
   (trava `INITIATIVE_LOCK`; desiste se outra iniciativa saiu há < 10 min), instruções em `_PROACTIVE_INSTRUCTIONS`.
 - Prompt: `prompt_policy.py`, `world_context.py` (blocos do mundo), `voice_library.py`, `chat_naturalness.py`.
 - Disponibilidade (quanto ela demora pra responder): `response_availability.py`.
-- Fotos: `photo_director.py`, `promessa_foto.py`, `civitai_images.py` (custa Buzz — só com motivo).
+- Fotos: aqui só o *quando* ela manda (`promessa_foto.py`, bloco `[FOTO]`). Pose, prompt da foto e motor são da
+  frente `frente-imagens`.
 - Fechar: relatórios no mesmo commit (AUDITORIA + PLANO_VOZ + PLANO_WEBAPP), deploy, `passagem-de-bastao`.

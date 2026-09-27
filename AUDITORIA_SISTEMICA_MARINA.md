@@ -1551,3 +1551,5 @@ Backup: `backups/pre_audit2b_memory_20260923_012559.db`.
 
 ## Frente de bugs (27/09)
 Bugs do uso real agora têm frente própria: skill `frente-bugs` (capturar banco, mundo e log antes que mudem; diagnosticar por camada: mundo → prompt → fala) e seção 5 do `FRENTES_MARINA.md`. O primeiro caso é a volta do Quartinho Bar: o mundo estava certo e a fala contradisse o estado `post_event_recovery`.
+
+Frente de imagens (27/09): skill `frente-imagens` e seção 6 do painel, pra cadeia pose → prompt → motor.
