@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 27/09/2026, tarde (frente de imagens: rosto fixo da Bia e troca de rosto na foto de grupo)._
+_Atualizado em 27/09/2026, 16:15 (frente de imagens: rosto fixo de Carol, Júlia e Theo; fotos de perfil no Mundo do Bastidores)._
 
 ---
 
@@ -93,7 +93,7 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
 **Abertos:** nenhum.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
-**Abertura:** "bora na frente de imagens: rosto das amigas (Carol, Júlia, Theo)"
+**Abertura:** "bora na frente de imagens: foto de grupo com as amigas de ponta a ponta"
 
 Cadeia única: pose de referência → prompt no jeito da casa (`photo_director.Pose`) → motor (Civitai Krea 2, LoRA `marinaX`).
 O *quando* ela manda foto continua na frente da voz.
@@ -101,10 +101,10 @@ O *quando* ela manda foto continua na frente da voz.
 **Pronto:** pilha oficial decidida foto a foto (24/09); catálogo por cômodo com faixa de nível (70 poses, com as 18 referências do Patrick em 27/09); sessão com seed; foto sem ela (comida, Milo, vista); unha e cabelo de agora em toda foto; FinePorn v5 em A/B, **mantida a v4** (27/09); plug de coração como 3º brinquedo da gaveta; **Bia com rosto fixo** (28/09): foto-RG `data/amigas/bia_rg.jpg` + `visual_profile.FRIENDS_VISUAL` (quem ela é + estilo) + foto de grupo pela troca de rosto (`civitai_images.swap_friend_face`: Krea 2 Edit, 41 Buzz, cola só o lado dela; Marina intacta); **Carol com rosto fixo** (28/09): foto-RG `data/amigas/carol_rg.jpg`, loira de mel com braço fechado de tatuagem, pele branca rosada; **Júlia com rosto fixo** (28/09): `data/amigas/julia_rg.jpg`, nipo-brasileira de franja, olho verde (a menina da foto de grupo do teste da Bia, editada por partes); **Theo com rosto fixo** (28/09): `data/amigas/theo_rg.jpg`, pardo de cachos (a troca de rosto diz "the man" pra ele, `FRIENDS_VISUAL[...]["noun"]`); **foto de perfil dos quatro no Mundo do Bastidores** (28/09): Krea 2 Edit sobre o RG (cenário e roupa novos, 41 Buzz cada), recorte no rosto em `webapp/avatars/<chave>.jpg`; quem não tem foto fica nas iniciais.
 
 **Próximo:**
-1. **Rostos de gente nova** (se o Patrick quiser, ex.: Gabi, Bruno): mesmo caminho — referência → 4 rostos por texto (~80 Buzz) → RG → `FRIENDS_VISUAL` + `FRIEND_RG` → foto de perfil (41) em `webapp/avatars`. Lições: LoRA de rosto da amiga mistura com o da Marina; só texto sai com as feições da Marina; contraste de estrutura com a Marina; o Krea 2 põe sardas sozinho (pele "clear smooth even-toned" e cor concreta tiram quase tudo); a seed de uma candidata puxa o rosto dela numa nova geração com o texto ajustado; **edição por partes** (Júlia): o Krea 2 Edit muda um traço de cada vez (olho, cor da íris, nariz) e só aquela região volta colada na original, com a cor igualada pela pele do rosto — assim a pele, as sardas e a textura não "crocam"; nariz pede frase forte ("noticeably smaller and flatter… low, flat bridge"), a frase fraca não mexe.
-2. `swap_friend_face` ainda não rodou de ponta a ponta (o teste foi o script manual) — rodar 1 vez quando for usar; ligar nas fotos quando o Instagram existir.
-3. Poses que o Patrick mandar (PLANO_VOZ 1). Lição: roupa *sendo tirada* + nudez = recusa do Krea 2 (ruído de letras); escrever a roupa parada.
-4. Ângulo de trás sem espelho (PLANO_VOZ 1d); fatores do gozo especial (1e); acompanhar o slider de peso (9).
+1. Foto de grupo de ponta a ponta: `swap_friend_face` ainda não rodou pelo código (só o script manual da Bia). Rodar 1 foto com uma amiga (~20 + 41 Buzz), conferir feições (olho/nariz/queixo) e a emenda; depois ligar nas fotos quando o Instagram existir.
+2. Poses que o Patrick mandar (PLANO_VOZ 1). Lição: roupa *sendo tirada* + nudez = recusa do Krea 2 (ruído de letras); escrever a roupa parada.
+3. Ângulo de trás sem espelho (PLANO_VOZ 1d); fatores do gozo especial (1e); acompanhar o slider de peso (9).
+4. **Rostos de gente nova** (se o Patrick quiser, ex.: Gabi, Bruno): mesmo caminho — referência → 4 rostos por texto (~80 Buzz) → RG → `FRIENDS_VISUAL` + `FRIEND_RG` → foto de perfil (41) em `webapp/avatars`. Lições: LoRA de rosto da amiga mistura com o da Marina; só texto sai com as feições da Marina; contraste de estrutura com a Marina; o Krea 2 põe sardas sozinho (pele "clear smooth even-toned" e cor concreta tiram quase tudo); a seed de uma candidata puxa o rosto dela numa nova geração com o texto ajustado; **edição por partes** (Júlia): o Krea 2 Edit muda um traço de cada vez (olho, cor da íris, nariz) e só aquela região volta colada na original, com a cor igualada pela pele do rosto — assim a pele, as sardas e a textura não "crocam"; nariz pede frase forte ("noticeably smaller and flatter… low, flat bridge"), a frase fraca não mexe.
 5. Do Patrick: trocar a chave do Civitai (vazou em 24/09).
 
 ## 7. Auditoria de funcionamento — skill `frente-auditoria`
