@@ -97,7 +97,8 @@ class FotoGrupoTest(unittest.TestCase):
         s = pd.direct(self.db, datetime(2026, 9, 27, 22, 30), request="manda uma foto pelada", camera_ctx=home,
                       turn=IntimacyTurn(state="active", arousal=0.6), rng=random.Random(11),
                       force_pose="inclinada_pra_camera")
-        self.assertIn("mouth slightly open", s.prompt)
+        self.assertIn("biting her lower lip", s.prompt)
+        self.assertNotIn("mouth slightly open", s.prompt, "boca aberta vence a mordida")
         self.assertIn("eyes looking away from the camera", s.prompt)
         self.assertNotIn("smirk", s.prompt)
 

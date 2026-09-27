@@ -95,8 +95,11 @@ KREA2_AREOLA = "urn:air:krea2:lora:civitai:2554618@3120387"
 KREA2_NIPPLE = "urn:air:krea2:lora:civitai:2554559@3191856"
 KREA2_PUBES = "urn:air:krea2:lora:civitai:2617090@3136749"
 KREA2_ASS = "urn:air:krea2:lora:civitai:2554616@3207249"
+KREA2_REAL_FAKE = "urn:air:krea2:lora:civitai:2554586@3192618"   # Real/Fake Breast Slider (negativo = natural)
 # Corpo dela em toda foto (vestida ou nua: o corpo não muda entre as fotos).
-BODY_SLIDERS = {KREA2_ASS: 2.5}
+# 28/09 (Patrick): real/fake −1.0 — peito natural mas ainda durinho (−2.0 caía demais); vestida também, contra o
+# bojo que fazia "peitão".
+BODY_SLIDERS = {KREA2_ASS: 2.5, KREA2_REAL_FAKE: -1.0}
 # Só na foto adulta (partes à mostra). Lábios menores −2 deixou a vulva pequena demais: fora.
 NUDE_SLIDERS = {KREA2_GENITAL_COLOR: -3.0, KREA2_AREOLA: -2.0, KREA2_NIPPLE: -1.0, KREA2_PUBES: -2.0}
 KREA2_TANLINES = "urn:air:krea2:lora:civitai:2840638@3206585"  # Bikini Tan Lines (AiMami) — gatilho "bikini tan-lines"

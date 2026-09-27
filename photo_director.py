@@ -171,8 +171,10 @@ POSES: tuple[Pose, ...] = (
          (1, 3), "three_quarter", "timer", "standing and leaning forward toward the camera, her arms straight down "
          "in front of her with her hands together between her knees, her body leaning in, her head turned to one "
          "side and her eyes looking away from the camera toward the side",
-         # 28/09 (teste com o Patrick): o "meio sorriso" do humor fechava a boca — a boca entreaberta é o charme
-         face="biting her lower lip with her mouth slightly open, her upper teeth showing, a sultry half-lidded look"),
+         # 28/09 (testes com o Patrick): o "meio sorriso" do humor fechava a boca; "mouth slightly open / teeth
+         # showing" abria a boca e a mordida sumia. A que mordeu de verdade (sentando no dildo) dizia só "biting her
+         # lower lip" com os lábios entreabertos em volta.
+         face="heavy-lidded lustful eyes and parted lips, biting her lower lip, her cheeks flushed"),
     Pose("coracao_maos", "ajoelhada na beira da cama fazendo coração com as mãos (timer)", ("quarto",), (0, 3),
          "three_quarter", "timer", "kneeling at the edge of the bed leaning slightly toward the camera, her hands "
          "together in front of her chest making a heart shape, her thumbs and index fingers touching, looking at "
