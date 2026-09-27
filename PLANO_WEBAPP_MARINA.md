@@ -403,3 +403,5 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 **Auditoria, rodada 1 (27/09, 11:40):** Hoje e card batem com o mundo nas saídas; o Hoje deixa de mostrar "Foi pra calçada" colado no "Foi pra Enseada" (xixi do Milo some quando o passeio vem logo depois) e o card volta a ter o Se arrumando antes de uma saída de tarde (o almoço sai antes do preparo). Dinheiro: o pix de presente com rolê no dia não vira mais "Usou o pix do Patrick: comprou…" no Hoje. Decidido com o Patrick: o previsto de saída mostra a hora em que ela chega lá ("~15:00 No Shopping da Gávea com a Bia"), não a de sair de casa. O saldo dela foi consertado na produção (R$ 865) e a compra fantasma de R$ 236 saiu do Hoje.
 
 **Bia (28/09, frente de imagens):** aparência canônica decidida (morena carioca, só texto). Nada no Mini App ainda; entra quando houver Instagram.
+
+**Bia (28/09):** rosto fixo por foto-RG e troca de rosto nas fotos de grupo (frente de imagens). Nada no Mini App ainda.

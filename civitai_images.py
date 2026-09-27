@@ -319,46 +319,10 @@ async def generate(prompt: str, *, is_nsfw: bool, focus_angle: str = "frontal",
     own = session is None
     session = session or aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT_S + 30))
     try:
-        wf = None
-        for _attempt in range(1):
-            async with session.post(f"{BASE_URL}/v2/consumer/workflows?wait=30", headers=headers, json=body) as resp:
-                if resp.status < 400:
-                    wf = await resp.json()
-                    break
-                err = (await resp.text())[:300]
-            # 24/09: foto normal NUNCA vira adulta. Reenviar como adulta quando o
-            # moderador reclamava liberou nudez numa selfie de pijama. Se o
-            # moderador marca uma foto normal, ela falha (e o log diz por quê).
-            if not is_nsfw and "mature content" in err.lower():
-                logger.error("civitai.sfw_flagged_by_moderator — prompt normal com termo adulto")
-                return None
-            logger.error("civitai.submit_failed status=%s body=%s", resp.status, err)
-            return None
+        wf = await _run_workflow(session, headers, body, is_nsfw)
         if wf is None:
             return None
         wf_id = wf.get("id")
-        logger.info("civitai.submitted id=%s status=%s cost=%s nsfw=%s", wf_id, wf.get("status"),
-                    (wf.get("cost") or {}).get("total"), is_nsfw)
-        waited = 0.0
-        while (wf.get("status") or "").lower() not in TERMINAL:
-            if waited >= TIMEOUT_S:
-                logger.error("civitai.timeout id=%s", wf_id)
-                return None
-            await asyncio.sleep(POLL_S)
-            waited += POLL_S
-            try:
-                async with session.get(f"{BASE_URL}/v2/consumer/workflows/{wf_id}", headers=headers) as resp:
-                    if resp.status >= 500:
-                        continue   # instabilidade passageira: tenta de novo
-                    if resp.status >= 400:
-                        logger.error("civitai.poll_failed status=%s", resp.status)
-                        return None
-                    wf = await resp.json()
-            except aiohttp.ClientError as exc:
-                logger.warning("civitai.poll_error %s", type(exc).__name__)
-        if (wf.get("status") or "").lower() != "succeeded":
-            logger.error("civitai.workflow_%s id=%s", wf.get("status"), wf_id)
-            return None
         for image in _images(wf):
             if image.get("available") is False:
                 logger.warning("civitai.blob_unavailable id=%s reason=%s", image.get("id"), image.get("blockedReason"))
@@ -379,6 +343,115 @@ async def generate(prompt: str, *, is_nsfw: bool, focus_angle: str = "frontal",
     finally:
         if own:
             await session.close()
+
+
+async def _run_workflow(session: aiohttp.ClientSession, headers: dict, body: dict, is_nsfw: bool) -> Optional[dict]:
+    """Envia o workflow e espera terminar. Devolve o workflow que deu certo, ou None."""
+    async with session.post(f"{BASE_URL}/v2/consumer/workflows?wait=30", headers=headers, json=body) as resp:
+        if resp.status >= 400:
+            err = (await resp.text())[:300]
+            # 24/09: foto normal NUNCA vira adulta. Reenviar como adulta quando o
+            # moderador reclamava liberou nudez numa selfie de pijama. Se o
+            # moderador marca uma foto normal, ela falha (e o log diz por quê).
+            if not is_nsfw and "mature content" in err.lower():
+                logger.error("civitai.sfw_flagged_by_moderator — prompt normal com termo adulto")
+            else:
+                logger.error("civitai.submit_failed status=%s body=%s", resp.status, err)
+            return None
+        wf = await resp.json()
+    wf_id = wf.get("id")
+    logger.info("civitai.submitted id=%s status=%s cost=%s nsfw=%s", wf_id, wf.get("status"),
+                (wf.get("cost") or {}).get("total"), is_nsfw)
+    waited = 0.0
+    while (wf.get("status") or "").lower() not in TERMINAL:
+        if waited >= TIMEOUT_S:
+            logger.error("civitai.timeout id=%s", wf_id)
+            return None
+        await asyncio.sleep(POLL_S)
+        waited += POLL_S
+        try:
+            async with session.get(f"{BASE_URL}/v2/consumer/workflows/{wf_id}", headers=headers) as resp:
+                if resp.status >= 500:
+                    continue   # instabilidade passageira: tenta de novo
+                if resp.status >= 400:
+                    logger.error("civitai.poll_failed status=%s", resp.status)
+                    return None
+                wf = await resp.json()
+        except aiohttp.ClientError as exc:
+            logger.warning("civitai.poll_error %s", type(exc).__name__)
+    if (wf.get("status") or "").lower() != "succeeded":
+        logger.error("civitai.workflow_%s id=%s", wf.get("status"), wf_id)
+        return None
+    return wf
+
+
+# 28/09 (Patrick): amiga na foto junto da Marina. O LoRA dela vale pra imagem toda e puxa qualquer rosto
+# pro dela (teste 27/09) — então a foto sai com a amiga descrita de um lado e depois o Krea 2 Edit troca
+# só o rosto da amiga pelo da foto-RG dela (rosto fixo em toda foto). O editor refaz a imagem inteira e
+# deixa a textura "crocante": da edição fica só o lado da amiga, colado na original com a emenda suavizada.
+FRIEND_RG = {"bia_andrade": "data/amigas/bia_rg.jpg"}
+FRIEND_EDIT_PROMPT = ("Give the woman on the {side}, {who}, the exact face of the woman in the second image: her "
+                      "face shape, eyes, eyebrows, nose, lips and skin tone. Keep the other woman, both poses, the "
+                      "clothes, the accessories, the hair, the background and the lighting exactly as they are in "
+                      "the first image.")
+FRIEND_SEAM = 0.56      # a emenda fica no ombro da amiga (ela ocupa a metade do lado dela)
+FRIEND_SEAM_BLUR = 28
+
+
+def friend_edit_body(image: bytes, rg: bytes, *, side: str, who: str, width: int, height: int,
+                     is_nsfw: bool = False, seed: Optional[int] = None) -> dict:
+    import base64
+
+    def url(data: bytes) -> str:
+        return "data:image/jpeg;base64," + base64.b64encode(data).decode()
+
+    step = {"engine": "comfy", "ecosystem": "krea2", "model": "edit", "operation": "editImage",
+            "prompt": FRIEND_EDIT_PROMPT.format(side=side, who=who), "images": [url(image), url(rg)],
+            "width": width, "height": height, "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
+            "quantity": 1, "loras": {}}
+    body = {"steps": [{"$type": "imageGen", "input": step}], "allowMatureContent": bool(is_nsfw)}
+    if is_nsfw:
+        body["currencies"] = ["yellow"]
+    return body
+
+
+def paste_side(original: bytes, edited: bytes, side: str) -> bytes:
+    """Cola só o lado da amiga (da foto editada) na original, com a emenda suavizada."""
+    from PIL import Image, ImageDraw, ImageFilter
+    orig = Image.open(io.BytesIO(original)).convert("RGB")
+    ed = Image.open(io.BytesIO(edited)).convert("RGB").resize(orig.size, Image.LANCZOS)
+    w, h = orig.size
+    mask = Image.new("L", orig.size, 0)
+    box = [int(w * FRIEND_SEAM), 0, w, h] if side == "right" else [0, 0, int(w * (1 - FRIEND_SEAM)), h]
+    ImageDraw.Draw(mask).rectangle(box, fill=255)
+    out = io.BytesIO()
+    Image.composite(ed, orig, mask.filter(ImageFilter.GaussianBlur(FRIEND_SEAM_BLUR))).save(out, "JPEG", quality=93)
+    return out.getvalue()
+
+
+async def swap_friend_face(image: bytes, friend: str, *, side: str = "right", who: str = "",
+                           is_nsfw: bool = False, seed: Optional[int] = None) -> Optional[bytes]:
+    """Troca o rosto da amiga na foto de grupo pelo da foto-RG dela. None se não der (sem RG, erro)."""
+    from pathlib import Path
+    rg_path = FRIEND_RG.get(friend)
+    if not rg_path or not available():
+        return None
+    rg = (Path(__file__).resolve().parent / rg_path).read_bytes()
+    from PIL import Image
+    w, h = Image.open(io.BytesIO(image)).size
+    body = friend_edit_body(image, rg, side=side, who=who or "the other woman", width=w, height=h,
+                            is_nsfw=is_nsfw, seed=seed)
+    headers = {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json", "User-Agent": USER_AGENT}
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT_S + 30)) as session:
+        try:
+            wf = await _run_workflow(session, headers, body, is_nsfw)
+            for img in _images(wf or {}):
+                data = await _download(session, headers, img)
+                if data:
+                    return paste_side(image, data, side)
+        except Exception as exc:
+            logger.error("civitai.friend_swap_error %s: %s", type(exc).__name__, exc)
+    return None
 
 
 def _crop_bottom(data: bytes, frac: float) -> bytes:

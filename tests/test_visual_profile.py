@@ -147,8 +147,30 @@ class TestVisualProfile(unittest.TestCase):
         self.assertTrue(bia["en"] and bia["pt"])
         for trait in ("amber", "freckles", HAIR_COLOR, KREA2_TRIGGER):
             self.assertNotIn(trait, bia["en"])
-        self.assertIn("nose stud", bia["en"])
         self.assertNotRegex(bia["en"], r"\b(no|not|without)\b")
+        self.assertNotIn("choker", bia["en"], "acessório é estilo, não quem ela é")
+        import civitai_images as ci
+        from pathlib import Path
+        self.assertTrue((Path(ci.__file__).resolve().parent / ci.FRIEND_RG["bia_andrade"]).is_file())
+
+    def test_friend_face_swap_keeps_marina_side(self):
+        """28/09: da edição fica só o lado da amiga; o lado da Marina é o original, pixel a pixel."""
+        import io
+        from PIL import Image
+        import civitai_images as ci
+
+        def jpg(color):
+            out = io.BytesIO()
+            Image.new("RGB", (400, 600), color).save(out, "JPEG", quality=100)
+            return out.getvalue()
+        merged = Image.open(io.BytesIO(ci.paste_side(jpg((200, 30, 30)), jpg((30, 30, 200)), "right")))
+        self.assertGreater(merged.getpixel((20, 300))[0], 180)    # lado da Marina: original
+        self.assertGreater(merged.getpixel((390, 300))[2], 180)   # lado da amiga: editado
+        body = ci.friend_edit_body(b"a", b"b", side="right", who="the woman with wavy hair", width=400, height=600)
+        step = body["steps"][0]["input"]
+        self.assertEqual((step["model"], step["operation"], step["loras"]), ("edit", "editImage", {}))
+        self.assertEqual(len(step["images"]), 2)
+        self.assertFalse(body["allowMatureContent"])
 
 
 if __name__ == "__main__":

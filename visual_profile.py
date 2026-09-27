@@ -111,18 +111,21 @@ KREA2_DIRECTOR_RULES = (
 )
 KREA2_IDENTITY_SHORT = f"a young Brazilian woman with {HAIR_COLOR} and light amber-hazel eyes"
 
-# Aparência canônica das amigas (Patrick, 28/09), pro Instagram e fotos de rolê. Só texto, sem LoRA:
-# LoRA de rosto da amiga junto do LoRA da Marina mistura as duas (teste 27/09). O contraste com a Marina
-# vem de estrutura (pele, textura do cabelo, rosto) e o "crachá" (piercing, argolas) segura quem ela é.
-# Na foto em grupo a amiga fica de um lado, com "two very different-looking young women" no começo.
+# Aparência canônica das amigas (Patrick, 28/09), pro Instagram e fotos de rolê. Sem LoRA de rosto:
+# junto do LoRA da Marina ele mistura as duas (27/09), e só texto deixa a amiga com a cara da Marina.
+# O rosto vem da foto-RG (civitai_images.FRIEND_RG, troca pelo Krea 2 Edit); o texto dá o corpo e o
+# cabelo pra foto de grupo sair com a amiga no lugar. "en"/"pt" = quem ela é (fixo);
+# "style" = o que ela gosta de usar (entra quando o look pede, não em toda foto).
 FRIENDS_VISUAL = {
-    "bia_andrade": {
-        "en": ("a young Brazilian woman with warm golden-brown skin, big voluminous black curly hair with tight "
-               "curls falling past her shoulders, dark brown almond-shaped eyes, thick dark eyebrows, high "
-               "cheekbones, full lips with berry-red lipstick, a small gold nose stud and large gold hoop earrings"),
-        "pt": ("morena de pele dourada, cabelo preto cacheado e volumoso abaixo dos ombros, olhos castanho-escuros "
-               "amendoados, sobrancelha grossa, maçãs do rosto altas, boca carnuda de batom vermelho-frutado, "
-               "piercing dourado pequeno no nariz e argolas douradas grandes"),
+    "bia_andrade": {   # RG: a nº 4 das candidatas (Patrick, 28/09) — linda, desejada, namoradeira
+        "en": ("a stunning young Brazilian woman with model-like beauty, light olive skin with a soft tan, long "
+               "voluminous dark brown hair in loose messy waves with subtle lighter brown highlights, thick straight "
+               "dark eyebrows and dark brown almond-shaped eyes"),
+        "pt": ("morena linda, com cara de modelo, pele oliva levemente bronzeada, cabelo castanho-escuro comprido e "
+               "volumoso em ondas soltas com mechas mais claras, sobrancelha grossa e reta, olhos castanho-escuros "
+               "amendoados"),
+        "style": ("dramatic black winged eyeliner, gold hoop earrings, black chokers, black night-out outfits",
+                  "delineado gatinho marcado, argolas douradas, chokers pretas, roupa preta de balada"),
     },
 }
 KREA2_ZOOM_OPEN = {
