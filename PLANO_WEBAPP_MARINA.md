@@ -381,3 +381,5 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 **Organização (27/09):** frentes novas de bugs (seção 5) e imagens (seção 6) no `FRENTES_MARINA.md`.
 
 **Frente de imagens (27/09):** nada mudou no Mini App. As fotos dela ganharam 18 poses novas e o plug de coração entrou na gaveta (PLANO_VOZ, "Poses de referência").
+
+**Amigas (27/09, frente de imagens):** pensando no Instagram, a Bia ganhou um LoRA de rosto (teste: sozinha funciona, junto da Marina os rostos se misturam). Nada no Mini App ainda.
