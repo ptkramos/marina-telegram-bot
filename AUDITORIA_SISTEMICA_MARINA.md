@@ -1548,3 +1548,6 @@ Backup: `backups/pre_audit2b_memory_20260923_012559.db`.
 - Ficaram 15 fatos, 12 momentos e 0 pendências abertas.
 
 `tests/test_memory_audit2b.py`, 10 testes (pendência curta sem check-in, deduplicação, vencimento em 12 h, projeto mantém 24 h, abandonado arquivável, dica descritiva sem data, contextual expira em 3 dias, higiene roda as expirações, regras no prompt, `HOJE` com a data da conversa).
+
+## Frente de bugs (27/09)
+Bugs do uso real agora têm frente própria: skill `frente-bugs` (capturar banco, mundo e log antes que mudem; diagnosticar por camada: mundo → prompt → fala) e seção 5 do `FRENTES_MARINA.md`. O primeiro caso é a volta do Quartinho Bar: o mundo estava certo e a fala contradisse o estado `post_event_recovery`.

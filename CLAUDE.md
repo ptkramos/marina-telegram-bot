@@ -20,6 +20,7 @@ ser "praticamente humana" — um mundo vivo onde tudo o que ela faz acontece de 
 | Apps (Mini App: iFood, Nubank, Bastidores) | `frente-apps` | PLANO_WEBAPP |
 | Voz e chat (como ela fala, balões, fotos, proatividade) | `frente-voz` | PLANO_VOZ, AUDITORIA |
 | Infra (VPS, deploy, desempenho, testes) | `frente-infra` | AUDITORIA |
+| Bugs do uso real (capturar, diagnosticar, corrigir) | `frente-bugs` | FRENTES_MARINA.md (seção 5) |
 | Encerrar/trocar de conversa | `passagem-de-bastao` | FRENTES_MARINA.md |
 
 **Quando sugerir conversa nova (regra pra você, Claude):** ao terminar um item grande do painel; quando o assunto

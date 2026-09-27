@@ -58,3 +58,16 @@ dividindo balão; vocabulário da masturbação; música que ele manda por link.
    SQLite por resolve). Cache por dia / conexão reaproveitada.
 2. Do Patrick (ele faz): trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot da VPS.
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
+
+## 5. Bugs — skill `frente-bugs`
+**Abertura:** "bora na frente de bugs: volta do Quartinho (27/09)"
+
+Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
+
+**Abertos:**
+1. **Volta do Quartinho Bar (26→27/09).** Evidências salvas na conversa de 26/09 (conversas 42–69, world_state 104–194, evento 1).
+   - **Ida a pé apesar do combinado.** Às 20:19–20:20 ele pediu "vai e volta de uber" e ela prometeu. A ida saiu a pé (20:48–21:00, `commute:outing:…:c1:ida`). A promessa não chega no modo do trajeto: a agenda reativa trata horário e cancelamento, mas não "vou de uber". Camada: mundo.
+   - **Chat dizendo que ainda estava no bar, com ela em casa.** O mundo estava certo: a volta foi `uber_dividido` com a Bia, 23:59–00:05, e às 00:07 ela já estava em casa (`post_event_recovery`). Às 00:18 ela disse "acabei de terminar o drink, vou pedir o Uber"; às 00:20 disse "no quarto" e depois "me confundi, ainda tô na rua"; às 00:29 veio "Cheguei", mas pelo ritual `banho_rua`. Camada: prompt.
+     - `post_event_recovery` não é `binding` em `world_context.py`, e o texto ("acabou de terminar o compromisso anterior, ainda em casa relaxando") não diz de onde ela voltou nem como.
+     - O histórico ("te aviso quando chegar em casa") venceu o fato.
+     - Ela também não avisou que chegou quando chegou (00:05): a promessa não virou gatilho.
