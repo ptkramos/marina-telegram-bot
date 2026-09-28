@@ -103,9 +103,15 @@ class MiloTest(_Base):
         self.milo.materialize(datetime(2026, 9, 28, 17, 42))
         self.assertIsNone(self._arte_registrada(arte["key"]))
         self._estado(datetime(2026, 9, 28, 17, 45), "em casa, descansando", "free_time")
-        self.milo.materialize(datetime(2026, 9, 28, 17, 47))
-        self.assertEqual(self._arte_registrada(arte["key"]), datetime(2026, 9, 28, 17, 47),
-                         "acontece quando ela volta, na hora em que já está em casa")
+        with patch("agenda.Agenda.agora", return_value=None):
+            self.milo.materialize(datetime(2026, 9, 28, 17, 47))
+            self.assertIsNone(self._arte_registrada(arte["key"]),
+                              "28/09 (auditoria): não no minuto em que chega (17:43 junto com 'Brincando com o Milo')")
+            self.milo.materialize(datetime(2026, 9, 28, 18, 30))
+        from milo import ARTE_DEPOIS_DE_CHEGAR, _rng
+        espera = _rng(d, "arte:chegada").randint(*ARTE_DEPOIS_DE_CHEGAR)
+        self.assertEqual(self._arte_registrada(arte["key"]), datetime(2026, 9, 28, 17, 45) + timedelta(minutes=espera),
+                         "acontece 20–40 min depois que ela chega em casa")
 
     def test_arte_em_casa_fica_na_hora_planejada(self):
         d = date(2026, 9, 28)

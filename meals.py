@@ -102,6 +102,7 @@ SAIDA_PREFIXOS = ("outing", "freela", "vontade", "mercado", "medico", "unhas", "
 SAIDA_ANTES = timedelta(minutes=75)         # caminho (~40) + se arrumar (~35): a refeição acaba antes disso
 SAIDA_ANTES_NOITE = timedelta(minutes=110)  # rolê à noite: arrumação longa (60–90)
 SAIDA_VOLTA = timedelta(minutes=40)
+LANCHE_NOITE_ANTES_DE_DEITAR = timedelta(minutes=15)
 SAIDA_CURTA = timedelta(minutes=90)
 REFEICAO_INTERVALO = timedelta(minutes=60)
 REFEICAO_PISO = {"almoco": time(11, 0), "jantar": time(18, 0)}   # mais cedo que isso não é almoço/jantar
@@ -349,11 +350,22 @@ class Meals:
         chance = 0.05 if diet else (0.25 + (0.25 if tpm else 0.0))
         if rng.random() < chance:
             night = at + timedelta(minutes=rng.randint(80, 150))
-            slots.append(MealSlot("lanche", f"meal:{iso}:lanche:2", night, dur("lanche", rng), "casa",
-                                  rng.choice(["pipoca vendo série", "um chocolate", "um açaí pequeno"])))
+            minutos, prato = dur("lanche", rng), rng.choice(["pipoca vendo série", "um chocolate", "um açaí pequeno"])
+            # 28/09 (auditoria): o Hoje previa "~22:55 Lanche" depois de "~22:30 Dormir" — só se couber antes de deitar
+            if night + timedelta(minutes=minutos) <= self._deitar(day) - LANCHE_NOITE_ANTES_DE_DEITAR:
+                slots.append(MealSlot("lanche", f"meal:{iso}:lanche:2", night, minutos, "casa", prato))
         return self._antes_das_saidas(day, sorted(slots, key=lambda s: s.at), wake, volta)
 
-    ALMOCO_POR_LA = 0.5          # sozinha, depois da última aula: chance de almoçar na PUC/Gávea antes de voltar
+    def _deitar(self, day: date) -> datetime:
+        """A hora de deitar sem os fatores do corpo (ou a congelada): o sono não depende das refeições."""
+        try:
+            from sleep_plan import SleepPlan
+            return SleepPlan(self.db)._bed_simple(day)
+        except Exception:
+            logger.exception("meals.deitar")
+            return datetime.combine(day + timedelta(days=1), time(3, 30))
+
+    ALMOCO_POR_LA = 0.5         # sozinha, depois da última aula: chance de almoçar na PUC/Gávea antes de voltar
     ALMOCO_TARDE = time(14, 0)   # ...e aula acabando daí em diante, sozinha, almoça por lá (em casa seria 16h)
 
     def almoco_pos_aula(self, day: date, modo_volta: str) -> Optional[MealSlot]:
@@ -627,10 +639,17 @@ class Meals:
 
     def _numa_etapa(self, now: datetime) -> bool:
         """27/09, 19:28: "beliscou iogurte com granola" com ela já saindo pra farmácia — o retrato do mundo ainda
-        dizia "em casa". Se arrumando, a caminho, lá ou voltando (aba Agora): não é hora de beliscar em casa."""
+        dizia "em casa". Se arrumando, a caminho, lá ou voltando (aba Agora): não é hora de beliscar em casa.
+        28/09, 16:46 (auditoria): o belisco começou 1 min antes do Se arrumando do passeio do Milo e foi até 16:52
+        — o mundo e o chat ficaram em "beliscando" e o preparo nunca apareceu. Etapa que começa antes do belisco
+        acabar também conta."""
         try:
             from agenda import Agenda
-            return Agenda(self.db).agora(now) is not None
+            ag = Agenda(self.db)
+            if ag.agora(now) is not None:
+                return True
+            ate = now + timedelta(minutes=DURATION_MIN["lanche"][1])
+            return any(now < e.inicio < ate for e in ag.etapas(now.date(), now))
         except Exception:
             return False
 

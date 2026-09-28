@@ -870,7 +870,7 @@ def _motivo_refeicao(text: str) -> str:
 
 
 # Milo: travessura que diverte, que irrita ou que derrete.
-MILO_ANTICS = (("xixi no tapete", "raiva", "irritacao", 0.3), ("manha pedindo colo a noite", "raiva", "impaciencia", 0.25),
+MILO_ANTICS = (("xixi no tapete", "raiva", "irritacao", 0.3), ("pediu colo", "afeto", "ternura", 0.35),
                ("roubou uma meia", "alegria", "diversao", 0.35), ("latiu pro entregador", "alegria", "diversao", 0.25),
                ("deitou em cima da roupa", "alegria", "diversao", 0.25), ("encarando ela", "afeto", "ternura", 0.3),
                ("dormiu encostado", "afeto", "ternura", 0.4))

@@ -356,7 +356,12 @@ class TempoLivre:
             ini = b.fim
         else:
             return None
-        b = self._escolhe(now, chave, max(ini, now - timedelta(minutes=5), self._chegou(now)), fim_slot, registrar)
+        # 28/09 (auditoria): "Viu o desfile 15:53–16:20" e "Montou looks" às 16:16 — o bloco da faixa anterior
+        # ainda corria; o novo começa quando ele acaba
+        anterior = max((datetime.fromisoformat(v["fim"]) for v in guardados.values()
+                        if datetime.fromisoformat(v["inicio"]) < now), default=datetime.min)
+        b = self._escolhe(now, chave, max(ini, now - timedelta(minutes=5), self._chegou(now), min(anterior, now)),
+                          fim_slot, registrar)
         if not registrar:
             return b
         st.setdefault(dia, {})[chave] = {**b.__dict__, "inicio": b.inicio.isoformat(), "fim": b.fim.isoformat()}

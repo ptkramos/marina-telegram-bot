@@ -1787,3 +1787,34 @@ Visto pelo Patrick no Hoje e no chat. Capturado da produção (só leitura) e o 
 - Testes: `tests/test_milo_d5.py` (+3): o caso real de 28/09 (17:21 na Enseada → nada; na volta a pé → nada; em casa
   17:47 → acontece às 17:47), em casa fica na hora sorteada, chegada perto de deitar não tem arte.
 
+## Auditoria de funcionamento, rodada 2 (28/09, 18:00): varredura do Agora e do Hoje
+Pedido do Patrick depois do bug 14 ("o Agora e o Hoje ainda têm muitas pontas soltas"). Cópia do banco feita dentro da
+VPS (`/tmp/audit_2809`, sem trazer pro PC), `Agenda.card(t)` de 5 em 5 min das 04:00 às 18:00 × `world_state` ×
+`life_events` × Hoje × conversa; depois o código novo numa cópia do código em `/tmp` contra outra cópia do banco.
+- **Deploy:** VPS em `d9e1dd5`, `main` em `ddf7ebc` (só painel). Distance Matrix funcionando (2–6 chamadas por dia, o
+  trajeto fica gravado; a última às 05:16, ônibus pra PUC 41/42 min). As duas falhas `RecursionError` das 17:24 foram no
+  processo de antes da correção da pilha (`1d40f4a`, 17:31).
+- **Funciona:** manhã da PUC com card e mundo batendo minuto a minuto; vontade Starbucks → emenda na Pacheco → volta, com
+  consumo no saldo (27 + 13 + 19); passeio do Milo com preparo, ida, lá, volta e a Gabi por proximidade; tempo livre só
+  depois da chegada (13:35, 15:53, 17:43); Hoje com a volta em cada saída e a playlist com os artistas.
+- **Quebrou e foi corrigido** (FRENTES, seção 5, item 15):
+  - Belisco 16:46–16:52 por cima do Se arrumando do passeio (16:47): o `pending_transition` do belisco vence o preparo
+    no resolve, então o mundo nunca disse "se arrumando". `Meals._numa_etapa` agora olha a janela do belisco (15 min).
+  - Arte do Milo adiada no minuto da chegada, junto com "Brincando com o Milo": `Milo._depois_de_chegar` — 20–40 min
+    depois do primeiro retrato em casa (sorteio por dia), fora de etapa. Chamego separado de arte (`milo.CHAMEGO`;
+    Hoje "Chamego com o Milo"; "pediu colo" vira ternura em `emotion.MILO_ANTICS`).
+  - Lanchinho da noite sorteado sem olhar o deitar (`Meals._deitar` = `SleepPlan._bed_simple`, sem depender das
+    refeições; entra só se acabar 15 min antes); Hoje não prevê nada depois do Dormir.
+  - Consumo: "Comprou" em farmácia/mercado (`consumo.COMPRA`), artigo pelo lugar (`vontade.no`), nome de produto
+    inteiro (`consumo._frase`). O Hoje lê "Pediu|Dividiu|Comprou … no|na".
+  - Hoje: sem a linha "comeu fora"/"lanche na rua" (o consumo com valor já conta), ícone pelo tipo da vontade,
+    "Pulou" sem intervalo, bloco em casa cortado no início do próximo; no mundo, `TempoLivre.agora` não começa bloco
+    antes do anterior acabar.
+  - Card: `Agenda._encontros` — contato presencial dentro do Lá vira `Passo(encontro=True)`: aparece feito, na hora,
+    não vira o passo atual (`passo_atual` ignora) e não repete quem foi junto.
+- **Conferido na cópia com o código novo:** card da PUC com "Encontrou o Theo 09:46" e "Encontrou a Júlia 12:32", da
+  Enseada com "Encontrou a Gabi 17:07"; Hoje com "Pulou o café da manhã 07:52", farmácia com a pílula, desfile até 16:16,
+  pão de queijo numa linha só, "Chamego com o Milo"; plano de comida sem o lanche das 22:56; previsto termina no Dormir.
+  Os três consumos de hoje ficam com o texto antigo (já gravados).
+- Testes: `tests/test_bug_auditoria_2809.py` (12) e `tests/test_milo_d5.py` (o caso do bug 14 agora espera 20–40 min).
+

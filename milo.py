@@ -28,11 +28,14 @@ WALKER_EXTRA_LOW_ENERGY = 0.2
 HEAT_BLOCK = (time(11, 30), time(15, 30))
 ANTICS_CHANCE = 0.25
 ARTE_ANTES_DE_DORMIR = timedelta(minutes=30)   # arte adiada (ela estava na rua) não entra na hora de deitar
+ARTE_DEPOIS_DE_CHEGAR = (20, 40)   # 28/09 (auditoria): adiada, vem 20–40 min depois que ela chega, não no minuto
 XIXI_ANTES_DO_PASSEIO = timedelta(minutes=90)   # passeio mais perto que isso do xixi: só o passeio
 ANTICS = ("roubou uma meia e saiu correndo pela casa", "latiu pro entregador do iFood",
-          "fez manha pedindo colo a noite toda", "deitou em cima da roupa que ela ia usar",
+          "pediu colo e não quis mais sair", "deitou em cima da roupa que ela ia usar",
           "ficou encarando ela até ganhar um petisco", "fez xixi no tapete do banheiro",
           "dormiu encostado nela no sofá")
+# 28/09 (Patrick): dormir encostado nela não é arte, é chamego — no Hoje, "Chamego com o Milo"
+CHAMEGO = ("dormiu encostado nela no sofá", "pediu colo e não quis mais sair")
 
 
 def _rng(day: date, name: str) -> random.Random:
@@ -135,11 +138,38 @@ class Milo:
         rng = _rng(day, "arte")
         if rng.random() < ANTICS_CHANCE:
             at = datetime.combine(day, time(9, 0)) + timedelta(minutes=rng.randint(0, 12 * 60))
+            texto = rng.choice(ANTICS)
             plan.append({"key": f"milo:{iso}:arte", "at": at, "minutes": 0, "state": False, "em_casa": True,
-                         "summary": f"O Milo {rng.choice(ANTICS)}."})
+                         "chamego": texto in CHAMEGO, "summary": f"O Milo {texto}."})
         return sorted(plan, key=lambda p: p["at"])
 
     # ------------------------------------------------------------ mundo --
+    def _depois_de_chegar(self, item: dict, now: datetime) -> Optional[datetime]:
+        """28/09 (auditoria): a arte adiada caía no minuto da chegada, junto com "Brincando com o Milo" (17:43).
+        Vem 20–40 min depois que ela chega, fora de etapa da aba Agora. None: ainda não é hora."""
+        from meals import Meals
+        chegou = now
+        with self.db.get_connection() as conn:          # o 1º retrato em casa depois do último fora (ou cochilo)
+            rows = conn.execute("SELECT * FROM world_state WHERE observed_at<=? ORDER BY observed_at DESC, id DESC "
+                                "LIMIT 400", (now.isoformat(),)).fetchall()
+        for r in rows:
+            if Meals._fora(dict(r)):
+                break
+            chegou = datetime.fromisoformat(r["observed_at"])
+        at = max(chegou, item["at"]) + timedelta(minutes=_rng(item["at"].date(), "arte:chegada").randint(*ARTE_DEPOIS_DE_CHEGAR))
+        if at > now:
+            return None
+        try:
+            from agenda import Agenda
+            ag = Agenda(self.db)
+            if ag.agora(now) is not None:
+                return None               # se arrumando pra sair de novo: fica pra quando voltar
+            if ag.agora(at) is not None:
+                at = now
+        except Exception:
+            pass
+        return at
+
     def materialize(self, now: datetime) -> int:
         from meals import Meals
         meals = Meals(self.db)
@@ -155,13 +185,13 @@ class Milo:
             at = item["at"]
             if item.get("em_casa"):
                 # 28/09 (bug 14): a arte é coisa de casa (sofá, meia, tapete). Se ela estava na rua na hora,
-                # o Milo apronta quando ela chega — nunca durante o passeio nem perto de deitar.
+                # o Milo apronta 20–40 min depois que ela chega — nunca durante o passeio nem perto de deitar.
                 if not meals._at_home():
                     continue
                 if meals._away_at(at):
-                    if now >= self._bed(now.date()) - ARTE_ANTES_DE_DORMIR:
+                    at = self._depois_de_chegar(item, now)
+                    if at is None or now >= self._bed(now.date()) - ARTE_ANTES_DE_DORMIR:
                         continue
-                    at = now
             with self.db.get_connection() as conn:
                 fim_item = at + timedelta(minutes=item["minutes"]) if item["minutes"] else None
                 cur = conn.execute(

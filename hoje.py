@@ -20,7 +20,11 @@ FORA = {"father_check_in", "thread_consequence"}
 PERIODOS = (("Manhã", 4, 12), ("Tarde", 12, 18), ("Noite", 18, 28))
 
 # 26/09 (Patrick): ícones do Tabler (outline)
-SAIDA_IC = {"faculdade": "school", "academia": "activity", "milo": "dog", "noite": "moon-stars",
+# 28/09 (auditoria): a farmácia saía com a xícara — toda vontade virava "cafe"
+VONTADE_TIPO = {"farmacia": "farmacia", "mercado": "mercado", "acai": "acai", "orla": "orla", "shopping": "shopping",
+                "praia": "praia"}
+SAIDA_IC = {"farmacia": "pill", "acai": "ice-cream", "orla": "walk", "shopping": "shopping-bag",
+            "faculdade": "school", "academia": "activity", "milo": "dog", "noite": "moon-stars",
             "encontro": "users", "freela": "camera", "praia": "beach", "jogo": "ball-football", "cafe": "coffee",
             "mercado": "shopping-cart", "medico": "building-hospital", "unhas": "brush", "cabelo": "scissors"}
 
@@ -139,10 +143,10 @@ def _curto(ev: dict) -> dict:
     if tipo == "consumo" and s.startswith(("Cabelo na ", "Fez as unhas em gel")):
         return {**out, **_salao(s)}
     if tipo == "consumo":
-        m = re.match(r"(?:Pediu|Dividiu) (.+?)(?: com .+?)? no .+? \(R\$ (\d+)", s)
+        m = re.match(r"(Pediu|Dividiu|Comprou) (.+?)(?: com .+?)? n[oa] .+? \(R\$ (\d+)", s)
         if m:
-            out.update(ic="receipt", texto=("Dividiu " if s.startswith("Dividiu") else "Pediu ") + m.group(1),
-                       valor=int(m.group(2)))
+            out.update(ic="receipt", texto=f"{m.group(1)} {m.group(2)}",
+                       valor=int(m.group(3)))
         else:
             out.update(ic="receipt")
         return out
@@ -193,7 +197,9 @@ def _curto(ev: dict) -> dict:
             return out
         m = re.match(r"O Milo (.+)$", s)
         if m:
-            out.update(ic="dog", texto="Arte do Milo", sub=_cap(m.group(1)))
+            from milo import CHAMEGO                      # 28/09 (Patrick): dormir encostado nela é chamego, não arte
+            chamego = any(m.group(1).startswith(c) for c in CHAMEGO)
+            out.update(ic="dog", texto="Chamego com o Milo" if chamego else "Arte do Milo", sub=_cap(m.group(1)))
             return out
         if "Milo" in s and "xixi" in s:                  # Patrick: "Foi pra calçada" e o xixi recuado
             out.update(ic="dog", texto="Foi pra calçada", filhos=[{"texto": "Xixi do Milo"}])
@@ -360,6 +366,9 @@ def _refeicao(ev: dict, s: str) -> dict:
     """26/09 (Patrick): a refeição na linha 1 e o prato embaixo; presente seu: a loja em cima, os itens embaixo."""
     fim = datetime.fromisoformat(ev["end_at"]) if ev.get("end_at") else None
     estufada = " · comeu além da conta" if "estufada" in s else ""
+    if s.startswith("Pulou"):                       # 28/09 (auditoria): "Pulou o café 07:52–08:05" — pulou não dura
+        return {"ic": "tools-kitchen-2", "texto": _painel(s.split(":")[0]), "fim": None,
+                "sub": _cap(s.split(": ", 1)[1].rstrip(".")) if ": " in s else ""}
     if ev["event_type"] == "snack" or s.startswith("Beliscou"):
         return {"ic": "cookie", "texto": _painel(s.split(";")[0]), "fim": None}
     m = re.match(r"O Patrick mandou de surpresa (.+?) do (.+?) pelo app", s)
@@ -377,7 +386,7 @@ def _refeicao(ev: dict, s: str) -> dict:
         prato = re.sub(r" pedido no iFood$", " do iFood", prato)
         return {"ic": "coffee" if verbo == "Tomou café" else "tools-kitchen-2", "texto": verbo + onde,
                 "fim": fim, "sub": _cap(prato) + estufada}
-    m = re.match(r"Comeu (.+?) no (.+)", s)
+    m = re.match(r"Comeu (.+?) n[oa] (.+)", s)
     if m:
         return {"ic": "tools-kitchen-2", "texto": "Comeu", "sub": _cap(m.group(1)), "fim": fim}
     return {"ic": "tools-kitchen-2", "texto": _painel(s.split(";")[0]), "fim": fim}
@@ -431,7 +440,9 @@ def _saidas(db, dia: date, now: datetime) -> list[dict]:
     try:
         ag = Agenda(db)
         etapas = ag.etapas(dia, now)
-        amigos = {c["key"]: [short_name(f) for f in c["friends"]] for c in ag._compromissos(dia)}
+        comps = ag._compromissos(dia)
+        amigos = {c["key"]: [short_name(f) for f in c["friends"]] for c in comps}
+        tipos = {c["key"]: c.get("tipo", "") for c in comps}
     except Exception:
         logger.exception("hoje.saidas")
         return []
@@ -442,7 +453,7 @@ def _saidas(db, dia: date, now: datetime) -> list[dict]:
     out = []
     for key, es in por.items():
         la = next((e for e in es if e.tipo == "la"), es[0])
-        tipo = _tipo_saida(key, la)
+        tipo = _tipo_saida(key, la, tipos.get(key, ""))
         com = amigos.get(key) or la.com                      # "com a Bia" (o card usa sem artigo)
         titulo = _foi(la.titulo) + (f" com {_e(com)}" if com else "")
         out.append({"key": key, "ini": es[0].inicio, "fim": es[-1].fim, "titulo": titulo,
@@ -464,7 +475,7 @@ def _e(nomes: list) -> str:
     return nomes[0] if len(nomes) == 1 else ", ".join(nomes[:-1]) + " e " + nomes[-1]
 
 
-def _tipo_saida(key: str, la) -> str:
+def _tipo_saida(key: str, la, tipo_vontade: str = "") -> str:
     if key.startswith("puc:"):
         return "faculdade"
     if key.startswith("gym:"):
@@ -477,7 +488,7 @@ def _tipo_saida(key: str, la) -> str:
         if key.startswith(t + ":"):
             return t
     if key.startswith("vontade:"):
-        return "cafe"
+        return VONTADE_TIPO.get(tipo_vontade, "cafe")
     if la.lugar_key.endswith("_beach"):
         return "praia"
     if la.lugar_key == "estadio_nilton_santos":
@@ -525,6 +536,9 @@ def _previstos(db, dia: date, now: datetime, saidas: list[dict]) -> list[dict]:
         from sleep_plan import SleepPlan
         bed = SleepPlan(db).bed(dia)
         if bed > now:
+            # 28/09 (auditoria): "~21:50 Dormir" e "~21:55 Série" (treinou e o corpo pediu cama) — depois de
+            # deitar não tem mais nada previsto
+            out = [p for p in out if p["at"] < bed]
             out.append({"at": bed, "ic": "moon", "texto": "Dormir"})
     except Exception:
         logger.exception("hoje.previsto.dormir")
@@ -554,6 +568,8 @@ def _hoje_view(db, now: datetime) -> dict:
         logger.exception("hoje.acordou")
 
     for ev in _eventos(db, ini, now):
+        if ev["event_type"] in ("meal", "snack") and (ev["event_key"].endswith(":fora") or ":lanche:rua:" in ev["event_key"]):
+            continue          # 28/09 (auditoria): "Pediu pão de queijo R$ 13" e "Comeu pão de queijo no Starbucks"
         at = datetime.fromisoformat(ev["event_at"])
         it = {"at": at, "key": ev["event_key"], **curto(ev)}
         if ev["event_type"] == "tempo_livre" and ev["event_key"] in fins:
@@ -565,6 +581,8 @@ def _hoje_view(db, now: datetime) -> dict:
     # 27/09: o banho interrompe o que ela fazia em casa (o Instagram 00:02–00:38 com banho às 00:31)
     # e a saída também (27/09: "Montou looks" até 15:11 com a academia às 14:53)
     banhos = [it["at"] for it in itens if it["ic"] == "chuveiro"] + [s["ini"] for s in saidas]
+    # 28/09 (auditoria): "Viu o desfile 15:53–16:20" com "Montou looks" começando 16:16
+    banhos += [it["at"] for it in itens if it.get("key", "").startswith("livre:")]
     for it in itens:
         corte = next((b for b in banhos if it["ic"] != "chuveiro" and it.get("fim") and it["at"] < b < it["fim"]), None)
         if corte:

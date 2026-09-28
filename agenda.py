@@ -100,6 +100,7 @@ class Passo:
     inicio: datetime
     valor: Optional[int] = None
     aviso: bool = False
+    encontro: bool = False        # 28/09 (Patrick): "Encontrou a Gabi 17:07" no Lá — marca a hora, não vira o passo atual
 
 
 @dataclass
@@ -599,9 +600,31 @@ class Agenda:
                 passos.append(Passo(antes[-1].texto, inicio, valor=antes[-1].valor))
             passos.append(Passo(f"Chegou {duracao(timedelta(minutes=ida.atraso))} atrasada", inicio, aviso=True))
             passos.sort(key=lambda p: (p.inicio, not p.aviso))
+        passos = sorted(passos + self._encontros(c, inicio, fim_la), key=lambda p: p.inicio)
         return Etapa("la", titulo, inicio, fim_la, linha2=f"Volta pra casa às {aprox(fim_la)}",
                      lugar_key=c["place"], bairro=place["region"], com=com, celular=cel, passos=passos,
                      chave=f"la:{c['key']}")
+
+    def _encontros(self, c: dict, inicio: datetime, fim: datetime) -> list[Passo]:
+        """28/09 (Patrick): quem ela encontrou lá (o Theo e a Júlia na PUC, a Gabi na Enseada) só aparecia no Hoje.
+        Só o que já aconteceu (o acontecimento existe) e sem quem já foi com ela."""
+        try:
+            from hoje import curto
+            with self.db.get_connection() as conn:
+                rows = [dict(r) for r in conn.execute(
+                    "SELECT * FROM life_events WHERE event_type='social_contact' AND title LIKE 'presencial%' "
+                    "AND event_at>=? AND event_at<? ORDER BY event_at", (inicio.isoformat(), fim.isoformat()))]
+        except Exception:
+            logger.exception("agenda.encontros")
+            return []
+        junto = set(c.get("friends") or [])
+        out = []
+        for ev in rows:
+            partes = ev["event_key"].split(":")
+            if len(partes) > 2 and partes[2] in junto:
+                continue
+            out.append(Passo(curto(ev)["texto"], datetime.fromisoformat(ev["event_at"]), encontro=True))
+        return out
 
     def _reativa(self, key: str, passos: list, fim_la: datetime) -> list:
         """Agenda reativa (26/09): pausa no banheiro e saída mais cedo aparecem nos passos."""
@@ -647,7 +670,7 @@ class Agenda:
         return None
 
     def passo_atual(self, etapa: Etapa, now: datetime) -> Optional[Passo]:
-        atuais = [p for p in etapa.passos if p.inicio <= now and not p.aviso]
+        atuais = [p for p in etapa.passos if p.inicio <= now and not p.aviso and not p.encontro]
         return atuais[-1] if atuais else None
 
     def prep_activity(self, now: datetime) -> Optional[dict]:
@@ -718,7 +741,7 @@ class Agenda:
                 atual_passo = self.passo_atual(e, now)
                 for p in e.passos:
                     feito = p.inicio <= now
-                    if p.aviso and not feito:
+                    if (p.aviso or p.encontro) and not feito:
                         continue                    # 28/09: o imprevisto só aparece depois de acontecer
                     st = "aviso" if p.aviso and feito else "agora" if p is atual_passo else "feito" if feito else "depois"
                     if e.tipo == "la" and not feito and p.valor is not None:

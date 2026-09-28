@@ -81,6 +81,24 @@ def _secoes(loja_id: str) -> list:
         return []
 
 
+def _frase(nome: str) -> str:
+    """28/09 (auditoria): "caramel Macchiato Grande" — nome de produto com maiúscula no meio fica como está;
+    "Pão de queijo" vira "pão de queijo"."""
+    return nome if any(c.isupper() for c in nome[1:]) else nome[:1].lower() + nome[1:]
+
+
+def _no(lugar: str) -> str:
+    """"na Drogarias Pacheco", "no Starbucks" (o mesmo artigo do card)."""
+    try:
+        from vontade import no
+        return no(lugar)
+    except Exception:
+        return f"no {lugar}"
+
+
+COMPRA = ("farmacia", "mercado")      # 28/09 (auditoria): loja que não é de comida — "Comprou", não "Pediu"
+
+
 def _parte(preco: float, pessoas: int, dividido: bool) -> int:
     return int(math.ceil(preco / pessoas)) if dividido else int(round(preco))
 
@@ -136,7 +154,7 @@ def plan(outing: dict) -> list[Item]:
             at = start + timedelta(minutes=rng.randint(2, 6))
             escolhidos = rng.sample(itens, k=1 if rng.random() < 0.6 or len(itens) < 2 else 2)
             for n, i in enumerate(escolhidos):
-                add(at + timedelta(minutes=n), (i["nome"], i["nome"][:1].lower() + i["nome"][1:], i["preco"]),
+                add(at + timedelta(minutes=n), (i["nome"], _frase(i["nome"]), i["preco"]),
                     comida=meta.get("tipo") in ("cafe", "acai"))
     elif place == "starbucks_shopping_gavea":
         menu = _starbucks()
@@ -207,10 +225,11 @@ class Consumo:
         return created
 
     def _record(self, outing, n, item: Item, lugar: str, com: str, friends: list, now: datetime) -> int:
+        compra = (json.loads(outing.get("metadata_json") or "{}") or {}).get("tipo") in COMPRA
         if item.dividido:
-            summary = f"Dividiu {item.frase} com {com} no {lugar} (R$ {item.valor}, a parte dela)."
+            summary = f"Dividiu {item.frase} com {com} {_no(lugar)} (R$ {item.valor}, a parte dela)."
         else:
-            summary = f"Pediu {item.frase} no {lugar} (R$ {item.valor})."
+            summary = f"{'Comprou' if compra else 'Pediu'} {item.frase} {_no(lugar)} (R$ {item.valor})."
         title = f"{lugar} · {item.nome}" + (" (dividiu)" if item.dividido else "")
         with self.db.get_connection() as conn:
             cur = conn.execute(
@@ -237,7 +256,7 @@ class Consumo:
                autonomy_level,importance,participants_json,share_worthy,created_at)
                VALUES (?,?,?,?,?,'simulated',1,0.1,?,0.2,?)""",
             (f"meal:{day}:{kind}:fora", item.at.isoformat(), "snack" if kind == "lanche" else "meal",
-             f"comeu fora ({lugar})", f"Comeu {item.frase} no {lugar}.", json.dumps(["marina", *friends]),
+             f"comeu fora ({lugar})", f"Comeu {item.frase} {_no(lugar)}.", json.dumps(["marina", *friends]),
              now.isoformat()))
 
     def _transport(self, day, floor: datetime, now: datetime) -> int:

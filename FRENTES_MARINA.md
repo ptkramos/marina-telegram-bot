@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 17:55 (frente de bugs: item 14 resolvido e na produção — a arte do Milo só acontece com ela em casa; próxima conversa na auditoria de funcionamento, varredura do Agora e do Hoje de 28/09)._
+_Atualizado em 28/09/2026, 19:00 (auditoria de funcionamento, rodada 2: varredura do Agora e do Hoje de 28/09 — item 15 dos bugs, corrigido)._
 
 ---
 
@@ -193,6 +193,33 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
     - O Patrick sente que o Agora e o Hoje ainda têm muitas pontas soltas com tudo o que foi construído — vale uma
       varredura (frente de auditoria de funcionamento) depois deste.
 
+15. ✅ **Varredura do Agora e do Hoje de 28/09 (auditoria de funcionamento, rodada 2)** — corrigido em 28/09
+    (`tests/test_bug_auditoria_2809.py`, 12 testes; `test_milo_d5` atualizado). Card minuto a minuto × mundo × Hoje
+    numa cópia do banco feita **dentro da VPS** (o banco não sai de lá), 04:00–18:00.
+    - **Belisco atravessando o preparo (16:46).** O belisco começou 1 min antes do Se arrumando do passeio do Milo e
+      foi até 16:52: o mundo e o chat ficaram em "beliscando em casa" e o preparo nunca chegou ao mundo. A trava só
+      olhava o minuto em que ela começava a comer; agora etapa que começa antes do belisco acabar também segura.
+      Camada: mundo (`meals._numa_etapa`).
+    - **Arte do Milo no minuto da chegada (17:43).** Adiada (ela estava na rua), caía junto com "Brincando com o Milo".
+      Agora vem 20–40 min depois que ela chega, fora de etapa. E (Patrick) **dormir encostado nela é chamego, não
+      arte**: no Hoje, "Chamego com o Milo"; "pediu colo e não quis mais sair" (era "fez manha pedindo colo a noite
+      toda") também é chamego e derrete em vez de irritar. Camada: mundo e app (`milo.py`, `hoje.py`, `emotion.py`).
+    - **Previsto depois de dormir.** "~22:55 Lanche" depois de "~22:30 Dormir"; e, com o treino, "~21:55 Série"
+      depois de "~21:50 Dormir". O lanchinho da noite só entra no plano se acabar 15 min antes de deitar; o Hoje não
+      prevê nada depois do Dormir. Camada: mundo e app.
+    - **"Pediu vitamina C… no Drogarias Pacheco" e "Pediu caramel Macchiato Grande".** Farmácia e mercado dizem
+      "Comprou"; o artigo segue o lugar ("na Drogarias Pacheco"); nome de produto com maiúscula no meio fica inteiro.
+      Vai pro Hoje e pro dia que ela lê no prompt. Camada: mundo (`consumo.py`).
+    - **Hoje:** pão de queijo em duas linhas (o consumo com o valor já diz; a refeição "comeu fora" sai do Hoje);
+      farmácia com a xícara (ícone pelo tipo da vontade: pílula, sorvete, caminhada, sacola, praia); "Pulou o café
+      07:52–08:05" (pulou não dura: só a hora); "Viu o desfile 15:53–16:20" com "Montou looks" às 16:16 (o bloco
+      termina quando o próximo começa, e no mundo o bloco novo espera o anterior acabar). Camada: app e mundo.
+    - **Card (decisão do Patrick):** quem ela encontrou lá vira passo do Lá na hora em que aconteceu ("Encontrou a
+      Gabi 17:07", "Encontrou o Theo 09:46"), sem virar o passo atual e sem quem foi junto com ela. Camada: card.
+    - Sobras de bugs já corrigidos, sem ação: almoço "na PUC" 13:15–13:58 com ela na carona (bug 13; ela confirmou no
+      chat às 13:45), banho da manhã não registrado (bug 11) e "Foi pra calçada" sem volta (bug 13). O
+      `RecursionError` das 17:24 foi no processo antigo, antes da correção da pilha subir.
+
 **Abertos:** nenhum.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
@@ -234,6 +261,13 @@ O Patrick está achando muitos bugs no uso real: o dia 26/09 teve ~50 commits em
 Bug achado vira item na seção 5 (Bugs), com a correção feita aqui mesmo se for pequena.
 
 **Próxima rodada (pedido do Patrick, 28/09, bug 14):** ele sente que o Agora e o Hoje ainda têm muitas pontas soltas com tudo o que foi construído. Varredura do dia 28/09 inteiro numa cópia do banco (`.backup`, `COMMUTE_LIVE_TIMES=false`): `Agenda(db).card(t)` minuto a minuto × `world_state` × Hoje × `life_events` × conversa; cada desencontro vira item na seção 5. Olhar em especial acontecimento "de casa" com ela na rua (o Milo era um; conferir os outros sorteios do dia).
+
+**Rodada 2 (28/09, 18:00) — feita:** item 15 da seção 5. Funciona: PUC (se arrumando → metrô e ônibus com a
+Distance Matrix → aula → carona → casa), vontade Starbucks → emenda na Pacheco → volta com consumo no saldo, passeio
+do Milo com as quatro etapas, tempo livre começando na chegada, correções dos bugs 10–14. Não exercitado: academia com
+preparo às 18:23, banho pós-treino, jantar, série, xixi da noite e se arrumando pra dormir — próxima rodada olha a
+noite de 28/09 e a manhã de 29/09. Método que valeu: a varredura roda na VPS numa cópia em `/tmp` (banco não vem pro
+PC; `COMMUTE_LIVE_TIMES=false`), e o código novo roda numa cópia do código em `/tmp` antes do deploy.
 
 **Status:** rodada 1 feita e no ar (`5332280`). Próxima rodada quando o "não exercitado" abaixo acontecer no uso real (academia em dia útil, vontade, Ophicina, fotos).
 
