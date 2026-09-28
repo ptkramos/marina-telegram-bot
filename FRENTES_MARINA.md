@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 17:40 (frente de infra: pilha no limite e desempenho resolvidos — ciclo trechos → sono cortado, plano do dia uma vez por rodada; bug aberto 14, Milo "no sofá" durante o passeio, capturado pra frente de bugs)._
+_Atualizado em 28/09/2026, 17:55 (frente de bugs: item 14 resolvido e na produção — a arte do Milo só acontece com ela em casa; próxima conversa na auditoria de funcionamento, varredura do Agora e do Hoje de 28/09)._
 
 ---
 
@@ -65,6 +65,7 @@ dividindo balão; vocabulário da masturbação; música que ele manda por link.
 1. Regras das fotos por promessa (PLANO_VOZ 15: quando ela cumpre) e auditoria do prompt do chat (PLANO_VOZ 16).
 2. Observar coerência entre turnos e qualidade das iniciativas no uso real (PLANO_VOZ 12, com /bom e /ruim).
 3. Técnicas antigas (PLANO_VOZ 13).
+4. Histórico puxando assunto velho (bug 14, 28/09): às 17:24, passeando na Enseada, ela disse "tô organizando umas referências de look" — repetição do que ela disse às 13:41. A causa principal (o sofá do Milo no prompt) saiu; se voltar a acontecer sem fato contraditório, é da voz.
 
 ## 4. Infra — skill `frente-infra`
 **Abertura:** "bora na frente de infra: API paga de rotas — quantas chamadas a produção faz por dia e o default local desligado"
@@ -82,7 +83,7 @@ despertador passa a seguir sempre a regra). Detalhe na AUDITORIA ("Frente de inf
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
-**Abertura:** "bora na frente de bugs: item 14 — o Milo 'dormiu no sofá' às 17:21 com ela no passeio na Enseada, e ela confirmou no chat (e o look de antes)"
+**Abertura:** "bora na frente de bugs: peguei um bug" (nenhum aberto; traga o print ou a hora)
 
 Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
 
@@ -211,7 +212,7 @@ O *quando* ela manda foto continua na frente da voz.
 5. Do Patrick: trocar a chave do Civitai (vazou em 24/09).
 
 ## 7. Auditoria de funcionamento — skill `frente-auditoria`
-**Abertura:** "bora na auditoria de funcionamento: tudo o que fizemos em 26/09"
+**Abertura:** "bora na auditoria de funcionamento: varredura do Agora e do Hoje de 28/09 — as pontas soltas com tudo o que foi construído"
 
 O Patrick está achando muitos bugs no uso real: o dia 26/09 teve ~50 commits em várias conversas, e muita coisa pode ter ficado desamarrada (um módulo novo que o outro não conhece). Não é criar nada novo: é conferir se cada entrega **funciona de verdade na produção**, junto com as outras.
 
@@ -231,6 +232,8 @@ O Patrick está achando muitos bugs no uso real: o dia 26/09 teve ~50 commits em
 8. Imagens (27/09): câmera segue a situação, catálogo de poses, unha e cabelo nas fotos.
 
 Bug achado vira item na seção 5 (Bugs), com a correção feita aqui mesmo se for pequena.
+
+**Próxima rodada (pedido do Patrick, 28/09, bug 14):** ele sente que o Agora e o Hoje ainda têm muitas pontas soltas com tudo o que foi construído. Varredura do dia 28/09 inteiro numa cópia do banco (`.backup`, `COMMUTE_LIVE_TIMES=false`): `Agenda(db).card(t)` minuto a minuto × `world_state` × Hoje × `life_events` × conversa; cada desencontro vira item na seção 5. Olhar em especial acontecimento "de casa" com ela na rua (o Milo era um; conferir os outros sorteios do dia).
 
 **Status:** rodada 1 feita e no ar (`5332280`). Próxima rodada quando o "não exercitado" abaixo acontecer no uso real (academia em dia útil, vontade, Ophicina, fotos).
 
