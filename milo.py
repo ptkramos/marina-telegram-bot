@@ -27,6 +27,7 @@ WALKER_CHANCE_TIRED = 0.35      # noite curta
 WALKER_EXTRA_LOW_ENERGY = 0.2
 HEAT_BLOCK = (time(11, 30), time(15, 30))
 ANTICS_CHANCE = 0.25
+ARTE_ANTES_DE_DORMIR = timedelta(minutes=30)   # arte adiada (ela estava na rua) não entra na hora de deitar
 XIXI_ANTES_DO_PASSEIO = timedelta(minutes=90)   # passeio mais perto que isso do xixi: só o passeio
 ANTICS = ("roubou uma meia e saiu correndo pela casa", "latiu pro entregador do iFood",
           "fez manha pedindo colo a noite toda", "deitou em cima da roupa que ela ia usar",
@@ -134,7 +135,7 @@ class Milo:
         rng = _rng(day, "arte")
         if rng.random() < ANTICS_CHANCE:
             at = datetime.combine(day, time(9, 0)) + timedelta(minutes=rng.randint(0, 12 * 60))
-            plan.append({"key": f"milo:{iso}:arte", "at": at, "minutes": 0, "state": False,
+            plan.append({"key": f"milo:{iso}:arte", "at": at, "minutes": 0, "state": False, "em_casa": True,
                          "summary": f"O Milo {rng.choice(ANTICS)}."})
         return sorted(plan, key=lambda p: p["at"])
 
@@ -151,13 +152,23 @@ class Milo:
                 continue
             if item["state"] and not meals._at_home():
                 continue              # na rua: leva o Milo quando voltar
+            at = item["at"]
+            if item.get("em_casa"):
+                # 28/09 (bug 14): a arte é coisa de casa (sofá, meia, tapete). Se ela estava na rua na hora,
+                # o Milo apronta quando ela chega — nunca durante o passeio nem perto de deitar.
+                if not meals._at_home():
+                    continue
+                if meals._away_at(at):
+                    if now >= self._bed(now.date()) - ARTE_ANTES_DE_DORMIR:
+                        continue
+                    at = now
             with self.db.get_connection() as conn:
-                fim_item = item["at"] + timedelta(minutes=item["minutes"]) if item["minutes"] else None
+                fim_item = at + timedelta(minutes=item["minutes"]) if item["minutes"] else None
                 cur = conn.execute(
                     """INSERT OR IGNORE INTO life_events(event_key,event_at,end_at,event_type,title,summary,
                        source_type,autonomy_level,importance,participants_json,share_worthy,created_at)
                        VALUES (?,?,?,?,?,?,'simulated',1,0.1,?,0.3,?)""",
-                    (item["key"], item["at"].isoformat(), fim_item.isoformat() if fim_item else None, "routine",
+                    (item["key"], at.isoformat(), fim_item.isoformat() if fim_item else None, "routine",
                      "Milo", item["summary"], json.dumps(["marina"]), now.isoformat()))
                 conn.commit()
                 fresh = bool(cur.rowcount)

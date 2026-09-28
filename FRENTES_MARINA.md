@@ -177,18 +177,22 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
    - Registrados: lista de compras (barrinhas) na frente do mundo, item 8; pilha no limite e API paga em script local
      na infra.
 
-**Abertos:**
-14. ⬜ **Milo "no sofá" durante o passeio na Enseada (28/09, 17:21, visto pelo Patrick no Hoje e no chat)** —
-    capturado da produção às 17:30 (só leitura): mundo 16:56–17:39 "passeando com Milo" (Enseada; 17:07 encontrou a
-    Gabi), e às 17:21 o acontecimento `milo:2026-09-28:arte` "O Milo dormiu encostado nela no sofá". No chat ela
-    confirmou e disse que estava "organizando um look" (o bloco "montando looks" foi 16:16–16:47, antes de sair).
-    - Causa do Milo (mundo): a arte do Milo (`milo.day_plan`, chave `arte`) sorteia 09:00–21:00 e o `materialize` não
-      olha onde ela está (só o xixi da noite checa `_at_home`). Falta: só em casa e fora de saída/passeio; o texto da
-      arte é de casa (sofá), então fora de casa ela não acontece (ou espera ela voltar).
-    - Falta ver a conversa (camada prompt → fala): por que ela confirmou o sofá e trouxe o look de 30 min antes como
-      se fosse agora.
+14. ✅ **Milo "no sofá" durante o passeio na Enseada (28/09, 17:21, visto pelo Patrick no Hoje e no chat)** —
+    corrigido em 28/09 (`tests/test_milo_d5.py`, +3). Mundo 16:56–17:39 "passeando com Milo" (Enseada; 17:07 a Gabi);
+    às 17:21 o acontecimento `milo:2026-09-28:arte` "O Milo dormiu encostado nela no sofá"; às 17:24 ela: "Tô
+    organizando umas referências de look aqui e o Milo tá dormindo do meu lado".
+    - **Mundo (a causa):** a arte do Milo sorteava 09:00–21:00 sem olhar onde ela estava. Agora é coisa de casa: com
+      ela na rua espera; se ela estava fora na hora sorteada, acontece quando ela chega (nunca nos 30 min antes de
+      deitar). O Hoje e o "derretida" vêm junto.
+    - **Prompt:** às 17:24 dizia certo "passeando com Milo, Enseada… não diga que está em casa", mas também o sofá das
+      17:21 (no dia e no sentimento). Dois fatos brigando; ela ficou com o sofá.
+    - **Fala:** o look não veio do bloco "montando looks" (16:16–16:47, fora do prompt): veio dela mesma às 13:41 no
+      histórico ("olhando o Pinterest… referências de look"). Sem o sofá o estado atual volta a mandar; fica anotado
+      (histórico puxando assunto velho), sem mudança agora.
     - O Patrick sente que o Agora e o Hoje ainda têm muitas pontas soltas com tudo o que foi construído — vale uma
       varredura (frente de auditoria de funcionamento) depois deste.
+
+**Abertos:** nenhum.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** "bora na frente de imagens: quarto apagado com flash e foto de grupo das outras amigas"

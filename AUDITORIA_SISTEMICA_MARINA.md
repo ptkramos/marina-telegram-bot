@@ -1764,3 +1764,26 @@ de 28/09 (11:54), com a API de rotas desligada.
   independente da ordem, pilha rasa no resolve (os 4 falham no código antigo), e as regras da rodada (grava → recalcula,
   outro gerente do mesmo arquivo, transação, reentrância, dublê de banco, resolve igual com e sem rodada).
 
+## Bug 14 (28/09, noite): o Milo "no sofá" durante o passeio
+Visto pelo Patrick no Hoje e no chat. Capturado da produção (só leitura) e o prompt refeito numa cópia do banco.
+- **O que aconteceu:** mundo 16:56–17:39 "passeando com Milo" na Enseada (17:07 encontrou a Gabi). Às 17:21 virou
+  acontecimento `milo:2026-09-28:arte` "O Milo dormiu encostado nela no sofá". Às 17:24 ele perguntou "fazendo uq de
+  bom?" e ela: "Tô organizando umas referências de look aqui e o Milo tá dormindo do meu lado".
+- **Camada 1, mundo (a causa):** a arte do Milo sorteia uma hora entre 09:00 e 21:00 e o `Milo.materialize` não olhava
+  onde ela estava (só o xixi da noite checava se ela estava em casa). Todas as artes são de casa (sofá, meia, tapete,
+  entregador).
+- **Camada 2, prompt:** às 17:24 o prompt dizia certo "[SEU ESTADO ATUAL — FATO CANÔNICO] Local: Enseada. Atividade:
+  passeando com Milo… Não diga que está em casa", mas também "Sentindo agora: derretida — O Milo dormiu encostado nela
+  no sofá" e "17:21 — O Milo dormiu encostado nela no sofá" em "[SEU DIA ATÉ AGORA — aconteceu de verdade]". Dois fatos
+  brigando; ela ficou com o sofá.
+- **Camada 3, fala:** o "look" não veio do bloco "montando looks" das 16:16 (o prompt das 17:24 não fala de look); veio
+  do histórico dela mesma às 13:41 ("largada na sala olhando o Pinterest, achei umas referências de look"). Com o sofá
+  dizendo "em casa", ela repetiu o assunto da tarde como se fosse agora. Sem o fato contraditório, o estado atual volta
+  a mandar; fica anotado como caso de histórico puxando o assunto velho (voz), sem mudança agora.
+- **Correção:** a arte é marcada como coisa de casa (`em_casa`). Com ela na rua, espera; se ela estava fora na hora
+  sorteada, o Milo apronta quando ela chega (a hora do acontecimento é a da chegada, não a sorteada), e não entra nos
+  30 min antes de deitar (`ARTE_ANTES_DE_DORMIR`). Em casa na hora sorteada, nada muda. O sentimento ("derretida") e o
+  Hoje leem o acontecimento, então vêm junto.
+- Testes: `tests/test_milo_d5.py` (+3): o caso real de 28/09 (17:21 na Enseada → nada; na volta a pé → nada; em casa
+  17:47 → acontece às 17:47), em casa fica na hora sorteada, chegada perto de deitar não tem arte.
+

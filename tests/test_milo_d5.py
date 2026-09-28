@@ -78,6 +78,52 @@ class MiloTest(_Base):
         antics = [d for d in self.days if any(p["key"].endswith(":arte") for p in self.milo.day_plan(d))]
         self.assertTrue(0 < len(antics) < len(self.days))
 
+    def _estado(self, t: datetime, activity: str, reason: str):
+        with self.db.get_connection() as conn:
+            conn.execute("INSERT INTO world_state (state_date, observed_at, activity, source_json) VALUES (?,?,?,?)",
+                         (t.date().isoformat(), t.isoformat(), activity, json.dumps({"reason": reason})))
+            conn.commit()
+
+    def _arte_registrada(self, key: str):
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT event_at FROM life_events WHERE event_key=?", (key,)).fetchone()
+        return datetime.fromisoformat(row[0]) if row else None
+
+    def test_arte_do_milo_so_acontece_com_ela_em_casa(self):
+        # 28/09, 17:21 (bug 14): "O Milo dormiu encostado nela no sofá" com ela passeando com ele na Enseada.
+        d = date(2026, 9, 28)
+        arte = next(p for p in self.milo.day_plan(d) if p["key"].endswith(":arte"))
+        self.assertEqual(arte["at"].strftime("%H:%M"), "17:21")
+        self._estado(datetime(2026, 9, 28, 16, 46), "beliscando em casa", "announced_transition")
+        self._estado(datetime(2026, 9, 28, 16, 51), "indo pra Enseada a pé", "commute")
+        self._estado(datetime(2026, 9, 28, 16, 56), "passeando com Milo", "milo_morning_walk")
+        self.milo.materialize(datetime(2026, 9, 28, 17, 23))
+        self.assertIsNone(self._arte_registrada(arte["key"]), "na rua o Milo não apronta em casa")
+        self._estado(datetime(2026, 9, 28, 17, 39), "voltando pra casa a pé", "commute")
+        self.milo.materialize(datetime(2026, 9, 28, 17, 42))
+        self.assertIsNone(self._arte_registrada(arte["key"]))
+        self._estado(datetime(2026, 9, 28, 17, 45), "em casa, descansando", "free_time")
+        self.milo.materialize(datetime(2026, 9, 28, 17, 47))
+        self.assertEqual(self._arte_registrada(arte["key"]), datetime(2026, 9, 28, 17, 47),
+                         "acontece quando ela volta, na hora em que já está em casa")
+
+    def test_arte_em_casa_fica_na_hora_planejada(self):
+        d = date(2026, 9, 28)
+        arte = next(p for p in self.milo.day_plan(d) if p["key"].endswith(":arte"))
+        self._estado(datetime(2026, 9, 28, 16, 0), "em casa, descansando", "free_time")
+        self.milo.materialize(arte["at"] + timedelta(minutes=10))
+        self.assertEqual(self._arte_registrada(arte["key"]), arte["at"])
+
+    def test_arte_adiada_nao_passa_da_hora_de_dormir(self):
+        d = date(2026, 9, 28)
+        arte = next(p for p in self.milo.day_plan(d) if p["key"].endswith(":arte"))
+        self._estado(datetime(2026, 9, 28, 16, 56), "passeando com Milo", "milo_morning_walk")
+        self.milo.materialize(arte["at"] + timedelta(minutes=2))
+        tarde = self.milo._bed(d) - timedelta(minutes=10)
+        self._estado(tarde - timedelta(minutes=5), "em casa, descansando", "free_time")
+        self.milo.materialize(tarde)
+        self.assertIsNone(self._arte_registrada(arte["key"]), "chegou quase na hora de dormir: hoje não teve")
+
 
 class NapTest(_Base):
     def test_short_night_brings_an_afternoon_nap_sometimes(self):
