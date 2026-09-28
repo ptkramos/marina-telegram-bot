@@ -6,6 +6,8 @@ Roda na VPS (as fotos ficam em data/instagram/ e os posts no banco de lá):
     venv/bin/python scripts/instagram_acervo.py --refoto 5   # refaz a foto do post 5 (pose e roupa novas)
     venv/bin/python scripts/instagram_acervo.py --textos     # apaga e refaz legendas e comentários de todos
     venv/bin/python scripts/instagram_acervo.py --trocar 7   # só a troca de rosto da amiga (quando ela falhou)
+    venv/bin/python scripts/instagram_acervo.py --trocar 7 --base novo7c.jpg   # troca sobre uma foto de fora
+    venv/bin/python scripts/instagram_acervo.py --colocar 7 --base foto.jpg    # põe uma foto já aprovada
 
 - Foto de perfil da Ma (retrato vestido, recortado quadrado).
 - 9 posts dela nos últimos ~2 meses e 2 de cada amiga (foto nova sobre o RG).
@@ -151,19 +153,28 @@ async def refoto(db, pid: int, pose: str) -> None:
     print(f"FOTO {nome}")
 
 
-async def trocar(db, pid: int) -> None:
-    """Só a troca de rosto da amiga na foto que já está no post (quando a troca falhou e a foto ficou boa)."""
+async def trocar(db, pid: int, base: str = "") -> None:
+    """Só a troca de rosto da amiga na foto que já está no post (quando a troca falhou e a foto ficou boa),
+    ou numa foto de fora (--base arquivo: uma tentativa anterior de que o Patrick gostou)."""
     import civitai_images
     p = ig.post(db, pid)
     amiga = next((a for a in json.loads(p["marcados_json"] or "[]") if a in civitai_images.FRIEND_RG), "")
     if not amiga:
         print("post sem amiga de RG")
         return
-    trocada = await civitai_images.swap_friend_face(ig.caminho(p["imagem"]).read_bytes(), amiga)
+    foto = Path(base).read_bytes() if base else ig.caminho(p["imagem"]).read_bytes()
+    trocada = await civitai_images.swap_friend_face(foto, amiga)
     if not trocada:
         print("falhou")
         return
     nome = ig.salvar_imagem(trocada)
+    ig._exec(db, "UPDATE ig_posts SET imagem=? WHERE id=?", (nome, pid))
+    print(f"FOTO {nome}")
+
+
+def colocar(db, pid: int, arquivo: str) -> None:
+    """Põe no post uma foto já pronta (aprovada pelo Patrick fora do script), sem gerar nada."""
+    nome = ig.salvar_imagem(Path(arquivo).read_bytes())
     ig._exec(db, "UPDATE ig_posts SET imagem=? WHERE id=?", (nome, pid))
     print(f"FOTO {nome}")
 
@@ -251,12 +262,16 @@ if __name__ == "__main__":
     ap.add_argument("--pose", default="", help="com --refoto: pose do catálogo")
     ap.add_argument("--textos", action="store_true", help="apaga e refaz legendas e comentários")
     ap.add_argument("--trocar", type=int, help="id do post: só refaz a troca de rosto da amiga")
+    ap.add_argument("--base", default="", help="com --trocar: a foto de partida (em vez da que está no post)")
+    ap.add_argument("--colocar", type=int, help="id do post: põe a foto --base como está, sem gerar")
     a = ap.parse_args()
-    if a.refoto or a.textos or a.trocar:
+    if a.refoto or a.textos or a.trocar or a.colocar:
         from db import DatabaseManager
         banco = DatabaseManager()
-        if a.trocar:
-            asyncio.run(trocar(banco, a.trocar))
+        if a.colocar:
+            colocar(banco, a.colocar, a.base)
+        elif a.trocar:
+            asyncio.run(trocar(banco, a.trocar, a.base))
         elif a.refoto:
             asyncio.run(refoto(banco, a.refoto, a.pose))
         else:

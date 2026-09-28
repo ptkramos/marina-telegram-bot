@@ -145,10 +145,10 @@ FRIENDS_VISUAL = {
     "julia_azevedo": {
         "en": ("a pretty young Japanese-Brazilian woman with straight glossy jet-black hair falling just past her "
                "shoulders and thick blunt bangs, gently almond-shaped clear green eyes, a small soft nose with a low "
-               "flat bridge and a small round tip, a soft round face, fair porcelain skin with rosy cheeks, soft pink "
+               "flat bridge and a small round tip, a slim oval face with a delicate narrow chin, fair porcelain skin with rosy cheeks, soft pink "
                "lips, a slim body, and a small fine-line crescent moon tattoo on her inner right forearm"),
         "pt": ("nipo-brasileira de cabelo preto liso e brilhante passando do ombro, franja reta e cheia, olhos "
-               "verdes levemente amendoados, nariz pequeno de ponte baixa, rosto redondinho, pele de porcelana com "
+               "verdes levemente amendoados, nariz pequeno de ponte baixa, rosto fino e oval de queixo delicado, pele de porcelana com "
                "bochecha corada, magra, tatuagem fininha de lua no antebraço direito"),
         "style": ("black winged eyeliner, a thin black cord choker, black ribbed tank tops, thrifted vintage pieces, "
                   "a film camera on a strap",

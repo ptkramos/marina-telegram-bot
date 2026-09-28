@@ -404,21 +404,39 @@ FRIEND_RG = {"bia_andrade": "data/amigas/bia_rg.jpg", "carol_menezes": "data/ami
 FRIEND_RG_FACE = {"bia_andrade": 0.62, "carol_menezes": 0.47, "julia_azevedo": 0.6, "theo_martins": 0.66}
 
 
-def _rg_rosto(friend: str) -> Optional[bytes]:
+# 27/09 (Patrick): na troca de rosto a folha inteira vazou o body cinza por cima do biquíni. A troca usa a 3x4
+# (de frente, fundo liso), pintada abaixo do queixo como o RG; a folha fica pra foto da amiga sozinha.
+FRIEND_3X4_FACE = {"bia_andrade": 0.6, "carol_menezes": 0.6, "julia_azevedo": 0.6, "theo_martins": 0.64}
+
+
+def _so_cabeca(caminho: str, queixo: float) -> bytes:
     from pathlib import Path
-    from PIL import Image
-    rg_path = FRIEND_RG.get(friend)
-    if not rg_path:
-        return None
-    im = Image.open(Path(__file__).resolve().parent / rg_path).convert("RGB")
+    from PIL import Image, ImageDraw
+    im = Image.open(Path(__file__).resolve().parent / caminho).convert("RGB")
     w, h = im.size
     # recorte com altura "quebrada" (721 px) fez o editor responder 500: mantém o tamanho e pinta de cinza liso
     # (#B8B8B8, como a folha de personagem) tudo abaixo do queixo
-    from PIL import ImageDraw
-    ImageDraw.Draw(im).rectangle([0, int(h * FRIEND_RG_FACE.get(friend, 0.6)), w, h], fill=(184, 184, 184))
+    ImageDraw.Draw(im).rectangle([0, int(h * queixo), w, h], fill=(184, 184, 184))
     out = io.BytesIO()
     im.save(out, "JPEG", quality=95)
     return out.getvalue()
+
+
+def _rg_rosto(friend: str) -> Optional[bytes]:
+    rg_path = FRIEND_RG.get(friend)
+    return _so_cabeca(rg_path, FRIEND_RG_FACE.get(friend, 0.6)) if rg_path else None
+
+
+def _rosto(friend: str) -> Optional[bytes]:
+    """Só a cabeça da amiga, pra troca de rosto: a 3x4, se existir, senão o RG."""
+    from pathlib import Path
+    rg_path = FRIEND_RG.get(friend)
+    if not rg_path:
+        return None
+    id_foto = rg_path.replace("_rg.jpg", "_3x4.jpg")
+    if (Path(__file__).resolve().parent / id_foto).is_file():
+        return _so_cabeca(id_foto, FRIEND_3X4_FACE.get(friend, 0.6))
+    return _rg_rosto(friend)
 
 
 FRIEND_EDIT_PROMPT = ("Give the {noun} on the {side}, {who}, the exact face of the {noun} in the second image: "
@@ -501,17 +519,17 @@ def paste_side(original: bytes, edited: bytes, side: str) -> bytes:
 
 async def swap_friend_face(image: bytes, friend: str, *, side: str = "right", who: str = "",
                            is_nsfw: bool = False, seed: Optional[int] = None) -> Optional[bytes]:
-    """Troca o rosto da amiga na foto de grupo pelo da foto-RG dela. None se não der (sem RG, erro)."""
-    from pathlib import Path
-    rg_path = FRIEND_RG.get(friend)
-    if not rg_path or not available():
+    """Troca o rosto da amiga na foto de grupo pelo da 3x4 dela (ou do RG, sem 3x4). None se não der."""
+    if not FRIEND_RG.get(friend) or not available():
         return None
-    rg = _rg_rosto(friend)
+    ref = _rosto(friend)
+    if not ref:
+        return None
     from PIL import Image
     w, h = Image.open(io.BytesIO(image)).size
     from visual_profile import FRIENDS_VISUAL
     noun = FRIENDS_VISUAL.get(friend, {}).get("noun", "woman")
-    body = friend_edit_body(image, rg, side=side, who=who or f"the other {noun}", width=w, height=h,
+    body = friend_edit_body(image, ref, side=side, who=who or f"the other {noun}", width=w, height=h,
                             is_nsfw=is_nsfw, seed=seed, noun=noun)
     headers = {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json", "User-Agent": USER_AGENT}
     async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT_S + 30)) as session:
@@ -546,7 +564,9 @@ FRIEND_SHEET_PROMPT = (
     "Film character sheet, photorealistic commercial studio photography. Four views of the exact same {noun} from the "
     "image, {who}, wearing {outfit}. {extra} Standing in a row on a seamless neutral grey #B8B8B8 background: full-body front "
     "view, full-body side view, full-body back view, and a close-up passport-style ID portrait of the face - exactly "
-    "four views, no more. Identical person, "
+    "four views, no more. Each full-body view shows the whole person from the top of the head down to the bare feet "
+    "standing on the grey floor, feet fully visible, nothing cropped, with a little empty grey space above the head "
+    "and below the feet - the camera is far enough back. Identical person, "
     "outfit, hairstyle and styling in all four views. In the full-body front view the person stands upright in a "
     "relaxed neutral pose facing the camera, head level, and a flat opaque solid white circle graphic is placed "
     "directly over the face, completely covering it from forehead to chin, like an anonymized casting photo - crisp "
@@ -568,8 +588,15 @@ FRIEND_ID_PROMPT = ("A 3x4 passport ID photo of the exact same {noun} from the i
                     "shoulders square to the camera, looking straight into the lens, calm natural expression with a "
                     "slight closed-mouth smile, wearing {top}, plain seamless light grey #B8B8B8 background, soft even "
                     "studio lighting. Strictly preserve the exact same face, facial structure, eye shape, facial "
-                    "features, skin tone, hair and identity.")
+                    "features, skin tone, hair and identity.{extra}")
 FRIEND_ID_TOP = {"woman": "a plain light grey sleeveless top", "man": "a plain light grey t-shirt"}
+# o que a 3x4 erra se não disser (1ª da Júlia: rosto largo demais — a selfie de perto alarga a bochecha)
+FRIEND_ID_EXTRA = {
+    "julia_azevedo": " She has a thin, narrow oval face with visible cheekbones, slightly hollow cheeks under them, a "
+                     "defined slender jawline and a small narrow pointed chin; her face is clearly narrower and longer "
+                     "than in the selfie, which a close wide-angle phone lens distorted and widened. Do not make the "
+                     "face round, wide or chubby.",
+}
 
 
 async def _edit_uma(prompt: str, image: bytes, width: int, height: int, seed: Optional[int] = None) -> Optional[bytes]:
@@ -599,7 +626,8 @@ async def friend_id_photo(friend: str) -> Optional[bytes]:
     from visual_profile import FRIENDS_VISUAL
     rg = _rg_rosto(friend)
     noun = FRIENDS_VISUAL.get(friend, {}).get("noun", "woman")
-    return await _edit_uma(FRIEND_ID_PROMPT.format(noun=noun, top=FRIEND_ID_TOP[noun]), rg, 768, 1024) if rg else None
+    prompt = FRIEND_ID_PROMPT.format(noun=noun, top=FRIEND_ID_TOP[noun], extra=FRIEND_ID_EXTRA.get(friend, ""))
+    return await _edit_uma(prompt, rg, 768, 1024) if rg else None
 
 
 def _referencia(friend: str) -> tuple[Optional[bytes], bool]:
@@ -631,22 +659,32 @@ FRIEND_SCENE_PROMPT = ("One {noun}, solo. Place this person in this scene: {scen
                        "facial features, skin tone and identity; do not alter the facial structure. Keep the same "
                        "hairstyle and body proportions. A candid Instagram photo taken with a smartphone by a friend, "
                        "natural light, clean dry skin, realistic skin texture, vertical 4:5 framing.")
+# com a folha (artigo "reference consistency"): enquadramento e contagem primeiro, "as shown in the image as a
+# turnaround sheet", e dizer o que da folha não entra (senão desenha os círculos, o body cinza ou as 4 vistas).
+FRIEND_SCENE_PROMPT_SHEET = (
+    "One {noun}, solo, a single photo. Place the {noun} shown in the image as a turnaround sheet in this scene: "
+    "{scene}, wearing clothes that fit this new scene, never the grey bodysuit from the sheet. The face comes from "
+    "the close-up portrait of the sheet; the hair and body proportions from the full-body views. Only one person "
+    "and one view, no white circles, no grey studio background. Strictly preserve the exact same face, facial "
+    "structure, eye shape, facial features, skin tone and identity; do not alter the facial structure. Keep the "
+    "same hairstyle and body proportions. A candid Instagram photo taken with a smartphone by a friend, natural "
+    "light, clean dry skin, realistic skin texture, vertical 4:5 framing.")
 
 
 async def friend_scene(friend: str, scene: str, *, width: int = 896, height: int = 1120,
                        seed: Optional[int] = None) -> Optional[bytes]:
-    """Foto nova da amiga numa cena (Krea 2 Edit sobre a foto-RG). None se não der."""
-    from pathlib import Path
+    """Foto nova da amiga numa cena (Krea 2 Edit sobre a folha dela, ou o RG sem folha). None se não der."""
     import base64
-    rg_path = FRIEND_RG.get(friend)
-    if not rg_path or not available():
+    if not FRIEND_RG.get(friend) or not available():
         return None
-    rg = _rg_rosto(friend)
+    ref, folha = _referencia(friend)
+    if not ref:
+        return None
     from visual_profile import FRIENDS_VISUAL
     noun = FRIENDS_VISUAL.get(friend, {}).get("noun", "woman")
     step = {"engine": "comfy", "ecosystem": "krea2", "model": "edit", "operation": "editImage",
-            "prompt": FRIEND_SCENE_PROMPT.format(noun=noun, scene=scene),
-            "images": ["data:image/jpeg;base64," + base64.b64encode(rg).decode()],
+            "prompt": (FRIEND_SCENE_PROMPT_SHEET if folha else FRIEND_SCENE_PROMPT).format(noun=noun, scene=scene),
+            "images": ["data:image/jpeg;base64," + base64.b64encode(ref).decode()],
             "width": width, "height": height, "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
             "quantity": 1, "loras": {}}
     body = {"steps": [{"$type": "imageGen", "input": step}], "allowMatureContent": False}
