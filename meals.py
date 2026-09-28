@@ -751,11 +751,13 @@ class Meals:
 
     # ------------------------------------------------------------ apetite --
     def _gym_today(self, now: datetime) -> bool:
+        """Treinou hoje (o treino em si). Bug 16, 28/09: o preparo ("colocando roupa de treino") contava, e ela
+        "se pesou na academia" às 18:43, ainda a caminho."""
         start = datetime.combine(now.date(), time(0, 0)).isoformat()
         with self.db.get_connection() as conn:
             return bool(conn.execute(
                 "SELECT 1 FROM world_state WHERE observed_at>=? AND observed_at<=? AND "
-                "(activity LIKE '%academia%' OR activity LIKE '%trein%') LIMIT 1",
+                "activity LIKE 'treinando%' LIMIT 1",
                 (start, now.isoformat())).fetchone())
 
     def _ultima(self, now: datetime) -> Optional[dict]:

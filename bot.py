@@ -776,10 +776,14 @@ def _has_foreign_script_leak(text: str) -> bool:
 # de emoji-only nem o de script estrangeiro pegavam.
 _DEBUG_ARTIFACT_RE = re.compile(
     r"(?:"
-    # chave=valor técnico. Fala natural em pt-BR não usa '=' nem ':' seguido de
+    # chave=valor técnico. Fala natural em pt-BR não usa '=' seguido de
     # booleano/número, então não exige underscore: pega tanto
     # 'affirmation_pronouns=true' quanto 'temperature=0.85'.
-    r"\b[a-z][a-z0-9_]{2,}\s*[=:]\s*(?:true|false|none|null|query|\d+(?:\.\d+)?)\b"
+    r"\b[a-z][a-z0-9_]{2,}\s*=\s*(?:true|false|none|null|query|\d+(?:\.\d+)?)\b"
+    # Com ':' a fala usa número ("Me pesei hoje: 54,4 kg" virou ",4 kg" — bug 16,
+    # 28/09): só chave com underscore, ou booleano.
+    r"|\b[a-z][a-z0-9]*_[a-z0-9_]+\s*:\s*(?:true|false|none|null|query|\d+(?:\.\d+)?)\b"
+    r"|\b[a-z][a-z0-9_]{2,}\s*:\s*(?:true|false|none|null)\b"
     # chave= sem valor, colada ao fim ou antes de espaço ("irdp=" — soak 21/09)
     r"|\b[a-z][a-z0-9_]{2,}=(?=\s|$)"
     r"|</?[a-z_]{3,}(?:\s[^>]*)?>"            # <tag> / </tag> / <thinking>

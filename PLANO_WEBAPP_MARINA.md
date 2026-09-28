@@ -576,6 +576,8 @@ Escolhas do Patrick com mockup e múltipla escolha:
 
 **Bug corrigido (28/09, Hoje, bug 14):** o Hoje mostrou "O Milo dormiu encostado nela no sofá" às 17:21 no meio do passeio na Enseada. A arte do Milo agora só acontece com ela em casa; se ela estava fora, aparece no Hoje na hora em que ela chegou (FRENTES_MARINA.md, seção 5, item 14).
 
+**Bug corrigido (28/09, Hoje e Por fora, bug 16):** "Se pesou · 54,4 kg" aparecia às 18:43, com ela ainda a caminho da Bodytech (o preparo contava como treino). Agora a pesagem entra no Hoje e na linha Pesou quando ela sai do treino (FRENTES_MARINA.md, seção 5, item 16).
+
 **Bug corrigido (27/09, Hoje x card):** às 01:05 o card dizia "Se arrumando" com banho às 01:00 e o Hoje dizia "Tomou banho 00:31–01:12". Agora é um card só (o banho de chegada é o banho do Se arrumando), o Hoje põe no presente o que ainda está acontecendo ("Tomando banho 00:31–"), corta o bloco em casa quando o banho começa e não mostra mais bloco antes da chegada nem lanche em casa com ela no bar (FRENTES_MARINA.md, seção 5, item 2).
 
 **Bug corrigido (27/09):** a aba Agora mostrou certo, em casa às 00:07 depois da volta de uber às 00:05, enquanto no chat ela dizia que estava no bar. O bug era da fala, não do app (FRENTES_MARINA.md, seção 5). Efeito no app: quando ele combina "vai e volta de uber" e ela topa, os trechos da saída na aba Agora passam a mostrar uber (e o tempo de uber).

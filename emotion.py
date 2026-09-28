@@ -635,7 +635,14 @@ class EmotionEngine:
         lines.append(f"- Humor: {self.mood_words(f.valence, f.arousal)}.")
         for ep in f.episodes[:2]:
             about = f" com {ep.target}" if ep.target else ""
-            lines.append(f"- Sentindo agora: {ep.word}{about} — {_short(ep.cause)}.")
+            # Bug 16 (28/09): "derretida — O Milo dormiu encostado nela no sofá" às 18:58, uma hora depois e com
+            # ela na academia, soou como agora: "tô em casa, no sofá com o Milo". Causa antiga leva a hora.
+            quando = ""
+            if f.now - ep.started_at > timedelta(minutes=20):
+                dias = (f.now.date() - ep.started_at.date()).days
+                quando = (f" (às {ep.started_at:%H:%M})" if dias == 0 else
+                          f" (ontem, {ep.started_at:%H:%M})" if dias == 1 else f" (dia {ep.started_at:%d/%m})")
+            lines.append(f"- Sentindo agora: {ep.word}{about} — {_short(ep.cause)}{quando}.")
         heart = []
         if f.bond["affection"] >= 0.8:
             heart.append("apaixonada e carinhosa")

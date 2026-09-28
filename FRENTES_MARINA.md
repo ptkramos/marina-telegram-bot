@@ -4,8 +4,8 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 19:40 (roupa e make de verdade prontas e na produção em `90bc800`/`53f07c4`; **freio
-decidido com o Patrick: fecha a lista abaixo e para tudo pro soak**; próxima conversa na frente de bugs, bug 16)._
+_Atualizado em 28/09/2026, 20:40 (bug 16 corrigido na frente de bugs; **freio decidido com o Patrick: fecha a
+lista abaixo e para tudo pro soak**; próxima conversa na frente da voz, item 2)._
 
 ---
 
@@ -15,7 +15,7 @@ Pedido dele: "eu estou colocando funcionalidade em cima de funcionalidade sem pa
 aviso ele disso na hora. Só entra o que está em "Antes do soak" e correção de bug.
 
 **Antes do soak — fecha e para (nesta ordem, uma conversa cada):**
-1. Bug 16 (18:57: academia × "em casa no sofá", ",4 kg") — "bora na frente de bugs: bug 16 (18:57)"
+1. ✅ Bug 16 (18:57: academia × "em casa no sofá", ",4 kg") — corrigido em 28/09 (seção 5, item 16)
 2. Voz: histórico puxando assunto velho + auditoria do prompt do chat + regra de quando ela cumpre promessa de foto
    (PLANO_VOZ 15 e 16) — "bora na frente da voz: fechar pro soak"
 3. Mundo: lista de compras (ela promete e não existe), bateria social (café/açaí como rolê), sementes de história que
@@ -130,7 +130,7 @@ despertador passa a seguir sempre a regra). Detalhe na AUDITORIA ("Frente de inf
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
-**Abertura:** "bora na frente de bugs: bug 16 (18:57)" (um aberto, abaixo; ou traga o print ou a hora)
+**Abertura:** "bora na frente de bugs" (nenhum aberto; traga o print ou a hora)
 
 Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
 
@@ -267,17 +267,25 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       chat às 13:45), banho da manhã não registrado (bug 11) e "Foi pra calçada" sem volta (bug 13). O
       `RecursionError` das 17:24 foi no processo antigo, antes da correção da pilha subir.
 
-**Abertos:**
+16. ✅ **Inverdades no chat com ela na academia (28/09, ~18:57)** — corrigido em 28/09
+    (`tests/test_bug16_academia_sofa.py`, 6). Mundo: Se arrumando 18:24–18:29, "indo pra Bodytech a pé" 18:38–18:48,
+    "treinando na academia" desde 18:50 (certo). Prompt das 18:58 remontado numa cópia do banco dentro da VPS.
+    - **",4 kg" (18:56) — limpeza da fala.** O modelo disse "Me pesei hoje: 54,4 kg" duas vezes; o guard de artefato
+      de debug (`bot._DEBUG_ARTIFACT_RE`) leu "hoje: 54" como `chave: valor` e o salvamento cortou o "hoje: 54" (log:
+      `llm.junk_reply … salvaged reply='Oi, meu amor. Me pesei ,4 kg kkk'`). Agora com ":" só pega chave com
+      underscore ou booleano; "=" continua pegando tudo.
+    - **"Se pesou na academia" às 18:43, a caminho — mundo.** O "colocando roupa de treino" do preparo contava como
+      treino do dia (`meals._gym_today` procurava "trein"). Agora só o treino em si ("treinando…"): ela se pesa quando
+      sai da academia.
+    - **"Tô em casa, no sofá com o Milo" (18:58) — prompt.** O prompt dizia "Bodytech, não diga que está em casa",
+      mas com "Origem: inferência de rotina (probabilística)" (academia e passeio do Milo são decididos no dia desde
+      26/09) e "Sentindo agora: derretida — O Milo dormiu encostado nela no sofá" de 17:21, sem hora. Agora academia,
+      passeio do Milo, preparo e trajeto são fato com a regra forte ("NUNCA diga 'em casa'"); no preparo, o texto de
+      "em casa" não manda mais "não invente ida a lugar externo"; sentimento com mais de 20 min leva a hora ("(às
+      17:21)"). As referências de Práticas Experimentais VI vieram do bloco da faculdade e do histórico das 17:24.
+    - **"Mais, seu guloso" (18:57) estava certo:** a pesagem anterior foi 54,0 kg (26/09).
 
-16. **Inverdades do Agora e do mundo no chat de 28/09, ~18:57 (Patrick, registrado na conversa da roupa)** — só
-    capturado, falta diagnosticar. Produção (leitura, banco na VPS):
-    - Mundo: Se arrumando pra Bodytech ("colocando roupa de treino") 18:24–18:29, "indo pra Bodytech a pé"
-      18:38–18:48, **"treinando na academia" desde 18:50**; acontecimento "Se pesou na academia: 54,4 kg" (18:43).
-    - Chat (conversas 224–231): 18:56 "Oi, meu amor. Me pesei **,4 kg** kkk" (o 54 sumiu da fala — limpeza de texto?);
-      18:57 "Mais, seu guloso" (a mais que o quê? conferir o peso anterior); **18:58 "Tô em casa, amor / Deitada no
-      sofá com o Milo, escolhendo umas referências pro trabalho de Práticas Experimentais VI"** com ela na academia.
-    - Suspeitas: prompt das 18:58 (estado da academia × histórico do sofá/referências, como no bug 14) e
-      `limpar_fala_marina`/sanitização comendo número. Abertura: "bora na frente de bugs: bug 16 (18:57)".
+**Abertos:** nenhum.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** congelada até o soak fechar (freio, seção 0); foto errada no uso real é bug do soak

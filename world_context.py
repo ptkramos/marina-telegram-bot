@@ -80,9 +80,18 @@ class WorldContextBuilder:
             "announced_transition": "atividade já em andamento no seu dia (é fato)",
             # 27/09 (volta do Quartinho): "ainda em casa" soava como se ela nem tivesse saído.
             "post_event_recovery": "já voltou do compromisso anterior e está em casa (é fato)",
+            # Bug 16 (28/09, 18:58): academia e passeio do Milo são decididos uma vez por dia (academia.py), com
+            # preparo e trajeto; chamados de "inferência de rotina (probabilística)", ela disse "tô em casa, no
+            # sofá com o Milo" treinando na Bodytech. No preparo, o texto de "em casa" mandava não inventar saída.
+            "gym_weekly": "treino que você decidiu pro dia (é fato)",
+            "gym_weekly:rain_fallback": "treino que você decidiu pro dia (é fato)",
+            "milo_morning_walk": "passeio do Milo que você decidiu pro dia (é fato)",
+            "getting_ready": "você está se arrumando pra sair (é fato)",
+            "commute": "você está no caminho (é fato)",
         }
         certainty = certainty_map.get(reason, "inferência de rotina (probabilística)")
-        binding = reason in ("confirmed_commitment", "explicit_plan", "announced_transition")
+        binding = reason in ("confirmed_commitment", "explicit_plan", "announced_transition", "gym_weekly",
+                             "gym_weekly:rain_fallback", "milo_morning_walk", "getting_ready", "commute")
         # 27/09, 19:37: o "local reservado" (máscara antiga pra compromisso que não era saída social) escondia a
         # Drogarias Pacheco, e ela disse "tô no Shopping da Gávea ainda". Tudo na agenda dela é vida dela: o lugar
         # aparece.

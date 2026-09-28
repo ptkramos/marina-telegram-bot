@@ -1848,3 +1848,24 @@ Pedido do Patrick (aba Por fora, opção C): o look do momento existir no mundo,
 
 ## Freio e soak (28/09, 19:40 — decisão do Patrick)
 Nada de funcionalidade nova até o soak fechar. Antes do soak: bug 16, voz (histórico velho, auditoria do prompt, promessa de foto), mundo (lista de compras, bateria social, sementes, revisão de textos), infra (relatório diário do soak + API de rotas) e auditoria de funcionamento rodada 3. Soak: 7 dias reais + 3 limpos; relatório gerado na VPS às 05:10 cobrindo 05:00→05:00. Detalhe e lista "Depois do soak" na seção 0 do `FRENTES_MARINA.md`.
+
+## Bug 16 (28/09, ~18:57): "Me pesei ,4 kg" e "Tô em casa, no sofá com o Milo" treinando na Bodytech
+Captura na produção: conversas 224–231, world_state 694–699, life_events 107, journal 21:56–21:58 UTC. Prompt das
+18:58 remontado numa cópia do banco feita dentro da VPS (`/tmp/bug16.db`; o banco não sai de lá).
+- **Fala (guard de artefato):** "Me pesei hoje: 54,4 kg" caiu no `_DEBUG_ARTIFACT_RE` como `chave: valor` ("hoje: 54")
+  duas vezes; o `_salvage_reply` cortou o trecho e sobrou ",4 kg". Com ":" o guard agora exige chave com underscore
+  (`htar_negative: 0`) ou valor booleano (`planejamento: true`); com "=" segue pegando qualquer chave.
+- **Mundo (pesagem):** `Meals._gym_today` contava o preparo "(colocando roupa de treino)" como treino, e com o trajeto
+  (que não é "academia") ela "se pesou na academia" às 18:43, antes de chegar. Agora só "treinando…" conta; a
+  pesagem cai quando ela sai do treino.
+- **Prompt (estado):** `gym_weekly`, `gym_weekly:rain_fallback`, `milo_morning_walk`, `getting_ready` e `commute`
+  caíam em "inferência de rotina (probabilística)" — resto de antes de 26/09, quando academia e passeio eram
+  sorteados. Hoje são decididos no dia (`academia.py`) e têm preparo e trajeto: viraram fato com a regra forte. No
+  preparo em casa, o texto antigo mandava "não invente ida a lugar externo", o contrário do que ela está fazendo.
+- **Prompt (sentimento):** "Sentindo agora: derretida — O Milo dormiu encostado nela no sofá" (17:21) às 18:58, sem
+  hora, puxou o sofá pro agora (mesmo padrão do bug 14). Episódio com mais de 20 min leva a hora ("(às 17:21)";
+  "(ontem, HH:MM)"; "(dia DD/MM)").
+- **Sem mudança:** "Mais, seu guloso" estava certo (54,0 kg em 26/09 → 54,4 kg). As referências de Práticas
+  Experimentais VI vieram do bloco da faculdade e da fala dela das 17:24 no histórico (item de voz "histórico puxando
+  assunto velho", já na lista do soak).
+- **Testes:** `tests/test_bug16_academia_sofa.py` (6) + `test_reply_guards_v030`, `test_meals` + suíte inteira.
