@@ -109,6 +109,12 @@ def _curto(ev: dict) -> dict:
         return out
     if tipo == "tempo_livre" and s.startswith("Fez as unhas em casa"):
         return {**out, **_salao(s)}
+    if tipo == "tempo_livre" and s.startswith("Ficou ouvindo a playlist dela"):
+        # 28/09: "Ouviu Sabrina Carpenter" com Chappell Roan e Liniker tocando (e o story da Liniker às 14:09)
+        artistas = list(dict.fromkeys(re.findall(r'"[^"]+" \(([^)]+)\)', s)))
+        out.update(ic="music", texto="Ouviu a playlist dela", presente="Ouvindo a playlist dela",
+                   sub=_e(artistas) if artistas else "")
+        return out
     if tipo == "tempo_livre":
         out.update(ic=_ic_midia(title), texto=passado(_cap(title)) if title else _painel(s))
         return out
@@ -191,6 +197,8 @@ def _curto(ev: dict) -> dict:
             return out
         if "Milo" in s and "xixi" in s:                  # Patrick: "Foi pra calçada" e o xixi recuado
             out.update(ic="dog", texto="Foi pra calçada", filhos=[{"texto": "Xixi do Milo"}])
+            if ev.get("end_at"):                         # 28/09: sem a volta, parecia que o Milo foi com ela pra PUC
+                out["fim"] = datetime.fromisoformat(ev["end_at"])
         elif "Milo" in s or title == "Milo":
             out.update(ic="dog")
         elif title == "casa":
@@ -439,7 +447,8 @@ def _saidas(db, dia: date, now: datetime) -> list[dict]:
         titulo = _foi(la.titulo) + (f" com {_e(com)}" if com else "")
         out.append({"key": key, "ini": es[0].inicio, "fim": es[-1].fim, "titulo": titulo,
                     "previsto": la.titulo + (f" com {_e(com)}" if com else ""),
-                    "ic": SAIDA_IC.get(tipo, "map-pin"), "la": la})
+                    "ic": SAIDA_IC.get(tipo, "map-pin"), "la": la,
+                    "volta": next((e for e in es if e.tipo == "voltando"), None)})
     return sorted(out, key=lambda s: s["ini"])
 
 
@@ -543,7 +552,7 @@ def hoje_view(db, now: datetime) -> dict:
         it = {"at": at, "key": ev["event_key"], **curto(ev)}
         if ev["event_type"] == "tempo_livre" and ev["event_key"] in fins:
             it["fim"] = fins[ev["event_key"]]
-            if ev.get("title"):
+            if ev.get("title") and not it.get("presente"):
                 it["presente"] = _cap(ev["title"])
         itens.append(it)
 
@@ -587,11 +596,24 @@ def hoje_view(db, now: datetime) -> dict:
             else:
                 it["sub"] = it["motivo"]
     for it in juntos:
-        dono = next((r for r in raiz if r.get("saida") and r["at"] <= it["at"] <= (r["fim"] or now)), None)
+        # 28/09: "Olhou o Pinterest 13:35" (já em casa) caía dentro da PUC, que acabava às 13:35
+        dono = next((r for r in raiz if r.get("saida") and r["at"] <= it["at"]
+                     and (it["at"] < r["fim"] if r["fim"] else it["at"] <= now)), None)
         if dono:
             dono["filhos"].append(it)
         else:
             raiz.append({**it, "filhos": [{"at": it["at"], "fim": None, **f} for f in it.get("filhos") or []]})
+    # 28/09 (Patrick): a volta pra casa não aparecia — "Foi pra PUC 08:19–13:35" engolia a carona com o Theo
+    for s in abertas:
+        v, dono = s.get("volta"), next((r for r in raiz if r.get("key") == s["key"] and r.get("saida")), None)
+        if v and dono and v.inicio <= now:
+            chegou = v.fim <= now
+            dono["filhos"].append({"at": v.inicio, "fim": v.fim if chegou else None, "ic": "home",
+                                   "texto": "Voltou pra casa" if chegou else "Voltando pra casa", "sub": v.como,
+                                   "valor": None, "aviso": False})       # o uber já tem a linha dele, com valor
+    for r in raiz:
+        if r.get("filhos"):
+            r["filhos"].sort(key=lambda f: f["at"])
     raiz.sort(key=lambda x: x["at"])
 
     previstos = _previstos(db, dia, now, saidas)

@@ -141,6 +141,33 @@ MEAL_NOW_RE = re.compile(
 )
 
 
+# 28/09: "vou comprar um sanduíche antes de entrar" (a caminho da PUC) não virava nada — só a promessa em casa e
+# "agora" abria refeição. Na rua, comprar/comer algo vira lanche fora, com o preço no saldo dela.
+RUA_COMIDA = {"sanduíche": 15, "sanduiche": 15, "misto": 12, "salgado": 8, "coxinha": 8, "empada": 8, "esfiha": 8,
+              "pão de queijo": 9, "pao de queijo": 9, "barrinha": 6, "fruta": 5, "banana": 3, "açaí": 18, "acai": 18,
+              "biscoito": 5, "croissant": 14, "tapioca": 14, "lanche": 14}
+RUA_RE = re.compile(
+    r"\b(?:vou|j[aá] vou|vou l[aá])\s+(?:comprar|pegar|comer|beliscar)\s+(?P<item>(?:um|uma|uns|umas)\s+"
+    r"(?P<comida>p[aã]o de queijo|[a-zçãéíõúâê]+)|alguma coisa|algo)(?P<resto>[^.!?\n]{0,60})",
+    re.IGNORECASE,
+)
+
+
+def comida_na_rua(text: str) -> Optional[tuple[str, int]]:
+    """("um sanduíche", 15) se ela disse que vai comprar/comer algo agora; None se não é comida."""
+    for m in RUA_RE.finditer(text or ""):
+        comida = (m.group("comida") or "").lower()
+        if comida:
+            base = comida[:-1] if comida.endswith("s") and comida[:-1] in RUA_COMIDA else comida
+            if base in RUA_COMIDA:
+                return m.group("item").lower(), RUA_COMIDA[base]
+            continue
+        if re.search(r"\b(comer|comprar|pegar)\b", m.group(0), re.IGNORECASE) and re.search(
+                r"caminho|antes d[aeo]|rapidinh|pra comer|fome", m.group(0) + (m.group("resto") or ""), re.IGNORECASE):
+            return "um lanche", RUA_COMIDA["lanche"]
+    return None
+
+
 def announces_meal(text: str) -> bool:
     return bool(MEAL_PROMISE_RE.search(text or "") or MEAL_NOW_RE.search(text or ""))
 
@@ -274,6 +301,7 @@ class Meals:
         rng = _rng(day, "almoco")
         noon_lo, noon_hi = datetime.combine(day, time(11, 30)), datetime.combine(day, time(14, 30))
         lunch = None
+        volta = self._volta_puc(day) if blocks else None
         if blocks:
             gaps = [(a[1], b[0]) for a, b in zip(blocks, blocks[1:])
                     if (b[0] - a[1]) >= timedelta(minutes=40) and noon_lo <= a[1] <= noon_hi]
@@ -285,10 +313,13 @@ class Meals:
                                  min(dur("almoco", rng), int((end - start).total_seconds() // 60) - 10),
                                  where, rng.choice(MENU["almoco_puc" if where == "puc" else "almoco_gavea"]))
             elif blocks[-1][1] <= datetime.combine(day, time(15, 0)) and blocks[-1][1] >= noon_lo:
-                where = "puc" if rng.random() < 0.5 else "gavea"
-                lunch = MealSlot("almoco", f"meal:{iso}:almoco", blocks[-1][1] + timedelta(minutes=rng.randint(10, 30)),
-                                 dur("almoco", rng), where,
-                                 rng.choice(MENU["almoco_puc" if where == "puc" else "almoco_gavea"]))
+                # 28/09 (Patrick, "depende da carona"): a carona com o Theo saiu às 13:00 e o almoço ficou
+                # "no restaurante da PUC" 13:15–13:58. Com carona volta direto e almoça em casa; sozinha, às vezes
+                # almoça por lá e a volta sai depois (commute pergunta `almoco_pos_aula`).
+                lunch = self.almoco_pos_aula(day, volta.mode if volta else "")
+                if lunch is None and volta:
+                    lunch = MealSlot("almoco", f"meal:{iso}:almoco", volta.end + timedelta(minutes=rng.randint(10, 25)),
+                                     dur("almoco", rng), "casa", rng.choice(MENU["almoco_casa"]))
         if lunch is None:
             lunch = MealSlot("almoco", f"meal:{iso}:almoco", _at(day, time(12, 0), time(14, 0), rng),
                              dur("almoco", rng), "casa", rng.choice(MENU["almoco_casa"]))
@@ -320,7 +351,40 @@ class Meals:
             night = at + timedelta(minutes=rng.randint(80, 150))
             slots.append(MealSlot("lanche", f"meal:{iso}:lanche:2", night, dur("lanche", rng), "casa",
                                   rng.choice(["pipoca vendo série", "um chocolate", "um açaí pequeno"])))
-        return self._antes_das_saidas(day, sorted(slots, key=lambda s: s.at), wake)
+        return self._antes_das_saidas(day, sorted(slots, key=lambda s: s.at), wake, volta)
+
+    ALMOCO_POR_LA = 0.5          # sozinha, depois da última aula: chance de almoçar na PUC/Gávea antes de voltar
+    ALMOCO_TARDE = time(14, 0)   # ...e aula acabando daí em diante, sozinha, almoça por lá (em casa seria 16h)
+
+    def almoco_pos_aula(self, day: date, modo_volta: str) -> Optional[MealSlot]:
+        """O almoço por lá depois da última aula (a volta sai depois dele), ou None (volta direto e come em casa).
+        Não consulta o trajeto: o commute chama com o modo da volta."""
+        blocks = self._blocks(day)
+        if not blocks or modo_volta == "carona":
+            return None
+        noon_lo = datetime.combine(day, time(11, 30))
+        if any((b[0] - a[1]) >= timedelta(minutes=40) and noon_lo <= a[1] <= datetime.combine(day, time(14, 30))
+               for a, b in zip(blocks, blocks[1:])):
+            return None                                  # almoça no intervalo entre aulas
+        fim = blocks[-1][1]
+        if not (noon_lo <= fim <= datetime.combine(day, time(15, 0))):
+            return None
+        rng = _rng(day, "almoco_pos_aula")
+        chance = 1.0 if fim.time() >= self.ALMOCO_TARDE else self.ALMOCO_POR_LA   # aula até 15:00: não espera chegar
+        if rng.random() >= chance:
+            return None
+        where = "puc" if rng.random() < 0.5 else "gavea"
+        return MealSlot("almoco", f"meal:{day.isoformat()}:almoco", fim + timedelta(minutes=rng.randint(10, 20)),
+                        rng.randint(*DURATION_MIN["almoco"]), where,
+                        rng.choice(MENU["almoco_puc" if where == "puc" else "almoco_gavea"]))
+
+    def _volta_puc(self, day: date):
+        try:
+            from commute import Commute
+            return Commute(self.db).volta_puc(day)
+        except Exception:
+            logger.exception("meals.volta_puc")
+            return None
 
     def _saidas(self, day: date) -> list[tuple[datetime, datetime]]:
         """Saídas confirmadas do dia (rolê, freela, vontade, mercado, médico, salão): (início lá, fim lá)."""
@@ -335,7 +399,7 @@ class Meals:
         except Exception:
             return []
 
-    def _antes_das_saidas(self, day: date, slots: list[MealSlot], wake: datetime) -> list[MealSlot]:
+    def _antes_das_saidas(self, day: date, slots: list[MealSlot], wake: datetime, volta_puc=None) -> list[MealSlot]:
         """27/09 (auditoria): o almoço em casa das 13:50–14:29 atravessava a saída das 14:20 pro cinema das 15:00
         e o Se arrumando sumia do card. Refeição em casa sai antes do preparo; se não cabe, ela come quando
         voltar (saída curta) ou come por lá (o consumo do rolê)."""
@@ -354,6 +418,8 @@ class Meals:
                 if not (s.at < volta and s.end > sai):
                     continue
                 piso = (out[-1].end + REFEICAO_INTERVALO) if out else wake + timedelta(minutes=15)
+                if volta_puc and s.at >= volta_puc.start:    # 28/09: não come em casa antes de chegar da PUC
+                    piso = max(piso, volta_puc.end + timedelta(minutes=5))
                 antes = sai - timedelta(minutes=s.minutes)
                 if antes >= piso and antes.time() >= REFEICAO_PISO.get(s.kind, time(0)):
                     s = replace(s, at=antes)                                     # come antes de se arrumar
@@ -596,6 +662,9 @@ class Meals:
     # ----------------------------------------------------------- promessa --
     def observe_marina_line(self, text: str, now: datetime) -> Optional[dict]:
         """Chamado depois que a fala dela é entregue. Retorna o payload se abriu refeição."""
+        if not self._at_home():
+            self.lanche_na_rua(text, now)
+            return None
         if not announces_meal(text):
             return None
         kind = meal_kind(now)
@@ -613,6 +682,45 @@ class Meals:
         self._start_eating(slot, start, slot.end, now)
         logger.info("meal.promised kind=%s start=%s", kind, start.isoformat(timespec="minutes"))
         return json.loads(self.db.get_estado_relacional()["pending_transition_json"])
+
+    RUA_ATE_COMPRAR = timedelta(minutes=10)
+
+    def lanche_na_rua(self, text: str, now: datetime) -> bool:
+        """Na rua (a caminho, lá), ela disse que vai comprar/comer algo: compra e come (sai do saldo dela).
+        Uma vez por hora (repetir a promessa na conversa não compra outro)."""
+        achado = comida_na_rua(text)
+        if not achado:
+            return False
+        try:                        # no rolê (bar, café, cinema) o consumo.py já decide o que ela pede
+            from agenda import Agenda
+            etapa = Agenda(self.db).agora(now)
+            if etapa and etapa.tipo == "la" and not etapa.compromisso.startswith(("puc:", "gym:", "milo:", "medico:")):
+                return False
+        except Exception:
+            logger.exception("meals.rua.agenda")
+        item, valor = achado
+        at = now + self.RUA_ATE_COMPRAR
+        with self.db.get_connection() as conn:
+            if conn.execute("SELECT 1 FROM life_events WHERE event_key LIKE ? AND event_at>=? LIMIT 1",
+                            (f"meal:{now.date().isoformat()}:lanche:rua:%",
+                             (now - timedelta(hours=1)).isoformat())).fetchone():
+                return False
+            chave = f"{now.date().isoformat()}:lanche:rua:{at:%H%M}"
+            conn.execute(
+                """INSERT OR IGNORE INTO life_events(event_key,event_at,end_at,event_type,title,summary,source_type,
+                   autonomy_level,importance,participants_json,share_worthy,created_at)
+                   VALUES (?,?,?,'snack','comeu na rua',?,'simulated',1,0.1,?,0.2,?)""",
+                (f"meal:{chave}", at.isoformat(), (at + timedelta(minutes=8)).isoformat(),
+                 f"Comeu {item} no caminho.", json.dumps(["marina"]), now.isoformat()))
+            conn.execute(
+                """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
+                   autonomy_level,importance,participants_json,share_worthy,created_at)
+                   VALUES (?,?,'consumo',?,?,'simulated',1,0.1,?,0.1,?)""",
+                (f"consumo:{chave}", at.isoformat(), f"na rua · {item}", f"Pediu {item} no caminho (R$ {valor}).",
+                 json.dumps(["marina"]), now.isoformat()))
+            conn.commit()
+        logger.info("meal.rua item=%s at=%s", item, at.isoformat(timespec="minutes"))
+        return True
 
     def _recent_meal(self, now: datetime) -> Optional[dict]:
         with self.db.get_connection() as conn:

@@ -100,6 +100,17 @@ class Bloco:
             extra = " pensando no Patrick e chamando ele pro sexting"
         return f"em casa, {self.texto[:1].lower() + self.texto[1:]}{extra} ({self.comodo_nome.lower()})"
 
+    def atividade_em(self, now: datetime) -> str:
+        """28/09: o story das 14:09 era "Baby 95" (Liniker) e o mundo dizia "ouvindo Sabrina Carpenter" o bloco
+        inteiro (a 1ª faixa). Na música, o mundo acompanha a faixa que está tocando."""
+        if self.faixas:
+            from musica import Musica
+            f = Musica.tocando(self.faixas, now)
+            if f:
+                return (f'em casa, ouvindo "{f["nome"]}" ({f["artista"]}) na playlist dela'
+                        f' ({self.comodo_nome.lower()})')
+        return self.atividade
+
 
 def _rng(day: date, salt: str) -> random.Random:
     return random.Random(f"tempo_livre:{day.isoformat()}:{salt}")

@@ -152,12 +152,13 @@ class Milo:
             if item["state"] and not meals._at_home():
                 continue              # na rua: leva o Milo quando voltar
             with self.db.get_connection() as conn:
+                fim_item = item["at"] + timedelta(minutes=item["minutes"]) if item["minutes"] else None
                 cur = conn.execute(
-                    """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,
+                    """INSERT OR IGNORE INTO life_events(event_key,event_at,end_at,event_type,title,summary,
                        source_type,autonomy_level,importance,participants_json,share_worthy,created_at)
-                       VALUES (?,?,?,?,?,'simulated',1,0.1,?,0.3,?)""",
-                    (item["key"], item["at"].isoformat(), "routine", "Milo", item["summary"],
-                     json.dumps(["marina"]), now.isoformat()))
+                       VALUES (?,?,?,?,?,?,'simulated',1,0.1,?,0.3,?)""",
+                    (item["key"], item["at"].isoformat(), fim_item.isoformat() if fim_item else None, "routine",
+                     "Milo", item["summary"], json.dumps(["marina"]), now.isoformat()))
                 conn.commit()
                 fresh = bool(cur.rowcount)
             created += int(fresh)

@@ -209,6 +209,12 @@ então de manhã quase tudo tinha sumido.
   dentro") o café é o 1º passo, na hora real do meals, e o Se arrumando começa nele; pulou o café, sem passo. A
   descida do Milo que cai em qualquer Se arrumando vira o passo "Descendo com o Milo" na hora dela (o seguinte espera
   ela subir). Ver AUDITORIA ("Bug: manhã de 28/09") e `tests/test_bug_manha_2809.py`.
+- **Hoje (bugs do dia 28/09, frente de bugs):** a saída termina com "Voltou pra casa" (sub: como e com quem, hora
+  13:00–13:35; o uber segue com a linha dele e o valor) e o que começa quando ela chega fica fora da saída; "Foi pra
+  calçada" com a volta (07:58–08:11), sem parecer que o Milo foi pra PUC; música vira "Ouviu a playlist dela" com os
+  artistas embaixo ("Sabrina Carpenter, Chappell Roan e Liniker"); lanche na rua aparece como "Pediu um sanduíche"
+  (R$ 15) e "Comeu um sanduíche no caminho"; a PUC mostra "Almoçando" quando ela almoça por lá. Ver AUDITORIA ("Bug: o
+  dia 28/09 visto pelo Patrick") e `tests/test_bug_dia_2809.py`.
 - **Aba nova "Por fora" (Patrick, 28/09):** tem coisa no Por dentro que é aparência, não sentimento — vai pra uma aba
   Por fora. Feita na mesma tarde (seção abaixo).
 - **Código:** `por_dentro.py` (novo), `webapp_server` (`emocao_view`, `motivo_tela`, `_alguem` com "você", Ciclo),

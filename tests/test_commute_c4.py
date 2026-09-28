@@ -32,7 +32,9 @@ class CommuteTests(unittest.TestCase):
         self.temp.cleanup()
 
     def test_ida_e_volta_da_puc(self):
-        ida, volta = [l for l in self.c.legs_on(self.class_day) if "puc" in l.key]
+        # 28/09: almoçando por lá, a volta sai depois do almoço (test_bug_dia_2809); aqui ela volta direto
+        with patch("meals.Meals.almoco_pos_aula", return_value=None):
+            ida, volta = [l for l in self.c.legs_on(self.class_day) if "puc" in l.key]
         self.assertEqual(ida.end, self.first)
         self.assertEqual(volta.start, self.last)
         self.assertLessEqual((ida.end - ida.start).total_seconds() / 60, commute.CLASS_GO_MAX_MIN)

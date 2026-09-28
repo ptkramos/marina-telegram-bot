@@ -300,6 +300,24 @@ class Commute:
             logger.exception("commute.atraso.error")
             return legs
 
+    def _volta_puc_modo(self, day: date, last: datetime, puc: dict, w: float) -> tuple[str, int]:
+        mode, mins = self._choose(day, "puc:volta", "Gávea", last, place=puc, outbound=False, carona_weight=w)
+        return mode, min(mins, CLASS_BACK_MAX_MIN)
+
+    def volta_puc(self, day: date) -> Optional[Leg]:
+        """Só a volta da PUC, saindo no fim da última aula (sem o almoço por lá): o meals decide o almoço por ela
+        sem montar o dia inteiro de trechos (a pilha do resolve já é funda)."""
+        from academic_life import AcademicLife
+        blocks = AcademicLife(self.db).blocks_on(day)
+        if not blocks:
+            return None
+        last = max(datetime.fromisoformat(b["end_at"]) for b in blocks)
+        puc = self._place("puc_rio") or {"name": "PUC-Rio", "region": "Gávea"}
+        _key, driver = self._driver()
+        mode, mins = self._volta_puc_modo(day, last, puc, CARONA_WEIGHT_PUC if driver else 0.0)
+        return Leg(f"commute:{day.isoformat()}:puc:volta", last, last + timedelta(minutes=mins), mode, "volta",
+                   _de("PUC"), "Gávea", driver if mode == "carona" else "")
+
     def _legs_planejados(self, day: date) -> list[Leg]:
         legs: list[Leg] = []
         from academic_life import AcademicLife
@@ -316,9 +334,15 @@ class Commute:
             legs.append(self._incident(Leg(f"commute:{day.isoformat()}:puc:ida", first - timedelta(minutes=mins),
                                            first, mode, "ida", _pra("PUC"), "Gávea",
                                            driver if mode == "carona" else "", compromisso=f"puc:{day.isoformat()}")))
-            mode, mins = self._choose(day, "puc:volta", "Gávea", last, place=puc, outbound=False,
-                                      carona_weight=w)
-            mins = min(mins, CLASS_BACK_MAX_MIN)
+            mode, mins = self._volta_puc_modo(day, last, puc, w)
+            try:                                  # 28/09: almoçou por lá (sozinha) — a volta sai depois do almoço
+                from meals import Meals
+                almoco = Meals(self.db).almoco_pos_aula(day, mode)
+            except Exception:
+                logger.exception("commute.almoco_pos_aula")
+                almoco = None
+            if almoco:
+                last = almoco.end + timedelta(minutes=5)
             legs.append(self._incident(Leg(f"commute:{day.isoformat()}:puc:volta", last,
                                            last + timedelta(minutes=mins), mode, "volta", _de("PUC"), "Gávea",
                                            driver if mode == "carona" else "")))

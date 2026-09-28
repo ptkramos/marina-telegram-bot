@@ -547,6 +547,14 @@ class Agenda:
                 nome = (b.get("display_name") or "Aula").split(":")[0].strip()
                 passos.append(Passo(nome, ini))
                 anterior = fim
+            try:                                         # 28/09: almoçou por lá antes de voltar (meals.almoco_pos_aula)
+                from meals import Meals
+                alm = next((s for s in Meals(self.db).day_plan(c["inicio"].date())
+                            if s.kind == "almoco" and s.where in ("puc", "gavea") and anterior and s.at >= anterior), None)
+            except Exception:
+                alm = None
+            if alm and volta and alm.at < volta.start:
+                passos.append(Passo("Almoçando" + (" na Gávea" if alm.where == "gavea" else ""), alm.at))
             cel = CELULAR["aula"]
         elif c["tipo"] == "cabelo":                          # 26/09: os serviços da vez (cabelo.py), valor na direita
             meta = json.loads(c["outing"]["metadata_json"] or "{}")

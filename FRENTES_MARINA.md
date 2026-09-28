@@ -36,6 +36,9 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 6. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
 7. Sementes de história que nunca fecham (`story_threads` "Contato de Henrique", `father_check_in`, aberta desde
    26/09; o painel já esconde) e o consumo gravando "no {lugar}" sempre ("no Drogarias Pacheco") — achados da aba Mundo/Dinheiro.
+8. **Lista de compras** (Patrick, 28/09, frente de bugs): às 08:52 ele pediu barrinhas na próxima compra da semana e
+   ela prometeu "vou colocar na lista" — não existe lista no mundo. O que ela ou ele pedem no chat entra na próxima
+   compra da semana (mercado), sai no extrato do Dinheiro e ela pode comentar depois.
 
 ## 2. Apps (Mini App) — skill `frente-apps`
 **Abertura:** "bora na frente dos apps: Instagram no uso real"
@@ -68,9 +71,15 @@ dividindo balão; vocabulário da masturbação; música que ele manda por link.
 
 **Próximo:**
 1. **Desempenho:** cada resolve do mundo leva ~7 s na cópia local, quase tudo no `sleep_plan` (~1.300 conexões
-   SQLite por resolve). Cache por dia / conexão reaproveitada.
-2. Do Patrick (ele faz): trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot da VPS.
-3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
+   SQLite por resolve). Cache por dia / conexão reaproveitada. **Pilha no limite (achado 28/09, frente de bugs):** o
+   Hoje de um dia de aula na cópia leva ~65 s, chama `Commute.legs_on` ~90 vezes e chega a 988 níveis de pilha (o
+   limite do Python é 1000) — com a API de rotas ligada estourou `RecursionError` localmente. Na produção, zero hoje,
+   mas a margem é mínima: as camadas agenda → meals → commute → academia → agenda se chamam em cadeia. Achatar (plano
+   do dia calculado uma vez e reaproveitado).
+2. **Script local chama a API paga de rotas:** `commute._live_minutes` usa a `DISTANCE_MATRIX_KEY` do `.env` fora dos
+   testes; varredura/cópia local deve rodar com `COMMUTE_LIVE_TIMES=false` (ou o default local ser desligado).
+3. Do Patrick (ele faz): trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot da VPS.
+4. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
 **Abertura:** "bora na frente de bugs: <o que você viu, com a hora>"
@@ -148,6 +157,25 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
      se ela falou por último há menos de 45 min e ele não respondeu, iniciativa espera (menos os avisos com hora).
      Camada: proatividade.
    - A pergunta dele ("ela nunca se atrasa?") virou o item 6 da frente do mundo.
+
+13. ✅ **O dia 28/09 visto pelo Patrick (conversa, card e Hoje)** — corrigido em 28/09 (`tests/test_bug_dia_2809.py`, 10 testes).
+   - **Almoço na PUC com ela na carona.** Aula 09:00–13:00, carona com o Theo 13:00–13:35, almoço "no restaurante da
+     PUC" 13:15–13:58. Agora (decisão do Patrick, "depende da carona"): com carona volta e almoça em casa depois de
+     chegar; sozinha, às vezes almoça na PUC/Gávea e a volta sai depois do almoço (aula até 14h ou mais: sempre, pra
+     não almoçar às 16h); o card da PUC mostra o "Almoçando". Almoço em casa nunca antes de ela chegar. Camada: mundo
+     (`meals` × `commute`).
+   - **Sanduíche prometido que não existiu.** 08:33, a caminho: "vou comprar um sanduíche antes de entrar" (sugestão
+     dele); o mundo só abria refeição com promessa em casa e "agora". Na rua, comprar/comer algo vira lanche fora
+     ("Comeu um sanduíche no caminho", R$ 15 no saldo; no rolê quem decide é o consumo). Camada: mundo.
+   - **Story da Liniker × "ouvindo Sabrina Carpenter".** O story das 14:09 estava certo ("Baby 95"); o mundo e o Hoje
+     ficavam no 1º artista da playlist o bloco inteiro. O mundo acompanha a faixa tocando; o Hoje diz "Ouviu a playlist
+     dela" com os artistas embaixo. Camada: mundo e app.
+   - **Milo "indo pra PUC" no Hoje.** "Foi pra calçada 07:58" sem volta, colado no "Foi pra PUC 08:19". A descida
+     ganha a hora de volta (07:58–08:11). Camada: app (e o Milo grava o fim).
+   - **Volta pra casa sumida no Hoje.** A saída termina com "Voltou pra casa" (como e com quem, hora) e o que começa
+     quando ela chega (o Pinterest das 13:35) fica fora da saída. Camada: app.
+   - Registrados: lista de compras (barrinhas) na frente do mundo, item 8; pilha no limite e API paga em script local
+     na infra.
 
 **Abertos:** nenhum.
 

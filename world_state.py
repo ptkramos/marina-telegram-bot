@@ -986,7 +986,7 @@ class WorldStateManager:
                 logger.exception("tempo_livre.error")
                 bloco = None
             if bloco:
-                chosen = {**chosen, "activity": bloco.atividade, "place_key": "marina_apartment"}
+                chosen = {**chosen, "activity": bloco.atividade_em(now), "place_key": "marina_apartment"}
                 slot_end = bloco.fim
         else:
             # 27/09 (linha do tempo de 26/09): "Montou looks" até 15:11 com a academia às 14:53 e a música
