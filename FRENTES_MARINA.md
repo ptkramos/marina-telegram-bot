@@ -4,12 +4,12 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 12:50 (passagem de bastão: item 1 do mundo — atraso de verdade — pronto e na produção, `dc770ca`; próxima conversa na frente dos apps — aba nova Por fora, depois Dinheiro e Mundo)._
+_Atualizado em 28/09/2026, 15:05 (passagem de bastão: Bastidores revisado aba a aba com o Patrick — Por fora, Dinheiro e Mundo — e na produção, `3c25453`, `d1da1db`, `887af86`; próxima conversa na frente do mundo — roupa e make de verdade)._
 
 ---
 
 ## 1. Mundo e agenda — skill `frente-mundo`
-**Abertura:** "bora na frente do mundo: ver a agenda viva e o atraso no uso real"
+**Abertura:** "bora na frente do mundo: roupa e make de verdade (o look do momento, pra aba Por fora e pras fotos)"
 
 **Pronto (26/09):** agenda única (planejado, vontade, convite → mesma agenda com etapas); academia e passeio do
 Milo decididos uma vez por dia; mercado e médico como itens (Bradesco Saúde, Samaritano/Novamed); tempo livre
@@ -25,15 +25,17 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 **Pronto (28/09, tarde):** **atraso de verdade** (`atraso.py`, `dc770ca`): despertador, enrolar pelo que sente, Milo, conversa com o Patrick, esquecer algo, imprevisto e chuva empurram a ida e a chegada em aula, rolê/jogo, freela, médico e salão; o compromisso começa sem ela; card com saída/chegada reais; prompt; ela avisa pelo que sente; atraso grande pesa na agenda viva.
 
 **Próximo, nesta ordem:**
-1. Ver a agenda viva e o atraso no uso real (primeira desistência, emenda, amiga chamada, primeiro atraso e aviso) e calibrar os pesos com ele se algo soar forçado.
-2. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber, "Agenda viva" e "Atraso de verdade").
-3. Salão (Ophicina) ainda não é repensado pelo humor nem remarcado pela conversa (tem estado próprio em `unhas.py`/`cabelo.py`).
-4. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
-5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
-6. **Roupa e make de verdade** (Patrick, 28/09, aba Por fora opção C): hoje a roupa nasce na hora da foto (sorteio do
+1. **Roupa e make de verdade** (Patrick, 28/09, aba Por fora opção C): hoje a roupa nasce na hora da foto (sorteio do
    guarda-roupa) e a make é só passo do card. Virar estado: roupa pela etapa/lugar (pijama, treino, faculdade, sair,
    camisa do Botafogo) e make feita no Se arrumando e tirada antes de dormir; a foto usa a mesma roupa; depois a frente
    dos apps mostra no bloco "Agora" da Por fora.
+2. Ver a agenda viva e o atraso no uso real (primeira desistência, emenda, amiga chamada, primeiro atraso e aviso) e calibrar os pesos com ele se algo soar forçado.
+3. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber, "Agenda viva" e "Atraso de verdade").
+4. Salão (Ophicina) ainda não é repensado pelo humor nem remarcado pela conversa (tem estado próprio em `unhas.py`/`cabelo.py`).
+5. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
+6. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
+7. Sementes de história que nunca fecham (`story_threads` "Contato de Henrique", `father_check_in`, aberta desde
+   26/09; o painel já esconde) e o consumo gravando "no {lugar}" sempre ("no Drogarias Pacheco") — achados da aba Mundo/Dinheiro.
 
 ## 2. Apps (Mini App) — skill `frente-apps`
 **Abertura:** "bora na frente dos apps: Instagram no uso real"
@@ -41,18 +43,14 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; **Instagram** no ar (27/09) com acervo refeito
 (folhas das quatro amigas, fotos e textos sem fórmula) e textos revisados por ele no app e na produção (28/09); foto de
-fora à noite com luz de noite; post 6 refeito.
+fora à noite com luz de noite; post 6 refeito. **Bastidores revisado aba a aba (28/09)**: Por dentro; Por fora
+(nova: Peso → Cabelo → Unhas); Dinheiro (mês, próximo cachê, contas, extrato agrupado por saída); Mundo (pessoas por
+círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
 
 **Próximo:**
-1. Bastidores **aba a aba** com ele: **Por dentro ✅ (28/09)** — ordem nova, Ciclo no Corpo, Hoje por dentro, Na
-   cabeça (agenda viva à vista), motivos num padrão só em voz de painel, barras deslizando a cada 30 s.
-   **Por fora ✅ (28/09, tarde)** — aba nova: Peso (novo) → Cabelo → Unhas; o bloco "Agora" (roupa e make do
-   momento) entra quando o mundo tiver isso (item 6 do mundo). **Dinheiro ✅ (28/09, tarde)** — entrou/saiu no mês,
-   próximo cachê, contas; extrato agrupado por saída. **Mundo ✅ (28/09, tarde)** — pessoas por círculo, Onde
-   ela foi no mês, Rolando agora sem fio de sistema. **Bastidores revisado inteiro** (PLANO_VOZ 14 ✅).
-2. Instagram no uso real: o próximo post de rolê da noite (luz e cabelo) e os textos ao vivo (tipo por pessoa, sem molde).
-3. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
-4. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).
+1. Instagram no uso real: o próximo post de rolê da noite (luz e cabelo) e os textos ao vivo (tipo por pessoa, sem molde).
+2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
+3. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).
 
 ## 3. Voz e chat — skill `frente-voz`
 **Abertura:** "bora na frente da voz"
