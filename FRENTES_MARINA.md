@@ -30,14 +30,14 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** "bora na frente dos apps: Instagram, folhas da Júlia e do Theo e refazer o acervo"
+**Abertura:** "bora na frente dos apps: Instagram, folhas da Bia, da Júlia e do Theo e refazer o acervo"
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps.
 
 **Próximo:**
 0. 🟡 **Instagram da Marina** (Etapa 5): no ar desde 27/09 (@masalles; ela posta pelo dia dela, amigas comentam e postam; textos sem bordão, roupa sem repetir, praia de biquíni). Acervo gerado, sendo refeito. Nesta ordem:
-   a. Folhas de personagem da **Júlia e do Theo** (`scripts/folha_amigas.py <amiga> 3x4`, depois `folha`, depois ajuste à mão: círculo no rosto da vista de lado, espelhar tatuagem se precisar); pintar os círculos nas vistas de lado da folha da **Bia**. Carol pronta. Mostrar cada passo ao Patrick.
+   a. Folhas de personagem da **Bia (refazer do zero), da Júlia e do Theo** (`scripts/folha_amigas.py <amiga> 3x4`, depois `folha`, depois ajuste à mão: círculo no rosto da vista de lado, espelhar tatuagem se precisar). Carol pronta. Mostrar cada passo ao Patrick.
    b. Ligar a folha em `swap_friend_face` e `friend_scene` (`civitai_images._referencia` já existe) e testar 1 foto.
    c. Refazer as fotos 7 (praia com a Carol), 3, 5, 9 e 13 **uma por vez com aprovação** (`scripts/instagram_acervo.py --refoto ID` na VPS); a pose "alguém tirando" ainda sai com cara de selfie. Depois `--textos`.
    d. Revisar com ele os textos que decidi sozinho (fim da seção "Etapa 5 — Instagram" do PLANO_WEBAPP).
