@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 19:00 (auditoria de funcionamento, rodada 2: varredura do Agora e do Hoje de 28/09 — item 15 dos bugs, corrigido)._
+_Atualizado em 28/09/2026, 18:40 (auditoria de funcionamento, rodada 2: varredura do Agora e do Hoje de 28/09 — item 15 dos bugs, corrigido e na produção em `a0c61c8`; próxima conversa na frente do mundo, roupa e make de verdade; a auditoria volta depois da noite de 28/09)._
 
 ---
 
@@ -35,7 +35,7 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 5. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
 6. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
 7. Sementes de história que nunca fecham (`story_threads` "Contato de Henrique", `father_check_in`, aberta desde
-   26/09; o painel já esconde) e o consumo gravando "no {lugar}" sempre ("no Drogarias Pacheco") — achados da aba Mundo/Dinheiro.
+   26/09; o painel já esconde) — achado da aba Mundo (o "no Drogarias Pacheco" foi corrigido na auditoria de 28/09).
 8. **Lista de compras** (Patrick, 28/09, frente de bugs): às 08:52 ele pediu barrinhas na próxima compra da semana e
    ela prometeu "vou colocar na lista" — não existe lista no mundo. O que ela ou ele pedem no chat entra na próxima
    compra da semana (mercado), sai no extrato do Dinheiro e ela pode comentar depois.
@@ -239,7 +239,7 @@ O *quando* ela manda foto continua na frente da voz.
 5. Do Patrick: trocar a chave do Civitai (vazou em 24/09).
 
 ## 7. Auditoria de funcionamento — skill `frente-auditoria`
-**Abertura:** "bora na auditoria de funcionamento: varredura do Agora e do Hoje de 28/09 — as pontas soltas com tudo o que foi construído"
+**Abertura:** "bora na auditoria de funcionamento: a noite de 28/09 e a manhã de 29/09 (academia, banho pós-treino, jantar, dormir, Se arrumando da faculdade)"
 
 O Patrick está achando muitos bugs no uso real: o dia 26/09 teve ~50 commits em várias conversas, e muita coisa pode ter ficado desamarrada (um módulo novo que o outro não conhece). Não é criar nada novo: é conferir se cada entrega **funciona de verdade na produção**, junto com as outras.
 
@@ -262,7 +262,7 @@ Bug achado vira item na seção 5 (Bugs), com a correção feita aqui mesmo se f
 
 **Próxima rodada (pedido do Patrick, 28/09, bug 14):** ele sente que o Agora e o Hoje ainda têm muitas pontas soltas com tudo o que foi construído. Varredura do dia 28/09 inteiro numa cópia do banco (`.backup`, `COMMUTE_LIVE_TIMES=false`): `Agenda(db).card(t)` minuto a minuto × `world_state` × Hoje × `life_events` × conversa; cada desencontro vira item na seção 5. Olhar em especial acontecimento "de casa" com ela na rua (o Milo era um; conferir os outros sorteios do dia).
 
-**Rodada 2 (28/09, 18:00) — feita:** item 15 da seção 5. Funciona: PUC (se arrumando → metrô e ônibus com a
+**Rodada 2 (28/09, 18:00) — feita e na produção (`a0c61c8`, 18:33):** item 15 da seção 5. Funciona: PUC (se arrumando → metrô e ônibus com a
 Distance Matrix → aula → carona → casa), vontade Starbucks → emenda na Pacheco → volta com consumo no saldo, passeio
 do Milo com as quatro etapas, tempo livre começando na chegada, correções dos bugs 10–14. Não exercitado: academia com
 preparo às 18:23, banho pós-treino, jantar, série, xixi da noite e se arrumando pra dormir — próxima rodada olha a
