@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 27/09/2026, 23:30 (frente dos apps: folhas das quatro amigas prontas e ligadas; foto 7 refeita; faltam 3, 5, 9, 13 e os textos)._
+_Atualizado em 28/09/2026, 00:30 (frente dos apps: folhas das quatro amigas prontas e ligadas; fotos 7, 3, 5, 9 e 13 refeitas; falta refazer os textos)._
 
 ---
 
@@ -38,7 +38,7 @@ Agora decidida linha a linha (card layout D); tela inicial só com os apps.
 **Próximo:**
 0. 🟡 **Instagram da Marina** (Etapa 5): no ar desde 27/09 (@masalles; ela posta pelo dia dela, amigas comentam e postam; textos sem bordão, roupa sem repetir, praia de biquíni). Acervo gerado, sendo refeito. Nesta ordem:
    a. ✅ Folhas das quatro amigas prontas (27/09, noite). Ligadas: amiga sozinha parte da folha; troca de rosto usa a 3x4 só com a cabeça (a folha vazou o body cinza no biquíni). Foto 7 refeita (novo7c + cabeça da Carol).
-   c. Refazer as fotos 3, 5, 9 e 13 **uma por vez com aprovação** (`scripts/instagram_acervo.py --refoto ID` na VPS, depois do deploy); a pose "alguém tirando" ainda sai com cara de selfie. Depois `--textos`.
+   c. ✅ Fotos 3, 5, 9 e 13 refeitas e aprovadas. Falta `--textos` (na VPS) e mostrar o resultado ao Patrick.
    d. Revisar com ele os textos que decidi sozinho (fim da seção "Etapa 5 — Instagram" do PLANO_WEBAPP).
 1. Bastidores **aba a aba** com ele (Por dentro, Dinheiro, Mundo), como foi a Agora — ele quer ver no celular e
    ajustar palavra por palavra (PLANO_VOZ 14).
@@ -107,7 +107,7 @@ O *quando* ela manda foto continua na frente da voz.
 **Próximo:**
 0. **Quarto apagado com flash** (o Patrick gostou no teste da pose inclinada, 27/09): "her dark bedroom with the lights off… the only light is the bright direct flash of the camera" ficou igual à referência dele. Decidir se vira opção de luz à noite no quarto (`apartamento.setting/backdrop`, e o fim "natural light" → "direct camera flash") e quando entra (tarde da noite, clima de sexting?).
 1. Foto de grupo: acompanhar a 1ª no uso real (log `foto de grupo sem a troca de rosto` = falhou a troca). Pendências: Carol/Júlia/Theo ainda não rodaram em grupo (a Carol é o maior contraste); foto de grupo em casa (amiga visitando) e com duas amigas (a troca hoje é de uma só, lado direito); ligar no Instagram.
-2. Poses que o Patrick mandar (PLANO_VOZ 1). Lição: roupa *sendo tirada* + nudez = recusa do Krea 2 (ruído de letras); escrever a roupa parada.
+2. Poses que o Patrick mandar (PLANO_VOZ 1). **Aplicar os artigos de pose do Krea 2 (memória `krea2-poses-e-camera`):** a pose de grupo "alguém tirando" ainda sai selfie — testar o objeto borrado na borda (ombro de quem tira); revisar as frases de ausência dos prompts ("not a selfie", "no white circles"…) quando algo proibido aparecer. Lição: roupa *sendo tirada* + nudez = recusa do Krea 2 (ruído de letras); escrever a roupa parada.
 3. Ângulo de trás sem espelho (PLANO_VOZ 1d); fatores do gozo especial (1e); acompanhar o slider de peso (9).
 4. **Rostos de gente nova** (se o Patrick quiser, ex.: Gabi, Bruno): mesmo caminho — referência → 4 rostos por texto (~80 Buzz) → RG → `FRIENDS_VISUAL` + `FRIEND_RG` → foto de perfil (41) em `webapp/avatars`. Lições: LoRA de rosto da amiga mistura com o da Marina; só texto sai com as feições da Marina; contraste de estrutura com a Marina; o Krea 2 põe sardas sozinho (pele "clear smooth even-toned" e cor concreta tiram quase tudo); a seed de uma candidata puxa o rosto dela numa nova geração com o texto ajustado; **edição por partes** (Júlia): o Krea 2 Edit muda um traço de cada vez (olho, cor da íris, nariz) e só aquela região volta colada na original, com a cor igualada pela pele do rosto — assim a pele, as sardas e a textura não "crocam"; nariz pede frase forte ("noticeably smaller and flatter… low, flat bridge"), a frase fraca não mexe.
 5. Do Patrick: trocar a chave do Civitai (vazou em 24/09).

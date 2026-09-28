@@ -406,7 +406,8 @@ button.primary:disabled { opacity: .5; }
 .igp-quem > span { display: flex; flex-direction: column; line-height: 1.2; }
 .igp-local { font-size: 12px; }
 .igp-foto { position: relative; aspect-ratio: 4 / 5; background: var(--bg2); overflow: hidden; user-select: none; }
-.igp-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* as fotos dela saem 2:3; no 4:5 o corte centrado cortava a testa (27/09): corta mais embaixo, como no app de verdade */
+.igp-foto img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; display: block; }
 .ig-marcas { position: absolute; left: 10px; bottom: 10px; width: 28px; height: 28px; border-radius: 50%; border: 0;
   background: rgba(0, 0, 0, .7); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .ig-marcas-lista { position: absolute; left: 44px; bottom: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
@@ -468,7 +469,7 @@ button.primary:disabled { opacity: .5; }
 .igpf-abas button.on { color: var(--fg); border-bottom-color: var(--fg); }
 .igpf-abas .ti { font-size: 22px; }
 .igpf-grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
-.igpf-tile { aspect-ratio: 3 / 4; border: 0; padding: 0; background: var(--bg2) center / cover no-repeat; cursor: pointer; }
+.igpf-tile { aspect-ratio: 3 / 4; border: 0; padding: 0; background: var(--bg2) 50% 20% / cover no-repeat; cursor: pointer; }
 #igpf-posts[hidden], #igpf-marcadas[hidden] { display: none; }
 
 /* atividade */

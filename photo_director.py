@@ -369,8 +369,10 @@ POSES: tuple[Pose, ...] = (
          "three_quarter", "friend", "caught mid-laugh looking off to the side at someone out of frame, candid and "
          "unposed, one hand near her collarbone"),
     Pose("fora_amiga_sentada", "sentada à mesa, uma amiga tirando do outro lado", ("fora",), (0, 1),
-         "three_quarter", "friend", "sitting at a small table, leaning forward a little with her chin resting on one "
-         "hand, a drink in front of her, smiling at the person taking the photo"),
+         # 27/09 (foto 9, duas vezes selfie): olho na lente + uma mão livre = selfie; as duas mãos ficam ocupadas
+         "three_quarter", "friend", "seen from across the table, sitting at a small table with the table edge and "
+         "the back of her chair in the frame, her chin resting on her left hand and her right hand wrapped around "
+         "her drink on the table, smiling at her friend who is taking the photo"),
     Pose("fora_amiga_encostada", "encostada na parede, uma amiga tirando", ("fora",), (0, 1), "full", "friend",
          "leaning back against a wall with one foot resting flat against it, arms relaxed, looking at the camera"),
     Pose("fora_amiga_costas", "indo embora e olhando por cima do ombro, uma amiga tirando", ("fora",), (0, 1),

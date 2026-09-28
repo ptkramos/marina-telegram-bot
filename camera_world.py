@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 # Generic photographic descriptions — never forward private region/commitment text.
 PLACE_VISUAL: dict[str, str] = {
     'marina_apartment': 'modern Rio de Janeiro apartment interior, candid indoor smartphone photo',
-    'puc_rio': 'university campus indoor setting, classroom or corridor, candid smartphone photo',
+    # 27/09 (Patrick): "corridor" saía corredor de escola americana; a PUC-Rio é campus aberto no meio do verde
+    'puc_rio': ('PUC-Rio university campus in Gávea, Rio de Janeiro: open-air concrete walkways under modernist '
+                'pilotis buildings surrounded by lush tropical trees, students passing, candid smartphone photo'),
     'bodytech_sao_clemente': 'modern gym interior, fitness equipment background, candid smartphone photo',
     'enseada_botafogo': 'Botafogo waterfront promenade outdoors, coastal path, candid smartphone photo',
     'botafogo_praia_shopping': 'shopping mall interior corridor, casual storefront lighting',

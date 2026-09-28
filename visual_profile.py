@@ -71,7 +71,13 @@ KREA2_DISTANT = ("full body", "full-body", "corpo inteiro", "corpo todo", "few m
 KREA2_FRAMING_DISTANT = ("Full body shot taken from about four meters away, showing her from head to toe with "
                          "space around her, both arms relaxed at her sides.")
 KREA2_PHOTO_DISTANT = ("It is a real photo taken by a friend a few meters away with a phone, her whole body in the "
-                       "frame, not a selfie: natural light, real skin texture, unblemished skin.")
+                       "frame, not a selfie: she is not holding any phone. Natural light, real skin texture, "
+                       "unblemished skin.")
+# 27/09 (Instagram, foto 9): de meio corpo, "whole body in the frame" contradizia o enquadramento e ela saiu com o
+# braço esticado segurando o celular. O artigo do Krea 2 avisa: sem dizer quem segura a câmera, ela segura.
+KREA2_PHOTO_FRIEND = ("It is a real photo taken by a friend with a phone from across the table or a couple of "
+                      "meters away, not a selfie: she is not holding any phone, and neither of her arms reaches "
+                      "toward the camera. Natural light, real skin texture, unblemished skin.")
 # C.1b (24/09): ela mora sozinha — foto de corpo inteiro em casa é o celular apoiado
 # numa prateleira com o timer, não "uma amiga tirando".
 # 24/09 (teste): "phone propped on a shelf" desenhou o celular DENTRO da foto — o texto não
@@ -218,7 +224,7 @@ def krea2_zoom_prompt(action: str, *, zoom: str, setting: str, backdrop: str, is
     elif framing == "timer":
         parts.append(KREA2_PHOTO_PROPPED)
     elif framing == "friend":
-        parts.append(KREA2_PHOTO_DISTANT)
+        parts.append(KREA2_PHOTO_DISTANT if zoom in ("full", "room") else KREA2_PHOTO_FRIEND)
     else:
         parts.append(KREA2_PHOTO)
     return " ".join(parts)

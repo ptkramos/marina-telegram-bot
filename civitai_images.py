@@ -661,9 +661,13 @@ FRIEND_SCENE_PROMPT = ("One {noun}, solo. Place this person in this scene: {scen
                        "natural light, clean dry skin, realistic skin texture, vertical 4:5 framing.")
 # com a folha (artigo "reference consistency"): enquadramento e contagem primeiro, "as shown in the image as a
 # turnaround sheet", e dizer o que da folha não entra (senão desenha os círculos, o body cinza ou as 4 vistas).
+# 27/09 (foto 13): cena sem roupa dita ("encostado no carro") saiu com a camiseta e a bermuda cinza da folha —
+# a roupa vai sempre no estilo da pessoa (visual_profile.FRIENDS_VISUAL "style").
 FRIEND_SCENE_PROMPT_SHEET = (
     "One {noun}, solo, a single photo. Place the {noun} shown in the image as a turnaround sheet in this scene: "
-    "{scene}, wearing clothes that fit this new scene, never the grey bodysuit from the sheet. The face comes from "
+    "{scene}, wearing real clothes that fit this new scene, in the {noun}'s own style ({style}), "
+    "never the plain light grey t-shirt, shorts or bodysuit from the sheet, nothing "
+    "plain light grey. The face comes from "
     "the close-up portrait of the sheet; the hair and body proportions from the full-body views. Only one person "
     "and one view, no white circles, no grey studio background. Strictly preserve the exact same face, facial "
     "structure, eye shape, facial features, skin tone and identity; do not alter the facial structure. Keep the "
@@ -683,7 +687,8 @@ async def friend_scene(friend: str, scene: str, *, width: int = 896, height: int
     from visual_profile import FRIENDS_VISUAL
     noun = FRIENDS_VISUAL.get(friend, {}).get("noun", "woman")
     step = {"engine": "comfy", "ecosystem": "krea2", "model": "edit", "operation": "editImage",
-            "prompt": (FRIEND_SCENE_PROMPT_SHEET if folha else FRIEND_SCENE_PROMPT).format(noun=noun, scene=scene),
+            "prompt": (FRIEND_SCENE_PROMPT_SHEET if folha else FRIEND_SCENE_PROMPT).format(
+                noun=noun, scene=scene, style=FRIENDS_VISUAL.get(friend, {}).get("style", ("casual clothes",))[0]),
             "images": ["data:image/jpeg;base64," + base64.b64encode(ref).decode()],
             "width": width, "height": height, "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
             "quantity": 1, "loras": {}}
