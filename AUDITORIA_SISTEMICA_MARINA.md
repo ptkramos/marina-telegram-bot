@@ -1842,3 +1842,6 @@ Pedido do Patrick (aba Por fora, opção C): o look do momento existir no mundo,
   adulto (nada que remeta a menor); peças novas também vão como foto adulta (regex do `adult`).
 - **Testes:** `tests/test_roupa.py` (12) + módulos vizinhos (agenda, agenda reativa/viva, cabelo, câmera, Instagram,
   intimidade, photo_director, promessa, rituais, tempo livre, webapp, world_state: 251 ok) + suíte inteira.
+- **Na produção (19:22):** o estado nasceu com ela ainda na academia e a saída aplicou o preparo das 18:23 (top e
+  legging, "Academia", desde 18:23). Achado: a roupa de casa da partida foi pro histórico "de 19:22 até 18:23"; troca
+  retroativa antes da roupa atual agora a substitui (teste `test_troca_retroativa_nao_deixa_historico_invertido`).

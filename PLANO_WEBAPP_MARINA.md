@@ -272,7 +272,7 @@ leem daqui. Decisões do Patrick com múltipla escolha:
   Patrick." e "Dormiu sem tirar a make (…) e acordou borrada."; ícones hanger, heart, brush.
 - **Código:** `roupa.py` (novo), `world_state.resolve` (tick depois de cada resolve), `rituals.start_shower`,
   `photo_director` (`_roupa_de_agora`, `_make`), `world_context`, `bot.py` (tesão, opções de look, escolha dele, ela
-  contar, Instagram), `tempo_livre`, `agenda`, `webapp_server`/`webapp`. Testes: `tests/test_roupa.py` (12).
+  contar, Instagram), `tempo_livre`, `agenda`, `webapp_server`/`webapp`. Testes: `tests/test_roupa.py` (13). Na produção desde 28/09, 19:17.
 
 ### Bastidores aba a aba — Dinheiro (28/09, tarde, no celular, com o banco da produção) ✅
 Escolhas do Patrick com mockup e múltipla escolha:

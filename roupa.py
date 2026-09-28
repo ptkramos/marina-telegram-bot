@@ -343,7 +343,7 @@ class Roupa:
         atual = st.get("atual")
         if atual and atual.get("look") == look and atual.get("ocasiao") == ocasiao:
             return
-        if atual:
+        if atual and datetime.fromisoformat(atual["desde"]) < at:   # troca retroativa antes dela: substitui
             st.setdefault("hist", []).append({**atual, "ate": at.isoformat()})
             corte = at - timedelta(days=HIST_DIAS)
             st["hist"] = [h for h in st["hist"] if datetime.fromisoformat(h["ate"]) >= corte]

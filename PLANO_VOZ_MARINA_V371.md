@@ -1169,7 +1169,7 @@ Ele notou na conversa de 22–23/09 que, mesmo com a fala boa, algumas coisas **
   veste, pra quê e desde quando; a make e se borrou; o que está por baixo e se ele já sabe; a peça que ela vestiu pra
   provocar). Sem frase pronta: ela provoca/insinua do jeito dela. A iniciativa de tesão em casa agora vem com ela
   vestindo algo pra ele (detalhe da iniciativa), e ela contar o "por baixo" no chat libera a linha no Por fora.
-  Pra observar no uso real: se ela insinua demais o que está vestindo, ou se contradiz a roupa na conversa.
+  Pra observar no uso real: se ela insinua demais o que está vestindo, ou se contradiz a roupa na conversa. Na produção desde 28/09, 19:17.
 - **Organização (26/09):** painel `FRENTES_MARINA.md`, mapa `CLAUDE.md` e skills por frente; a próxima conversa começa pela agenda reativa (frente do mundo).
 - **Frente de imagens (27/09):** poses de referência, prompts de foto e motor (Civitai/LoRA) têm conversa própria (skill `frente-imagens`, seção 6 do `FRENTES_MARINA.md`); pendências 1, 1d, 1e, 1g e 9 andam por lá. O *quando* ela manda foto (15) segue na voz.
 - **Uma iniciativa por vez (26/09):** a entrega surpresa e uma saudade saíram juntas e intercalaram os balões; agora cada mensagem sai inteira e a saudade desiste se outra iniciativa acabou de sair. Plano de saúde canônico (Bradesco Saúde Top Nacional, dependente do pai; Samaritano Botafogo ou Novamed).

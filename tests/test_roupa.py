@@ -123,6 +123,13 @@ class RoupaTest(unittest.TestCase):
         self.assertEqual((st["atual"]["ocasiao"], st["atual"]["desde"][11:16]), ("sair", "19:50"))
         self.assertIn(st["make"]["nivel"], ("completa", "festa"))
 
+    def test_troca_retroativa_nao_deixa_historico_invertido(self):
+        # 28/09, 19:22 na produção: a roupa de casa da partida ficou "de 19:22 até 18:23" no histórico
+        st = self.r._state(T)
+        self.r._vestir(st, ["top_preto", "legging_preta"], "treino", T - timedelta(hours=1), "Academia")
+        self.assertEqual(st["hist"], [])
+        self.assertEqual(st["atual"]["desde"][11:16], "14:00")
+
     def test_saiu_de_pijama_sem_se_arrumar_poe_roupa_de_rua(self):
         self.cama = True
         self.r.tick(datetime(2026, 9, 26, 2, 0))
