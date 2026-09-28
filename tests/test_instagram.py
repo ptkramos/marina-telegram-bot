@@ -159,6 +159,51 @@ class VariedadeTest(Base):
         self.assertEqual(ig._limpa("“Carro alugado, autoestima em dia 😎”"), "Carro alugado, autoestima em dia 😎")
 
 
+class RevisaoTextosTest(Base):
+    """28/09 (revisão do acervo com o Patrick): legenda com molde, amiga falando com a Ma no post de outra,
+    terceira pessoa, palavra ecoando entre pessoas, o Theo sempre convidando, e o rolê de ontem ganhando do de hoje."""
+
+    def test_role_mais_recente_ganha_o_empate(self):
+        evento(self.db, "social:2026-09-26:bia_andrade:saida", T - timedelta(hours=21), "social_contact",
+               "presencial com a Bia", "Encontrou a Bia (Quartinho Bar); assunto: festas.", ("marina", "bia_andrade"))
+        self.rolê()
+        self.assertEqual(ig.motivos(self.db, T)[0]["local"], "Shopping da Gávea")
+
+    def test_no_post_da_amiga_falam_com_ela(self):
+        pid = ig.publicar(self.db, autor="bia_andrade", now=T, motivo_chave="a", descricao="ela na praia de Ipanema")
+        pedido = ig.pedido_comentarios(self.db, ig.post(self.db, pid), ["carol_menezes", "marina"])
+        self.assertIn("Post no Instagram da Bia. A foto: a Bia na praia de Ipanema", pedido)
+        self.assertIn("falando com a Bia", pedido)
+        self.assertIn("ninguém fala com ela aqui", pedido)
+
+    def test_o_que_os_outros_escreveram_vai_no_pedido(self):
+        velho = ig.publicar(self.db, autor="marina", now=T - timedelta(days=2), motivo_chave="v", descricao="x")
+        ig.comentar(self.db, velho, "theo_martins", "starbucks entregando cenário", T - timedelta(days=2))
+        pid = ig.publicar(self.db, autor="marina", now=T, motivo_chave="n", descricao="você no closet")
+        self.assertIn("starbucks entregando cenário", ig.pedido_comentarios(self.db, ig.post(self.db, pid), ["bia_andrade"]))
+
+    def test_tipo_nao_se_repete_nos_ultimos_tres_da_pessoa(self):
+        rng = __import__("random").Random(3)
+        tipos = [ig._escolher_tipo(self.db, "theo_martins", "comentario", ig.TIPOS_COMENTARIO, rng) for _ in range(12)]
+        for i in range(3, 12):
+            self.assertNotIn(tipos[i], tipos[i - 3:i])
+
+    def test_legenda_tem_tipo_e_hora_da_foto(self):
+        pedido = ig.pedido_legenda(self.db, "marina", "você com a Bia no Quartinho Bar", "Quartinho Bar",
+                                   quando=ig.quando_foi(datetime(2026, 9, 26, 21, 5), T))
+        self.assertIn("a foto é de ontem à noite", pedido)
+        self.assertTrue(any(t in pedido for t in ig.TIPOS_LEGENDA))
+        self.assertIn("nunca soa como encontro romântico", pedido)
+        self.assertEqual(ig.quando_foi(datetime(2026, 9, 27, 15, 5), T), "hoje à tarde")
+        self.assertEqual(ig.quando_foi(T - timedelta(hours=1), T), "")
+
+    def test_marcada_estava_la(self):
+        pid = ig.publicar(self.db, autor="marina", now=T, motivo_chave="q", descricao="você com a Bia no Quartinho Bar",
+                          marcados=["bia_andrade"])
+        pedido = ig.pedido_comentarios(self.db, ig.post(self.db, pid), ["bia_andrade", "julia_azevedo"])
+        self.assertIn("a Bia está na foto e estava lá junto", pedido)
+
+
 class StoryTest(Base):
     def test_musica_tocando_vira_story_uma_vez_e_no_maximo_dois_por_dia(self):
         faixa = {"nome": "Houdini", "artista": "Dua Lipa", "at": (T - timedelta(minutes=2)).isoformat(), "id": 1}

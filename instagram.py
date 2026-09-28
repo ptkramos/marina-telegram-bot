@@ -102,6 +102,62 @@ def _nao_repita(db, autor: str) -> str:
             + ", ".join(f"\"{c}\"" for c in _comecos(feitos)) + ".")
 
 
+def _dos_outros(db, n: int = 12, *, legendas: bool = False) -> str:
+    """28/09 (revisão do acervo): o "não repita" era só da própria pessoa, e três pessoas diferentes escreveram
+    "entregando". Isto é o que todo mundo escreveu por último, pra ninguém ecoar ninguém."""
+    sql = ("SELECT legenda AS texto FROM ig_posts WHERE legenda!='' AND tipo='feed' ORDER BY criado_em DESC LIMIT ?"
+           if legendas else "SELECT texto FROM ig_comentarios ORDER BY criado_em DESC LIMIT ?")
+    feitos = [r["texto"] for r in _rows(db, sql, (n,))]
+    if not feitos:
+        return ""
+    return (" Já escrito por outras pessoas no Insta (ninguém ecoa palavra marcante, bordão nem molde disso): "
+            + " / ".join(f"\"{t}\"" for t in feitos) + ".")
+
+
+# 28/09 (revisão do acervo): cada um tem memória dos tipos que fez por último, senão o sorteio repete (o Theo
+# convidou pra algo em 3 de 7 comentários). Guardado em estado_relacional.
+TIPOS_KEY = "ig_tipos_json"
+
+
+def _escolher_tipo(db, autor: str, qual: str, opcoes: tuple, rng: random.Random, evitar: set = frozenset()) -> str:
+    try:
+        st = json.loads(db.get_estado_relacional(TIPOS_KEY) or "{}")
+    except (TypeError, ValueError):
+        st = {}
+    recentes = st.get(f"{qual}:{autor}", [])[-3:]
+    livres = ([t for t in opcoes if t not in recentes and t not in evitar]
+              or [t for t in opcoes if t not in evitar] or list(opcoes))
+    tipo = rng.choice(livres)
+    st[f"{qual}:{autor}"] = (st.get(f"{qual}:{autor}", []) + [tipo])[-6:]
+    db.set_estado_relacional(TIPOS_KEY, json.dumps(st, ensure_ascii=False))
+    return tipo
+
+
+# 28/09 (Patrick, revisão do acervo): as 17 legendas saíram no mesmo molde ("unhas novas, humor novo ✨", "sol, sal e
+# pele terracota 🌞"): lista ou antítese com um emoji no fim. Cada legenda recebe um tipo, como os comentários.
+TIPOS_LEGENDA = (
+    "só um emoji, nenhuma palavra",
+    "uma ou duas palavras, sem emoji",
+    "só o lugar ou o momento, do jeito que se marca no Insta",
+    "o que passou pela cabeça na hora, como quem fala sozinha, sem poesia",
+    "uma autozoeira ou piada sobre a própria foto",
+    "uma reação ao próprio dia ou ao momento, sem contar fato que não está na foto",
+    "uma frase comum do dia, dita do jeito mais simples",
+)
+
+
+def quando_foi(at: datetime, now: datetime) -> str:
+    """"ontem à noite", "hoje à tarde": a legenda de um rolê da tarde não pode falar em noite. Foto de agora
+    (menos de 3 h) não diz nada — o modelo copiava "hoje à tarde" pra legenda."""
+    if now - at < timedelta(hours=3):
+        return ""
+    h = at.hour
+    periodo = "de madrugada" if h < 5 else "de manhã" if h < 12 else "à tarde" if h < 18 else "à noite"
+    dias = (now.date() - at.date()).days
+    dia = "hoje" if dias <= 0 else "ontem" if dias == 1 else f"há {dias} dias"
+    return f"{dia} {periodo}"
+
+
 # 27/09 (Patrick): cada comentário sai de um tipo diferente, senão cada pessoa vira uma fórmula. Só emoji pode.
 TIPOS_COMENTARIO = (
     "uma pergunta pra quem postou, sobre algo da foto ou do dia",
@@ -115,22 +171,38 @@ TIPOS_COMENTARIO = (
 )
 # quem é de fora só conhece de vista: nada de lembrança, zoeira ou convite
 TIPOS_DE_FORA = (TIPOS_COMENTARIO[2], TIPOS_COMENTARIO[3], TIPOS_COMENTARIO[4], TIPOS_COMENTARIO[7])
+# quem está na foto estava lá: não pergunta como foi (28/09: a Bia, marcada, perguntou "até que horas vocês ficaram?")
+TIPOS_DA_MARCADA = ("uma lembrança de algo que rolou ali, que só quem estava sabe", TIPOS_COMENTARIO[2],
+                    TIPOS_COMENTARIO[3], TIPOS_COMENTARIO[5])
+
+
+def momento_do_post(db, p: dict) -> datetime:
+    """Quando a foto foi tirada: a hora do acontecimento que virou post, ou a do próprio post."""
+    r = _rows(db, "SELECT event_at FROM life_events WHERE event_key=? LIMIT 1", (p.get("motivo_chave") or "",))
+    return datetime.fromisoformat(r[0]["event_at"] if r else p["criado_em"])
 
 
 def _foto_pros_outros(p: dict) -> str:
-    """A foto descrita de fora (a descrição guardada fala com a Marina: "você com a Bia")."""
+    """A foto descrita de fora (a da Marina fala com ela: "você com a Bia"; a da amiga diz "ela/ele")."""
+    from social_day import short_name
     foto = re.sub(r"\bvocê\b", "a Marina", re.sub(r"\b(sua|seu)\b", "da Marina", p["descricao"]))
+    if p["autor"] != "marina":
+        foto = re.sub(r"^(ela|ele)\b", short_name(p["autor"]), foto)
     if p.get("roupa"):
-        foto += f" (roupa dela: {p['roupa']})"
+        foto += f" (roupa: {p['roupa']})"
     return foto
 
 
-def pedido_legenda(db, autor: str, foto: str, local: str = "") -> str:
+def pedido_legenda(db, autor: str, foto: str, local: str = "", *, quando: str = "",
+                   rng: Optional[random.Random] = None) -> str:
     """Prompt da legenda de um post (da Marina ou de uma amiga)."""
+    tipo = _escolher_tipo(db, autor, "legenda", TIPOS_LEGENDA, rng or random.Random())
     return (f"Quem posta: {QUEM_ESCREVE[autor]}. Vai postar no próprio Instagram uma foto: {foto}"
-            + (f", em {local}" if local else "") + ". Escreva só a legenda, como essa pessoa escreveria: curta "
-            "(até 8 palavras), pode ser só um emoji ou uma frase solta, sem hashtag, sem aspas, sem falar com "
-            "ninguém." + _nao_repita(db, autor))
+            + (f", em {local}" if local else "") + (f" (a foto é de {quando})" if quando else "")
+            + f". Escreva só a legenda, como essa pessoa escreveria. Esta legenda: {tipo}. Até 8 palavras, caixa "
+            "baixa, sem hashtag, sem aspas, sem falar com ninguém; nada de lista de três coisas, nada de \"x novo, y "
+            "novo\", nada de frase de efeito, e emoji só se o tipo pedir. Foto com amiga é carinho de amiga, nunca "
+            "soa como encontro romântico." + _nao_repita(db, autor) + _dos_outros(db, 8, legendas=True))
 
 FEED_GAP_H = 36          # entre dois posts dela
 LIMIAR = 1.0             # vontade de postar (motivo + dias sem postar + como ela está)
@@ -436,7 +508,9 @@ def motivos(db, now: datetime, horas: float = 30) -> list[dict]:
         add({"chave": f"vista:{now:%Y-%m-%d}", "at": now.replace(hour=10, minute=0, second=0, microsecond=0).isoformat(),
              "motivo": "vista", "peso": PESO["vista"],
              "local": "Botafogo, Rio de Janeiro", "place_key": "", "amiga": "", "descricao": "uma selfie sua em casa"})
-    return sorted(out.values(), key=lambda m: -m["peso"])
+    # 28/09 (Patrick): no empate ganha o mais recente (em 27/09 ela postou o Quartinho da noite anterior saindo
+    # do cinema com a mesma Bia)
+    return sorted(out.values(), key=lambda m: (m["peso"], m["at"]), reverse=True)
 
 
 def _dias_sem_postar(db, now: datetime) -> float:
@@ -633,13 +707,23 @@ def pedido_comentarios(db, p: dict, autores: list[str], rng: Optional[random.Ran
     """Prompt (texto interno) pra gerar os comentários de todo mundo de uma vez, em JSON."""
     from social_day import short_name
     rng = rng or random.Random(f"ig:tipo:{p['id']}")
-    dona = "da Marina (@masalles)" if p["autor"] == "marina" else f"de {short_name(p['autor'])}"
-    tipos = rng.sample(TIPOS_COMENTARIO, len(TIPOS_COMENTARIO))
+    dona = "da Marina (@masalles)" if p["autor"] == "marina" else "d" + short_name(p["autor"])   # "da Bia"
+    quem_postou = "a Marina" if p["autor"] == "marina" else short_name(p["autor"])
+    # 28/09: no post da Bia a Carol escreveu "marina, até o sol…"; no da Marina a Júlia falou "o olho da Marina"
+    fala_com = (f" Todo mundo comenta falando com {quem_postou}, que postou (você/tu), nunca sobre ela na terceira "
+                "pessoa" + ("; a Marina é só mais uma comentando, ninguém fala com ela aqui." if p["autor"] != "marina"
+                            else "."))
+    # 28/09: a Bia, marcada na foto do Quartinho, perguntou "tu e a Marina já saíram de lá…?"
+    marcados = [a for a in json.loads(p.get("marcados_json") or "[]") if a in AMIGAS]
+    if marcados:
+        fala_com += (" " + " e ".join(short_name(a) for a in marcados) + " está na foto e estava lá "
+                     "junto; quem não está marcado não estava.")
+    usados: set = set()   # cada tipo uma vez por post
     linhas = []
     for a in autores:
-        tipo = next((t for t in tipos if a in QUEM_ESCREVE or t in TIPOS_DE_FORA), TIPOS_DE_FORA[0])
-        if tipo in tipos:
-            tipos.remove(tipo)   # cada tipo uma vez por post
+        opcoes = TIPOS_DA_MARCADA if a in marcados else TIPOS_COMENTARIO if a in QUEM_ESCREVE else TIPOS_DE_FORA
+        tipo = _escolher_tipo(db, a, "comentario", opcoes, rng, usados)
+        usados.add(tipo)
         tipo = f" Este comentário: {tipo}."
         if a in QUEM_ESCREVE:
             linhas.append(f"- \"{a}\": {QUEM_ESCREVE[a]}.{tipo}{_nao_repita(db, a)}")
@@ -651,10 +735,12 @@ def pedido_comentarios(db, p: dict, autores: list[str], rng: Optional[random.Ran
               "amiga: curto (até 12 palavras), português informal, em caixa baixa, sem ponto final, no máximo 1 "
               "emoji (no tipo só emojis, de 1 a 3 e nada mais), sem hashtag. Cada um faz o tipo de comentário "
               "pedido e reage a algo diferente e concreto desta foto, desta legenda ou da vida delas; o jeito da "
-              "pessoa aparece em como ela escreve, não em assunto fixo. Entre as amigas o carinho é de amiga, sem "
+              "pessoa aparece em como ela escreve, não em assunto fixo. Detalhe só do que está na descrição da foto "
+              "ou da roupa, sem inventar; lembrança só de coisa que dá pra ter vivido; quem lê só a foto e a legenda "
+              "tem que entender o comentário. Entre as amigas o carinho é de amiga, sem "
               "flerte. Ninguém repete o que o outro "
-              "disse nem o que já escreveu antes. O Patrick (@ptkramos) é o namorado da Marina; dá pra citar ele "
-              "de vez em quando, não sempre.\n" + "\n".join(linhas)
+              "disse nem o que já escreveu antes." + fala_com + " O Patrick (@ptkramos) é o namorado da Marina; dá "
+              "pra citar ele de vez em quando, não sempre." + _dos_outros(db) + "\n" + "\n".join(linhas)
             + "\nResponda só com um JSON: {\"chave\": \"comentário\", ...}")
 
 
@@ -736,8 +822,8 @@ def marina_olha(db, now: datetime, fala: Callable[[str], str], rng: Optional[ran
                 f"Você abriu o Instagram e viu que {quem} comentou \"{c['texto']}\" {onde}"
                 + (f" (legenda: \"{c['legenda']}\")" if c["legenda"] else "")
                 + ". Escreva só a sua resposta a esse comentário, como você responderia no Instagram: curtinha "
-                  "(até 10 palavras), sem aspas, sem @, no máximo 1 emoji, ou só emoji; com amiga, carinho de "
-                  "amiga, sem flerte." + _nao_repita(db, "marina")))
+                  "(até 10 palavras), caixa baixa, sem ponto final nem exclamação, sem aspas, sem @, no máximo 1 "
+                  "emoji, ou só emoji; com amiga, carinho de amiga, sem flerte." + _nao_repita(db, "marina")))
             if texto:
                 comentar(db, c["post_id"], "marina", texto, now + timedelta(minutes=rng.randint(1, 3)),
                          pai_id=c["pai_id"] or c["id"])

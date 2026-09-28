@@ -4,7 +4,7 @@
     {"name": "miniapp", "runtimeExecutable": "venv/Scripts/python.exe", "runtimeArgs": ["scripts/webapp_preview.py", "8799"], "port": 8799},
     {"name": "miniapp-cabelo", "runtimeExecutable": "venv/Scripts/python.exe", "runtimeArgs": ["scripts/webapp_preview.py", "8797"], "port": 8797},
     {"name": "miniapp-hoje", "runtimeExecutable": "venv/Scripts/python.exe", "runtimeArgs": ["scripts/webapp_preview.py", "8796", "--db", "C:/Users/conta/AppData/Local/Temp/claude/C--Arquivos-GitHub-marin-telegram-bot/c7684628-b708-4061-ade2-52f0332c50e6/scratchpad/prod_copy.db", "--agora", "2026-09-26T22:50"], "port": 8796},
-    {"name": "miniapp-insta", "runtimeExecutable": "venv/Scripts/python.exe", "runtimeArgs": ["scripts/webapp_preview.py", "8795", "--db", "C:/Users/conta/AppData/Local/Temp/claude/C--Arquivos-GitHub-marin-telegram-bot/dc0c9d68-ff06-4410-8954-e3c5cdbb7ab9/scratchpad/ig_preview.db", "--agora", "2026-09-27T18:40"], "port": 8795},
+    {"name": "miniapp-insta", "runtimeExecutable": "venv/Scripts/python.exe", "runtimeArgs": ["scripts/webapp_preview.py", "8795", "--db", "C:/Users/conta/AppData/Local/Temp/claude/C--Arquivos-GitHub-marin-telegram-bot/74d4f8ca-239b-46bd-b480-5a881cd34d81/scratchpad/ig_copy.db", "--agora", "2026-09-28T11:00"], "port": 8795},
     {"name": "miniapp-real", "runtimeExecutable": "venv/Scripts/python.exe", "runtimeArgs": ["scripts/webapp_preview.py", "8798", "--db", "C:/Users/conta/AppData/Local/Temp/claude/C--Arquivos-GitHub-marin-telegram-bot/03b484b8-2d35-45e0-b6af-1702ba1d1100/scratchpad/prod_copy.db", "--agora", "2026-09-26T13:30"], "port": 8798}
   ]
 }

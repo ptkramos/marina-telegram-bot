@@ -5,6 +5,7 @@ Roda na VPS (as fotos ficam em data/instagram/ e os posts no banco de lá):
     venv/bin/python scripts/instagram_acervo.py --gerar      # gera o que falta (rodar de novo só completa)
     venv/bin/python scripts/instagram_acervo.py --refoto 5   # refaz a foto do post 5 (pose e roupa novas)
     venv/bin/python scripts/instagram_acervo.py --textos     # apaga e refaz legendas e comentários de todos
+    venv/bin/python scripts/instagram_acervo.py --textos --incluir 6   # e também o post de verdade 6
     venv/bin/python scripts/instagram_acervo.py --trocar 7   # só a troca de rosto da amiga (quando ela falhou)
     venv/bin/python scripts/instagram_acervo.py --trocar 7 --base novo7c.jpg   # troca sobre uma foto de fora
     venv/bin/python scripts/instagram_acervo.py --colocar 7 --base foto.jpg    # põe uma foto já aprovada
@@ -94,7 +95,8 @@ def textos_do_post(db, p: dict, rng: random.Random, *, legenda: bool = True, ja:
     pid, at = p["id"], datetime.fromisoformat(p["criado_em"])
     if legenda:
         foto = p["descricao"] + (f" (roupa: {p['roupa']})" if p.get("roupa") else "")
-        nova = ig._limpa(llm(ig.pedido_legenda(db, p["autor"], foto, p["local"]), 80))
+        nova = ig._limpa(llm(ig.pedido_legenda(db, p["autor"], foto, p["local"], rng=rng,
+                                               quando=ig.quando_foi(ig.momento_do_post(db, p), at)), 80))
         ig._exec(db, "UPDATE ig_posts SET legenda=? WHERE id=?", (nova, pid))
         p = ig.post(db, pid)
     marcados = json.loads(p["marcados_json"] or "[]")
@@ -119,7 +121,8 @@ def textos_do_post(db, p: dict, rng: random.Random, *, legenda: bool = True, ja:
             quem = ig.PERFIS[autor]["nome"].split()[0]
             resp = ig._limpa(llm(f"Quem responde: {ig.QUEM_ESCREVE['marina']}. Na sua foto ({p['descricao']}; "
                                  f"legenda \"{p['legenda']}\"), {quem} comentou \"{texto}\". Escreva só a sua "
-                                 "resposta, curtinha (até 8 palavras), sem @, no máximo 1 emoji ou só emoji; carinho de amiga, sem flerte."
+                                 "resposta, curtinha (até 8 palavras), caixa baixa, sem ponto final nem exclamação, sem @, no "
+                                 "máximo 1 emoji ou só emoji; carinho de amiga, sem flerte."
                                  + ig._nao_repita(db, "marina"), 80))
             if resp:
                 ig.comentar(db, pid, "marina", resp, c_at + timedelta(minutes=rng.randint(5, 90)), pai_id=cid)
@@ -197,21 +200,26 @@ def conversas_do_patrick(db) -> set[int]:
     return {i for i in todos if raiz(i) in raizes}
 
 
-def refazer_textos(db) -> None:
+def refazer_textos(db, incluir: tuple = ()) -> None:
     """Refaz legendas e comentários dos posts do acervo em ordem de data (a memória de não repetir vai se formando).
-    27/09 (Patrick): post de verdade não é tocado, e conversa em que ele comentou fica inteira."""
+    27/09 (Patrick): post de verdade não é tocado (só os de --incluir), e conversa em que ele comentou fica inteira."""
     manter = conversas_do_patrick(db)
-    acervo = [p["id"] for p in ig._rows(db, "SELECT id FROM ig_posts WHERE tipo='feed' AND fonte='acervo'")]
+    marca = ",".join("?" * len(incluir)) or "NULL"
+    onde = f"tipo='feed' AND (fonte='acervo' OR id IN ({marca}))"
+    acervo = [p["id"] for p in ig._rows(db, f"SELECT id FROM ig_posts WHERE {onde}", tuple(incluir))]
     for pid in acervo:
         for c in ig._rows(db, "SELECT id FROM ig_comentarios WHERE post_id=?", (pid,)):
             if c["id"] not in manter:
                 ig._exec(db, "DELETE FROM ig_comentarios WHERE id=?", (c["id"],))
-    ig._exec(db, "UPDATE ig_posts SET legenda='' WHERE tipo='feed' AND fonte='acervo'")
-    for p in ig._rows(db, "SELECT * FROM ig_posts WHERE tipo='feed' AND fonte='acervo' ORDER BY criado_em"):
+    ig._exec(db, f"UPDATE ig_posts SET legenda='' WHERE {onde}", tuple(incluir))
+    for p in ig._rows(db, f"SELECT * FROM ig_posts WHERE {onde} ORDER BY criado_em", tuple(incluir)):
         rng = random.Random(f"textos:{p['id']}")
         ja = frozenset(c["autor"] for c in ig._rows(db, "SELECT autor FROM ig_comentarios WHERE post_id=?", (p["id"],)))
         textos_do_post(db, p, rng, ja=ja)
         p = ig.post(db, p["id"])
+        if p["fonte"] != "acervo":   # post de verdade: a linha do Hoje leva a legenda
+            ig._exec(db, "UPDATE life_events SET summary=? WHERE event_key=?",
+                     (f"Postou uma foto no Instagram: {p['legenda']}", f"instagram:post:{p['id']}"))
         print(f"{p['id']:>3} {p['autor']:<14} {p['legenda']}")
         for c in ig._rows(db, "SELECT autor, texto, pai_id FROM ig_comentarios WHERE post_id=? ORDER BY id", (p["id"],)):
             print(f"      {'  ↳ ' if c['pai_id'] else ''}{c['autor']}: {c['texto']}")
@@ -279,6 +287,7 @@ if __name__ == "__main__":
     ap.add_argument("--refoto", type=int, help="id do post: refaz a foto")
     ap.add_argument("--pose", default="", help="com --refoto: pose do catálogo")
     ap.add_argument("--textos", action="store_true", help="apaga e refaz legendas e comentários")
+    ap.add_argument("--incluir", type=int, action="append", default=[], help="com --textos: post de verdade a refazer junto")
     ap.add_argument("--trocar", type=int, help="id do post: só refaz a troca de rosto da amiga")
     ap.add_argument("--base", default="", help="com --trocar: a foto de partida (em vez da que está no post)")
     ap.add_argument("--colocar", type=int, help="id do post: põe a foto --base como está, sem gerar")
@@ -293,6 +302,6 @@ if __name__ == "__main__":
         elif a.refoto:
             asyncio.run(refoto(banco, a.refoto, a.pose))
         else:
-            refazer_textos(banco)
+            refazer_textos(banco, tuple(a.incluir))
     else:
         asyncio.run(main(a.gerar, dict(x.split("=", 1) for x in a.usar)))

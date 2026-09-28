@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 02:35 (passagem de bastão: desencontros de 27/09 com a aba Agora corrigidos e no ar; próxima conversa na frente dos apps — textos do Instagram e a legenda do post de 27/09)._
+_Atualizado em 28/09/2026, 01:10 (passagem de bastão: gerador de textos do Instagram revisado e no ar; próxima conversa na frente dos apps — o Patrick revisa os textos novos no app e eles vão pra produção)._
 
 ---
 
@@ -30,7 +30,7 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** "bora na frente dos apps: revisar no app os textos do Instagram refeitos e a legenda do post de 27/09"
+**Abertura:** "bora na frente dos apps: revisar no app os textos novos do Instagram, passar pra produção e refazer a foto do post 6"
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; Instagram com acervo refeito (folhas de personagem das quatro amigas, fotos 3/5/7/9/13 e textos sem fórmula, 27–28/09).
@@ -39,14 +39,13 @@ Agora decidida linha a linha (card layout D); tela inicial só com os apps; Inst
 0. 🟡 **Instagram da Marina** (Etapa 5): no ar desde 27/09 (@masalles; ela posta pelo dia dela, amigas comentam e postam; textos sem bordão, roupa sem repetir, praia de biquíni). Acervo refeito (folhas, fotos e textos). Falta:
    a. ✅ Folhas das quatro amigas prontas (27/09, noite). Ligadas: amiga sozinha parte da folha; troca de rosto usa a 3x4 só com a cabeça (a folha vazou o body cinza no biquíni). Foto 7 refeita (novo7c + cabeça da Carol).
    c. ✅ Fotos 3, 5, 9 e 13 refeitas e aprovadas; textos refeitos (tipo de comentário por pessoa, começos proibidos, só emoji liberado; conversa do Patrick no post 8 preservada).
-   d. Revisar com ele, **no app**, as legendas e comentários refeitos (deslizes já vistos: post 11 a Carol fala com a Marina; Theo convida demais) e os textos que decidi sozinho (fim da seção "Etapa 5 — Instagram" do PLANO_WEBAPP).
+   d. 🟡 Gerador revisado com ele (28/09: legenda com tipo, memória de tipo por pessoa, falam com quem postou, marcada estava lá, rolê mais recente ganha) e no ar. **Falta:** ele revisar no app os textos novos (cópia local em `…/74d4f8ca…/scratchpad/ig_copy.db`, pré-visualização `miniapp-insta`), copiar esses textos exatos pra produção (acervo + post 6, sem gerar de novo) e refazer a foto do post 6 (rolê da noite com luz de dia).
 1. Bastidores **aba a aba** com ele (Por dentro, Dinheiro, Mundo), como foi a Agora — ele quer ver no celular e
    ajustar palavra por palavra (PLANO_VOZ 14).
 2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
 3. Fotos provisórias de marca e logos marcados "conferir"; redes sociais dela (Etapa 5).
-4. Legenda do post real de 27/09 (18:58, `instagram.post id=6 motivo=role_amiga`): "noite gostosa com minha pessoa"
-   numa tarde de cinema com a Bia — a legenda de rolê com amiga não pode soar como date, nem "noite" de tarde
-   (achado na varredura da frente de bugs, 28/09).
+4. ✅ Legenda do post real de 27/09: era o Quartinho da noite de 26/09 (não o cinema); "minha pessoa" soava date. Refeita
+   ("no quartinho bar, ontem à noite"), entra na produção junto com o item 0.d.
 
 ## 3. Voz e chat — skill `frente-voz`
 **Abertura:** "bora na frente da voz"

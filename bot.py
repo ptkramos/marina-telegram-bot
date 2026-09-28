@@ -5345,7 +5345,9 @@ def _ig_shot(plano: dict, now: datetime, feeling):
                           sublocation="", weather=None, snapshot_id=None)
     import instagram
     # 27/09 (Patrick): guarda-roupa do Instagram, sem repetir roupa; praia é de biquíni (a amiga também)
-    ocasiao = instagram.ocasiao_da_roupa(motivo, now.hour)
+    # 28/09: roupa pela hora do rolê, não da hora em que ela posta (rolê da noite postado no dia seguinte)
+    quando = datetime.fromisoformat(plano["at"]) if plano.get("at") else now
+    ocasiao = instagram.ocasiao_da_roupa(motivo, quando.hour)
     roupa = instagram.escolher_roupa(memory_manager.db, ocasiao, rng) if ocasiao else None
     dela = (instagram.escolher_roupa(memory_manager.db, ocasiao, rng, evitar=(roupa,), simples=True)
             if ocasiao and plano.get("amiga") else None)
@@ -5386,7 +5388,8 @@ async def _ig_post(plano: dict, now: datetime, feeling) -> None:
         roupa, pose = shot.outfit, shot.pose_id
     local = plano.get("local") or ""
     legenda = instagram._limpa(await asyncio.to_thread(
-        _ig_fala, instagram.pedido_legenda(db, "marina", desc + (f" (roupa: {roupa})" if roupa else ""), local)))
+        _ig_fala, instagram.pedido_legenda(db, "marina", desc + (f" (roupa: {roupa})" if roupa else ""), local,
+                                          quando=instagram.quando_foi(datetime.fromisoformat(plano["at"]), now))))
     pid = instagram.publicar(db, autor="marina", now=now, imagem=imagem, legenda=legenda, local=local,
                              marcados=marcados, motivo=plano["motivo"], motivo_chave=plano["chave"],
                              fonte=plano["fonte"], descricao=desc, roupa=roupa, pose=pose)
