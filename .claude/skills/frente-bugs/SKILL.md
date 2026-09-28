@@ -17,6 +17,9 @@ Salve no scratchpad, da produção (`root@82.29.60.214`, chave `~/.ssh/marina_vp
 - Agenda: `SELECT * FROM eventos_pendentes ORDER BY id DESC LIMIT 10`.
 - Log: `journalctl -u marina --since "… UTC" --until "…" --no-pager | grep -v "apscheduler\|getUpdates"`
   (**journal em UTC**, local = UTC−3). Linhas úteis: `AVAILABILITY_DECISION`, `ritual.`, `turn.yielded`.
+- Varredura (sem exemplo do Patrick): cópia do banco com `sqlite3 marin_memory.db ".backup /tmp/x.db"` (o banco é
+  WAL; `cp` perde escritas), baixar e, com `MARINA_DB_PATH` apontando pra cópia, recalcular `Agenda(db).card(t)`
+  minuto a minuto e `WorldContextBuilder(db).build(now=t)` na hora da fala; comparar com `world_state` e `conversas`.
 - Recalcular o mundo numa hora: `TZ=America/Sao_Paulo venv/bin/python -c "…"` com `db.DatabaseManager()`
   (ex.: `commute.Commute(db).leg_at(datetime(...))`).
 

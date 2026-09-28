@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 01:40 (passagem de bastão: acervo do Instagram refeito; próxima conversa na frente de bugs — desencontros do mundo e do chat com a aba Agora)._
+_Atualizado em 28/09/2026, 02:35 (passagem de bastão: desencontros de 27/09 com a aba Agora corrigidos e no ar; próxima conversa na frente dos apps — textos do Instagram e a legenda do post de 27/09)._
 
 ---
 
@@ -30,7 +30,7 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** "bora na frente dos apps: revisar no app os textos do Instagram refeitos"
+**Abertura:** "bora na frente dos apps: revisar no app os textos do Instagram refeitos e a legenda do post de 27/09"
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; Instagram com acervo refeito (folhas de personagem das quatro amigas, fotos 3/5/7/9/13 e textos sem fórmula, 27–28/09).
@@ -69,7 +69,7 @@ dividindo balão; vocabulário da masturbação; música que ele manda por link.
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
-**Abertura:** "bora na frente de bugs: desencontros do mundo com a aba Agora do Bastidores, e do que ela diz no chat com a Agora"
+**Abertura:** "bora na frente de bugs: varre as últimas 24 horas (mundo × aba Agora × chat)"
 
 Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
 
