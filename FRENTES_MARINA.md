@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 01:30 (frente dos apps: acervo do Instagram refeito — folhas, fotos e textos; falta o Patrick revisar os textos no app)._
+_Atualizado em 28/09/2026, 01:40 (passagem de bastão: acervo do Instagram refeito; próxima conversa na frente de bugs — desencontros do mundo e do chat com a aba Agora)._
 
 ---
 
@@ -30,10 +30,10 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** "bora na frente dos apps: Instagram, folhas da Bia, da Júlia e do Theo e refazer o acervo"
+**Abertura:** "bora na frente dos apps: revisar no app os textos do Instagram refeitos"
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
-Agora decidida linha a linha (card layout D); tela inicial só com os apps.
+Agora decidida linha a linha (card layout D); tela inicial só com os apps; Instagram com acervo refeito (folhas de personagem das quatro amigas, fotos 3/5/7/9/13 e textos sem fórmula, 27–28/09).
 
 **Próximo:**
 0. 🟡 **Instagram da Marina** (Etapa 5): no ar desde 27/09 (@masalles; ela posta pelo dia dela, amigas comentam e postam; textos sem bordão, roupa sem repetir, praia de biquíni). Acervo refeito (folhas, fotos e textos). Falta:
@@ -66,7 +66,7 @@ dividindo balão; vocabulário da masturbação; música que ele manda por link.
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
-**Abertura:** "bora na frente de bugs: volta do Quartinho (27/09)"
+**Abertura:** "bora na frente de bugs: desencontros do mundo com a aba Agora do Bastidores, e do que ela diz no chat com a Agora"
 
 Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
 
@@ -94,7 +94,8 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
 8. ✅ **Acordou "tomando café" com o café 1h30 depois (27/09)** — corrigido: sem café agora, "acabou de acordar, ainda de pijama… (o café fica pra umas 10:37)".
 9. ✅ **Linha do tempo (26/09):** "Montou looks" × academia e música × banho (o bloco em casa é cortado quando outra coisa começa) e convite às 04:19 (visto ao acordar). `tests/test_bug_mundo_2709.py`.
 
-**Abertos:** nenhum.
+**Abertos:**
+10. 🔴 **Desencontros com a aba Agora (Patrick, 28/09)** — (a) o mundo (`world_state`/agenda) e o card da aba Agora mostrando coisas diferentes; (b) o que ela diz no chat não bate com a Agora. Começar pedindo ao Patrick os exemplos (print ou hora), capturar banco/log da produção naquele momento e comparar mundo × card (`agenda.card`/`card_casa`) × prompt (`world_context`) × fala.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** "bora na frente de imagens: quarto apagado com flash e foto de grupo das outras amigas"
