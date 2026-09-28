@@ -209,6 +209,9 @@ então de manhã quase tudo tinha sumido.
   dentro") o café é o 1º passo, na hora real do meals, e o Se arrumando começa nele; pulou o café, sem passo. A
   descida do Milo que cai em qualquer Se arrumando vira o passo "Descendo com o Milo" na hora dela (o seguinte espera
   ela subir). Ver AUDITORIA ("Bug: manhã de 28/09") e `tests/test_bug_manha_2809.py`.
+- **Aba nova "Por fora" (Patrick, 28/09):** tem coisa no Por dentro que é aparência, não sentimento — vai pra uma aba
+  Por fora (candidatos: Unhas e Cabelo; o resto decidir com ele). Fica pra frente dos apps depois do atraso de verdade
+  (frente do mundo), antes da Dinheiro e da Mundo.
 - **Código:** `por_dentro.py` (novo), `webapp_server` (`emocao_view`, `motivo_tela`, `_alguem` com "você", Ciclo),
   `emotion` (`day_log`, padrão dos motivos), `unhas.painel`, `cabelo.painel`/`_dia_lavagem`, `agenda_viva._sente`,
   `planner` (regra do `cause`), `bot._status_snapshot` (`ciclo_len`), `webapp/` (ordem, desenho, recarga, CSS). Testes em
