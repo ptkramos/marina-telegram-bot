@@ -52,6 +52,11 @@ class UnhasTest(unittest.TestCase):
         self.assertEqual((p["cor"], p["estado"], p["tipo"], p["feita"]), ("Vermelho", "Gastando", "Esmalte", "Há 6 dias, em casa"))
         self._atual("vermelho", "gel", 20, "salao")
         self.assertEqual(self.u.painel(T)["estado"], "Vencendo")
+        # 28/09 (Patrick): gel com 10 dias saía "Nova" — Perfeita nos primeiros dias, depois Nova
+        self._atual("nude", "gel", 2, "salao")
+        self.assertEqual((self.u.painel(T)["estado"], self.u.painel(T)["feita"]), ("Perfeita", "Há 2 dias, na Ophicina"))
+        self._atual("nude", "gel", 10, "salao")
+        self.assertEqual(self.u.painel(T)["estado"], "Nova")
         self.assertTrue(p["gasta"] and 0.8 < p["desgaste"] < 0.9)
 
     def test_em_casa_so_entediada_e_gasta(self):

@@ -1656,7 +1656,8 @@ def _status_snapshot(now_local: datetime) -> dict:
 
     snap = {"now": now_local, "atividade": atividade, "local": local_str, "disponivel": disp_str, "act_code": act_code,
             "humor": None, "energia": None,
-            "ciclo_dia": ciclo_info["day"], "ciclo_fase": ciclo_info["name"].split(" (")[0].lower(),
+            "ciclo_dia": ciclo_info["day"], "ciclo_len": ciclo_info.get("cycle_length"),
+            "ciclo_fase": ciclo_info["name"].split(" (")[0].lower(),
             "saude": [], "proximo": None, "planos": []}
     try:
         from emotion import EmotionEngine, ENERGY_WORDS, _word

@@ -58,7 +58,7 @@ async def main(port: int, banco: str = "", agora: str = "") -> None:
                 "saude": [], "proximo": ("aula de Projeto", "segunda 14:00"), "planos": [("bar com o Theo e a Júlia", "sábado 20:30")]}
 
     if banco:
-        return await _serve(db, port, status, fixo)
+        return await _serve(db, port, lambda now: status_real(db, now), fixo)
     # um sentimento e movimentações de exemplo pros Bastidores
     import financas
     from emotion import EmotionEngine
@@ -74,6 +74,42 @@ async def main(port: int, banco: str = "", agora: str = "") -> None:
                      (agora.replace(hour=8, minute=15).isoformat(),))
 
     await _serve(db, port, status, fixo)
+
+
+def status_real(db, now: datetime) -> dict:
+    """28/09: com --db, o mesmo retrato do bot._status_snapshot lido da cópia (antes era o de exemplo, e a
+    Por dentro mostrava 'cansada' com ela dormindo). Importar o bot abriria o banco local, então repete aqui."""
+    from calendar_world import CalendarWorld
+    from cycle import MenstrualCycleManager
+    from health import Health
+    from pending_response import ResponseAvailabilityPolicy
+    from social_day import SocialDay
+    from world_state import WorldStateManager
+
+    def quando(at: datetime) -> str:
+        dias = (at.date() - now.date()).days
+        dia = "hoje" if dias == 0 else "amanhã" if dias == 1 else \
+            ("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")[at.weekday()]
+        return f"{dia} {at:%H:%M}"
+
+    st = WorldStateManager(db).resolve(now) or {}
+    with db.get_connection() as conn:
+        row = conn.execute("SELECT name FROM world_places WHERE id = ?", (st.get("location_place_id"),)).fetchone()
+    local = " ".join(x for x in (row["name"] if row else "", f"({st['location_region']})" if st.get("location_region") else "") if x)
+    policy = ResponseAvailabilityPolicy(db)
+    act = policy._resolve_activity(now)[0]
+    perfil = policy.profiles.get(act, {})
+    disp = ("Dormindo" if act == "SLEEPING" else "Ocupada" if perfil.get("phone_access") == "LOW"
+            else "Concentrada" if perfil.get("prefer") == "DEFER" else "Online")
+    ciclo = MenstrualCycleManager(db.get_data_inicio_ciclo()).get_cycle_info()
+    nxt = CalendarWorld(db).next(now, include_academic=True)
+    return {"now": now.isoformat(), "atividade": (st.get("activity") or "").replace("_", " "), "local": local or "Rio de Janeiro",
+            "disponivel": disp, "act_code": act, "ciclo_dia": ciclo["day"], "ciclo_len": ciclo.get("cycle_length"),
+            "ciclo_fase": ciclo["name"].split(" (")[0].lower(),
+            "saude": [(c.label, c.remedy) for c in Health(db).conditions(now)],
+            "proximo": (nxt["activity"], quando(datetime.fromisoformat(nxt["start_at"]))) if nxt else None,
+            "planos": [(p["description"], quando(datetime.fromisoformat(p["event_at"])))
+                       for p in SocialDay(db).upcoming_outings(now, limit=2)]}
 
 
 async def _serve(db, port: int, status, fixo) -> None:

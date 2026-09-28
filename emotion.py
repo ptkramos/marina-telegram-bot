@@ -25,6 +25,7 @@ Nada aqui chama LLM ou rede.
 from __future__ import annotations
 
 import json
+import re
 import threading
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
@@ -363,10 +364,9 @@ class EmotionEngine:
                 continue
             if item["start"] - now <= timedelta(hours=18):
                 job = item["kind"] == "job"
+                quando = "amanhã" if item["start"].date() != now.date() else "hoje"
                 created += self.feel("medo", "ansiedade", 0.35 if job else 0.25,
-                                     f"{'job' if job else 'casting'} amanhã: {item['what']}"
-                                     if item["start"].date() != now.date()
-                                     else f"{'job' if job else 'casting'} hoje: {item['what']}",
+                                     _motivo(f"{'Job' if job else 'Casting'} {quando}", item["what"]),
                                      now, source_key=key, sticky=True)
         return created
 
@@ -384,7 +384,7 @@ class EmotionEngine:
             delivered_at = datetime.combine(due, datetime.min.time()).replace(hour=18)
             if now >= delivered_at:
                 self.resolve(key, delivered_at)
-                created += self.feel("alegria", "alivio", 0.45, f"entregou o {a['kind']} de {a['course']}",
+                created += self.feel("alegria", "alivio", 0.45, _motivo(f"Entregou o {a['kind']}", a["course"]),
                                      delivered_at, source_key=f"entregou:{a['key']}")
                 continue
             if a["pace"] == "adiantada":
@@ -395,8 +395,8 @@ class EmotionEngine:
                           now - timedelta(hours=48))
             if started <= now:
                 created += self.feel("medo", "ansiedade", intensity,
-                                     f"{a['kind']} de {a['course']} pra entregar "
-                                     f"{'amanhã' if days == 1 else 'hoje' if days == 0 else f'em {days} dias'}",
+                                     _motivo(f"Entrega {'amanhã' if days == 1 else 'hoje' if days == 0 else f'em {days} dias'}",
+                                             a["course"]),
                                      started, source_key=key, sticky=True)
         return created
 
@@ -689,8 +689,8 @@ class EmotionEngine:
                 last = max(eps_, key=lambda e: e.started_at)
                 rows.append((min(1.0, strongest + 0.02 * (len(eps_) - 1)), last, len(eps_)))
             for value, e, n in sorted(rows, key=lambda r: r[0], reverse=True)[:5]:
-                feelings.append({"word": e.word, "target": e.target, "value": value,
-                                 "cause": _short(e.cause, 70), "count": n,
+                feelings.append({"word": e.word, "target": e.target, "value": value, "at": e.started_at,
+                                 "cause": _short(e.cause, 70), "cause_raw": e.cause, "count": n,
                                  "until_resolved": bool(e.sticky and e.intensity >= e.peak * 0.99)})
         bond = [("Carinho", b["affection"]), ("Desejo", b["romantic_intensity"]),
                 ("Segurança", b["security"]), ("Saudade", f.missing)]
@@ -713,6 +713,24 @@ class EmotionEngine:
             "feelings": feelings,
             "bond": [{"label": k, "value": v} for k, v in bond],
         }
+
+    def day_log(self, start: datetime, end: datetime) -> list[dict]:
+        """28/09 (Patrick, Por dentro → "Hoje por dentro"): tudo o que ela sentiu num intervalo, mesmo o que
+        já passou, do mais recente pro mais antigo. O mesmo sentimento com a mesma causa no mesmo minuto
+        (ex.: quatro "banho quentinho" às 19h58) vira uma linha só."""
+        with self.db.get_connection() as conn:
+            rows = conn.execute("""SELECT kind, target, cause, started_at, intensity FROM emotion_episodes
+                                   WHERE started_at>=? AND started_at<? ORDER BY started_at DESC""",
+                                (start.isoformat(), end.isoformat())).fetchall()
+        out, vistos = [], set()
+        for r in rows:
+            chave = (r["kind"], r["target"] or "", r["cause"], r["started_at"][:16])
+            if chave in vistos:
+                continue
+            vistos.add(chave)
+            out.append({"word": KIND_WORDS.get(r["kind"], r["kind"]), "target": r["target"], "cause": r["cause"],
+                        "at": datetime.fromisoformat(r["started_at"]), "intensity": float(r["intensity"])})
+        return out
 
     def summary(self, now: Optional[datetime] = None) -> str:
         """Texto do /emocao (só pro Patrick): camada por camada, com as causas.
@@ -763,6 +781,87 @@ def _person(participants_json: Optional[str]) -> Optional[str]:
         return None
 
 
+# 28/09 (Patrick, Bastidores → Por dentro): o motivo de cada sentimento segue UM padrão — o fato em poucas
+# palavras, em 3ª pessoa ("o Patrick" pra ele, "ela" implícita), e o detalhe depois de " · " (a tela põe o detalhe
+# ao lado, em cinza, e troca "o Patrick" por "você"). Ex.: "Viu Paradise Kiss · eps 1 e 2", "Mensagens com a Bia ·
+# festas", "o Patrick mandou comida · surpresa". Antes cada fonte gravava de um jeito ("Viu episódios 1 a 2 de…",
+# "o pai deu bom dia e perguntou dela", "Trocou mensagens com a Bia; assunto: …").
+FATO_MAX = 42
+
+
+def _motivo(fato: str, detalhe: str = "") -> str:
+    fato = re.sub(r"\s+", " ", fato or "").strip().rstrip(".")
+    if len(fato) > FATO_MAX:
+        fato = fato[:FATO_MAX].rsplit(" ", 1)[0]
+    detalhe = (detalhe or "").strip().rstrip(".")
+    fato = fato[:1].upper() + fato[1:] if not fato.startswith("o Patrick") else fato
+    return f"{fato} · {detalhe}" if detalhe else fato
+
+
+def _motivo_generico(text: str) -> str:
+    """Resumo do mundo → 'fato · detalhe': o assunto (ou o que está entre parênteses) vira o detalhe."""
+    base, _, assunto = (text or "").partition("; assunto: ")
+    base = base.split("; ")[0]
+    par = re.search(r"\(([^)]{1,28})\)", base)
+    base = re.sub(r"\s*\([^)]*\)", "", base)
+    return _motivo(base, assunto or (par.group(1) if par else ""))
+
+
+def _motivo_contato(text: str, who: Optional[str], briga: bool) -> str:
+    """'Trocou mensagens com a Bia; assunto: festas' → 'Mensagens com a Bia · festas';
+    'Encontrou a Bia (Quartinho Bar); assunto: conflitos leves' → 'Se estranhou com a Bia · Quartinho Bar'."""
+    base, _, assunto = text.partition("; assunto: ")
+    par = re.search(r"\(([^)]+)\)", base)
+    lugar = par.group(1) if par else ""
+    base = re.sub(r"\s*\([^)]*\)", "", base).split(", ")[0]
+    mensagem = base.lower().startswith("trocou mensagens")
+    if briga:
+        return _motivo(f"Se estranhou com {who}" if who else "Se estranhou",
+                       "por mensagem" if mensagem else lugar)
+    if mensagem:
+        base = "Mensagens com " + base.split(" com ", 1)[-1]
+    return _motivo(base, assunto.split(",")[0] if assunto else lugar)
+
+
+def _motivo_convite(text: str) -> str:
+    """'A Bia te chamou: Saindo com a Bia no Quartinho Bar (hoje às 21:00)' → 'A Bia chamou pra sair · Quartinho Bar'."""
+    quem, _, resto = text.partition(" te chamou: ")
+    resto = re.sub(r"\s*\([^)]*\)", "", resto)
+    m = re.search(r"\b(?:no|na|em) ([A-ZÁÉÍÓÚ][^,;]*)$", resto)
+    return _motivo(f"{quem} chamou pra sair" if resto else text, m.group(1) if m else "")
+
+
+def _motivo_tv(text: str) -> str:
+    """'Viu episódios 1 a 2 de Paradise Kiss (…)' → 'Viu Paradise Kiss · eps 1 e 2';
+    'Saiu episódio novo de One Piece hoje (temporada 23, ep. 1180)' → 'Episódio novo de One Piece · ep. 1180'."""
+    m = re.match(r"Saiu episódio novo de (.+?) hoje", text)
+    if m:
+        ep = re.search(r"ep\. ?(\d+)", text)
+        return _motivo(f"Episódio novo de {m.group(1)}", f"ep. {ep.group(1)}" if ep else "")
+    m = re.match(r"Viu (?:o )?epis[óo]dios? (\d+)(?: a (\d+))? de ([^(;]+)", text)
+    if m:
+        eps = f"eps {m.group(1)} e {m.group(2)}" if m.group(2) and int(m.group(2)) == int(m.group(1)) + 1 \
+            else f"eps {m.group(1)} a {m.group(2)}" if m.group(2) else f"ep {m.group(1)}"
+        return _motivo(f"Viu {m.group(3).strip()}", eps)
+    return _motivo_generico(text)
+
+
+REFEICAO = {"almoço": "Almoçou", "jantar": "Jantou", "café": "Tomou café:", "lanche": "Lanchou"}
+
+
+def _motivo_refeicao(text: str) -> str:
+    """'Almoço em casa: um poke pedido no iFood; comeu além da conta…' → 'Almoçou um poke · comeu demais'."""
+    head, _, rest = text.partition(": ")
+    verbo = REFEICAO.get(head.split(" ")[0].lower())
+    if not verbo or not rest:
+        return _motivo_generico(text)
+    low = text.lower()
+    comida = re.sub(r" pedid[oa]s? no iFood", "", rest.split("; ")[0])
+    detalhe = "comeu demais" if "além da conta" in low else "iFood" if "ifood" in low else \
+        head.split(" no ", 1)[1] if " no " in head else ""
+    return _motivo(f"{verbo} {comida}", detalhe)
+
+
 # Milo: travessura que diverte, que irrita ou que derrete.
 MILO_ANTICS = (("xixi no tapete", "raiva", "irritacao", 0.3), ("manha pedindo colo a noite", "raiva", "impaciencia", 0.25),
                ("roubou uma meia", "alegria", "diversao", 0.35), ("latiu pro entregador", "alegria", "diversao", 0.25),
@@ -782,7 +881,7 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
     who = _person(ev.get("participants_json"))
     out = []
     if kind_ev == "commute" and key.endswith(":imprevisto"):
-        cause = text.split(": ", 1)[-1]
+        cause = _motivo_generico(text.split(": ", 1)[-1])
         if "açaí" in low:
             out.append(("alegria", "diversao", 0.3, cause, None))
         else:
@@ -791,103 +890,105 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
     elif key.startswith("milo:") and key.endswith(":arte"):
         for needle, fam, kind, intensity in MILO_ANTICS:
             if needle in low:
-                out.append((fam, kind, intensity + (0.1 if tired and fam == "raiva" else 0.0), text, None))
+                out.append((fam, kind, intensity + (0.1 if tired and fam == "raiva" else 0.0), _motivo_generico(text), None))
                 break
     elif key.startswith("banho:"):
-        out.append(("alegria", "alivio", 0.2, "banho quentinho, se sentiu gente de novo", None))
+        out.append(("alegria", "alivio", 0.2, "Banho quentinho", None))
     elif key.startswith("tv:novo:") or low.startswith("saiu episódio novo"):
-        out.append(("alegria", "empolgacao", 0.45, text, None))
+        out.append(("alegria", "empolgacao", 0.45, _motivo_tv(text), None))
     elif key.startswith("tv:"):
         if " e amou" in low:
-            out.append(("alegria", "contentamento", 0.4, text.split("; ")[-1], None))
+            out.append(("alegria", "contentamento", 0.4, _motivo_generico(text.split("; ")[-1]), None))
         elif "achou só ok" in low:
-            out.append(("tristeza", "decepcao", 0.2, text.split("; ")[-1], None))
+            out.append(("tristeza", "decepcao", 0.2, _motivo_generico(text.split("; ")[-1]), None))
         elif low.startswith("viu "):
-            out.append(("alegria", "diversao", 0.2, text.split("; ")[0], None))
+            out.append(("alegria", "diversao", 0.2, _motivo_tv(text), None))
     elif key.startswith("peso:"):
         if key.endswith(":agencia"):
-            out.append(("medo", "inseguranca", 0.6, "a Lívia da agência cobrou o peso", "a Lívia"))
-            out.append(("vergonha", "vergonha", 0.3, "levou bronca da agência pelo peso", None))
+            out.append(("medo", "inseguranca", 0.6, "A Lívia cobrou o peso · agência", "a Lívia"))
+            out.append(("vergonha", "vergonha", 0.3, "Bronca da agência · peso", None))
         elif key.endswith(":saude"):
-            out.append(("medo", "preocupacao", 0.35, "sentiu tontura no treino", None))
+            out.append(("medo", "preocupacao", 0.35, "Tontura no treino", None))
     elif key.startswith("casa:"):             # D9 — casa e vida adulta
         step = key.rsplit(":", 1)[-1]
         if step == "roupa_esquecida":
-            out.append(("raiva", "frustracao", 0.3 + (0.1 if tired else 0.0), "esqueceu a roupa na máquina", None))
+            out.append(("raiva", "frustracao", 0.3 + (0.1 if tired else 0.0), "Esqueceu a roupa na máquina", None))
         elif step in ("geral", "bagunca"):
-            out.append(("alegria", "alivio", 0.3, "o apê ficou arrumado e cheiroso", None))
+            out.append(("alegria", "alivio", 0.3, "Apê arrumado e cheiroso", None))
         elif step == "mercado_esqueceu":
-            out.append(("alegria", "diversao", 0.2, text, None))
+            out.append(("alegria", "diversao", 0.2, _motivo_generico(text), None))
         elif step == "perrengue":
             if "achou" in low:
-                out.append(("alegria", "contentamento", 0.3, text, None))
+                out.append(("alegria", "contentamento", 0.3, _motivo_generico(text), None))
             else:
-                out.append(("raiva", "irritacao", 0.3 + (0.1 if tired else 0.0), text, None))
+                out.append(("raiva", "irritacao", 0.3 + (0.1 if tired else 0.0), _motivo_generico(text), None))
     elif key.startswith("freela:"):          # D10 — trabalho de modelo
         step = key.rsplit(":", 1)[-1]
         if step == "oferta":
-            out.append(("alegria", "empolgacao", 0.35, "a Lívia mandou um casting", "a Lívia"))
+            out.append(("alegria", "empolgacao", 0.35, "A Lívia mandou um casting", "a Lívia"))
         elif step == "resultado" and "passou no casting" in low and "não passou" not in low:
             if "abrir mão" in low:
-                out.append(("tristeza", "decepcao", 0.4, "passou no casting mas o job batia com a faculdade", None))
+                out.append(("tristeza", "decepcao", 0.4, "Passou no casting · batia com a facul", None))
             else:
-                out.append(("alegria", "empolgacao", 0.65, "passou no casting", None))
-                out.append(("alegria", "orgulho", 0.45, "foi escolhida pro job", None))
+                out.append(("alegria", "empolgacao", 0.65, "Passou no casting", None))
+                out.append(("alegria", "orgulho", 0.45, "Foi escolhida pro job", None))
         elif step == "resultado":
-            out.append(("tristeza", "decepcao", 0.4, "não passou no casting", None))
+            out.append(("tristeza", "decepcao", 0.4, "Não passou no casting", None))
         elif step == "job":
-            out.append(("alegria", "orgulho", 0.45, text.split(". ")[0], None))
+            out.append(("alegria", "orgulho", 0.45, _motivo_generico(text.split(". ")[0]), None))
         elif step in ("job_perdido", "casting_perdido"):
-            out.append(("tristeza", "decepcao", 0.5 if step == "job_perdido" else 0.3, text, None))
+            out.append(("tristeza", "decepcao", 0.5 if step == "job_perdido" else 0.3, _motivo_generico(text), None))
         elif step in ("cache", "sinal"):
-            out.append(("alegria", "contentamento", 0.45 if step == "cache" else 0.35, text, None))
+            out.append(("alegria", "contentamento", 0.45 if step == "cache" else 0.35, _motivo_generico(text), None))
     elif key.endswith(":presente") or key.startswith("presente:"):   # delivery surpresa pelo Mini App (25/09)
-        out.append(("afeto", "carinho", 0.6, "o Patrick mandou comida de surpresa pra ela", PATRICK))
-        out.append(("alegria", "contentamento", 0.45, "a surpresa do delivery", None))
+        out.append(("afeto", "carinho", 0.6, "o Patrick mandou comida · surpresa", PATRICK))
+        out.append(("alegria", "contentamento", 0.45, "Delivery surpresa", None))
     elif key.startswith("financas:"):        # /pix e o dinheiro dela (24/09)
         step = key.rsplit(":", 1)[-1]
         if step in ("emergencia", "aperto"):
-            out.append(("medo", "preocupacao", 0.45, text, None))
+            out.append(("medo", "preocupacao", 0.45, _motivo_generico(text), None))
         elif step == "pix":
-            out.append(("afeto", "gratidao" if "presente" in low else "carinho", 0.5, "o Patrick fez um pix pra ela",
-                        PATRICK))
+            valor = re.search(r"R\$ ?[\d.]+", text)
+            out.append(("afeto", "gratidao" if "presente" in low else "carinho", 0.5,
+                        _motivo("o Patrick fez um Pix", valor.group(0) if valor else ""), PATRICK))
             if "aperto" in low:
                 out.append(("alegria", "alivio", 0.45, "o Patrick cobriu o aperto", None))
         elif step == "devolveu":
-            out.append(("alegria", "alivio", 0.35, "devolveu o que devia pro Patrick", None))
+            out.append(("alegria", "alivio", 0.35, "Devolveu o empréstimo do Patrick", None))
         elif step == "presente_usado":
-            out.append(("alegria", "contentamento", 0.35, text, None))
+            out.append(("alegria", "contentamento", 0.35, _motivo_generico(text), None))
     elif key.startswith("falta:"):
-        out.append(("vergonha", "culpa", 0.35, text, None))
+        out.append(("vergonha", "culpa", 0.35, _motivo_generico(text), None))
     elif key.startswith("atraso:"):
-        out.append(("raiva", "frustracao", 0.4, "perdeu o despertador e chegou atrasada", None))
+        out.append(("raiva", "frustracao", 0.4, "Perdeu a hora · chegou atrasada", None))
     elif key.startswith("facul:sessao:"):
         if "virando a noite" in low:
-            out.append(("medo", "ansiedade", 0.5, "virando a noite no trabalho da facul", None))
+            out.append(("medo", "ansiedade", 0.5, "Virando a noite · trabalho da facul", None))
         elif "enrolando" in low:
-            out.append(("vergonha", "culpa", 0.2, "enrolou no trabalho da facul", None))
+            out.append(("vergonha", "culpa", 0.2, "Enrolou no trabalho · facul", None))
         elif "rendendo bem" in low:
-            out.append(("alegria", "orgulho", 0.3, "rendeu bem no trabalho da facul", None))
+            out.append(("alegria", "orgulho", 0.3, "Rendeu no trabalho · facul", None))
     elif kind_ev == "social_invite":
         if key.endswith(":convite"):
-            out.append(("alegria", "empolgacao", 0.35, text, who))
+            out.append(("alegria", "empolgacao", 0.35, _motivo_convite(text), who))
     elif kind_ev == "social_contact":
         if "henrique" in (ev.get("participants_json") or ""):
             if "dinheiro" in low:
-                out.append(("alegria", "gratidao", 0.4, "o pai mandou o dinheiro da semana sem ela pedir", "o pai"))
-            elif "saudade" in low or "ligou" in low or "ligação" in low:
-                out.append(("afeto", "saudade_casa", 0.3, "falou com o pai", "o pai"))
+                out.append(("alegria", "gratidao", 0.4, "O pai mandou dinheiro · sem ela pedir", "o pai"))
+            elif "saudade" in low or "ligou" in low or "ligação" in low or "telefone" in low:
+                out.append(("afeto", "saudade_casa", 0.3, "Falou com o pai", "o pai"))
             else:
-                out.append(("afeto", "carinho", 0.25, "o pai deu bom dia e perguntou dela", "o pai"))
+                # 28/09: era "o pai deu bom dia e perguntou dela" a qualquer hora (21h15 inclusive)
+                out.append(("afeto", "carinho", 0.25, "O pai perguntou dela", "o pai"))
         elif "conflitos leves" in low:
-            out.append(("raiva", "chateacao", 0.3, text, who))
+            out.append(("raiva", "chateacao", 0.3, _motivo_contato(text, who, True), who))
         elif any(t in low for t in ("fofoca", "festas", "música", "moda", "fotografia", "humor")):
-            out.append(("alegria", "diversao", 0.25, text, who))
+            out.append(("alegria", "diversao", 0.25, _motivo_contato(text, who, False), who))
     elif kind_ev == "meal" and "beliscou" not in low and "pulou" not in low:
         if "açaí" in low:
-            out.append(("alegria", "contentamento", 0.35, text, None))
+            out.append(("alegria", "contentamento", 0.35, _motivo_refeicao(text), None))
         elif any(t in low for t in ("shopping", "ifood", "japonesa", "hambúrguer", "pizza")):
-            out.append(("alegria", "contentamento", 0.2, text, None))
+            out.append(("alegria", "contentamento", 0.2, _motivo_refeicao(text), None))
     return [(f, k, round(max(0.05, min(1.0, i)), 3), c, t) for f, k, i, c, t in out]
 
 
@@ -912,12 +1013,13 @@ PATRICK_EVENTS = {
     "sem_clima":   ([("raiva", "frustracao", 0.2)], {}, False),
 }
 KIND_WORDS["ciume"] = "com ciuminho"
-DEFAULT_CAUSES = {"elogio": "ele te elogiou", "cuidado": "ele cuidou de você", "flerte": "ele flertou",
-                  "provocacao": "ele te zoou de boa", "novidade_boa": "ele contou uma coisa boa",
-                  "ele_mal": "ele não está bem", "ciume": "ele falou de outra garota",
-                  "grosseria": "ele foi grosso com você", "esqueceu_importante": "ele esqueceu algo que importava",
-                  "briga": "vocês discutiram", "desculpa": "ele pediu desculpa",
-                  "sem_clima": "você quis e ele não entrou no clima"}
+# 28/09: no padrão dos motivos (3ª pessoa, "o Patrick"; a tela troca por "você")
+DEFAULT_CAUSES = {"elogio": "o Patrick elogiou ela", "cuidado": "o Patrick cuidou dela", "flerte": "o Patrick flertou",
+                  "provocacao": "o Patrick zoou ela", "novidade_boa": "o Patrick contou uma novidade boa",
+                  "ele_mal": "o Patrick não está bem", "ciume": "o Patrick falou de outra garota",
+                  "grosseria": "o Patrick foi grosso", "esqueceu_importante": "o Patrick esqueceu algo importante",
+                  "briga": "Discutiram", "desculpa": "o Patrick pediu desculpa",
+                  "sem_clima": "o Patrick não entrou no clima"}
 
 
 def apply_patrick_event(db, event: dict, now: Optional[datetime] = None) -> bool:

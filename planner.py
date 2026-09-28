@@ -400,7 +400,7 @@ Responda ESTRITAMENTE neste formato JSON (preserve exatamente os valores de enum
   "resolved_loop_hint": null,
   "shared_topic": "Assunto compartilhado ou null",
   "media_mentioned": {"title": null, "kind": "anime|série|filme|dorama|jogo"},
-  "patrick_event": {"kind": "nenhum|elogio|cuidado|flerte|provocacao|novidade_boa|ele_mal|grosseria|esqueceu_importante|briga|desculpa|ciume|sem_clima", "cause": "frase curta em português, do ponto de vista dela"},
+  "patrick_event": {"kind": "nenhum|elogio|cuidado|flerte|provocacao|novidade_boa|ele_mal|grosseria|esqueceu_importante|briga|desculpa|ciume|sem_clima", "cause": "o fato em até 6 palavras, em 3ª pessoa: 'o Patrick' pra ele e 'ela' pra ela (ex.: 'o Patrick chamou ela de princesa', 'o Patrick sumiu o dia todo'); detalhe, se precisar, depois de ' · ' (ex.: 'o Patrick desconfiou de uma foto · Instagram')"},
   "emotional_deltas": {
     "affection": 0.0,
     "playfulness": 0.0,

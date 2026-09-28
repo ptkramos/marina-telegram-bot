@@ -149,7 +149,7 @@ class WorldFeelsTest(unittest.TestCase):
             again = self.engine.appraise_world(NOW)
         self.assertEqual((first, again), (3, 0), "cada acontecimento vira sentimento uma vez só")
         words = {e.word: e for e in self.engine.episodes(NOW)}
-        self.assertEqual(words["irritada"].cause, "o motorista do uber errou o caminho")
+        self.assertEqual(words["irritada"].cause, "O motorista do uber errou o caminho")   # 28/09: fato · detalhe
         self.assertGreater(words["irritada"].intensity, 0.4, "cansada, o imprevisto irrita mais")
         self.assertIn("derretida", words)
         self.assertIn("empolgada", words)
@@ -171,7 +171,7 @@ class WorldFeelsTest(unittest.TestCase):
             self.engine._appraise_deadlines(NOW)
         worry = [e for e in self.engine.episodes(NOW) if e.kind == "ansiedade"][0]
         self.assertTrue(worry.sticky)
-        self.assertIn("pra entregar amanhã", worry.cause)
+        self.assertEqual(worry.cause, "Entrega amanhã · Práticas VI")   # 28/09: fato · detalhe
         after = datetime.combine(due, NOW.time()).replace(hour=19)
         with patch("college.College.assignments", return_value=[item]):
             self.engine._appraise_deadlines(after)

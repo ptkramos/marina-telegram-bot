@@ -150,6 +150,60 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 - **Seu Jorge (26/09):** pegar o delivery na portaria agora conta como contato com ele (`delivery._contato_portaria`); antes o Mundo mostrava "Sem contato ainda" logo depois de ela pegar o presente.
 - **Visto nos dados reais (26/09, 08:48):** depois do reset, todo mundo ainda "sem contato" e "Hoje" vazio — ela estava dormindo (sábado). Conferir de tarde se o pai e as amigas aparecem com contato.
 
+### Bastidores aba a aba — Por dentro (28/09, no celular, com o banco da produção) ✅
+Revisada com ele linha a linha, com mockup e múltipla escolha. Ele achou o **Sentindo agora a pior parte da aba**
+("tá faltando muita coisa da Marina"): só apareciam os sentimentos que não tinham esfriado (meia-vida de 1h30 a 8h),
+então de manhã quase tudo tinha sumido.
+- **Ordem:** Corpo → Humor → Sentindo agora → **Na cabeça** → **Hoje por dentro** → Vocês dois → Unhas → Cabelo
+  (corpo e cabeça em cima; unhas e cabelo, que mudam devagar, no fim).
+- **Corpo:** palavras da direita com maiúscula em toda a aba ("Dormindo", "Sem fome", "De boa"); Sono dormindo continua
+  "Dormindo agora"; **Ciclo** entrou ("Dia 27 de 28 · TPM" — tinha sumido de todo lugar com o cartão novo da Agora) e o
+  Desconforto não repete a fase ("Inchada", "Corpo meio dolorido").
+- **Humor e Vocês dois:** continuam com número (64%, 93%) — com palavra, as quatro barras de Vocês dois ficariam
+  quase sempre "Muito".
+- **Sentindo agora:** o motivo ganhou **quando** na direita ("ontem, 22h01", "há 20 min", "sáb, 18h").
+- **Hoje por dentro** (novo, `por_dentro.diario_view`): tudo o que ela sentiu no dia, com hora, mesmo o que já passou;
+  5 linhas + "Ver o dia todo (N)". O dia vira às 5h; se hoje ainda está vazio, mostra "Ontem por dentro".
+- **Na cabeça** (novo, `por_dentro.cabeca_view`): o que vem pela frente em 24 h e a vontade dela de ir — a mesma conta
+  da agenda viva (`Disposicao.avaliar` contra o peso do compromisso) —, mais entregas da faculdade (7 dias) e trabalhos
+  (freela). Dormindo ou a mais de 4 h da hora ela ainda não pensou nisso: sem estado nem barra. Layout escolhido por
+  ele: **título | quando; estado | barra | motivo na coluna da direita** (o motivo colado no estado, "Animada · pique
+  pra gente", ele não gostou).
+- **Vocês dois:** linhas **Conversa** ("Ontem, 23h04") e **Pendente** ("Nada", "Resposta dela", "Foto das unhas",
+  "Pix de R$ 200", "Mágoa").
+- **Unhas:** a barra ganhou rótulo como no Cabelo (**Desgaste** com o estado na direita; a linha Estado saiu); estado
+  **Perfeita** nos primeiros dias (gel 3, esmalte 1), depois **Nova**, depois Crescendo/Vencendo/Descascando; "Há 10
+  dias, na Ophicina" cabe numa linha.
+- **Cabelo:** a linha de baixo virou **Cor** ("Dourado, há 6 semanas"; a barra já se chama Luzes); lavou de madrugada
+  antes de dormir é **"Ontem à noite"** e o dia do cabelo vira às 5h (`cabelo._dia`), também na barra Lavagem.
+- **Motivos num padrão só** (ele: "não sinto um padrão"): **fato curto · detalhe ao lado, em voz de painel** (opção C
+  dele — "Você mandou comida", "Viu Paradise Kiss · eps 1 e 2", "Carinhosa com você"; o "ele"/"me" da voz dela saiu).
+  Aplicado na origem (`emotion.appraise_event`, causas fixas, prazos, agenda viva e a regra do `cause` no planner) e na
+  tela (`webapp_server.motivo_tela`, que também passa os motivos antigos pelo molde).
+- **Tempo real:** "em todas as telas, a barra deve ser atualizada em tempo real" — a recarga dos Bastidores caiu de
+  1 min pra 30 s, volta a carregar quando o app volta pra frente, não pede duas vezes ao mesmo tempo e as barras
+  deslizam do valor antigo pro novo. Na VPS a rota leva ~16 s na primeira vez (cartão da Agora) e 0,3 s depois.
+- **Pré-visualização:** com `--db`, o `scripts/webapp_preview.py` usa o status real da cópia (antes mostrava o de
+  exemplo e a Energia saía "cansada" com ela dormindo).
+- **Textos que eu decidi (pra ele revisar):** estados do Na cabeça (Animada, Vai, Na dúvida, Quer faltar/pular/adiar/
+  desmarcar, Desistiu, Ideia dela, Combinado, Emenda, Adiantada, No ritmo, Última hora, Correndo, Nervosa, Marcado);
+  motivos curtos da agenda viva (Dormiu mal, Entediada, Empolgada, Quer desabafar, Espairecer, Descarregar, Precisa de
+  remédio, TPM, Chovendo, Sem grana, Com amigos, Chateada com você); títulos (Treino, Passeio do Milo, Mercado, "4
+  aulas" + "Práticas II e +3", "Rolê com a Bia" + lugar, Entrega + matéria); os motivos novos do mundo (Banho
+  quentinho, Mensagens com a Bia · assunto, Se estranhou com a Bia · por mensagem, A Bia chamou pra sair · lugar,
+  Almoçou um poke · comeu demais, Episódio novo de One Piece · ep. 1180, O pai perguntou dela, Falou com o pai, Delivery
+  surpresa, Apê arrumado e cheiroso, Entrega amanhã · matéria, Entregou o trabalho · matéria, Casting amanhã · o quê,
+  Furou o rolê · com a Bia, Faltou a aula · matérias); "Ver o dia todo (N)" / "Mostrar menos"; no Sentindo agora o
+  detalhe vai junto do motivo ("Você mandou comida · surpresa") porque a direita já tem o quando.
+- **Bugs do mundo vistos nos dados reais** (chip pra frente de bugs): cartão da Agora "desde 05:46" com ela dormindo
+  desde 0h29; plano de sono (deitar 23h37) × banho à 0h06; "bom dia" do pai às 21h15; "banho quentinho" 4× no mesmo
+  minuto com intensidade 1.0; Saudade 100% enquanto ela dorme; "ciúme" dela quando o ciúme era dele.
+- **Código:** `por_dentro.py` (novo), `webapp_server` (`emocao_view`, `motivo_tela`, `_alguem` com "você", Ciclo),
+  `emotion` (`day_log`, padrão dos motivos), `unhas.painel`, `cabelo.painel`/`_dia_lavagem`, `agenda_viva._sente`,
+  `planner` (regra do `cause`), `bot._status_snapshot` (`ciclo_len`), `webapp/` (ordem, desenho, recarga, CSS). Testes em
+  `tests/test_bastidores_textos.py` (+ Na cabeça, diário, Vocês dois, padrão do mundo), `test_unhas`, `test_cabelo`,
+  `test_emotion_d14`.
+
 ### Aba Agora — decisões com o Patrick, linha a linha (26/09; saída de casa implementada, atividades em casa a decidir)
 **Por quê:** o status só mostrava onde ela está e o que faz; não existia preparação nem "indo fazer" (fora a faculdade de manhã) — do "tempo livre em casa" ela pulava pro trajeto.
 

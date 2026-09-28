@@ -105,15 +105,33 @@ button.primary:disabled { opacity: .5; }
 .bar.warm > i { background: #d4537e; }
 .un-cor { display: flex; align-items: center; gap: 8px; }
 .un-dot { width: 14px; height: 14px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px var(--line); }
-.un-bar { margin: 10px 0 4px; }
-.un-bar.gasta > i { background: #d9912b; }
 .ca-barras { margin-top: 8px; }
 .bar.alerta > i { background: #d9912b; }
 .bar-row .w { font-size: 12px; color: var(--muted); white-space: nowrap; text-align: right; overflow: hidden; text-overflow: ellipsis; }
 .feel { padding: 7px 0; border-bottom: 1px solid var(--line); }
 .feel:last-child { border-bottom: 0; }
 .feel .head { display: grid; grid-template-columns: 1fr 70px; gap: 10px; align-items: center; }
-.feel .why { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.feel .why { font-size: 12px; color: var(--muted); margin-top: 2px; display: flex; justify-content: space-between; gap: 10px; }
+.qd { flex: none; font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }
+/* 28/09 (Patrick): a barra desliza até o valor novo na recarga de 30 s */
+.bar > i, .ag-bar > i { transition: width .9s ease; }
+/* Na cabeça: o que vem pela frente e a vontade dela de ir */
+.nc { padding: 7px 0; border-bottom: 1px solid var(--line); }
+.nc:last-child { border-bottom: 0; }
+.nc-t { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 14px; font-weight: 600; }
+.nc-s { display: grid; grid-template-columns: 92px 1fr 104px; gap: 10px; align-items: center; margin-top: 3px; }
+.nc-e { font-size: 13px; }
+.nc-s .w { font-size: 12px; color: var(--muted); white-space: nowrap; text-align: right; overflow: hidden; text-overflow: ellipsis; }
+.dt { color: var(--muted); }
+/* Hoje por dentro: hora, sentimento e o motivo embaixo */
+.dr { display: grid; grid-template-columns: 44px 1fr; gap: 8px; padding: 6px 0; font-size: 14px; border-bottom: 1px solid var(--line); }
+.dr:last-of-type { border-bottom: 0; }
+.dr-h { font-size: 12px; color: var(--muted); padding-top: 2px; font-variant-numeric: tabular-nums; }
+.dr-m { font-size: 12px; color: var(--muted); margin-top: 1px; display: flex; justify-content: space-between; gap: 10px; }
+.dr-m > span:first-child { min-width: 0; }
+.dr-d { flex: 0 1 auto; max-width: 42%; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dr-mais { display: block; width: 100%; background: none; border: 0; border-top: 1px solid var(--line); color: var(--accent);
+  font: inherit; font-size: 13px; padding: 9px 0 3px; text-align: left; cursor: pointer; }
 .pre { white-space: pre-wrap; font: 13px/1.5 inherit; margin: 0; }
 #toast { position: fixed; left: 16px; right: 16px; bottom: 90px; z-index: 30; background: var(--fg); color: var(--bg);
   padding: 12px 14px; border-radius: 12px; font-size: 14px; text-align: center; }

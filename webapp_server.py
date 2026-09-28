@@ -302,9 +302,9 @@ FASES = {"fase menstrual": "Menstruada", "fase folicular": "Fase folicular",    
          "fase ovulatória / período fértil": "Período fértil", "fase lútea inicial": "Fase lútea",
          "fase pré-menstrual / tpm": "TPM"}
 # preposição de cada sentimento quando é por alguém: "com saudade DELE", "grata A ELE", "chateada COM ele"
-DE_ALGUEM = {"com saudade", "orgulhosa", "admirada", "com vergonha"}
+DE_ALGUEM = {"com saudade", "orgulhosa", "admirada", "com vergonha", "com ciuminho"}
 A_ALGUEM = {"grata"}
-SEM_ALGUEM = {"com culpa"}          # o motivo embaixo já diz com quem
+SEM_ALGUEM = {"com culpa", "com saudade de casa"}   # o motivo embaixo já diz com quem ("Falou com o pai")
 
 
 def _hora(at: datetime) -> str:
@@ -331,9 +331,12 @@ def status_view(snap: dict) -> dict:
     celular = CELULAR_POR_ATIVIDADE.get(snap.get("act_code") or "") or next(
         (txt for key, txt in TELEFONE if disp.startswith(key)), disp)
     fase = snap.get("ciclo_fase") or ""
+    # 28/09 (Patrick): "Dia 27 de 28 · TPM" — quanto falta pro ciclo virar
+    de = f" de {snap['ciclo_len']}" if snap.get("ciclo_len") else ""
     return {"atividade": cap(snap.get("atividade") or ""), "local": local, "celular": celular,
             "dormindo": disp.startswith("Dormindo"),
-            "ciclo": f"Dia {snap['ciclo_dia']} · {FASES.get(fase, cap(fase))}" if snap.get("ciclo_dia") else "",
+            "ciclo": f"Dia {snap['ciclo_dia']}{de} · {FASES.get(fase, cap(fase))}" if snap.get("ciclo_dia") else "",
+            "ciclo_fase": FASES.get(fase, cap(fase)),
             "saude": [f"{cap(l)} · {r}" for l, r in snap.get("saude") or []],
             "proximo": f"{cap(snap['proximo'][0])}, {_quando_txt(snap['proximo'][1])}" if snap.get("proximo") else "",
             "planos": [f"{cap(p)}, {_quando_txt(w)}" for p, w in snap.get("planos") or []]}
@@ -344,11 +347,12 @@ def cap(s: str) -> str:
 
 
 def _alguem(target: str, word: str) -> str:
-    """'o Patrick' vira ele; os outros ficam com o nome curto ('a Bia')."""
+    """'o Patrick' vira você (28/09, Patrick: o painel fala com você também no sentimento — "Carinhosa com
+    você", "Com saudade de você"); os outros ficam com o nome curto ('a Bia')."""
     if not target or word in SEM_ALGUEM:
         return ""
     if target == "o Patrick":
-        return "dele" if word in DE_ALGUEM else "a ele" if word in A_ALGUEM else "com ele"
+        return "de você" if word in DE_ALGUEM else "a você" if word in A_ALGUEM else "com você"
     art, _, resto = target.partition(" ")
     if word in DE_ALGUEM:
         return f"d{art} {resto}"                                  # "da Bia", "do Theo"
@@ -372,14 +376,64 @@ def voz_painel(txt: str) -> str:
     return cap(txt.replace("pix", "Pix"))
 
 
-def voz_dela(txt: str) -> str:
-    """Motivo do sentimento do jeito dela: 'O Patrick fez um pix pra ela' → 'Ele fez um Pix pra mim';
-    'ele te elogiou' → 'ele me elogiou'."""
-    txt = _PATRICK_RE.sub("ele", txt or "")
-    for a, b in ((r"\bdo Patrick\b", "dele"), (r"\bpra ela\b", "pra mim"), (r"\bcom ela\b", "comigo"),
-                 (r"\bte\b", "me"), (r"\bde você\b", "de mim"), (r"\bcom você\b", "comigo"), (r"^você\b", "eu")):
-        txt = re.sub(a, b, txt)
-    return cap(txt.replace("pix", "Pix"))
+FATO_MAX, DETALHE_MAX = 42, 22
+# motivos gravados antes do padrão (28/09): as frases fixas antigas e os resumos do mundo passam pelo molde novo
+LEGADO = {"banho quentinho, se sentiu gente de novo": "Banho quentinho",
+          "o pai deu bom dia e perguntou dela": "O pai perguntou dela",
+          "a surpresa do delivery": "Delivery surpresa",
+          "o Patrick mandou comida de surpresa pra ela": "o Patrick mandou comida · surpresa",
+          "o Patrick fez um pix pra ela": "o Patrick fez um Pix", "falou com o pai": "Falou com o pai",
+          "o apê ficou arrumado e cheiroso": "Apê arrumado e cheiroso"}
+
+
+def _legado(txt: str) -> str:
+    if txt in LEGADO:
+        return LEGADO[txt]
+    try:
+        from emotion import _motivo_convite, _motivo_refeicao, _motivo_tv
+        if re.match(r"(Viu (o )?epis|Saiu episódio novo)", txt):
+            return _motivo_tv(txt)
+        if " te chamou: " in txt:
+            return _motivo_convite(txt)
+        if re.match(r"(Almoço|Jantar|Café|Lanche)\b[^:]*: ", txt):
+            return _motivo_refeicao(txt)
+        if txt.startswith("Trocou mensagens com ") and "; assunto: " in txt:
+            base, _, assunto = txt.partition("; assunto: ")
+            quem = base.split(" com ", 1)[-1]
+            if assunto.startswith("conflitos"):
+                return f"Se estranhou com {quem} · por mensagem"
+            return f"Mensagens com {quem} · {assunto.split(',')[0]}"
+    except Exception:
+        logger.debug("motivo.legado", exc_info=True)
+    return txt
+
+
+def motivo_tela(cause: str, target: str = "") -> dict:
+    """28/09 (Patrick): o motivo segue um padrão só — o fato curto em voz de painel e o detalhe ao lado, em
+    cinza ({"motivo": "Viu Paradise Kiss", "detalhe": "eps 1 e 2"}). O mundo e o planner já gravam "fato ·
+    detalhe" em 3ª pessoa ("o Patrick mandou comida · surpresa" → "Você mandou comida"); os motivos antigos
+    ("Trocou mensagens com a Bia; assunto: festas", "Ele provocou, insinuando que…") passam pelo mesmo molde."""
+    txt = _legado((cause or "").strip().rstrip("."))
+    base, _, assunto = txt.partition("; assunto: ")
+    if assunto:
+        txt = f"{base} · {assunto}"
+    txt = re.sub(r"\s*\([^)]*\)", "", txt)
+    if target == "o Patrick":
+        txt = re.sub(r"^[Ee]le\b", "o Patrick", txt)            # planner antigo: "Ele provocou…"
+    txt = re.sub(r"\bminha\b", "dela", txt)
+    if " · " not in txt and len(txt) > FATO_MAX and ", " in txt:
+        txt = txt.replace(", ", " · ", 1)                     # "Ele recuou, dizendo que…" → fato · detalhe
+    fato, _, detalhe = txt.partition(" · ")
+    fato, detalhe = voz_painel(fato.strip()), detalhe.strip()
+    return {"motivo": _corta(fato, FATO_MAX), "detalhe": _PATRICK_RE.sub("você", _corta(detalhe, DETALHE_MAX))}
+
+
+def _corta(txt: str, n: int) -> str:
+    """Corta na palavra inteira, com reticências."""
+    if len(txt) <= n:
+        return txt
+    corte = txt[:n] if txt[n] == " " else txt[:n].rsplit(" ", 1)[0]
+    return corte.rstrip(",") + "…"
 
 
 def _horas(h: float) -> str:
@@ -389,25 +443,40 @@ def _horas(h: float) -> str:
     return f"{h_int}h{m:02d}" if m else f"{h_int}h"
 
 
-def emocao_view(e: dict, dormindo: bool) -> dict:
-    """Painel de emoção em texto de gente: linhas rotuladas em vez de 'dormiu 8,7 h · TPM'."""
-    body = [dict(b) for b in e["body"]]
+def _desconforto(why: str, fase: str) -> str:
+    """Com a linha Ciclo logo acima, o desconforto não repete a fase (Patrick, 28/09): 'inchada da TPM' → 'Inchada'."""
+    if fase == "TPM":
+        why = re.sub(r"\s+da TPM\b", "", why)
+    elif fase == "Menstruada":
+        why = re.sub(r"^menstruada,\s*", "", why)
+    return cap(why)
+
+
+def emocao_view(e: dict, dormindo: bool, now: Optional[datetime] = None, ciclo: str = "", fase: str = "") -> dict:
+    """Painel de emoção em texto de gente: linhas rotuladas em vez de 'dormiu 8,7 h · TPM'.
+    28/09 (Patrick): palavras com maiúscula, linha Ciclo, e o Sentindo agora diz quando começou."""
+    body = [{**b, "word": cap(b.get("word") or "")} for b in e["body"]]
     if dormindo:
-        body[0]["word"] = "dormindo"                 # 'exausta' dormindo era pressão de sono, não ela mal
+        body[0]["word"] = "Dormindo"                 # 'exausta' dormindo era pressão de sono, não ela mal
     linhas = []
     if dormindo:
-        linhas.append(["moon", "Sono", "dormindo agora"])
+        linhas.append(["moon", "Sono", "Dormindo agora"])
     elif e.get("hours_slept") is not None:
         acordou = e.get("awake_since")
-        linhas.append(["moon", "Sono", f"dormiu {_horas(e['hours_slept'])}"
+        linhas.append(["moon", "Sono", f"Dormiu {_horas(e['hours_slept'])}"
                        + (f" · acordou às {_hora(datetime.fromisoformat(str(acordou)))}" if acordou else "")])
+    if ciclo:
+        linhas.append(["droplet", "Ciclo", ciclo])
     if e.get("hours_since_release") is not None:
         h = e["hours_since_release"]
-        linhas.append(["heartbeat", "Último orgasmo", f"há {round(h)} h" if h < 48 else f"há {round(h / 24)} dias"])
+        linhas.append(["heartbeat", "Último orgasmo", f"Há {round(h)} h" if h < 48 else f"Há {round(h / 24)} dias"])
     if e.get("discomfort_why"):
-        linhas.append(["bandage", "Desconforto", cap(e["discomfort_why"])])
+        linhas.append(["bandage", "Desconforto", _desconforto(e["discomfort_why"], fase if ciclo else "")])
+    from por_dentro import quando
     sentindo = [{"texto": cap(" ".join(x for x in (f["word"], _alguem(f["target"], f["word"])) if x)),
-                 "motivo": voz_dela(f["cause"]), "valor": f["value"], "vezes": f["count"], "ate_resolver": f["until_resolved"]}
+                 **motivo_tela(f.get("cause_raw") or f["cause"], f["target"] or ""), "valor": f["value"],
+                 "vezes": f["count"], "ate_resolver": f["until_resolved"],
+                 "quando": quando(f["at"], now) if f.get("at") and now else ""}
                 for f in e["feelings"]]
     return {"body": body, "no_clima": e.get("in_the_mood", False), "linhas": linhas, "humor": cap(e["mood"]),
             "humor_barras": e["mood_bars"], "sentindo": sentindo, "voces": e["bond"]}
@@ -444,8 +513,18 @@ async def api_bastidores(request: web.Request) -> web.Response:
         except Exception:
             logger.exception("webapp.agenda.error")
             status["card"] = None
-        out = {"status": status, "emocao": emocao_view(EmotionEngine(hooks.db).panel(now), status["dormindo"]),
+        out = {"status": status, "emocao": emocao_view(EmotionEngine(hooks.db).panel(now), status["dormindo"], now,
+                                                       status["ciclo"], status.get("ciclo_fase", "")),
                "hoje": _hoje(hooks.db, now)}
+        try:
+            import por_dentro                        # 28/09 (Patrick): Hoje por dentro, Na cabeça, Vocês dois
+            out["diario"] = por_dentro.diario_view(hooks.db, now)
+            out["cabeca"] = por_dentro.cabeca_view(hooks.db, now, status["dormindo"])
+            out["emocao"]["voces_linhas"] = por_dentro.voces_linhas(hooks.db, now)
+        except Exception:
+            logger.exception("webapp.por_dentro.error")
+            out.setdefault("diario", {"titulo": "Hoje por dentro", "itens": []})
+            out.setdefault("cabeca", [])
         try:
             from unhas import Unhas                  # 26/09: unhas como status (seção própria no Por dentro)
             out["unhas"] = Unhas(hooks.db).painel(now)

@@ -40,6 +40,13 @@ from unhas import RESERVA, SALAO, SALAO_IDA_MIN, SALAO_NOME, motivo_txt
 logger = logging.getLogger(__name__)
 
 KEY = "cabelo_json"
+VIRA_O_DIA = 5                      # 28/09 (Patrick): a madrugada antes de acordar ainda é a noite anterior
+
+
+def _dia(at: datetime):
+    return (at - timedelta(hours=VIRA_O_DIA)).date()
+
+
 PERGUNTA_JANELA = timedelta(minutes=40)
 PENTEADO_PERGUNTA_CHANCE = 0.4      # antes de sair à noite/encontro, "às vezes" pergunta solto ou preso
 SALAO_PERGUNTA_CHANCE = 0.5         # corte/cor no salão
@@ -178,9 +185,10 @@ class Cabelo:
         return max(0.0, (now - datetime.fromisoformat(v)).total_seconds() / 86400) if v else 0.0
 
     def _dia_lavagem(self, st: dict, now: datetime) -> int:
-        """0 = lavado hoje, 1 = 2º dia, 2 = 3º dia (oleoso)."""
+        """0 = lavado hoje, 1 = 2º dia, 2 = 3º dia (oleoso). 28/09 (Patrick): o dia vira às 5h — lavou à 0h06
+        antes de dormir é "ontem à noite", e de manhã já é o 2º dia."""
         v = st.get("lavado_em")
-        return (now.date() - datetime.fromisoformat(v).date()).days if v else 1
+        return (_dia(now) - _dia(datetime.fromisoformat(v))).days if v else 1
 
     def sessao(self, now: datetime) -> Optional[dict]:
         s = self._load().get("sessao")
@@ -828,11 +836,15 @@ class Cabelo:
         lav = self._dia_lavagem(st, now)
         seca = {"natural": "secou natural", "secador": "secou no secador",
                 "escova_salao": "escova no salão"}.get(st.get("secagem") or "", "")
-        lavou = ("Hoje" if lav <= 0 else "Ontem" if lav == 1 else f"Há {lav} dias") + (f", {seca}" if seca else "")
+        lavado = datetime.fromisoformat(st["lavado_em"]) if st.get("lavado_em") else None
+        noite = lavado is not None and (lavado.hour >= 18 or lavado.hour < VIRA_O_DIA)
+        lavou = ("Hoje" if lav <= 0 else ("Ontem à noite" if noite else "Ontem") if lav == 1
+                 else f"Há {lav} dias") + (f", {seca}" if seca else "")
+        # 28/09 (Patrick): a barra já se chama Luzes; a linha diz a cor e quando fez
         return {"penteado": penteado, "hex": ROSA_HEX if c["rosa"] == "viva" else tom[3], "barras": barras,
                 "linhas": [["droplet", "Lavou", lavou],
                            ["scissors", "Corte", f"{CORTES[c['corte']][0]}, {quando('cortado_em').lower()}"],
-                           ["palette", "Luzes", f"{tom[0]}, {quando('tonalizado_em').lower()}"]]
+                           ["palette", "Cor", f"{tom[0]}, {quando('tonalizado_em').lower()}"]]
                 + ([["brush", "Rosa", self._linha_rosa(st, now, quando)]] if c["rosa"] else [])}
 
     def _linha_rosa(self, st: dict, now: datetime, quando) -> str:

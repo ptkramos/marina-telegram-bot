@@ -38,8 +38,9 @@ Agora decidida linha a linha (card layout D); tela inicial só com os apps; **In
 fora à noite com luz de noite; post 6 refeito.
 
 **Próximo:**
-1. Bastidores **aba a aba** com ele (Por dentro, Dinheiro, Mundo), como foi a Agora — ele quer ver no celular e
-   ajustar palavra por palavra (PLANO_VOZ 14).
+1. Bastidores **aba a aba** com ele: **Por dentro ✅ (28/09)** — ordem nova, Ciclo no Corpo, Hoje por dentro, Na
+   cabeça (agenda viva à vista), motivos num padrão só em voz de painel, barras deslizando a cada 30 s. Faltam
+   **Dinheiro** e **Mundo**, no celular, palavra por palavra (PLANO_VOZ 14).
 2. Instagram no uso real: o próximo post de rolê da noite (luz e cabelo) e os textos ao vivo (tipo por pessoa, sem molde).
 3. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
 4. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).

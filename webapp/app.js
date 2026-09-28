@@ -92,7 +92,29 @@ const ic = (name, cls = "") => `<i class="ti ti-${IC_PROPRIO[name] || name}${cls
 const nota = (n) => String(n).replace(".", ",");
 const abreAs = (h) => `Abre às ${String(h).padStart(2, "0")}:00`;
 
-const HOJE_ABERTOS = new Set();   // períodos passados que ele abriu no Hoje (sobrevivem à recarga de 1 min)
+const HOJE_ABERTOS = new Set();   // períodos passados que ele abriu no Hoje (sobrevivem à recarga de 30 s)
+let DIARIO_ABERTO = false;        // "Ver o dia todo" no Hoje por dentro (idem)
+let BAST_CARREGANDO = false;      // uma carga dos Bastidores por vez
+
+// 28/09 (Patrick): na recarga dos Bastidores a barra desliza do valor antigo pro novo, em vez de pular.
+// A chave é o cartão (id) + a posição da barra dentro dele.
+const BARRAS = "#v-bastidores .bar > i, #v-bastidores .ag-bar > i";
+function chaveBarra(el) {
+  const dono = el.closest("[id]");
+  return dono.id + ":" + [...dono.querySelectorAll(".bar > i, .ag-bar > i")].indexOf(el);
+}
+function largurasBarras() {
+  return new Map([...document.querySelectorAll(BARRAS)].map((el) => [chaveBarra(el), el.style.width]));
+}
+function deslizaBarras(antes) {
+  document.querySelectorAll(BARRAS).forEach((el) => {
+    const velho = antes.get(chaveBarra(el)), alvo = el.style.width;
+    if (!velho || velho === alvo) return;
+    el.style.transition = "none"; el.style.width = velho;
+    void el.offsetWidth;                          // aplica o valor antigo antes de animar
+    el.style.transition = ""; el.style.width = alvo;
+  });
+}
 
 const loaders = {
   async inicio() {
@@ -246,9 +268,12 @@ const loaders = {
   // 26/09 (Patrick): abas Agora · Por dentro · Dinheiro · Mundo. O servidor já manda o texto pronto
   // (status_view, emocao_view, world_panel, mov_desc); aqui é só desenho.
   async bastidores() {
+    if (BAST_CARREGANDO) return;              // 28/09: abrir a tela e a recarga de 30 s não pedem duas vezes
+    BAST_CARREGANDO = true;
     try {
       const [d, g] = await Promise.all([api("/api/bastidores"), api("/api/dinheiro")]);
       const s = d.status, e = d.emocao, m = d.mundo;
+      const antes = largurasBarras();
       const linha = (icone, rotulo, valor) => `<div class="linha"><span class="li-ic">${ic(icone)}</span>
         <span class="li-rot">${esc(rotulo)}</span><span class="li-val">${esc(valor)}</span></div>`;
       const vazio = (txt) => `<p class="muted vazio-txt">${esc(txt)}</p>`;
@@ -308,17 +333,19 @@ const loaders = {
       };
       desenhaHoje();
 
-      // Por dentro
+      // Por dentro — 28/09 (Patrick, no celular): Corpo, Humor, Sentindo agora, Na cabeça, Hoje por dentro,
+      // Vocês dois, Unhas, Cabelo
       $("bd-corpo").innerHTML = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Tesão")).join("")
         + (e.linhas.length || e.no_clima ? `<div class="linhas sep">${e.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}
           ${e.no_clima ? `<div class="linha"><span class="li-ic">${ic("flame")}</span><span class="li-rot">No clima agora</span></div>` : ""}</div>` : "");
-      // 26/09 (Patrick): unhas em seção própria — cor, barra de desgaste, Estado, Tipo, Feita
+      // 26/09 (Patrick): unhas em seção própria. 28/09: a barra ganha rótulo, igual ao Cabelo (Desgaste · estado)
       const u = d.unhas;
       $("bd-unhas-t").hidden = $("bd-unhas").hidden = !u;
       if (u) {
         $("bd-unhas").innerHTML = `<div class="big un-cor">${u.hex ? `<span class="un-dot" style="background:${esc(u.hex)}"></span>` : ""}${esc(u.cor)}</div>
-          <div class="bar un-bar${u.gasta ? " gasta" : ""}"><i style="width:${pct(u.desgaste)}%"></i></div>
-          <div class="linhas">${linha("sparkles", "Estado", u.estado)}${linha("droplet-half", "Tipo", u.tipo)}${linha("calendar-check", "Feita", u.feita)}</div>`;
+          <div class="ca-barras"><div class="bar-row"><span>Desgaste</span><div class="bar${u.gasta ? " alerta" : ""}"><i style="width:${pct(u.desgaste)}%"></i></div>
+            <span class="w">${esc(u.estado)}</span></div></div>
+          <div class="linhas sep">${linha("droplet-half", "Tipo", u.tipo)}${linha("calendar-check", "Feita", u.feita)}</div>`;
       }
       // 26/09 (Patrick): cabelo em seção própria — penteado, quatro barras (amarela quando vence) e as linhas
       const cab = d.cabelo;
@@ -330,12 +357,35 @@ const loaders = {
           <div class="linhas sep">${cab.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
       }
       $("bd-humor").innerHTML = `<div class="big">${esc(e.humor)}</div>` + e.humor_barras.map((b) => bar(b.label, b.value)).join("");
+      // 28/09 (Patrick): o motivo ganha quando começou, na direita
       $("bd-sentindo").innerHTML = e.sentindo.length ? e.sentindo.map((f) => `<div class="feel">
         <div class="head"><span class="t">${esc(f.texto)}</span><div class="bar"><i style="width:${pct(f.valor)}%"></i></div></div>
-        <div class="why">${esc(f.motivo)}</div>
+        <div class="why"><span>${esc(f.motivo)}${f.detalhe ? `<span class="dt"> · ${esc(f.detalhe)}</span>` : ""}</span>${f.quando ? `<span class="qd">${esc(f.quando)}</span>` : ""}</div>
         ${f.vezes > 1 || f.ate_resolver ? `<div class="pilulas">${f.vezes > 1 ? `<span class="pilula">${f.vezes} vezes</span>` : ""}${f.ate_resolver ? '<span class="pilula">até resolver</span>' : ""}</div>` : ""}</div>`).join("")
         : vazio("Nada marcante agora.");
-      $("bd-voces").innerHTML = e.voces.map((b) => bar(b.label, b.value, null, b.label === "Desejo")).join("");
+      // 28/09 (Patrick): Na cabeça — o que vem pela frente e a vontade dela de ir (agenda viva).
+      // O mais curto possível: título | quando; embaixo estado | barra | motivo (coluna da direita, como no Corpo)
+      const cb = d.cabeca || [];
+      $("bd-cabeca-t").hidden = $("bd-cabeca").hidden = !cb.length;
+      $("bd-cabeca").innerHTML = cb.map((x) => `<div class="nc"><div class="nc-t"><span>${esc(x.titulo)}</span><span class="qd">${esc(x.quando)}</span></div>
+        ${x.estado || x.vontade != null || x.detalhe ? `<div class="nc-s"><span class="nc-e">${esc(x.estado)}</span>${x.vontade != null
+          ? `<div class="bar"><i style="width:${pct(x.vontade)}%"></i></div>` : "<span></span>"}<span class="w">${esc(x.detalhe)}</span></div>` : ""}</div>`).join("");
+      // 28/09 (Patrick): Hoje por dentro — tudo o que ela sentiu no dia, mesmo o que já passou (5 + ver o dia todo)
+      const di = d.diario || { itens: [] };
+      $("bd-diario-t").hidden = $("bd-diario").hidden = !di.itens.length;
+      $("bd-diario-t").textContent = di.titulo || "Hoje por dentro";
+      const desenhaDiario = () => {
+        const todos = DIARIO_ABERTO || di.itens.length <= 6;
+        $("bd-diario").innerHTML = (todos ? di.itens : di.itens.slice(0, 5)).map((x) => `<div class="dr">
+          <span class="dr-h">${esc(x.hora)}</span><div><div>${esc(x.texto)}</div><div class="dr-m"><span>${esc(x.motivo)}</span>
+          ${x.detalhe ? `<span class="dr-d">${esc(x.detalhe)}</span>` : ""}</div></div></div>`).join("")
+          + (di.itens.length > 6 ? `<button class="dr-mais">${DIARIO_ABERTO ? "Mostrar menos" : `Ver o dia todo (${di.itens.length})`}</button>` : "");
+        const b = $("bd-diario").querySelector(".dr-mais");
+        if (b) b.addEventListener("click", () => { DIARIO_ABERTO = !DIARIO_ABERTO; desenhaDiario(); });
+      };
+      desenhaDiario();
+      $("bd-voces").innerHTML = e.voces.map((b) => bar(b.label, b.value, null, b.label === "Desejo")).join("")
+        + ((e.voces_linhas || []).length ? `<div class="linhas sep">${e.voces_linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>` : "");
 
       // Dinheiro
       $("bn-saldo").textContent = brl(g.saldo);
@@ -363,7 +413,9 @@ const loaders = {
         bloco("Rolando agora", m.rolando.map((r) => `<div class="item-m"><div>${esc(cap(r.titulo))}</div>${r.com.length ? `<div class="d">Com ${esc(r.com.join(", "))}</div>` : ""}</div>`))
         + bloco("Planos", m.planos.map((p) => `<div class="item-m dois-lados"><span>${esc(cap(p.descricao))}</span><span class="d">${esc(p.quando)}</span></div>`))
         + bloco("Lugares", m.lugares.map((l) => `<div class="item-m dois-lados"><span>${esc(l.nome)}</span><span class="d">${esc(l.quanto)}</span></div>`));
+      deslizaBarras(antes);
     } catch (err) { failIn($("ag-card"), err); }
+    finally { BAST_CARREGANDO = false; }
   },
 };
 
@@ -560,7 +612,11 @@ $("rv-fazer").addEventListener("click", async () => {
 });
 
 show("inicio", false);
-// 26/09 (Patrick): o que ela sente atualiza em tempo real — Bastidores aberto se recarrega sozinho
-setInterval(() => {
+// 26/09 (Patrick): o que ela sente atualiza em tempo real — Bastidores aberto se recarrega sozinho.
+// 28/09: "em todas as telas, a barra deve ser atualizada em tempo real" — a cada 30 s (antes 1 min), sem
+// duas recargas ao mesmo tempo, na volta pro app e com a barra deslizando até o valor novo (app.css)
+function recarregaBastidores() {
   if (stack[stack.length - 1] === "bastidores" && !document.hidden) loaders.bastidores();
-}, 60000);
+}
+setInterval(recarregaBastidores, 30000);
+document.addEventListener("visibilitychange", recarregaBastidores);

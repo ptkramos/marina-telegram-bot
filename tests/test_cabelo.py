@@ -48,6 +48,7 @@ class CabeloTest(unittest.TestCase):
         self.assertEqual(p["penteado"], "Solto natural")
         self.assertEqual([b["label"] for b in p["barras"]], ["Lavagem", "Pontas", "Luzes", "Hidratação"])
         self.assertEqual(p["linhas"][1][2], "Reto, há 5 semanas")
+        self.assertEqual(p["linhas"][2][:2], ["palette", "Cor"], "28/09: a barra já se chama Luzes")
         cor, estilo = self.c.visual(T)
         self.assertEqual(cor, "long chestnut brown hair with golden blonde tips")
         self.assertEqual(estilo, "semi-straight with soft waves at the ends")
@@ -59,6 +60,16 @@ class CabeloTest(unittest.TestCase):
         self.assertIn("blunt bangs", cor)
         self._set(cortado_em=50)
         self.assertEqual(self.c.condicao(T)["corte"], "cortina", "a franja cheia cresce e vira cortina")
+
+    def test_lavou_de_madrugada_e_a_noite_anterior(self):
+        # 28/09 (Patrick): lavou à 0h06 antes de dormir; às 5h55 é "Ontem à noite" e de manhã já é o 2º dia
+        st = self.c._state(T)
+        st.update(lavado_em="2026-09-28T00:06:00", secagem="natural")
+        self.db.set_estado_relacional(KEY, json.dumps(st))
+        agora = datetime(2026, 9, 28, 5, 55)
+        self.assertEqual(self.c.painel(agora)["linhas"][0], ["droplet", "Lavou", "Ontem à noite, secou natural"])
+        self.assertEqual(self.c.condicao(agora)["lavagem"], "2º dia")
+        self.assertEqual(self.c.condicao(datetime(2026, 9, 28, 2, 0))["lavagem"], "Lavado hoje", "antes das 5h: a mesma noite")
 
     def test_banho_lava_no_segundo_dia_e_protege_escova(self):
         self._set(lavado_em=0.2)

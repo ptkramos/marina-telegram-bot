@@ -61,9 +61,12 @@ CORES = {
     "amarelo": ("Amarelo", "pastel butter yellow", "estacao"),
     "glitter": ("Glitter", "sparkly silver glitter", "estacao"),
 }
-# estado curto no painel (Patrick, 26/09)
+# estado curto no painel (Patrick, 26/09). 28/09: gel com 10 dias saía "Nova" — agora Perfeita nos primeiros
+# dias, Nova depois, e o resto igual (Crescendo, Vencendo, Descascando; esmalte: Gastando, Descascando)
 ESTADO = {"perfeita": "Nova", "crescendo": "Crescendo", "pedindo manutenção": "Vencendo",
           "começando a gastar": "Gastando", "gastando": "Gastando", "descascando": "Descascando"}
+PERFEITA_GEL, PERFEITA_ESMALTE = 3, 1          # dias em que ainda está "Perfeita"
+SALAO_CURTO = "Ophicina"
 # bolinha da cor no painel (Bastidores → Por dentro)
 HEX = {"vermelho": "#c0182a", "vinho": "#6d1a2c", "nude": "#e3b5a4", "branco": "#f3eee6", "francesinha": "#f1d9d0",
        "preto": "#1b1b1d", "marsala": "#8a3b3b", "marinho": "#1f2a4d", "musgo": "#4a5a33", "rosa_bebe": "#f4c2d0",
@@ -460,16 +463,19 @@ class Unhas:
             return {"cor": nome(cor) if cor else "Escolhendo a cor", "hex": HEX.get(cor or "", ""), "desgaste": 0.0,
                     "gasta": False, "estado": "Fazendo agora",
                     "tipo": "Gel" if s["onde"] == "salao" else "Esmalte",
-                    "feita": f"Agora, na {SALAO_NOME}" if s["onde"] == "salao" else "Agora, em casa"}
+                    "feita": f"Agora, na {SALAO_CURTO}" if s["onde"] == "salao" else "Agora, em casa"}
         a = self.atual(now)
         if not a:
             return None
         d = int(a["dias"])
         quando = "Hoje" if d == 0 else "Ontem" if d == 1 else f"Há {d} dias"
-        onde = f"na {SALAO_NOME}" if a["onde"] == "salao" else "em casa"
+        onde = f"na {SALAO_CURTO}" if a["onde"] == "salao" else "em casa"   # 28/09: cabe numa linha no celular
+        estado = ESTADO[a["condicao"]]
+        if a["condicao"] == "perfeita" and a["dias"] < (PERFEITA_GEL if a["tipo"] == "gel" else PERFEITA_ESMALTE):
+            estado = "Perfeita"
         return {"cor": nome(a["cor"]), "hex": HEX.get(a["cor"], ""),
                 "desgaste": round(min(1.0, a["dias"] / (24 if a["tipo"] == "gel" else 7)), 2), "gasta": a["gasta"],
-                "estado": ESTADO[a["condicao"]],
+                "estado": estado,
                 "tipo": "Gel" if a["tipo"] == "gel" else "Esmalte", "feita": f"{quando}, {onde}"}
 
     def prompt_lines(self, now: datetime) -> list[str]:
