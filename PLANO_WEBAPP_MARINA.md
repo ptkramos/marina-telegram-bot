@@ -233,6 +233,7 @@ celular com a largura de cada aba pelo texto). Escolhas do Patrick com mockup e 
 - **Conteúdo (opção C):** Peso, Cabelo e Unhas agora; **roupa e make do momento** entram num bloco "Agora" no topo
   quando existirem no mundo — hoje a roupa só nasce na hora da foto (sorteio do guarda-roupa do `photo_director`) e a
   make só como passo do card ("Fazendo maquiagem", "Tirando maquiagem"). Registrado como item da frente do mundo.
+  **Feito em 28/09, noite** (seção "Roupa e make de verdade" abaixo).
 - **Ordem:** Peso → Cabelo → Unhas. Unhas e Cabelo saíram do Por dentro sem mudar o desenho.
 - **Peso** (novo, `Meals.painel_peso`): o número grande é o **peso de verdade** ("54,4 kg"; ela só sabe o da balança);
   barra **Agência** que enche de 52 a 56 kg com a folga na direita ("Folga 1,6 kg"; "No limite"; "Passou 0,3 kg" em
@@ -242,6 +243,36 @@ celular com a largura de cada aba pelo texto). Escolhas do Patrick com mockup e 
   "Ainda não", "Dieta", "Até dd/mm", "Altura"; ícones scale, salad, ruler-2.
 - **Código:** `meals.painel_peso`/`_kg`, `webapp_server.api_bastidores` (`peso`), `webapp/` (aba, `ba-fora`, `.seg` com
   cinco abas). Testes: `tests/test_por_fora.py` (5).
+
+### Roupa e make de verdade + bloco "Agora" do Por fora (28/09, noite, frente do mundo) ✅
+A roupa deixou de nascer na hora da foto: é estado do mundo (`roupa.py`), e a foto, o prompt, o Instagram e a aba
+leem daqui. Decisões do Patrick com múltipla escolha:
+- **Guarda-roupa de peças fixas que repetem** (casa, pijama, treino, rua, sair, jogo, praia — ~45 peças com nome);
+  o look é montado pela ocasião no passo de roupa do Se arrumando, sem repetir o mesmo look em 3 dias.
+- **Troca pela vida dela:** acorda de pijama e tira depois do banho ou 20–90 min depois de acordar; chegou da rua,
+  troca em 10–40 min (de rolê à noite, 60% fica com a roupa até dormir); saiu sem se arrumar, põe roupa de rua;
+  pijama no "Colocando pijama" ou ao deitar.
+- **Make em níveis que borram:** Sem / Leve / Completa / De festa / De ensaio (freela). Feita no "Fazendo
+  maquiagem" (leve implícita, pelo humor, na faculdade/café/médico/salão), tirada no "Tirando maquiagem" ou no banho;
+  academia, praia, choro e dormir com ela borram; dormiu sem tirar vira acontecimento.
+- **Ela namora e provoca (pedido dele):** gaveta íntima — provocante de casa, lingerie, fetiche (meia e cinta-liga,
+  couro e vinil, fantasias adultas) e transparências. Veste com tesão em casa (iniciativa de tesão, masturbação
+  chamando ele, às vezes quando o sexting começa), quando ele pede no sexting (a mesma peça em todas as fotos da
+  sessão), por baixo da roupa de sair (15%, 60% com tesão; tirou o vestido em casa, é ela que aparece) e às vezes
+  dorme com ela (30%, 60% se gozou com ele nas últimas 4 h; o card troca "Colocando pijama" por "Ficando de lingerie").
+- **Duas opções de look** saem do guarda-roupa dela; a que ele escolher ("a segunda") é a que ela veste pra sair.
+- **Bloco "Agora" no topo do Por fora** (mockup aprovado, mostra normal): a roupa em destaque ("No banho" no banho),
+  barra **Make** com Intacta / Pedindo retoque / Borrada, linhas **Pra quê** ("Sair à noite, desde 20:30"),
+  **Por baixo** (só depois que ela contou no chat) e **Feita** ("Completa, às 20:10") ou **Make** "Sem make".
+- **Textos que eu decidi (pra ele revisar):** nomes das peças (`roupa.PECAS`, `INTIMO`, `ACESSORIOS`); "Pra quê":
+  Ficar em casa, Dormir, Pra te provocar, Dormir de lingerie, Sair, Sair à noite, Encontro, Treino, Academia,
+  Caminhada na orla, Faculdade, Freela, Café, Açaí, Farmácia, Mercado, Shopping, Médico, Pronto atendimento, Unhas,
+  Salão, Passeio do Milo, Jogo do Botafogo, Praia; "No banho"; "Pedindo retoque" (ele tinha visto "Retocando");
+  rótulo "Feita" (pra não repetir "Make"); passo "Ficando de lingerie"; acontecimentos "Vestiu … pra provocar o
+  Patrick." e "Dormiu sem tirar a make (…) e acordou borrada."; ícones hanger, heart, brush.
+- **Código:** `roupa.py` (novo), `world_state.resolve` (tick depois de cada resolve), `rituals.start_shower`,
+  `photo_director` (`_roupa_de_agora`, `_make`), `world_context`, `bot.py` (tesão, opções de look, escolha dele, ela
+  contar, Instagram), `tempo_livre`, `agenda`, `webapp_server`/`webapp`. Testes: `tests/test_roupa.py` (12).
 
 ### Bastidores aba a aba — Dinheiro (28/09, tarde, no celular, com o banco da produção) ✅
 Escolhas do Patrick com mockup e múltipla escolha:

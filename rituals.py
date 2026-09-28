@@ -494,6 +494,11 @@ class Rituals:
             logger.exception("ritual.banho.cabelo")
         minutes += lavou
         end = start + timedelta(minutes=minutes)
+        try:                                   # 28/09: a make sai no banho; depois ela veste roupa de casa (roupa.py)
+            from roupa import Roupa
+            Roupa(self.db).banho(start, end)
+        except Exception:
+            logger.exception("ritual.banho.roupa")
         payload = {"routine_type": "shower", "activity": "tomando banho", "place_key": "marina_apartment",
                    "announced_at": now.isoformat(), "transition_at": start.isoformat(),
                    "end_at": end.isoformat(), "told_patrick": told_patrick}

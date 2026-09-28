@@ -686,7 +686,42 @@ def _default_room(level: int, now: datetime, rng: random.Random) -> str:
     return rng.choice(("sala", "sala", "varanda", "quarto"))
 
 
-def _outfit(pose: Pose, level: int, now: datetime, at_home: bool, rng: random.Random) -> Optional[str]:
+_TROCAVEL = re.compile(r"sports top|bikini")      # roupa fixa da pose que é a de agora dela (treino, praia)
+_OCASIAO_TROCAVEL = {"sports top": "treino", "bikini": "praia"}
+
+
+def _roupa_de_agora(db, pose: Pose, level: int, at: datetime, at_home: bool, intimo: bool) -> Optional[str]:
+    """28/09 (Patrick): a foto usa a roupa que ela está vestindo de verdade (roupa.py). No clima, em casa, é a peça
+    que ela pôs pra ele (e fica a mesma em todas as fotos da sessão)."""
+    if db is None or level >= 3:
+        return None
+    try:
+        from roupa import Roupa
+        r = Roupa(db)
+        if pose.outfit:
+            m = _TROCAVEL.search(pose.outfit)
+            return r.en_em(at) if m and r.ocasiao_em(at) == _OCASIAO_TROCAVEL[m.group(0)] else None
+        if at_home and intimo and level >= 1:
+            return r.pro_clima(at, level)
+        if level == 2 and r.ocasiao_em(at) != "provocar":
+            return None
+        return r.en_em(at)
+    except Exception:
+        logger.exception("photo_director.roupa")
+        return None
+
+
+def _outfit(pose: Pose, level: int, now: datetime, at_home: bool, rng: random.Random, db=None,
+            intimo: bool = False, at: Optional[datetime] = None) -> tuple[Optional[str], bool]:
+    """(roupa, veio do estado dela)."""
+    estado = _roupa_de_agora(db, pose, level, at or now, at_home, intimo)
+    if estado:
+        return estado, True
+    return _outfit_sorteio(pose, level, now, at_home, rng), False
+
+
+def _outfit_sorteio(pose: Pose, level: int, now: datetime, at_home: bool, rng: random.Random) -> Optional[str]:
+    """Sem o estado da roupa (teste, banco sem mundo): o sorteio antigo."""
     if pose.outfit:
         return pose.outfit
     if level >= 3:
@@ -767,12 +802,14 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         lo, hi = pose.levels
         if not (lo <= level <= hi):
             keep = False
+    intimo = not outfit_override and ((asked or 0) >= 1 or getattr(turn, "state", "off") in
+                                      ("warming", "active", "climax", "afterglow"))
     if keep:
         room = session["room"]
         seed = session["seed"]
-        outfit = session.get("outfit") if session.get("level") == level else None
-        if outfit is None:
-            outfit = _outfit(pose, level, now, at_home, rng)
+        outfit, do_estado = _outfit(pose, level, now, at_home, rng, db, intimo, scene_at)
+        if not do_estado and session.get("level") == level and session.get("outfit") is not None:
+            outfit = session["outfit"]
     else:
         if at_home:
             activity = (getattr(camera_ctx, "activity", None) or "") if camera_ctx else ""
@@ -805,7 +842,7 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
                 pose = None
         pose = pose or rng.choice(candidates)
         seed = rng.randint(1, 2**31 - 1)
-        outfit = _outfit(pose, level, now, at_home, rng)
+        outfit, _ = _outfit(pose, level, now, at_home, rng, db, intimo, scene_at)
 
     if outfit_override and level <= 1:
         outfit = outfit_override           # 25/09: as duas opções de look que ela prometeu mandar
@@ -868,6 +905,10 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     nails = _nails(db, now)                  # 26/09: a cor de verdade das unhas dela (unhas.py)
     if nails:
         prompt = f"{prompt} {nails}"
+    # 28/09: a make de verdade (roupa.py) — feita, borrada ou sem; cena passada (post de ontem) fica sem frase
+    make = _make(db, now) if scene_at is None else ""
+    if make:
+        prompt = f"{prompt} {make}"
     prompt = _hair(db, now, prompt, action, cena_passada=scene_at is not None)  # 26/09: o cabelo de agora — cor, corte e penteado (cabelo.py)
     where = apartamento.ROOMS[room]["pt"] if room in apartamento.ROOMS else "na rua"
     facts = f"lugar: {where}; pose: {pose.pt}; roupa: {outfit or 'pelada'}"
@@ -882,7 +923,9 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
                    "beat": beat, "seed": seed, "at": now.isoformat(), "food": f"{request} {her_line}" if food else "",
                    "friend": in_photo, "friend_outfit": friend_outfit}
     # Calcinha/toalha em foto "normal" o moderador do Civitai barra: vai como adulta (Buzz amarelo).
-    adult = level >= 2 or bool(outfit and re.search(r"panties|thong|towel", outfit))
+    # 28/09: a gaveta íntima dela (roupa.py) — lingerie, fetiche e transparência também vão como adulta
+    adult = level >= 2 or bool(outfit and re.search(r"panties|thong|towel|bralette|stockings|bodysuit|vinyl|"
+                                                    r"harness|costume|nightie|babydoll", outfit))
     if pose.framing == "pov":
         # 26/09: foto tirada por ela, ela não aparece. Não vira sessão (o próximo "manda outra" é dela).
         from visual_profile import krea2_pov_prompt
@@ -929,6 +972,17 @@ def _nails(db, now: datetime) -> str:
         return Unhas(db).visual(now)
     except Exception:
         logger.exception("photo_director.unhas")
+        return ""
+
+
+def _make(db, at: datetime) -> str:
+    if db is None:
+        return ""
+    try:
+        from roupa import Roupa
+        return Roupa(db).make_prompt(at)
+    except Exception:
+        logger.exception("photo_director.make")
         return ""
 
 

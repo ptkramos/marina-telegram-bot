@@ -510,6 +510,12 @@ async def api_bastidores(request: web.Request) -> web.Response:
             out.setdefault("diario", {"titulo": "Hoje por dentro", "itens": []})
             out.setdefault("cabeca", [])
         try:
+            from roupa import Roupa                  # 28/09 (Patrick): roupa e make de agora abrem a aba Por fora
+            out["roupa"] = Roupa(hooks.db).painel(now)
+        except Exception:
+            logger.exception("webapp.roupa.error")
+            out["roupa"] = None
+        try:
             from meals import Meals                  # 28/09 (Patrick): Peso abre a aba Por fora
             out["peso"] = Meals(hooks.db).painel_peso(now)
         except Exception:

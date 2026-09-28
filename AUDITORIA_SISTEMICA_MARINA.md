@@ -1818,3 +1818,27 @@ VPS (`/tmp/audit_2809`, sem trazer pro PC), `Agenda.card(t)` de 5 em 5 min das 0
   Os três consumos de hoje ficam com o texto antigo (já gravados).
 - Testes: `tests/test_bug_auditoria_2809.py` (12) e `tests/test_milo_d5.py` (o caso do bug 14 agora espera 20–40 min).
 
+
+## Frente do mundo (28/09, noite): roupa e make de verdade
+Pedido do Patrick (aba Por fora, opção C): o look do momento existir no mundo, pra aba e pras fotos.
+- **Antes:** a roupa era sorteada a cada foto (`photo_director._outfit` sobre `WARDROBE`), o Instagram tinha outro
+  guarda-roupa (`instagram.ROUPAS`) e a make só existia como texto de passo do card. Nada disso conversava: a foto do
+  rolê podia sair com uma roupa, o post com outra, e o chat inventava uma terceira.
+- **Agora:** `roupa.py` guarda o estado (look, ocasião, desde, pra quê; make com desgaste; por baixo; histórico de 5
+  dias) em `estado_relacional["roupa_json"]`, sem migration. Quem escreve: `WorldStateManager.resolve` chama
+  `Roupa.tick` no fim (dentro da trava e da rodada) — passos do Se arrumando (roupa, make, tirar make, banho), saída
+  sem preparo, chegada (troca em 10–40 min), deitar (pijama; dormiu de make vira acontecimento), sexting (clima);
+  `Rituals.start_shower` (make sai, roupa de casa depois); `bot.py` (iniciativa de tesão e escolha do look);
+  `TempoLivre` (masturbação chamando ele). Quem lê: `photo_director` (roupa, e a make na frase do prompt; no clima
+  `pro_clima` veste e persiste), `world_context` (bloco do prompt), `_ig_shot` (post do rolê com a roupa que ela
+  usava lá), `agenda` ("Ficando de lingerie"), `webapp_server` (bloco "Agora" do Por fora).
+- **Desempenho (memória "desempenho sem mudar comportamento"):** o tick consultava `Agenda.agora` a cada resolve
+  (+17 ms, 34 → 51 ms com o dia em cache, medido num banco de teste). Agora só consulta quando o resolve diz "se
+  arrumando" (e uma vez na saída, pra aplicar um preparo que o resolve não viu) e só grava quando algo mudou:
+  +4 ms no mesmo teste, concentrado nos minutos de preparo e saída.
+- **Cuidados:** peça íntima só entra com contexto de clima (pedido ≥ nível 1 ou sessão ativa) — foto do cabelo ou da
+  unha com nível 1 usa a roupa de agora, sem vestir calcinha; a roupa de fora de pose fixa (toalha, capa do salão,
+  roupa puxada) continua da pose; treino e biquíni da pose viram os dela quando a ocasião bate. Gaveta fetiche é de
+  adulto (nada que remeta a menor); peças novas também vão como foto adulta (regex do `adult`).
+- **Testes:** `tests/test_roupa.py` (12) + módulos vizinhos (agenda, agenda reativa/viva, cabelo, câmera, Instagram,
+  intimidade, photo_director, promessa, rituais, tempo livre, webapp, world_state: 251 ok) + suíte inteira.

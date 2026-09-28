@@ -666,7 +666,14 @@ class WorldStateManager:
         paralelo, da saudade, gravou "olhando o Instagram" por cima no mesmo segundo)."""
         from db import rodada
         with _RESOLVE_LOCK, rodada(self.db):   # 28/09 (infra): o plano do dia calculado uma vez por resolve
-            return self._resolve(now, **kw)
+            snap = self._resolve(now, **kw)
+            try:                               # 28/09: roupa e make de verdade seguem o que ela está fazendo
+                from calendar_world import local_time
+                from roupa import Roupa
+                Roupa(self.db).tick(local_time(now), dict(snap) if snap else None)
+            except Exception:
+                logger.exception("roupa.tick.error")
+            return snap
 
     def _resolve(
         self, now: datetime, *, confirmed_commitment: Optional[Mapping] = None,

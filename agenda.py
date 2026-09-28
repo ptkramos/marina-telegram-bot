@@ -378,6 +378,13 @@ class Agenda:
                     else:
                         lista = self._distribui(resto, inicio, bed)
                 lista = self._com_milo(day, lista, inicio, bed)
+                try:                             # 28/09 (Patrick): às vezes ela dorme com a lingerie que pôs pra ele
+                    from roupa import Roupa
+                    if Roupa(self.db).dorme_de_lingerie(day):
+                        lista = [Passo("Ficando de lingerie", p.inicio) if p.texto == "Colocando pijama" else p
+                                 for p in lista]
+                except Exception:
+                    logger.exception("agenda.roupa.dorme")
                 out.append(Etapa("arrumando", "Se arrumando", inicio, bed, linha2=f"Vai dormir às {aprox(bed)}",
                                  lugar_key="marina_apartment", celular=CELULAR["arrumando"],
                                  passos=lista, chave=f"prep:dormir:{day}", prep_tipo="dormir"))

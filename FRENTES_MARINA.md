@@ -24,11 +24,16 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 
 **Pronto (28/09, tarde):** **atraso de verdade** (`atraso.py`, `dc770ca`): despertador, enrolar pelo que sente, Milo, conversa com o Patrick, esquecer algo, imprevisto e chuva empurram a ida e a chegada em aula, rolê/jogo, freela, médico e salão; o compromisso começa sem ela; card com saída/chegada reais; prompt; ela avisa pelo que sente; atraso grande pesa na agenda viva.
 
+**Pronto (28/09, noite):** **roupa e make de verdade** (`roupa.py`): guarda-roupa de peças fixas que repetem, troca
+pela vida dela (pijama → casa → Se arrumando → chegada → pijama), make em níveis que borram (academia, praia, choro,
+dormir com ela), gaveta íntima pra provocar (lingerie, fetiche, transparência; com tesão em casa, no sexting quando
+ele pede, por baixo da roupa de sair, às vezes dorme com ela), escolha dele entre as duas opções de look; a foto, o
+prompt e o post do rolê usam a roupa de verdade; bloco "Agora" no topo do Por fora.
+
 **Próximo, nesta ordem:**
-1. **Roupa e make de verdade** (Patrick, 28/09, aba Por fora opção C): hoje a roupa nasce na hora da foto (sorteio do
-   guarda-roupa) e a make é só passo do card. Virar estado: roupa pela etapa/lugar (pijama, treino, faculdade, sair,
-   camisa do Botafogo) e make feita no Se arrumando e tirada antes de dormir; a foto usa a mesma roupa; depois a frente
-   dos apps mostra no bloco "Agora" da Por fora.
+1. Ver a roupa no uso real (primeira noite: Se arrumando, foto, chegada, pijama; primeira provocação) e revisar com
+   ele os textos que decidi (lista no PLANO_WEBAPP, "Roupa e make de verdade"). Ideia anotada: roupa nova comprada
+   no shopping entrando no guarda-roupa (sai do saldo).
 2. Ver a agenda viva e o atraso no uso real (primeira desistência, emenda, amiga chamada, primeiro atraso e aviso) e calibrar os pesos com ele se algo soar forçado.
 3. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber, "Agenda viva" e "Atraso de verdade").
 4. Salão (Ophicina) ainda não é repensado pelo humor nem remarcado pela conversa (tem estado próprio em `unhas.py`/`cabelo.py`).
@@ -47,7 +52,7 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; **Instagram** no ar (27/09) com acervo refeito
 (folhas das quatro amigas, fotos e textos sem fórmula) e textos revisados por ele no app e na produção (28/09); foto de
 fora à noite com luz de noite; post 6 refeito. **Bastidores revisado aba a aba (28/09)**: Por dentro; Por fora
-(nova: Peso → Cabelo → Unhas); Dinheiro (mês, próximo cachê, contas, extrato agrupado por saída); Mundo (pessoas por
+(nova: Agora com roupa e make de verdade → Peso → Cabelo → Unhas); Dinheiro (mês, próximo cachê, contas, extrato agrupado por saída); Mundo (pessoas por
 círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
 
 **Próximo:**
@@ -83,7 +88,7 @@ despertador passa a seguir sempre a regra). Detalhe na AUDITORIA ("Frente de inf
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
-**Abertura:** "bora na frente de bugs: peguei um bug" (nenhum aberto; traga o print ou a hora)
+**Abertura:** "bora na frente de bugs: bug 16 (18:57)" (um aberto, abaixo; ou traga o print ou a hora)
 
 Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
 
@@ -220,7 +225,17 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       chat às 13:45), banho da manhã não registrado (bug 11) e "Foi pra calçada" sem volta (bug 13). O
       `RecursionError` das 17:24 foi no processo antigo, antes da correção da pilha subir.
 
-**Abertos:** nenhum.
+**Abertos:**
+
+16. **Inverdades do Agora e do mundo no chat de 28/09, ~18:57 (Patrick, registrado na conversa da roupa)** — só
+    capturado, falta diagnosticar. Produção (leitura, banco na VPS):
+    - Mundo: Se arrumando pra Bodytech ("colocando roupa de treino") 18:24–18:29, "indo pra Bodytech a pé"
+      18:38–18:48, **"treinando na academia" desde 18:50**; acontecimento "Se pesou na academia: 54,4 kg" (18:43).
+    - Chat (conversas 224–231): 18:56 "Oi, meu amor. Me pesei **,4 kg** kkk" (o 54 sumiu da fala — limpeza de texto?);
+      18:57 "Mais, seu guloso" (a mais que o quê? conferir o peso anterior); **18:58 "Tô em casa, amor / Deitada no
+      sofá com o Milo, escolhendo umas referências pro trabalho de Práticas Experimentais VI"** com ela na academia.
+    - Suspeitas: prompt das 18:58 (estado da academia × histórico do sofá/referências, como no bug 14) e
+      `limpar_fala_marina`/sanitização comendo número. Abertura: "bora na frente de bugs: bug 16 (18:57)".
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** "bora na frente de imagens: quarto apagado com flash e foto de grupo das outras amigas"

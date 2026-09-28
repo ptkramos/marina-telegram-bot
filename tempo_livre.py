@@ -431,6 +431,11 @@ class TempoLivre:
                        "junto (sexting).")
             self.db.set_estado_relacional(CONVITE_KEY, json.dumps(
                 {"key": key, "inicio": b.inicio.isoformat(), "fim": b.fim.isoformat(), "enviado": False}))
+            try:                                  # 28/09 (Patrick): chamando ele, veste algo pra provocar (roupa.py)
+                from roupa import Roupa
+                Roupa(self.db).provocar(max(b.inicio, min(now, b.fim)), "sexting")
+            except Exception:
+                logger.exception("tempo_livre.roupa.provocar")
         else:
             summary = (f"Com tesão, se masturbou {onde} pensando no Patrick."
                        + (" Pode contar pra ele, do jeito dela, se vier a calhar." if tells

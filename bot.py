@@ -4044,6 +4044,14 @@ async def process_incoming_batch(
         except Exception:
             logger.exception("cabelo.observe.error")
         try:
+            # 28/09 (Patrick): ele escolheu uma das duas opções de look → é essa que ela veste pra sair;
+            # e se ela contou o que está usando por baixo, aparece no Por fora.
+            from roupa import Roupa
+            Roupa(memory_manager.db).observe_patrick(texto_usuario, datetime.now())
+            Roupa(memory_manager.db).observe_marina(fala_limpa, datetime.now())
+        except Exception:
+            logger.exception("roupa.observe.error")
+        try:
             # D11 (Patrick, 24/09): mal de verdade + "vai no médico" dele → ela vai.
             from health import Health
             if Health(memory_manager.db).observe_patrick(texto_usuario, datetime.now()):
@@ -4583,8 +4591,15 @@ async def _autonomous_routine_v36(application: Application):
         candidate = proactivity_service.determine_living_world_candidate(now)
         if why == 'tesao':
             from emotion import EmotionEngine, TESAO_KEY
-            candidate = dict(candidate, reason='tesao', detail=EmotionEngine(memory_manager.db).tesao_detail(now),
-                             event_id=None, loop_id=None)
+            detail = EmotionEngine(memory_manager.db).tesao_detail(now)
+            try:                                 # 28/09 (Patrick): em casa, ela veste algo pra provocar ele antes
+                from roupa import Roupa
+                peca = Roupa(memory_manager.db).provocar(now, "tesao")
+                if peca:
+                    detail += f" Você acabou de vestir {peca} pra provocar ele (ele ainda não sabe)."
+            except Exception:
+                logger.exception("roupa.provocar.tesao")
+            candidate = dict(candidate, reason='tesao', detail=detail, event_id=None, loop_id=None)
             memory_manager.db.set_estado_relacional(TESAO_KEY, now.isoformat())
         if why == 'saiu_mais_cedo':
             from agenda_reativa import AgendaReativa, MOTIVOS
@@ -5087,7 +5102,9 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
     part = p.get("part", 1)
     if p["kind"] == "looks":
         # 26/09 (/feedback): uma de cada vez, com a troca de roupa no meio; mesma cena (mesma seed).
-        outfits = p.get("outfits") or random.sample(photo_director.WARDROBE["sair"], p["count"])
+        # 28/09: as opções saem do guarda-roupa dela (roupa.py); a que ele escolher é a que ela veste pra sair
+        from roupa import Roupa
+        outfits = p.get("outfits") or Roupa(db).opcoes_de_look(p["count"], now, random.Random(seed))
         # 26/09 (Patrick): look ela mostra no tripé do closet, e a pose muda junto com o look.
         poses = p.get("poses") or random.sample(photo_director.LOOK_POSES, len(outfits))
         seed = p.get("seed") or seed
@@ -5363,7 +5380,16 @@ def _ig_shot(plano: dict, now: datetime, feeling):
     # 28/09: roupa e luz pela hora do rolê, não da hora em que ela posta (rolê da noite postado no dia seguinte)
     quando = datetime.fromisoformat(plano["at"]) if plano.get("at") else now
     ocasiao = instagram.ocasiao_da_roupa(motivo, quando.hour)
-    roupa = instagram.escolher_roupa(memory_manager.db, ocasiao, rng) if ocasiao else None
+    roupa = None
+    if ocasiao and motivo != "look":
+        # 28/09: o post do rolê mostra a roupa que ela estava usando lá (roupa.py), se for roupa de rua/praia
+        from roupa import Roupa
+        estava = Roupa(memory_manager.db).entrada_em(quando)
+        ok = ("praia",) if ocasiao == "praia" else ("rua", "sair", "jogo")
+        if estava and estava["ocasiao"] in ok:
+            from roupa import en_look
+            roupa = en_look(estava["look"])
+    roupa = roupa or (instagram.escolher_roupa(memory_manager.db, ocasiao, rng) if ocasiao else None)
     dela = (instagram.escolher_roupa(memory_manager.db, ocasiao, rng, evitar=(roupa,), simples=True)
             if ocasiao and plano.get("amiga") else None)
     return photo_director.direct(memory_manager.db, now, camera_ctx=ctx, feeling=feeling,

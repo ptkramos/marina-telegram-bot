@@ -339,7 +339,16 @@ const loaders = {
       $("bd-corpo").innerHTML = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Tesão")).join("")
         + (e.linhas.length || e.no_clima ? `<div class="linhas sep">${e.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}
           ${e.no_clima ? `<div class="linha"><span class="li-ic">${ic("flame")}</span><span class="li-rot">No clima agora</span></div>` : ""}</div>` : "");
-      // Por fora — 28/09 (Patrick): Peso (barra de folga até a agência, amarela quando passa), Cabelo, Unhas
+      // Por fora — 28/09 (Patrick): Agora (roupa e make de verdade), Peso (barra de folga até a agência, amarela
+      // quando passa), Cabelo, Unhas. Agora: a roupa em destaque, a barra da make quando tem, e as linhas.
+      const rp = d.roupa;
+      $("bf-agora-t").hidden = $("bf-agora").hidden = !rp;
+      if (rp) {
+        $("bf-agora").innerHTML = `<div class="big">${esc(rp.look)}</div>
+          ${rp.make ? `<div class="ca-barras"><div class="bar-row"><span>Make</span><div class="bar${rp.make.alerta ? " alerta" : ""}"><i style="width:${pct(rp.make.valor)}%"></i></div>
+            <span class="w">${esc(rp.make.palavra)}</span></div></div>` : ""}
+          <div class="linhas sep">${rp.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
+      }
       const ps = d.peso;
       $("bf-peso-t").hidden = $("bf-peso").hidden = !ps;
       if (ps) {
