@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 15:05 (passagem de bastão: Bastidores revisado aba a aba com o Patrick — Por fora, Dinheiro e Mundo — e na produção, `3c25453`, `d1da1db`, `887af86`; próxima conversa na frente do mundo — roupa e make de verdade)._
+_Atualizado em 28/09/2026, 16:20 (frente de bugs: item 13 — o dia 28/09 visto pelo Patrick, almoço × carona, sanduíche, música, Milo e voltas no Hoje — corrigido e na produção, `5b1c04d`; a pedido do Patrick, próxima conversa na frente de infra — pilha no limite e desempenho — antes de voltar a construir; depois, frente do mundo — roupa e make de verdade)._
 
 ---
 
@@ -67,7 +67,7 @@ dividindo balão; vocabulário da masturbação; música que ele manda por link.
 3. Técnicas antigas (PLANO_VOZ 13).
 
 ## 4. Infra — skill `frente-infra`
-**Abertura:** "bora na frente de infra: desempenho do resolve"
+**Abertura:** "bora na frente de infra: pilha no limite e desempenho — plano do dia calculado uma vez, antes de construir mais"
 
 **Próximo:**
 1. **Desempenho:** cada resolve do mundo leva ~7 s na cópia local, quase tudo no `sleep_plan` (~1.300 conexões
@@ -75,9 +75,10 @@ dividindo balão; vocabulário da masturbação; música que ele manda por link.
    Hoje de um dia de aula na cópia leva ~65 s, chama `Commute.legs_on` ~90 vezes e chega a 988 níveis de pilha (o
    limite do Python é 1000) — com a API de rotas ligada estourou `RecursionError` localmente. Na produção, zero hoje,
    mas a margem é mínima: as camadas agenda → meals → commute → academia → agenda se chamam em cadeia. Achatar (plano
-   do dia calculado uma vez e reaproveitado).
-2. **Script local chama a API paga de rotas:** `commute._live_minutes` usa a `DISTANCE_MATRIX_KEY` do `.env` fora dos
-   testes; varredura/cópia local deve rodar com `COMMUTE_LIVE_TIMES=false` (ou o default local ser desligado).
+   do dia calculado uma vez e reaproveitado). **O Patrick pediu (28/09) pra fazer isto antes de construir mais.**
+2. **API paga de rotas:** `commute._live_minutes` usa a `DISTANCE_MATRIX_KEY` do `.env` fora dos testes; varredura
+   local deve rodar com `COMMUTE_LIVE_TIMES=false` (ou o default local ser desligado). Conferir também quantas
+   chamadas a produção faz por dia (cache por trecho/dia?).
 3. Do Patrick (ele faz): trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot da VPS.
 4. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
