@@ -35,6 +35,19 @@ SAUDADE_THRESHOLD = 0.6
 SAUDADE_BACKOFF_MINUTES = 90
 SAUDADE_MAX_UNANSWERED = 3
 
+
+def awake_hours_since(db, since: datetime, now: datetime) -> float:
+    """Horas sem ele que contam pra saudade: só as que ela passou acordada (28/09 — dormindo desde 00:29, às
+    05:55 a saudade estava em 100%). Sem plano de sono, o relógio corrido."""
+    hours = max(0.0, (now - since).total_seconds() / 3600)
+    try:
+        from sleep_plan import SleepPlan, enabled
+        if enabled():
+            return SleepPlan(db).horas_acordada(since, now)
+    except Exception:
+        pass
+    return hours
+
 # Atividades externas que fazem sentido anunciar naturalmente.
 EXTERNAL_TRANSITION_TEMPLATES = {
     "gym": {
@@ -372,7 +385,7 @@ class ProactivityService:
                 mult *= 0.5
         except Exception:
             pass
-        level = min(1.0, SAUDADE_RATE_PER_HOUR * hours * mult)
+        level = min(1.0, SAUDADE_RATE_PER_HOUR * awake_hours_since(self.db, last_user, now) * mult)
         unanswered = self._unanswered_initiatives(last_user)
         out.update(level=level, hours=hours, unanswered=unanswered)
         if level < SAUDADE_THRESHOLD or unanswered >= SAUDADE_MAX_UNANSWERED:

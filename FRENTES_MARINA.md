@@ -104,7 +104,35 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
    - **Tapioca com o McDonald's a caminho (21:32).** Ele avisou que pediu; o jantar agora espera e ela não reage como surpresa. Camada: mundo e prompt.
    - Pros apps: post das 18:58 "noite gostosa com minha pessoa" numa tarde de cinema com a Bia.
 
-**Abertos:** nenhum. Deploy das correções de 28/09 feito junto (ver seção 7 se faltar).
+11. ✅ **Bastidores às 05:55 de 28/09 (Agora e Por dentro, achados da frente dos apps)** — corrigido em 28/09
+   (`tests/test_bug_por_dentro_2809.py`, 15 testes). Cópia do banco da produção; ela dormindo desde 00:29.
+   - **"Dormindo · desde 05:46 · 11min".** O mundo grava um retrato "dormindo" novo por hora e o cartão Em casa pegava
+     o último. Agora o "desde" é o do primeiro retrato da sequência (00:29). Camada: app (`agenda.card_casa`).
+   - **Plano de sono (deitar 23:37) × dormiu 00:29.** "se arrumando pra dormir" contava como dormindo ("dorm"), e o
+     retrato ficou preso depois das 23:37; às 00:04 o ritual viu "se arrumando" sem etapa e deu o **banho da manhã do
+     dia 28** (lavou o cabelo 00:06–00:28) — e o banho de verdade das 07:46 não aconteceu (a marca já estava gasta).
+     Na noite de 26→27, três banhos entre 00:31 e 01:48 pelo mesmo motivo. Agora "se arrumando" não é dormindo, o
+     banho da manhã só depois de ela acordar, e (decisão do Patrick) **o deitar acompanha** o banho ou a refeição que
+     passa da hora de deitar; dormindo pelo plano, sem belisco. Camada: mundo.
+   - **"O pai deu bom dia" às 21:15.** Era uma ligação; já corrigido na frente dos apps ("Falou com o pai").
+   - **"Banho quentinho" 4× às 19:58 com força 1.0.** A fusão (mesmo sentimento em 3 h reforça) não guardava a chave
+     fundida e fundia de novo a cada turno; e fundia com sentimento **mais novo**, puxando pra trás — os carinhos das
+     07:47–08:33 viraram "o Patrick mandou comida" das 22:01, força ~1.0. Agora só funde com o que começou antes e
+     guarda a chave (`emotion_sources`, migração 033). Camada: mundo (sentimento).
+   - **Saudade 100% dormindo.** Contava o sono inteiro dela. Agora só cresce acordada, no painel e na mensagem de
+     saudade (decisão do Patrick). Camada: mundo (sentimento).
+   - **"Com ciuminho" pelo ciúme dele.** Três vezes em dois dias. Ciume é o dela; ciúme dele de brincadeira é
+     provocação (ela se diverte) e desconfiança séria é `desconfiou` (chateada de leve, ~1h30) — decisão do Patrick.
+     Camada: prompt (planner).
+   - Banco da produção limpo (backup antes): os 4 carinhos falsos da manhã, a noite de 27/09 = 00:29, as linhas antigas
+     do pai e os 3 "ciuminho" que eram dele.
+
+**Abertos:**
+12. 🔴 **Manhã de 28/09: o Se arrumando da faculdade não sabe do café pulado nem do Milo.** Card e mundo disseram
+   "tomando café" 07:36–07:46 e "tomando banho" 07:46–08:06, mas as refeições registraram "Pulou o café da manhã"
+   (07:52) e o Milo desceu pro xixi às 07:58, no meio do "banho". No chat (08:24) ela disse, certo pelo mundo,
+   "desci rapidinho com o Milo… pulei o café". Camada: mundo/card (`agenda` × `meals` × `milo`). Também conferir:
+   resposta às 07:47 ("Bom plantão, amor") e iniciativa às 07:51 ("como tá o plantão até agora?"), 4 min depois.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** "bora na frente de imagens: quarto apagado com flash e foto de grupo das outras amigas"

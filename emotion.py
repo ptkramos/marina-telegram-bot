@@ -264,22 +264,29 @@ class EmotionEngine:
             raise ValueError(f"família emocional desconhecida: {family}")
         now = now or datetime.now()
         with self.db.get_connection() as conn:
-            if source_key and conn.execute("SELECT 1 FROM emotion_episodes WHERE source_key=?",
-                                           (source_key,)).fetchone():
+            if source_key and (
+                    conn.execute("SELECT 1 FROM emotion_episodes WHERE source_key=?", (source_key,)).fetchone()
+                    or conn.execute("SELECT 1 FROM emotion_sources WHERE source_key=?", (source_key,)).fetchone()):
                 return False
             # 25/09 (/emocao): o planner sentia "carinho" de novo a cada mensagem — 23 episódios iguais
             # numa noite, que ainda somavam tesão. O mesmo sentimento pela mesma pessoa em 3 h reforça o
             # episódio que já existe (a causa vira a mais recente).
+            # 28/09: só o que começou ANTES (o banho das 19:58, reavaliado, puxava os de 00:31, 01:20 e 01:35 pra
+            # 19:58; a comida das 22:01 virou a causa dos carinhos da manhã seguinte), e a chave fundida fica
+            # guardada — antes cada turno fundia de novo o mesmo acontecimento e a força subia até 1.0.
             if not sticky:
                 row = conn.execute(
                     """SELECT id, intensity FROM emotion_episodes WHERE family=? AND kind=? AND
                        COALESCE(target,'')=COALESCE(?,'') AND sticky=0 AND resolved_at IS NULL AND started_at>=?
-                       ORDER BY started_at DESC LIMIT 1""",
-                    (family, kind, target, (now - MERGE_WINDOW).isoformat())).fetchone()
+                       AND started_at<=? ORDER BY started_at DESC LIMIT 1""",
+                    (family, kind, target, (now - MERGE_WINDOW).isoformat(), now.isoformat())).fetchone()
                 if row:
                     merged = _clamp(max(float(row["intensity"]), intensity) + 0.1 * intensity)
                     conn.execute("UPDATE emotion_episodes SET intensity=?, cause=?, started_at=? WHERE id=?",
                                  (round(merged, 3), cause, now.isoformat(), row["id"]))
+                    if source_key:
+                        conn.execute("INSERT OR IGNORE INTO emotion_sources (source_key, episode_id, created_at) "
+                                     "VALUES (?,?,?)", (source_key, row["id"], datetime.now().isoformat()))
                     conn.commit()
                     return True
             cur = conn.execute(
@@ -334,7 +341,7 @@ class EmotionEngine:
         with self.db.get_connection() as conn:
             rows = conn.execute(
                 """SELECT event_key, event_at, event_type, summary, participants_json FROM life_events
-                   WHERE event_at<=? AND event_at>=?""",
+                   WHERE event_at<=? AND event_at>=? ORDER BY event_at""",
                 (now.isoformat(), (now - timedelta(hours=lookback_hours)).isoformat())).fetchall()
         tired = self.energy(now) < 0.5
         created = 0
@@ -412,14 +419,14 @@ class EmotionEngine:
         return {k: float(state.get(k, {}).get("valor", BOND_BASELINES[k])) for k in BOND_KEYS}
 
     def _missing(self, now: datetime) -> float:
-        """Saudade pelo silêncio dele (mesma taxa da proatividade)."""
+        """Saudade pelo silêncio dele (mesma taxa da proatividade), só nas horas em que ela está acordada."""
         try:
-            from proactivity_service import SAUDADE_RATE_PER_HOUR
+            from proactivity_service import SAUDADE_RATE_PER_HOUR, awake_hours_since
             with self.db.get_connection() as conn:
                 row = conn.execute("SELECT timestamp FROM conversas WHERE role='user' ORDER BY id DESC LIMIT 1").fetchone()
             if not row:
                 return 0.0
-            hours = max(0.0, (now - datetime.fromisoformat(row["timestamp"])).total_seconds() / 3600)
+            hours = awake_hours_since(self.db, datetime.fromisoformat(row["timestamp"]), now)
             return round(_clamp(SAUDADE_RATE_PER_HOUR * hours), 3)
         except Exception:
             return 0.0
@@ -1006,6 +1013,9 @@ PATRICK_EVENTS = {
     "novidade_boa": ([("alegria", "empolgacao", 0.35)], {}, False),
     "ele_mal":     ([("medo", "preocupacao", 0.45)], {}, False),
     "ciume":       ([("medo", "ciume", 0.25)], {}, False),
+    # 28/09 (Patrick): o ciúme DELE não é o ciuminho dela — de brincadeira é provocacao; desconfiança séria
+    # ("vai continuar mentindo?") chateia de leve e passa em ~1h30.
+    "desconfiou":  ([("raiva", "chateacao", 0.2)], {}, False),
     "grosseria":   ([("tristeza", "decepcao", 0.4)], {"hurt": 0.25, "security": -0.03}, True),
     "esqueceu_importante": ([("tristeza", "decepcao", 0.4)], {"hurt": 0.2}, True),
     "briga":       ([("raiva", "chateacao", 0.55)], {"hurt": 0.3, "security": -0.05}, True),
@@ -1017,6 +1027,7 @@ KIND_WORDS["ciume"] = "com ciuminho"
 DEFAULT_CAUSES = {"elogio": "o Patrick elogiou ela", "cuidado": "o Patrick cuidou dela", "flerte": "o Patrick flertou",
                   "provocacao": "o Patrick zoou ela", "novidade_boa": "o Patrick contou uma novidade boa",
                   "ele_mal": "o Patrick não está bem", "ciume": "o Patrick falou de outra garota",
+                  "desconfiou": "o Patrick desconfiou dela",
                   "grosseria": "o Patrick foi grosso", "esqueceu_importante": "o Patrick esqueceu algo importante",
                   "briga": "Discutiram", "desculpa": "o Patrick pediu desculpa",
                   "sem_clima": "o Patrick não entrou no clima"}

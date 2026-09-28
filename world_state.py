@@ -856,6 +856,15 @@ class WorldStateManager:
                 "end_at": data.get("end_at"),
             }
             reason = "announced_transition"
+            try:
+                # 28/09 (Patrick): o deitar acompanha o que ela está fazendo — banho ou refeição que passa da hora
+                # de deitar empurra a noite pra quando termina.
+                from sleep_plan import SleepPlan, enabled as sleep_plan_enabled
+                if sleep_plan_enabled() and chosen.get("start_at") and chosen.get("end_at"):
+                    SleepPlan(self.db).acompanha(datetime.fromisoformat(str(chosen["start_at"])),
+                                                 datetime.fromisoformat(str(chosen["end_at"])))
+            except Exception:
+                logger.exception("sleep_plan.acompanha.error")
         elif self._active_plan(active_consequence, now):
             chosen = active_consequence
             reason = "active_consequence"
@@ -903,9 +912,11 @@ class WorldStateManager:
                     energy=energy, holiday_scope=holiday_scope,
                 )
             )
-            previous_sleeping = any(
-                token in (previous.get("activity") or "").casefold()
-                for token in ("dorm", "sleep", "sono")
+            # 28/09: "se arrumando pra dormir" não é dormindo — o retrato ficou preso das 23:37 (hora de deitar)
+            # até 00:09 e o ritual deu o banho da manhã seguinte à meia-noite (como em response_availability).
+            previous_activity = (previous.get("activity") or "").casefold()
+            previous_sleeping = not previous_activity.startswith("se arrumando") and any(
+                token in previous_activity for token in ("dorm", "sleep", "sono")
             )
             slot_end_raw = prior_source.get("slot_end")
             if slot_end_raw:

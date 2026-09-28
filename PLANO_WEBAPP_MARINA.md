@@ -198,6 +198,11 @@ então de manhã quase tudo tinha sumido.
 - **Bugs do mundo vistos nos dados reais** (chip pra frente de bugs): cartão da Agora "desde 05:46" com ela dormindo
   desde 0h29; plano de sono (deitar 23h37) × banho à 0h06; "bom dia" do pai às 21h15; "banho quentinho" 4× no mesmo
   minuto com intensidade 1.0; Saudade 100% enquanto ela dorme; "ciúme" dela quando o ciúme era dele.
+  **Corrigidos na frente de bugs (28/09):** o "desde" do cartão Em casa é o começo da atividade (dormindo desde 00:29);
+  o Sono bate com o mundo (o deitar acompanha o banho que passa da hora; noite de 27/09 corrigida pra 00:29); o
+  Sentindo agora e o Hoje por dentro sem sentimento repetido nem inflado (a fusão só olha pra trás e não repete), sem
+  "ciuminho" pelo seu ciúme; a barra Saudade de Vocês dois só enche com ela acordada. Ver AUDITORIA ("Bug:
+  Bastidores às 05:55") e `tests/test_bug_por_dentro_2809.py`.
 - **Código:** `por_dentro.py` (novo), `webapp_server` (`emocao_view`, `motivo_tela`, `_alguem` com "você", Ciclo),
   `emotion` (`day_log`, padrão dos motivos), `unhas.painel`, `cabelo.painel`/`_dia_lavagem`, `agenda_viva._sente`,
   `planner` (regra do `cause`), `bot._status_snapshot` (`ciclo_len`), `webapp/` (ordem, desenho, recarga, CSS). Testes em

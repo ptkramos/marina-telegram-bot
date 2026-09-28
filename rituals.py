@@ -245,7 +245,10 @@ class Rituals:
         except Exception:
             etapa = None
         if not etapa or etapa.tipo != "arrumando":
-            if kind in ("WAKING", "GETTING_READY"):
+            # 28/09: "se arrumando pra dormir" preso depois da hora de deitar virou o banho da manhã do dia
+            # seguinte à 00:04 (e o banho de verdade das 07:46 não aconteceu). Banho da manhã só depois de acordar.
+            wake = self.wake_at(day)
+            if kind in ("WAKING", "GETTING_READY") and wake and now >= wake:
                 self._banho_manha(now, day)                # sem etapa na agenda: como antes
             return
         passo = agenda.passo_atual(etapa, now)

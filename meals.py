@@ -496,7 +496,7 @@ class Meals:
         """Com fome em casa e a próxima refeição longe: belisca alguma coisa agora."""
         if now < floor or not self._at_home() or self._transition_busy(now) or now.hour < 7 and now.hour >= 2:
             return 0
-        if self.hunger(now) < BELISCO_FOME:
+        if self.hunger(now) < BELISCO_FOME or self._na_cama(now):
             return 0
         proxima = next((s for s in self.day_plan(now.date()) if s.at > now and not s.skipped), None)
         if proxima and proxima.at - now < timedelta(minutes=60):
@@ -521,6 +521,15 @@ class Meals:
             self._start_eating(slot, slot.at, sac["fim"], now)
         logger.info("meal.belisco dish=%s", slot.dish)
         return 1
+
+    def _na_cama(self, now: datetime) -> bool:
+        """28/09: saiu do banho às 23:55 (o deitar acompanhou o banho) e às 23:56 "beliscou" — dormindo pelo plano
+        de sono não belisca (o limite era só 02:00–07:00)."""
+        try:
+            from sleep_plan import SleepPlan, enabled
+            return enabled() and SleepPlan(self.db).in_bed(now)
+        except Exception:
+            return False
 
     def _numa_etapa(self, now: datetime) -> bool:
         """27/09, 19:28: "beliscou iogurte com granola" com ela já saindo pra farmácia — o retrato do mundo ainda

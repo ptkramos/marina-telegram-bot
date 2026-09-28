@@ -53,6 +53,7 @@ NAP_MINUTES = (20, 60)
 NAP_WINDOW = (time(13, 30), time(17, 30))
 MICRO_WAKE_REASONS = (("foi ao banheiro", 0.5), ("acordou com sede e foi beber água", 0.2),
                       ("acordou de um sonho ruim", 0.1), ("pegou o celular por reflexo", 0.2))
+ACOMPANHA_DEPOIS = timedelta(minutes=60)   # começou até 1 h depois da hora de deitar: ela ainda estava de pé
 
 
 def _rng(day: date, name: str) -> random.Random:
@@ -226,6 +227,28 @@ class SleepPlan:
                           datetime.now().isoformat()))
             conn.commit()
 
+    def acompanha(self, inicio: datetime, fim: datetime) -> Optional[date]:
+        """28/09 (Patrick): o deitar acompanha o que ela está fazendo. Banho ou refeição que atravessa a hora de
+        deitar (ou começa logo depois dela) empurra a noite pra quando termina — o plano e o mundo sempre batem.
+        Devolve a noite que mudou."""
+        for night in (inicio.date() - timedelta(days=1), inicio.date()):
+            bed = self.bed(night)
+            if not (bed < fim and inicio <= bed + ACOMPANHA_DEPOIS):
+                continue
+            if fim >= self.wake(night + timedelta(days=1)):
+                return None
+            frozen = self._frozen(night)
+            why = frozen["why"] if frozen else self._onset(night, live=False)[1]
+            with self.db.get_connection() as conn:
+                conn.execute("INSERT INTO world_bootstrap (key, value, updated_at) VALUES (?, ?, ?) "
+                             "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+                             (f"sono:noite:{night.isoformat()}",
+                              json.dumps({"bed": fim.replace(microsecond=0).isoformat(), "why": why},
+                                         ensure_ascii=False), datetime.now().isoformat()))
+                conn.commit()
+            return night
+        return None
+
     def bed_why(self, day: date) -> list[str]:
         frozen = self._frozen(day)
         return frozen["why"] if frozen else self._onset(day, live=False)[1]
@@ -396,6 +419,27 @@ class SleepPlan:
         if nap:
             result.append(nap)
         return sorted(result)
+
+    def horas_acordada(self, ini: datetime, fim: datetime) -> float:
+        """Horas em que ela esteve acordada entre `ini` e `fim`. 28/09 (Patrick): a saudade só cresce com ela
+        acordada — às 05:55 estava em 100% dormindo desde 00:29 (contava o sono inteiro). Olha só as últimas 48 h:
+        a saudade enche com ~6 h acordada."""
+        ini = max(ini, fim - timedelta(hours=48))
+        if fim <= ini:
+            return 0.0
+        total = (fim - ini).total_seconds()
+        dia = ini.date() - timedelta(days=1)
+        while dia <= fim.date():
+            sonos = [(self.bed(dia), self.wake(dia + timedelta(days=1)))]
+            nap = self.nap(dia)
+            if nap:
+                sonos.append(nap)
+            for a, b in sonos:
+                lo, hi = max(a, ini), min(b, fim)
+                if hi > lo:
+                    total -= (hi - lo).total_seconds()
+            dia += timedelta(days=1)
+        return max(0.0, total / 3600)
 
     def micro_wake_at(self, now: datetime) -> Optional[str]:
         for night, _bed, _wake in self.nights_around(now):

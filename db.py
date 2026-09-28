@@ -541,6 +541,7 @@ class DatabaseManager:
             "story_threads",
             "world_state",
             # 26/09: "feedbacks" fica — é anotação do Patrick pra gente (/feedback), ela não lê.
+            "emotion_sources",
             "emotion_episodes",
             "estilo_linguagem",
             "gostos_marina",

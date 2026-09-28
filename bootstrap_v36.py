@@ -22,7 +22,7 @@ CLEAR = ('ig_comentarios', 'ig_posts', 'ig_fotos_chat', 'reminders', 'open_loops
          'perfil', 'knowledge_shares', 'knowledge_items', 'life_events',
          'life_events_archive', 'world_hygiene_log',
          'response_pending_batch_items', 'response_pending_batches',
-         'response_availability_events', 'intimacy_state', 'emotion_episodes',
+         'response_availability_events', 'intimacy_state', 'emotion_sources', 'emotion_episodes',
          'story_threads', 'world_decisions', 'world_state',
          'academic_schedule_blocks', 'academic_courses', 'academic_terms',
          'academic_profile', 'preference_evidence', 'social_evidence',

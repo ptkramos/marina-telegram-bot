@@ -641,6 +641,19 @@ class Agenda:
             row = conn.execute("SELECT * FROM world_state ORDER BY id DESC LIMIT 1").fetchone()
         return dict(row) if row else None
 
+    def _desde(self, snap: dict) -> datetime:
+        """28/09, 05:55: "Dormindo · desde 05:46 · 11min" com ela dormindo desde 00:29 — o world_state grava um
+        retrato novo por hora com a mesma atividade. O começo é o do primeiro retrato da sequência."""
+        t0 = datetime.fromisoformat(snap["observed_at"])
+        with self.db.get_connection() as conn:
+            rows = conn.execute("SELECT activity, location_place_id, observed_at FROM world_state WHERE id<=? "
+                                "ORDER BY id DESC LIMIT 400", (snap["id"],)).fetchall()
+        for r in rows:
+            if r["activity"] != snap["activity"] or r["location_place_id"] != snap["location_place_id"]:
+                break
+            t0 = min(t0, datetime.fromisoformat(r["observed_at"]))
+        return t0
+
     def _marcos(self, now: datetime) -> list[tuple[datetime, str]]:
         """O que acontece no dia, em ordem (pra linha do tempo em casa)."""
         dia = now.date() if now.hour >= 4 else now.date() - timedelta(days=1)
@@ -730,6 +743,7 @@ class Agenda:
         fim = datetime.fromisoformat(plano["end_at"]) if plano.get("end_at") else None
         if not fim and fonte.get("slot_end"):
             fim = datetime.fromisoformat(fonte["slot_end"])
+        desde = self._desde(snap)
         titulo, linha2, comodo, passos = "Em casa", act[:1].upper() + act[1:], None, []
         grade_extra = []
         from tempo_livre import TempoLivre
@@ -785,7 +799,7 @@ class Agenda:
         elif "milo" in low:
             rapidinho = "rapidinho" in low
             titulo = "Na calçada" if rapidinho else "Na Enseada"
-            t0 = inicio or datetime.fromisoformat(snap["observed_at"])
+            t0 = inicio or desde
             t1 = fim or t0 + timedelta(minutes=12 if rapidinho else 30)
             inicio, fim = t0, t1
             linha2 = f"Volta pra casa às {aprox(t1)}"
@@ -802,21 +816,21 @@ class Agenda:
         grade += grade_extra
         grade.append(["device-mobile", "Celular", celular])
         if fim and not inicio and fim > now:              # 26/09: tinha fim e não tinha início → sem barra
-            inicio = datetime.fromisoformat(snap["observed_at"])
+            inicio = desde
         if inicio and fim and fim > now:
             pos = (now - inicio).total_seconds() / max(1, (fim - inicio).total_seconds())
             barra = {"inicio": hora(inicio), "fim": aprox(fim), "pct": round(max(0, min(1, pos)) * 100),
                      "meio": f"há {duracao(now - inicio)} · faltam ~{duracao(fim - now)}"}
         else:
-            t0 = inicio or datetime.fromisoformat(snap["observed_at"])
+            t0 = inicio or desde
             barra = {"inicio": "", "fim": "", "pct": None, "meio": "", "desde": hora(t0), "duracao": duracao(now - t0)}
         # linha do tempo: o que veio antes e o que vem
         atual_txt = "Se alimentando" if titulo == "Se alimentando" else linha2 if titulo == "Em casa" else titulo
-        marcos = [m for m in self._marcos(now) if abs((m[0] - (inicio or now)).total_seconds()) > 60 or m[1] != atual_txt]
-        antes = [m for m in marcos if m[0] < (inicio or now)][-1:]
+        marcos = [m for m in self._marcos(now) if abs((m[0] - (inicio or desde)).total_seconds()) > 60 or m[1] != atual_txt]
+        antes = [m for m in marcos if m[0] < (inicio or desde)][-1:]
         depois = [m for m in marcos if m[0] > now][:2]
         linha = [{"texto": t, "hora": hora(a), "estado": "feito", "valor": None, "passos": []} for a, t in antes]
-        item = {"texto": atual_txt, "hora": hora(inicio or datetime.fromisoformat(snap["observed_at"])),
+        item = {"texto": atual_txt, "hora": hora(inicio or desde),
                 "estado": "agora", "valor": None, "passos": []}
         for p in passos:
             feito = p.inicio <= now
