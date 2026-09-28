@@ -24,9 +24,12 @@ janelas fixas do cânone.
 from __future__ import annotations
 
 import json
+import logging
 import random
 from datetime import date, datetime, time, timedelta
 from typing import Optional
+
+logger = logging.getLogger("SleepPlan")
 
 PREP_MINUTES = (50, 80)           # banho + skincare + cabelo + maquiagem + roupa + café
 MARGIN_MINUTES = (0, 10)
@@ -58,6 +61,19 @@ ACOMPANHA_DEPOIS = timedelta(minutes=60)   # começou até 1 h depois da hora de
 
 def _rng(day: date, name: str) -> random.Random:
     return random.Random(f"marina-sono:{day.isoformat()}:{name}")
+
+
+def _na_rodada(fn):
+    """28/09 (infra): a consulta abre a própria rodada — as noites, o despertador e os micro-despertares que ela pede
+    várias vezes saem uma vez só (reentrante: dentro de um resolve, vale a rodada dele)."""
+    import functools
+
+    @functools.wraps(fn)
+    def consulta(self, *args, **kwargs):
+        from db import rodada
+        with rodada(self.db):
+            return fn(self, *args, **kwargs)
+    return consulta
 
 
 def enabled() -> bool:
@@ -259,6 +275,10 @@ class SleepPlan:
         O que depende do estado de agora (energia) só entra na noite de hoje, a
         partir das 20h, e aí a hora fica **congelada**: uma emoção que muda de
         madrugada não pode "acordá-la" nem mudar a noite que já passou."""
+        from db import memo          # 28/09 (infra): uma vez por rodada, até alguém gravar
+        return memo(self.db, ("sono.bed", day), lambda: self._bed(day))
+
+    def _bed(self, day: date) -> datetime:
         frozen = self._frozen(day)
         if frozen:
             return datetime.fromisoformat(frozen["bed"])
@@ -309,6 +329,10 @@ class SleepPlan:
 
         Depois que a manhã aconteceu, fica congelada: se ela decide faltar a aula
         (D7) às 6h, o despertador daquele dia não pode "sumir" retroativamente."""
+        from db import memo
+        return memo(self.db, ("sono.wake", day), lambda: self._wake(day))
+
+    def _wake(self, day: date) -> datetime:
         with self.db.get_connection() as conn:
             row = conn.execute("SELECT value FROM world_bootstrap WHERE key=?",
                                (f"sono:manha:{day.isoformat()}",)).fetchone()
@@ -336,6 +360,7 @@ class SleepPlan:
         at = bed + timedelta(minutes=int(rng.uniform(*FREE_SLEEP_H) * 60))
         return max(datetime.combine(day, lo), min(datetime.combine(day, hi), at))
 
+    @_na_rodada
     def hours_slept(self, day: date) -> float:
         """Horas de sono da noite que termina na manhã de `day`."""
         return max(0.0, (self.wake(day) - self.bed(day - timedelta(days=1))).total_seconds() / 3600)
@@ -343,6 +368,10 @@ class SleepPlan:
     # ------------------------------------------------------ micro-despertar --
     def micro_wakes(self, day: date) -> list[tuple[datetime, datetime, str]]:
         """Micro-despertares da noite de `day` (entre bed(day) e wake(day+1))."""
+        from db import memo
+        return memo(self.db, ("sono.micro", day), lambda: self._micro_wakes(day))
+
+    def _micro_wakes(self, day: date) -> list[tuple[datetime, datetime, str]]:
         start, end = self.bed(day), self.wake(day + timedelta(days=1))
         rng = _rng(day, "micro")
         roll, acc, count = rng.random(), 0.0, 0
@@ -378,6 +407,10 @@ class SleepPlan:
     def nap(self, day: date) -> Optional[tuple[datetime, datetime]]:
         """Cochilo da tarde depois de noite curta (decisão do Patrick, 23/09:
         "às vezes nosso corpo simplesmente precisa disso"). Só em tarde livre."""
+        from db import memo
+        return memo(self.db, ("sono.nap", day), lambda: self._nap(day))
+
+    def _nap(self, day: date) -> Optional[tuple[datetime, datetime]]:
         slept = self.hours_slept(day)
         chance = NAP_CHANCE_SHORT if slept < NAP_SHORT_H else (NAP_CHANCE_MEH if slept < NAP_MEH_H else 0.0)
         rng = _rng(day, "cochilo")
@@ -401,12 +434,14 @@ class SleepPlan:
         return None
 
     # ------------------------------------------------------------ consultas --
+    @_na_rodada
     def nights_around(self, now: datetime) -> list[tuple[date, datetime, datetime]]:
         out = []
         for night in (now.date() - timedelta(days=1), now.date()):
             out.append((night, self.bed(night), self.wake(night + timedelta(days=1))))
         return out
 
+    @_na_rodada
     def windows_on(self, day: date) -> list[tuple[datetime, datetime]]:
         """Intervalos de sono dentro do dia de calendário `day`."""
         lo, hi = datetime.combine(day, time(0, 0)), datetime.combine(day + timedelta(days=1), time(0, 0))
@@ -420,6 +455,7 @@ class SleepPlan:
             result.append(nap)
         return sorted(result)
 
+    @_na_rodada
     def horas_acordada(self, ini: datetime, fim: datetime) -> float:
         """Horas em que ela esteve acordada entre `ini` e `fim`. 28/09 (Patrick): a saudade só cresce com ela
         acordada — às 05:55 estava em 100% dormindo desde 00:29 (contava o sono inteiro). Olha só as últimas 48 h:
@@ -441,6 +477,7 @@ class SleepPlan:
             dia += timedelta(days=1)
         return max(0.0, total / 3600)
 
+    @_na_rodada
     def micro_wake_at(self, now: datetime) -> Optional[str]:
         for night, _bed, _wake in self.nights_around(now):
             for start, end, reason in self.micro_wakes(night):
@@ -448,20 +485,24 @@ class SleepPlan:
                     return reason
         return None
 
+    @_na_rodada
     def napping(self, now: datetime) -> bool:
         nap = self.nap(now.date())
         return bool(nap and nap[0] <= now < nap[1])
 
+    @_na_rodada
     def in_bed(self, now: datetime) -> bool:
         """Entre deitar e levantar (dormindo ou num micro-despertar), ou no cochilo."""
         return self.napping(now) or any(bed <= now < wake for _n, bed, wake in self.nights_around(now))
 
+    @_na_rodada
     def is_asleep(self, now: datetime) -> bool:
         if self.napping(now):
             return True
         asleep = any(bed <= now < wake for _n, bed, wake in self.nights_around(now))
         return asleep and self.micro_wake_at(now) is None
 
+    @_na_rodada
     def next_wake_boundary(self, now: datetime) -> Optional[datetime]:
         """Próximo momento em que ela vai estar acordada (fim do cochilo, micro-despertar ou manhã)."""
         nap = self.nap(now.date())
@@ -474,6 +515,7 @@ class SleepPlan:
         return None
 
     # --------------------------------------------------------------- prompt --
+    @_na_rodada
     def prompt_lines(self, now: datetime) -> list[str]:
         day = now.date()
         wake = self.wake(day)
@@ -499,10 +541,9 @@ class SleepPlan:
         return lines
 
 
-_DEPARTURE_CACHE: dict = {}
-
-
 def _first_departure(db_key: str, db, day: date) -> Optional[datetime]:
+    """Saída pra PUC (28/09, frente de infra: só a ida — o dia inteiro de trechos pede a academia, que pede as janelas
+    de sono, que pedem o despertador: o ciclo batia no limite de pilha a cada resolve)."""
     try:
         from academic_life import AcademicLife
         blocks = AcademicLife(db).blocks_on(day)
@@ -510,18 +551,11 @@ def _first_departure(db_key: str, db, day: date) -> Optional[datetime]:
         return None
     if not blocks:
         return None
-    first = min(datetime.fromisoformat(b["start_at"]) for b in blocks)
-    sig = (db_key, day.isoformat(), first.isoformat())
-    if sig not in _DEPARTURE_CACHE:
-        if len(_DEPARTURE_CACHE) > 512:
-            _DEPARTURE_CACHE.clear()
-        leave = first - timedelta(minutes=40)
-        try:
-            from commute import Commute
-            ida = [leg for leg in Commute(db).legs_on(day, planejado=True) if leg.key.endswith(":puc:ida")]
-            if ida:
-                leave = ida[0].start
-        except Exception:
-            pass
-        _DEPARTURE_CACHE[sig] = leave
-    return _DEPARTURE_CACHE[sig]
+    try:
+        from commute import Commute
+        ida = Commute(db).ida_puc(day)       # (memorizada na rodada)
+        if ida:
+            return ida.start
+    except Exception:
+        logger.exception("sleep_plan.first_departure.error")
+    return min(datetime.fromisoformat(b["start_at"]) for b in blocks) - timedelta(minutes=40)

@@ -9,6 +9,7 @@ Gerencia a persistência definitiva e exclusiva em marin_memory.db:
 - Estilo linguístico e sincronia do casal
 Sistema 100% autônomo sem dependência de arquivos JSON.
 """
+import copy
 import sqlite3
 import json
 import logging
@@ -112,10 +113,22 @@ if _REUSE_IN_TESTS:
     _install_test_cleanup_hooks()
 MIGRATIONS_DIR = BASE_DIR / "migrations"
 
+# 28/09 (frente de infra): contador de gravações por arquivo de banco. A rodada (DatabaseManager.rodada) guarda o
+# plano do dia calculado e o descarta assim que qualquer conexão — de qualquer thread ou gerente — grava no arquivo.
+_WRITE_GEN: dict = {}
+_WRITE_GEN_LOCK = Lock()
+
+
+def _bump_writes(key: str) -> None:
+    with _WRITE_GEN_LOCK:
+        _WRITE_GEN[key] = _WRITE_GEN.get(key, 0) + 1
+
+
 class _ManagedConnection:
     """Wrapper para sqlite3.Connection que garante commit/rollback e fecha a conexão no __exit__."""
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection, gen_key: str = ""):
         self._conn = conn
+        self._gen_key = gen_key
 
     def __enter__(self):
         self._conn.__enter__()
@@ -125,6 +138,11 @@ class _ManagedConnection:
         try:
             self._conn.__exit__(exc_type, exc_val, exc_tb)
         finally:
+            try:
+                if self._conn.total_changes:
+                    _bump_writes(self._gen_key)
+            except Exception:
+                pass
             try:
                 self._conn.close()
             except Exception:
@@ -142,14 +160,20 @@ class _ReusedConnection:
     custa ~0,04 ms. Abrir uma conexão por consulta fazia o bot pagar isso
     centenas de vezes por mensagem.
     """
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection, gen_key: str = ""):
         self._conn = conn
+        self._gen_key = gen_key
+        self._changes = conn.total_changes
 
     def __enter__(self):
         return self._conn.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        return self._conn.__exit__(exc_type, exc_val, exc_tb)
+        try:
+            return self._conn.__exit__(exc_type, exc_val, exc_tb)
+        finally:
+            if self._conn.total_changes != self._changes:
+                _bump_writes(self._gen_key)
 
     def __getattr__(self, name):
         return getattr(self._conn, name)
@@ -189,6 +213,8 @@ class DatabaseManager:
         self._thread_conn = local()
         self._open_conns: list[sqlite3.Connection] = []
         self._open_conns_lock = Lock()
+        self._rodada_state = local()
+        self._gen_key = str(Path(db_path).resolve())
         if _REUSE_IN_TESTS:
             self._reuse = True
             _TEST_MANAGERS.add(self)
@@ -221,7 +247,7 @@ class DatabaseManager:
         if active is not None:
             return active
         if not self._reuse:
-            return _ManagedConnection(self._open())
+            return _ManagedConnection(self._open(), self._gen_key)
         conn = getattr(self._thread_conn, "conn", None)
         if conn is None:
             conn = self._open()
@@ -233,7 +259,39 @@ class DatabaseManager:
             # uma escrita esquecida aberta travaria o banco para as outras threads.
             logger.warning("db.reused_connection.dangling_transaction — rollback")
             conn.rollback()
-        return _ReusedConnection(conn)
+        return _ReusedConnection(conn, self._gen_key)
+
+    # ------------------------------------------------ rodada (28/09, infra) --
+    @contextmanager
+    def rodada(self):
+        """Uma rodada de cálculo (um resolve, uma tela do Hoje): o plano do dia — aulas, ida pra PUC, sono, trechos —
+        é calculado uma vez e reaproveitado (`memo`) até alguém gravar no banco. Reentrante; por thread."""
+        if getattr(self._rodada_state, "cache", None) is not None:
+            yield
+            return
+        self._rodada_state.cache = {}
+        try:
+            yield
+        finally:
+            self._rodada_state.cache = None
+
+    def _versao(self) -> tuple:
+        conn = getattr(self._thread_conn, "conn", None) if self._reuse else None
+        return _WRITE_GEN.get(self._gen_key, 0), (conn.total_changes if conn is not None else None)
+
+    def memo(self, chave: tuple, calcula):
+        """Resultado de `calcula()` reaproveitado dentro da rodada enquanto nada for gravado (fora dela, ou numa
+        transação aberta, sempre calcula). Devolve cópia: quem chama pode mexer no que recebe."""
+        cache = getattr(self._rodada_state, "cache", None)
+        if cache is None or getattr(self._transaction_state, "connection", None) is not None:
+            return calcula()
+        versao = self._versao()
+        hit = cache.get(chave)
+        if hit is not None and hit[0] == versao:
+            return copy.deepcopy(hit[1])
+        valor = calcula()
+        cache[chave] = (versao, copy.deepcopy(valor))
+        return valor
 
     @contextmanager
     def transaction(self):
@@ -2304,6 +2362,17 @@ class DatabaseManager:
                 "created_at": r["created_at"],
                 "reverted_at": r["reverted_at"]
             }
+
+def memo(db, chave: tuple, calcula):
+    """`DatabaseManager.memo` para quem recebe um banco qualquer (dublê de teste: sempre calcula)."""
+    return db.memo(chave, calcula) if isinstance(db, DatabaseManager) else calcula()
+
+
+def rodada(db):
+    """`DatabaseManager.rodada` para quem recebe um banco qualquer."""
+    from contextlib import nullcontext
+    return db.rodada() if isinstance(db, DatabaseManager) else nullcontext()
+
 
 db_manager = DatabaseManager()
 

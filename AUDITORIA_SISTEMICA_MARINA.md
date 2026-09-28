@@ -1727,3 +1727,40 @@ Etapa 5 do PLANO_WEBAPP, decidida com o Patrick por mockup (formato, bio, abertu
 - **Quando com maiúscula:** "hoje, 13:50" era a única direita em minúscula no Bastidores; `_quando_curto` só é usado pelo painel.
 - Testes: `test_bastidores_textos` com o círculo, o onde foi e a semente escondida.
 
+## Frente de infra (28/09, noite): pilha no limite e o plano do dia calculado uma vez
+Pedido do Patrick: resolver antes de construir mais, **só desempenho, sem quebrar nada**. Medido numa cópia do banco
+de 28/09 (11:54), com a API de rotas desligada.
+- **Achado sistêmico — a pilha não era funda, era um ciclo:** `Commute.legs_on(dia)` pedia a academia
+  (`Academia.plano` → `RoutineEngine._placement`), que pedia as janelas de sono, que pediam o despertador
+  (`sleep_plan._first_departure`), que pedia `legs_on(dia)` de novo. Não havia fim: **todo resolve batia no limite de
+  pilha do Python** (992 de 1000 níveis) e seguia porque o `except Exception` do `_first_departure` engolia o
+  `RecursionError` e usava "aula − 40 min". Consequências: o despertador de 4 dos 8 dias de aula conferidos não era
+  "ida − se arrumar − margem" (diferença de 2 a 19 min), e **o despertador do mesmo dia mudava conforme a ordem das
+  perguntas** e o cache global do processo (mudava num reinício). Qualquer camada a mais (a API de rotas ligada, no teste
+  de 28/09) estourava de verdade.
+- **Correção:** o sono pede só a ida pra PUC (`Commute.ida_puc`: a ida planejada com o combinado da agenda reativa,
+  sem o dia inteiro), e o cache global `_DEPARTURE_CACHE` saiu. Pilha máxima: 992 → 55 (o máximo agora é o import do
+  Python). A regra do despertador não mudou; agora ela é cumprida sempre.
+- **Plano do dia uma vez por rodada:** `DatabaseManager.rodada()` (um resolve, uma tela do Hoje) e `memo()` guardam
+  aulas do dia (`AcademicLife.blocks_on`), ida pra PUC, sono (`bed`, `wake`, `nap`, `micro_wakes`) e trechos
+  (`legs_on`) — antes recalculados ~1.100 vezes por resolve (`social_battery.accrue` sozinho pedia o sono 96 vezes). O
+  guardado **cai sozinho quando qualquer conexão grava no arquivo** (contador de gravações por arquivo de banco, lido do
+  `total_changes` do SQLite na saída de cada `with get_connection()`; vale entre threads e entre dois gerentes do mesmo
+  arquivo), não vale dentro de transação aberta e some no fim da rodada. Quem recebe o resultado ganha uma cópia.
+  As consultas soltas do sono (`is_asleep`, `in_bed`, `micro_wake_at`, `next_wake_boundary`, `windows_on`,
+  `prompt_lines`, `horas_acordada`, `hours_slept`, `napping`, `nights_around`) abrem a própria rodada: sem o cache
+  global elas ficariam mais lentas que antes (24 perguntas seguidas: 0,30 s com o cache antigo quente, 0,56 s sem);
+  com a rodada, 0,14 s.
+- **Números (cópia local, Windows):** resolve 2,9 s → 1,2 s com conexão reaproveitada, como na VPS (do que sobra,
+  ~0,9 s era o TMDB com o cache vencido na cópia; na produção o `tmdb_cache` acerta); sem reaproveitar (scripts e
+  pré-visualização) 78–85 s → 7,7 s, de 14.659 para 1.167 conexões; `legs_on` 86 → 9 por resolve. A pré-visualização
+  (`scripts/webapp_preview.py`) passou a reaproveitar a conexão como o bot — era dela o Hoje de ~65 s.
+- **Prova de que nada mudou:** o mesmo roteiro (16 dias de sono, trechos, academia e Milo; 38 resolves de 28/09 12:05 a
+  29/09 09:00; Hoje e Agenda) no código antigo (worktree do `b4a526f`) e no novo. Rodada × sem rodada: **0
+  diferenças**. Antigo × novo: **0 diferenças nos trechos, academia, Milo e nos 38 resolves**; só o despertador/deitar
+  dos dias em que o antigo errava a própria regra. Antigo contra ele mesmo com os dias em ordem inversa: 22 diferenças;
+  o novo: 0.
+- Testes: `tests/test_infra_plano_do_dia.py` (12): despertador sem montar o dia, despertador = ida − se arrumar,
+  independente da ordem, pilha rasa no resolve (os 4 falham no código antigo), e as regras da rodada (grava → recalcula,
+  outro gerente do mesmo arquivo, transação, reentrância, dublê de banco, resolve igual com e sem rodada).
+

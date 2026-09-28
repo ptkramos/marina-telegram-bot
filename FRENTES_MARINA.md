@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 16:20 (frente de bugs: item 13 — o dia 28/09 visto pelo Patrick, almoço × carona, sanduíche, música, Milo e voltas no Hoje — corrigido e na produção, `5b1c04d`; a pedido do Patrick, próxima conversa na frente de infra — pilha no limite e desempenho — antes de voltar a construir; depois, frente do mundo — roupa e make de verdade)._
+_Atualizado em 28/09/2026, 17:40 (frente de infra: pilha no limite e desempenho resolvidos — ciclo trechos → sono cortado, plano do dia uma vez por rodada; bug aberto 14, Milo "no sofá" durante o passeio, capturado pra frente de bugs)._
 
 ---
 
@@ -70,12 +70,11 @@ dividindo balão; vocabulário da masturbação; música que ele manda por link.
 **Abertura:** "bora na frente de infra: pilha no limite e desempenho — plano do dia calculado uma vez, antes de construir mais"
 
 **Próximo:**
-1. **Desempenho:** cada resolve do mundo leva ~7 s na cópia local, quase tudo no `sleep_plan` (~1.300 conexões
-   SQLite por resolve). Cache por dia / conexão reaproveitada. **Pilha no limite (achado 28/09, frente de bugs):** o
-   Hoje de um dia de aula na cópia leva ~65 s, chama `Commute.legs_on` ~90 vezes e chega a 988 níveis de pilha (o
-   limite do Python é 1000) — com a API de rotas ligada estourou `RecursionError` localmente. Na produção, zero hoje,
-   mas a margem é mínima: as camadas agenda → meals → commute → academia → agenda se chamam em cadeia. Achatar (plano
-   do dia calculado uma vez e reaproveitado). **O Patrick pediu (28/09) pra fazer isto antes de construir mais.**
+1. ✅ **Desempenho e pilha (28/09, noite):** a pilha era um ciclo (trechos → academia → sono → despertador →
+   trechos) que batia no limite a cada resolve (997/1000 na VPS); cortado (`Commute.ida_puc`), pilha 55. Plano do
+   dia uma vez por rodada (`db.rodada`/`memo`, cai sozinho quando algo grava): resolve 2,9 → 1,2 s na cópia local;
+   pré-visualização com conexão reaproveitada (Hoje ~65 s → ~1 s). Saída igual ao código antigo (só o despertador
+   passa a seguir sempre a regra). Detalhe na AUDITORIA ("Frente de infra (28/09, noite)").
 2. **API paga de rotas:** `commute._live_minutes` usa a `DISTANCE_MATRIX_KEY` do `.env` fora dos testes; varredura
    local deve rodar com `COMMUTE_LIVE_TIMES=false` (ou o default local ser desligado). Conferir também quantas
    chamadas a produção faz por dia (cache por trecho/dia?).
@@ -178,7 +177,18 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
    - Registrados: lista de compras (barrinhas) na frente do mundo, item 8; pilha no limite e API paga em script local
      na infra.
 
-**Abertos:** nenhum.
+**Abertos:**
+14. ⬜ **Milo "no sofá" durante o passeio na Enseada (28/09, 17:21, visto pelo Patrick no Hoje e no chat)** —
+    capturado da produção às 17:30 (só leitura): mundo 16:56–17:39 "passeando com Milo" (Enseada; 17:07 encontrou a
+    Gabi), e às 17:21 o acontecimento `milo:2026-09-28:arte` "O Milo dormiu encostado nela no sofá". No chat ela
+    confirmou e disse que estava "organizando um look" (o bloco "montando looks" foi 16:16–16:47, antes de sair).
+    - Causa do Milo (mundo): a arte do Milo (`milo.day_plan`, chave `arte`) sorteia 09:00–21:00 e o `materialize` não
+      olha onde ela está (só o xixi da noite checa `_at_home`). Falta: só em casa e fora de saída/passeio; o texto da
+      arte é de casa (sofá), então fora de casa ela não acontece (ou espera ela voltar).
+    - Falta ver a conversa (camada prompt → fala): por que ela confirmou o sofá e trouxe o look de 30 min antes como
+      se fosse agora.
+    - O Patrick sente que o Agora e o Hoje ainda têm muitas pontas soltas com tudo o que foi construído — vale uma
+      varredura (frente de auditoria de funcionamento) depois deste.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** "bora na frente de imagens: quarto apagado com flash e foto de grupo das outras amigas"

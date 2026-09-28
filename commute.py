@@ -289,6 +289,10 @@ class Commute:
     # ------------------------------------------------------------ trechos --
     def legs_on(self, day: date, planejado: bool = False) -> list[Leg]:
         """Os trechos do dia. `planejado=True`: sem o atraso de verdade (o sono planeja a manhã por eles)."""
+        from db import memo          # 28/09 (infra): calculados uma vez por rodada, até alguém gravar
+        return memo(self.db, ("commute.legs_on", day, planejado), lambda: self._legs_on(day, planejado))
+
+    def _legs_on(self, day: date, planejado: bool) -> list[Leg]:
         legs = self._voltas_trocadas(self._legs_planejados(day))
         legs = self._emendas(legs)
         if planejado:
@@ -318,6 +322,31 @@ class Commute:
         return Leg(f"commute:{day.isoformat()}:puc:volta", last, last + timedelta(minutes=mins), mode, "volta",
                    _de("PUC"), "Gávea", driver if mode == "carona" else "")
 
+    def _ida_puc(self, day: date, first: datetime, puc: dict, driver: str, w: float) -> Leg:
+        mode, mins = self._choose(day, "puc:ida", "Gávea", first - timedelta(minutes=40), place=puc,
+                                  carona_weight=w)
+        mins = min(mins, CLASS_GO_MAX_MIN)
+        return self._incident(Leg(f"commute:{day.isoformat()}:puc:ida", first - timedelta(minutes=mins), first, mode,
+                                  "ida", _pra("PUC"), "Gávea", driver if mode == "carona" else "",
+                                  compromisso=f"puc:{day.isoformat()}"))
+
+    def ida_puc(self, day: date) -> Optional[Leg]:
+        """Só a ida pra PUC (planejada, com o combinado da agenda reativa). 28/09 (frente de infra): o sono planeja a
+        manhã por ela, e pedir o dia inteiro fechava um ciclo — trechos → academia → janelas de sono → despertador →
+        trechos do mesmo dia — que só parava no limite de pilha do Python (o RecursionError era engolido)."""
+        from db import memo
+        return memo(self.db, ("commute.ida_puc", day), lambda: self._ida_puc_do_dia(day))
+
+    def _ida_puc_do_dia(self, day: date) -> Optional[Leg]:
+        from academic_life import AcademicLife
+        blocks = AcademicLife(self.db).blocks_on(day)
+        if not blocks:
+            return None
+        first = min(datetime.fromisoformat(b["start_at"]) for b in blocks)
+        puc = self._place("puc_rio") or {"name": "PUC-Rio", "region": "Gávea"}
+        _key, driver = self._driver()
+        return self._voltas_trocadas([self._ida_puc(day, first, puc, driver, CARONA_WEIGHT_PUC if driver else 0.0)])[0]
+
     def _legs_planejados(self, day: date) -> list[Leg]:
         legs: list[Leg] = []
         from academic_life import AcademicLife
@@ -328,12 +357,7 @@ class Commute:
             puc = self._place("puc_rio") or {"name": "PUC-Rio", "region": "Gávea"}
             _key, driver = self._driver()
             w = CARONA_WEIGHT_PUC if driver else 0.0
-            mode, mins = self._choose(day, "puc:ida", "Gávea", first - timedelta(minutes=40), place=puc,
-                                      carona_weight=w)
-            mins = min(mins, CLASS_GO_MAX_MIN)
-            legs.append(self._incident(Leg(f"commute:{day.isoformat()}:puc:ida", first - timedelta(minutes=mins),
-                                           first, mode, "ida", _pra("PUC"), "Gávea",
-                                           driver if mode == "carona" else "", compromisso=f"puc:{day.isoformat()}")))
+            legs.append(self._ida_puc(day, first, puc, driver, w))
             mode, mins = self._volta_puc_modo(day, last, puc, w)
             try:                                  # 28/09: almoçou por lá (sozinha) — a volta sai depois do almoço
                 from meals import Meals

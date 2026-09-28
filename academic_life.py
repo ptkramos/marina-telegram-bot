@@ -221,6 +221,10 @@ class AcademicLife:
         return dict(row) if row else None
 
     def blocks_on(self, day: date) -> list[dict]:
+        from db import memo          # 28/09 (infra): o plano do dia é pedido milhares de vezes por resolve
+        return memo(self.db, ("academic.blocks_on", day), lambda: self._blocks_on(day))
+
+    def _blocks_on(self, day: date) -> list[dict]:
         term = self._active_term_on(day)
         if not term:
             return []

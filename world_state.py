@@ -664,7 +664,8 @@ class WorldStateManager:
     def resolve(self, now: datetime, **kw):
         """Um resolve por vez no processo (26/09: a entrega pôs ela "comendo o sanduíche" e um resolve
         paralelo, da saudade, gravou "olhando o Instagram" por cima no mesmo segundo)."""
-        with _RESOLVE_LOCK:
+        from db import rodada
+        with _RESOLVE_LOCK, rodada(self.db):   # 28/09 (infra): o plano do dia calculado uma vez por resolve
             return self._resolve(now, **kw)
 
     def _resolve(

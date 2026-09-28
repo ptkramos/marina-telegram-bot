@@ -215,6 +215,10 @@ então de manhã quase tudo tinha sumido.
   artistas embaixo ("Sabrina Carpenter, Chappell Roan e Liniker"); lanche na rua aparece como "Pediu um sanduíche"
   (R$ 15) e "Comeu um sanduíche no caminho"; a PUC mostra "Almoçando" quando ela almoça por lá. Ver AUDITORIA ("Bug: o
   dia 28/09 visto pelo Patrick") e `tests/test_bug_dia_2809.py`.
+- **Velocidade (frente de infra, 28/09):** o Hoje e o resolve que alimenta o Agora montam o plano do dia uma vez só
+  (`db.rodada`/`memo`); resolve 2,9 s → 1,2 s na cópia local. A pré-visualização (`scripts/webapp_preview.py`)
+  reaproveita a conexão como o bot — o Hoje de ~65 s na cópia virou ~1 s. Nenhum texto nem tela mudou. Ver AUDITORIA
+  ("Frente de infra (28/09, noite)").
 - **Aba nova "Por fora" (Patrick, 28/09):** tem coisa no Por dentro que é aparência, não sentimento — vai pra uma aba
   Por fora. Feita na mesma tarde (seção abaixo).
 - **Código:** `por_dentro.py` (novo), `webapp_server` (`emocao_view`, `motivo_tela`, `_alguem` com "você", Ciclo),

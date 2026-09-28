@@ -50,6 +50,8 @@ async def main(port: int, banco: str = "", agora: str = "") -> None:
     else:
         db = DatabaseManager(Path(tempfile.mkdtemp()) / "preview.db")
         seed_world_bible(db)
+    # 28/09 (infra): uma conexão por thread, como o bot — abrir uma por consulta deixava o Hoje de ~1 s em ~65 s
+    db.enable_connection_reuse()
 
     def status(now: datetime) -> dict:
         # mesmo formato do bot._status_snapshot (valores de exemplo)

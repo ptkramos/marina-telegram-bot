@@ -532,6 +532,12 @@ def _previstos(db, dia: date, now: datetime, saidas: list[dict]) -> list[dict]:
 
 
 def hoje_view(db, now: datetime) -> dict:
+    from db import rodada
+    with rodada(db):                  # 28/09 (infra): o plano do dia calculado uma vez pela tela
+        return _hoje_view(db, now)
+
+
+def _hoje_view(db, now: datetime) -> dict:
     dia = dia_de(now)
     ini = datetime.combine(dia, datetime.min.time()) + timedelta(hours=4)
     saidas = _saidas(db, dia, now)
