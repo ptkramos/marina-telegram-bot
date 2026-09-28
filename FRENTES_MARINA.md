@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 05:35 (passagem de bastão: textos do Instagram revisados no app e na produção, foto do post 6 refeita à noite; próxima conversa na frente dos apps — Bastidores aba a aba)._
+_Atualizado em 28/09/2026, 10:05 (passagem de bastão: os 6 bugs dos Bastidores às 05:55 corrigidos e na produção, banco limpo; próxima conversa na frente de bugs — item 12, a manhã de 28/09 com o Se arrumando da faculdade; depois, frente dos apps — Dinheiro e Mundo)._
 
 ---
 
@@ -66,7 +66,7 @@ dividindo balão; vocabulário da masturbação; música que ele manda por link.
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
-**Abertura:** "bora na frente de bugs: varre as últimas 24 horas (mundo × aba Agora × chat)"
+**Abertura:** "bora na frente de bugs: item 12 — manhã de 28/09, o Se arrumando da faculdade dizia café e banho com ela pulando o café e descendo com o Milo; e a iniciativa das 07:51 colada na resposta das 07:47"
 
 Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
 
