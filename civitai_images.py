@@ -412,8 +412,12 @@ def _rg_rosto(friend: str) -> Optional[bytes]:
         return None
     im = Image.open(Path(__file__).resolve().parent / rg_path).convert("RGB")
     w, h = im.size
+    # recorte com altura "quebrada" (721 px) fez o editor responder 500: mantém o tamanho e pinta de cinza liso
+    # (#B8B8B8, como a folha de personagem) tudo abaixo do queixo
+    from PIL import ImageDraw
+    ImageDraw.Draw(im).rectangle([0, int(h * FRIEND_RG_FACE.get(friend, 0.6)), w, h], fill=(184, 184, 184))
     out = io.BytesIO()
-    im.crop((0, 0, w, int(h * FRIEND_RG_FACE.get(friend, 0.6)))).save(out, "JPEG", quality=95)
+    im.save(out, "JPEG", quality=95)
     return out.getvalue()
 
 
@@ -523,10 +527,110 @@ async def swap_friend_face(image: bytes, friend: str, *, side: str = "right", wh
 
 
 # 27/09 (Instagram): post da amiga sozinha. O editor parte da foto-RG (o rosto fica o dela) e monta a cena.
-FRIEND_SCENE_PROMPT = ("The same {noun} from the image, with the exact same face, eyes, eyebrows, nose, lips, skin tone "
-                       "and hair, now {scene}, wearing clothes that fit this new scene (not the clothes from the "
-                       "image). A candid Instagram photo taken with a smartphone, natural light, realistic skin "
-                       "texture, vertical 4:5 framing.")
+# 27/09 (Patrick, artigo "How I do reference consistency"): folha de personagem das amigas — 4 vistas num fundo
+# cinza liso, vestidas de body cinza justo (só a vestida, decisão dele). Nas vistas de corpo com o rosto visível, um
+# círculo branco cobre o rosto, pra o editor copiar o rosto só do close. Substitui o RG como referência: sem
+# roupa de verdade nem cenário pra vazar, e com o corpo inteiro (proporção).
+FRIEND_SHEET = {k: v.replace("_rg.jpg", "_folha.jpg") for k, v in FRIEND_RG.items()}
+FRIEND_SHEET_OUTFIT = {"woman": "a plain fitted light grey sleeveless bodysuit, bare legs, barefoot",
+                       "man": "a plain fitted light grey t-shirt and plain light grey shorts, barefoot"}
+# o que o editor erra se não disser (1ª folha da Carol: tatuagem nos dois braços e corpo mais magro)
+FRIEND_SHEET_EXTRA = {
+    "carol_menezes": "Her black-ink floral and skull tattoo sleeve is only on her LEFT arm; her right arm has no tattoos "
+                     "at all. She has a fit curvy athletic body with toned abs, full hips, strong thighs and a round butt.",
+    "julia_azevedo": "Her only tattoo is a small fine-line crescent moon on her inner right forearm. She has a slim body.",
+    "bia_andrade": "She has no tattoos. She has a slim curvy body with a small waist.",
+    "theo_martins": "He has no tattoos. He has a lean, lightly muscular body.",
+}
+FRIEND_SHEET_PROMPT = (
+    "Film character sheet, photorealistic commercial studio photography. Four views of the exact same {noun} from the "
+    "image, {who}, wearing {outfit}. {extra} Standing in a row on a seamless neutral grey #B8B8B8 background: full-body front "
+    "view, full-body side view, full-body back view, and a close-up passport-style ID portrait of the face - exactly "
+    "four views, no more. Identical person, "
+    "outfit, hairstyle and styling in all four views. In the full-body front view the person stands upright in a "
+    "relaxed neutral pose facing the camera, head level, and a flat opaque solid white circle graphic is placed "
+    "directly over the face, completely covering it from forehead to chin, like an anonymized casting photo - crisp "
+    "clean circle edge, pure white fill. The full-body side view shows the person from the side, facing left, with a "
+    "flat opaque solid white circle graphic placed directly over the face completely covering it from forehead to "
+    "chin - the side view face is covered by the white circle too, never visible. The full-body back view shows the "
+    "person from behind, feet to head fully in frame. The close-up is a 3x4 passport ID photo: head and top of the "
+    "shoulders, face completely frontal and centered, head straight and level with no tilt, neck straight, shoulders "
+    "square to the camera, looking straight into the lens, calm natural expression with a slight closed-mouth smile, "
+    "sharp focused eyes, natural skin texture with visible pores, the exact same face as in the image. Soft even "
+    "studio lighting with smooth falloff, clean "
+    "commercial catalogue look, accurate face, body proportions and tattoos carried over exactly.")
+
+
+# 27/09 (Patrick): o close da folha tem que ser 3x4 de documento, e o editor copiava a cabeça inclinada da selfie
+# do RG. Então primeiro sai a 3x4 reta (a partir do RG), e a folha parte dela.
+FRIEND_ID_PROMPT = ("A 3x4 passport ID photo of the exact same {noun} from the image: head and top of the shoulders, "
+                    "face completely frontal and centered, head straight and level with no tilt, neck straight, "
+                    "shoulders square to the camera, looking straight into the lens, calm natural expression with a "
+                    "slight closed-mouth smile, wearing {top}, plain seamless light grey #B8B8B8 background, soft even "
+                    "studio lighting. Strictly preserve the exact same face, facial structure, eye shape, facial "
+                    "features, skin tone, hair and identity.")
+FRIEND_ID_TOP = {"woman": "a plain light grey sleeveless top", "man": "a plain light grey t-shirt"}
+
+
+async def _edit_uma(prompt: str, image: bytes, width: int, height: int, seed: Optional[int] = None) -> Optional[bytes]:
+    import base64
+    if not available():
+        return None
+    step = {"engine": "comfy", "ecosystem": "krea2", "model": "edit", "operation": "editImage", "prompt": prompt,
+            "images": ["data:image/jpeg;base64," + base64.b64encode(image).decode()],
+            "width": width, "height": height, "seed": seed if seed is not None else random.randint(1, 2**31 - 1),
+            "quantity": 1, "loras": {}}
+    body = {"steps": [{"$type": "imageGen", "input": step}], "allowMatureContent": False}
+    headers = {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json", "User-Agent": USER_AGENT}
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT_S + 30)) as session:
+        try:
+            wf = await _run_workflow(session, headers, body, False)
+            for img in _images(wf or {}):
+                data = await _download(session, headers, img)
+                if data:
+                    return data
+        except Exception as exc:
+            logger.error("civitai.edit_error %s: %s", type(exc).__name__, exc)
+    return None
+
+
+async def friend_id_photo(friend: str) -> Optional[bytes]:
+    """A 3x4 de documento da amiga (reta, fundo cinza), a partir do RG."""
+    from visual_profile import FRIENDS_VISUAL
+    rg = _rg_rosto(friend)
+    noun = FRIENDS_VISUAL.get(friend, {}).get("noun", "woman")
+    return await _edit_uma(FRIEND_ID_PROMPT.format(noun=noun, top=FRIEND_ID_TOP[noun]), rg, 768, 1024) if rg else None
+
+
+def _referencia(friend: str) -> tuple[Optional[bytes], bool]:
+    """A referência da amiga: a folha, se existir (True), senão o RG só com o rosto."""
+    from pathlib import Path
+    folha = FRIEND_SHEET.get(friend)
+    p = Path(__file__).resolve().parent / folha if folha else None
+    if p and p.is_file():
+        return p.read_bytes(), True
+    return _rg_rosto(friend), False
+
+
+async def friend_sheet(friend: str, *, base: Optional[bytes] = None, seed: Optional[int] = None) -> Optional[bytes]:
+    """A folha de personagem da amiga (Krea 2 Edit, paisagem), a partir da 3x4 (base) ou do RG só com o rosto."""
+    from visual_profile import FRIENDS_VISUAL
+    ref = base or _rg_rosto(friend)
+    if not ref:
+        return None
+    v = FRIENDS_VISUAL.get(friend, {})
+    noun = v.get("noun", "woman")
+    prompt = FRIEND_SHEET_PROMPT.format(noun=noun, who=v.get("en", ""), outfit=FRIEND_SHEET_OUTFIT[noun],
+                                        extra=FRIEND_SHEET_EXTRA.get(friend, ""))
+    return await _edit_uma(prompt, ref, 1536, 1024, seed)
+
+
+# 27/09 (guia "Krea2 Reference Edit"): primeiro o que se quer (cena, roupa), depois a trava de identidade.
+FRIEND_SCENE_PROMPT = ("One {noun}, solo. Place this person in this scene: {scene}, wearing clothes that fit this new scene, not the "
+                       "clothes from the image. Strictly preserve the exact same face, facial structure, eye shape, "
+                       "facial features, skin tone and identity; do not alter the facial structure. Keep the same "
+                       "hairstyle and body proportions. A candid Instagram photo taken with a smartphone by a friend, "
+                       "natural light, clean dry skin, realistic skin texture, vertical 4:5 framing.")
 
 
 async def friend_scene(friend: str, scene: str, *, width: int = 896, height: int = 1120,

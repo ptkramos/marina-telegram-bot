@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 27/09/2026, 17:05 (frente de imagens: foto de grupo de ponta a ponta no ar, `63a3532`; próxima conversa, Instagram na frente dos apps)._
+_Atualizado em 27/09/2026, 21:10 (frente dos apps: Instagram no ar, acervo sendo refeito com folhas de personagem das amigas)._
 
 ---
 
@@ -30,16 +30,17 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** "bora na frente dos apps: Instagram da Marina (Etapa 5)"
+**Abertura:** "bora na frente dos apps: Instagram, folhas da Júlia e do Theo e refazer o acervo"
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps.
 
 **Próximo:**
-0. 🟡 **Instagram da Marina** (Etapa 5 do PLANO_WEBAPP): **construído em 27/09** (@masalles, feed, stories,
-   comentários, amigas postando; `instagram.py`, `webapp/insta.js`). Falta: gerar o acervo na VPS
-   (`scripts/instagram_acervo.py --gerar`, ~400 Buzz), acompanhar o 1º post/story/comentário no uso real e revisar
-   com ele os textos que decidi sozinho (lista no fim da seção "Etapa 5 — Instagram" do PLANO_WEBAPP).
+0. 🟡 **Instagram da Marina** (Etapa 5): no ar desde 27/09 (@masalles; ela posta pelo dia dela, amigas comentam e postam; textos sem bordão, roupa sem repetir, praia de biquíni). Acervo gerado, sendo refeito. Nesta ordem:
+   a. Folhas de personagem da **Júlia e do Theo** (`scripts/folha_amigas.py <amiga> 3x4`, depois `folha`, depois ajuste à mão: círculo no rosto da vista de lado, espelhar tatuagem se precisar); pintar os círculos nas vistas de lado da folha da **Bia**. Carol pronta. Mostrar cada passo ao Patrick.
+   b. Ligar a folha em `swap_friend_face` e `friend_scene` (`civitai_images._referencia` já existe) e testar 1 foto.
+   c. Refazer as fotos 7 (praia com a Carol), 3, 5, 9 e 13 **uma por vez com aprovação** (`scripts/instagram_acervo.py --refoto ID` na VPS); a pose "alguém tirando" ainda sai com cara de selfie. Depois `--textos`.
+   d. Revisar com ele os textos que decidi sozinho (fim da seção "Etapa 5 — Instagram" do PLANO_WEBAPP).
 1. Bastidores **aba a aba** com ele (Por dentro, Dinheiro, Mundo), como foi a Agora — ele quer ver no celular e
    ajustar palavra por palavra (PLANO_VOZ 14).
 2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
