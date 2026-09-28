@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 10:05 (passagem de bastão: os 6 bugs dos Bastidores às 05:55 corrigidos e na produção, banco limpo; próxima conversa na frente de bugs — item 12, a manhã de 28/09 com o Se arrumando da faculdade; depois, frente dos apps — Dinheiro e Mundo)._
+_Atualizado em 28/09/2026, 11:20 (passagem de bastão: item 12 dos bugs — manhã de 28/09, café e Milo no Se arrumando, iniciativa colada — corrigido e na produção, `6c4ca75`; frente de bugs sem aberto; próxima conversa na frente dos apps — Dinheiro e Mundo; o atraso de verdade entrou na frente do mundo, item 6)._
 
 ---
 
@@ -36,7 +36,7 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
    banho, imprevisto), o compromisso começa sem ela, e ela avisa o Patrick ("vou chegar atrasada") pelo que sente.
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** "bora na frente dos apps: Bastidores aba a aba no celular, começando pela Por dentro"
+**Abertura:** "bora na frente dos apps: Bastidores aba a aba no celular, agora a Dinheiro e depois a Mundo"
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; **Instagram** no ar (27/09) com acervo refeito
