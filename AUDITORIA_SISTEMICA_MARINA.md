@@ -1862,8 +1862,8 @@ Captura na produção: conversas 224–231, world_state 694–699, life_events 1
   caíam em "inferência de rotina (probabilística)" — resto de antes de 26/09, quando academia e passeio eram
   sorteados. Hoje são decididos no dia (`academia.py`) e têm preparo e trajeto: viraram fato com a regra forte. No
   preparo em casa, o texto antigo mandava "não invente ida a lugar externo", o contrário do que ela está fazendo.
-- **Prompt (sentimento):** "Sentindo agora: derretida — O Milo dormiu encostado nela no sofá" (17:21) às 18:58, sem
-  hora, puxou o sofá pro agora (mesmo padrão do bug 14). Episódio com mais de 20 min leva a hora ("(às 17:21)";
+- **Prompt (sentimento):** "Sentindo agora: derretida — O Milo dormiu encostado nela no sofá" (17:43, quando ela chegou) às 18:58, sem
+  hora, puxou o sofá pro agora (mesmo padrão do bug 14). Episódio com mais de 20 min leva a hora ("(às 17:43)";
   "(ontem, HH:MM)"; "(dia DD/MM)").
 - **Sem mudança:** "Mais, seu guloso" estava certo (54,0 kg em 26/09 → 54,4 kg). As referências de Práticas
   Experimentais VI vieram do bloco da faculdade e da fala dela das 17:24 no histórico (item de voz "histórico puxando

@@ -267,7 +267,7 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       chat às 13:45), banho da manhã não registrado (bug 11) e "Foi pra calçada" sem volta (bug 13). O
       `RecursionError` das 17:24 foi no processo antigo, antes da correção da pilha subir.
 
-16. ✅ **Inverdades no chat com ela na academia (28/09, ~18:57)** — corrigido em 28/09
+16. ✅ **Inverdades no chat com ela na academia (28/09, ~18:57)** — corrigido em 28/09 e na produção desde 20:31 (`e9ba399`)
     (`tests/test_bug16_academia_sofa.py`, 6). Mundo: Se arrumando 18:24–18:29, "indo pra Bodytech a pé" 18:38–18:48,
     "treinando na academia" desde 18:50 (certo). Prompt das 18:58 remontado numa cópia do banco dentro da VPS.
     - **",4 kg" (18:56) — limpeza da fala.** O modelo disse "Me pesei hoje: 54,4 kg" duas vezes; o guard de artefato
@@ -279,10 +279,10 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       sai da academia.
     - **"Tô em casa, no sofá com o Milo" (18:58) — prompt.** O prompt dizia "Bodytech, não diga que está em casa",
       mas com "Origem: inferência de rotina (probabilística)" (academia e passeio do Milo são decididos no dia desde
-      26/09) e "Sentindo agora: derretida — O Milo dormiu encostado nela no sofá" de 17:21, sem hora. Agora academia,
+      26/09) e "Sentindo agora: derretida — O Milo dormiu encostado nela no sofá" de 17:43, sem hora. Agora academia,
       passeio do Milo, preparo e trajeto são fato com a regra forte ("NUNCA diga 'em casa'"); no preparo, o texto de
       "em casa" não manda mais "não invente ida a lugar externo"; sentimento com mais de 20 min leva a hora ("(às
-      17:21)"). As referências de Práticas Experimentais VI vieram do bloco da faculdade e do histórico das 17:24.
+      17:43)"). As referências de Práticas Experimentais VI vieram do bloco da faculdade e do histórico das 17:24.
     - **"Mais, seu guloso" (18:57) estava certo:** a pesagem anterior foi 54,0 kg (26/09).
 
 **Abertos:** nenhum.
