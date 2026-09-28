@@ -14,8 +14,8 @@ trabalho, nenhuma falta — e o despertador perdido (D13) nunca virava atraso.
   manhã, depois de acordar — dormiu muito mal, chuva forte, cólica no começo da
   menstruação, ou preguiça (raro). Nunca em dia de entrega; no máximo 2 faltas
   por disciplina em 30 dias. Vira acontecimento com o motivo.
-* **Atraso de verdade**: perdeu o despertador e não deu tempo → "chegou 12 min
-  atrasada na aula de…".
+* **Atraso de verdade**: desde 28/09 no `atraso.py` (perdeu o despertador, enrolou,
+  o ônibus demorou — a ida sai e chega mais tarde de verdade).
 
 Determinístico por data; nada de chamada de modelo.
 """
@@ -35,7 +35,6 @@ SKIP_CHANCE_BASE = 0.03
 SKIP_CHANCE_BAD_SLEEP = 0.35      # dormiu menos de 5h30
 SKIP_CHANCE_RAIN = 0.10
 SKIP_MAX_PER_COURSE_30D = 2
-MIN_PREP_WHEN_LATE = 30           # atrasada, se arruma em 30 min
 
 
 def _rng(key: str) -> random.Random:
@@ -177,7 +176,7 @@ class College:
         return reason if rng.random() < chance else None
 
     def morning(self, now: datetime) -> Optional[str]:
-        """Depois de acordar: decide se falta; se vai, registra atraso de verdade."""
+        """Depois de acordar: decide se falta."""
         from academic_life import AcademicLife
         from sleep_plan import SleepPlan
         day = now.date()
@@ -209,23 +208,8 @@ class College:
             self._log(f"falta:{day.isoformat()}", wake + timedelta(minutes=10),
                       f"Faltou a aula hoje ({names}): {reason}.")
             return "falta"
-        late = self._late_minutes(day, wake, first)
-        if late > 0:
-            self._log(f"atraso:{day.isoformat()}", first + timedelta(minutes=late),
-                      f"Chegou {late} min atrasada na aula de {blocks[0]['display_name']} "
-                      "— perdeu o despertador.")
-            return "atraso"
+        # 28/09: o atraso de verdade (despertador, saída, caminho) é do `atraso.py` — empurra a ida e a chegada.
         return None
-
-    def _late_minutes(self, day: date, wake: datetime, first: datetime) -> int:
-        try:
-            from commute import Commute
-            ida = next((leg for leg in Commute(self.db).legs_on(day) if leg.key.endswith(":puc:ida")), None)
-            travel = (ida.end - ida.start) if ida else timedelta(minutes=40)
-        except Exception:
-            travel = timedelta(minutes=40)
-        arrival = wake + timedelta(minutes=MIN_PREP_WHEN_LATE) + travel
-        return max(0, int((arrival - first).total_seconds() // 60))
 
     # ------------------------------------------------------------ mundo --
     def materialize(self, now: datetime) -> int:

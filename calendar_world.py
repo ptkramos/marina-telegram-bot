@@ -25,6 +25,15 @@ def local_time(value: datetime) -> datetime:
     return value.astimezone(LOCAL_ZONE).replace(tzinfo=None) if value.tzinfo else value
 
 
+
+def _nao_chegou(db, now: datetime, compromisso: dict) -> bool:
+    """28/09 (atraso de verdade): o compromisso começou, mas ela ainda está a caminho (ou se arrumando)."""
+    try:
+        from atraso import nao_chegou
+        return nao_chegou(db, now, compromisso)
+    except Exception:
+        return False
+
 class RealContextCache:
     """Provenance and TTL gate. No weather or holiday is invented on cache miss."""
     def __init__(self, db: DatabaseManager):
@@ -193,7 +202,7 @@ class CalendarWorld:
                 friends = []
             if friends:
                 out['people'] = [str(f) for f in friends if f]
-            return out
+            return None if _nao_chegou(self.db, now, out) else out
         if not include_academic:
             return None
         from academic_life import AcademicLife
@@ -201,10 +210,11 @@ class CalendarWorld:
         block = AcademicLife(self.db).current_block(now)
         if not block:
             return None
-        return {'activity': f"na faculdade ({block['display_name']})",
-                'place_key': block['location_key'], 'start_at': block['start_at'],
-                'end_at': block['end_at'], 'academic_block_id': block['id'],
-                'source_key': f"academic:{block['id']}:{now.date().isoformat()}"}
+        out = {'activity': f"na faculdade ({block['display_name']})",
+               'place_key': block['location_key'], 'start_at': block['start_at'],
+               'end_at': block['end_at'], 'academic_block_id': block['id'],
+               'source_key': f"academic:{block['id']}:{now.date().isoformat()}"}
+        return None if _nao_chegou(self.db, now, out) else out
 
     def next(self, now: datetime, *, horizon_days: int = 14,
              include_academic: bool = True) -> dict | None:

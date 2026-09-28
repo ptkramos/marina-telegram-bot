@@ -708,6 +708,13 @@ class WorldStateManager:
         except Exception:
             logger.exception("freela.materialize.error")
         try:
+            # 28/09: atraso de verdade (despertador, hora de sair, caminho) — antes dos imprevistos do trajeto,
+            # que já saem na hora em que ela está de fato no caminho.
+            from atraso import Atraso
+            Atraso(self.db).materialize(now)
+        except Exception:
+            logger.exception("atraso.materialize.error")
+        try:
             from commute import Commute
             Commute(self.db).materialize(now)
         except Exception:

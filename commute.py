@@ -76,6 +76,11 @@ INCIDENTS = {
     "uber_dividido": ["o motorista do uber errou o caminho"],
     "carona": ["pegaram um trânsito chato no caminho", "pararam pra comprar um açaí no caminho"],
 }
+# 28/09 (atraso de verdade): o que cada imprevisto custa na chegada, em minutos (lotado e garoa não atrasam).
+INCIDENT_DELAY = {"o ônibus demorou uns 20 minutos pra passar": 15, "perdeu o ônibus da integração por um minuto": 10,
+                  "o metrô parou uns minutos entre as estações": 5, "o motorista do uber errou o caminho": 8,
+                  "o uber cancelou e ela teve que chamar outro": 7, "pegaram um trânsito chato no caminho": 10,
+                  "pararam pra comprar um açaí no caminho": 6}
 
 
 @dataclass
@@ -92,6 +97,15 @@ class Leg:
     incident_at: Optional[datetime] = None
     origem: str = ""        # emenda (27/09): de onde ela sai, quando vai direto de um lugar pro outro ("da PUC")
     decidido_em: Optional[datetime] = None   # item decidido na hora (vontade): onde ela estava quando decidiu
+    compromisso: str = ""   # 28/09: o compromisso da ida ("puc:<dia>", source_key do evento)
+    # 28/09 (atraso.py): saiu `saida_atraso` min depois do planejado (`saida_extra` decididos na hora de sair),
+    # o caminho custou `caminho_atraso` a mais (a partir de `caminho_at`) e chegou `atraso` min depois do começo.
+    atraso: int = 0
+    saida_atraso: int = 0
+    saida_extra: int = 0
+    caminho_atraso: int = 0
+    caminho_at: Optional[datetime] = None
+    avisos: tuple = ()      # ((hora, texto curto), ...) do Se arrumando: despertador, o que segurou a saída
 
     @property
     def how(self) -> str:
@@ -273,7 +287,20 @@ class Commute:
         return leg
 
     # ------------------------------------------------------------ trechos --
-    def legs_on(self, day: date) -> list[Leg]:
+    def legs_on(self, day: date, planejado: bool = False) -> list[Leg]:
+        """Os trechos do dia. `planejado=True`: sem o atraso de verdade (o sono planeja a manhã por eles)."""
+        legs = self._voltas_trocadas(self._legs_planejados(day))
+        legs = self._emendas(legs)
+        if planejado:
+            return legs
+        try:
+            from atraso import aplica
+            return aplica(self.db, day, legs)
+        except Exception:
+            logger.exception("commute.atraso.error")
+            return legs
+
+    def _legs_planejados(self, day: date) -> list[Leg]:
         legs: list[Leg] = []
         from academic_life import AcademicLife
         blocks = AcademicLife(self.db).blocks_on(day)
@@ -288,7 +315,7 @@ class Commute:
             mins = min(mins, CLASS_GO_MAX_MIN)
             legs.append(self._incident(Leg(f"commute:{day.isoformat()}:puc:ida", first - timedelta(minutes=mins),
                                            first, mode, "ida", _pra("PUC"), "Gávea",
-                                           driver if mode == "carona" else "")))
+                                           driver if mode == "carona" else "", compromisso=f"puc:{day.isoformat()}")))
             mode, mins = self._choose(day, "puc:volta", "Gávea", last, place=puc, outbound=False,
                                       carona_weight=w)
             mins = min(mins, CLASS_BACK_MAX_MIN)
@@ -333,13 +360,13 @@ class Commute:
             mode, mins = self._choose(day, f"{tag}:ida", region, start, place=place, carona_weight=w)
             legs.append(self._incident(Leg(f"commute:outing:{tag}:ida", start - timedelta(minutes=mins), start,
                                            mode, "ida", _pra(place["name"]), region,
-                                           driver if mode == "carona" else "")))
+                                           driver if mode == "carona" else "", compromisso=o["source_key"])))
             mode, mins = self._choose(day, f"{tag}:volta", region, end, companion, place=place, outbound=False,
                                       carona_weight=w)
             legs.append(self._incident(Leg(f"commute:outing:{tag}:volta", end, end + timedelta(minutes=mins),
                                            mode, "volta", _de(place["name"]), region,
                                            driver if mode == "carona" else companion)))
-        return self._emendas(self._voltas_trocadas(legs))
+        return legs
 
     @staticmethod
     def _emendas(legs: list[Leg]) -> list[Leg]:
@@ -408,7 +435,8 @@ class Commute:
             volta_min = int(meta.get("volta_min", mins))
             decidido = datetime.fromisoformat(meta["decidido_em"]) if meta.get("decidido_em") else None
             out.append(Leg(f"commute:{r['source_key']}:ida", ini - timedelta(minutes=mins), ini, modo, "ida",
-                           _pra(place["name"]), place.get("region") or "Botafogo", decidido_em=decidido))
+                           _pra(place["name"]), place.get("region") or "Botafogo", decidido_em=decidido,
+                           compromisso=r["source_key"]))
             out.append(Leg(f"commute:{r['source_key']}:volta", fim, fim + timedelta(minutes=volta_min),
                            meta.get("modo_volta", modo), "volta", _de(place["name"]), place.get("region") or "Botafogo"))
         return out

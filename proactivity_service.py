@@ -232,6 +232,14 @@ class ProactivityService:
         except Exception:
             logger.exception("proactivity.agenda_mudou")
 
+        # 28/09 (atraso de verdade): vai chegar atrasada e é coisa de contar (pelo que ela sente) — avisa ele.
+        try:
+            from atraso import Atraso
+            if Atraso(self.db).aviso(dt):
+                return True, "atraso"
+        except Exception:
+            logger.exception("proactivity.atraso")
+
         # 26/09 (Patrick): antes de sair ou do salão, às vezes pergunta o cabelo pra ele.
         try:
             from cabelo import Cabelo

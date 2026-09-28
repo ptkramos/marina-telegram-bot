@@ -1613,6 +1613,15 @@ Conferido na cópia da produção: Se arrumando 07:33–08:19 = Tomando banho ·
 
 `tests/test_bug_manha_2809.py`, 10 testes com os horários do caso (9 falham no código antigo). Suíte: 1298 testes; a única falha é a já registrada (`test_college_d7.test_she_skips_class_when_she_slept_terribly`, falha igual sem esta mudança).
 
+## Frente do mundo (28/09, tarde): atraso de verdade
+Pedido do Patrick (item 1 do painel do mundo). Detalhe e textos em PLANO_WEBAPP, "Atraso de verdade".
+- **Achado sistêmico — o atraso vivia só no banco:** `college.morning` gravava "Chegou N min atrasada" na hora em que ela acordava (com a hora da chegada no futuro), mas nada do mundo lia isso: a ida pra PUC tinha hora fixa, o `CalendarWorld.current` punha ela na aula às 07:00 em ponto, o card mostrava ela saindo na hora e, acordando depois da hora de sair, o Se arrumando sumia (`max(wake, ida−90)` ≥ saída). Agora `atraso.py` decide cada parte no seu momento (despertador ao acordar, o que segurou na hora de sair, caminho ao sair), congela em `world_bootstrap["atraso:<dia>"]` e o `commute.legs_on` aplica — o resto do mundo (card, `world_state`, disponibilidade, iniciativas, prompt) lê a mesma ida.
+- **Laço sono → trajeto:** o despertador é planejado pela ida da PUC (`sleep_plan._first_departure`); a ida atrasada depende do despertador. O sono lê `legs_on(planejado=True)` e o `atraso.aplica` tem trava de reentrada.
+- **"Chegou atrasada" antes de chegar:** `CalendarWorld.current` devolve nada enquanto o compromisso já começou e ela ainda não chegou (`atraso.nao_chegou`) — senão o resolve punha ela "na faculdade" com o trajeto ainda correndo.
+- **Spoiler do imprevisto (achado de passagem):** o card listava em cinza o aviso do caminho antes de acontecer ("Ônibus demorou 20min" como próximo passo). Aviso futuro não aparece mais; a chegada prevista e a barra só contam o atraso do caminho depois dele.
+- **Emoção:** o motivo fixo "Perdeu a hora · chegou atrasada" virou "Chegou atrasada · <onde>", com intensidade pelo tamanho do atraso.
+- `tests/test_atraso.py` (10 testes); `test_college_d7.test_late_for_real_when_she_oversleeps` virou `test_late_is_no_longer_logged_here`.
+
 ## Frente de auditoria de funcionamento (27/09)
 O Patrick está achando muitos bugs depois do 26/09 (~50 commits em várias conversas). Frente nova, skill `frente-auditoria` e seção 7 do `FRENTES_MARINA.md`: conferir entrega por entrega, com prova na produção, se funciona e está amarrada com o resto, e se falta deploy. Ponto de partida: VPS em `afd81fd`, `main` em `f69d2d4` (dois commits da frente de imagens sem deploy).
 

@@ -52,7 +52,7 @@ JANELA = {"role": (150, 30), "academia": (90, 15), "milo": (60, 10), "aula": (15
 IDA_APROX = {"role": 30, "academia": 12, "milo": 4, "aula": 40, "mercado_semana": 10}
 FALTAS_POR_SEMANA = 1
 # motivos que ela quer dividir com ele (quer colo); o resto só se ele perguntar
-CONTA = ("sono", "energia", "humor", "tristeza", "desconforto", "bateria", "ansiedade", "tpm")
+CONTA = ("sono", "energia", "humor", "tristeza", "desconforto", "bateria", "ansiedade", "tpm", "atraso")
 EMENDA_MIN = 0.72                    # vontade pra emendar mais uma parada
 EMENDA_MAX_DIA = 1
 PLANEJA_JANELA = (time(19, 30), time(22, 30))

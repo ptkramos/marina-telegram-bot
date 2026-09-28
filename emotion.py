@@ -967,7 +967,13 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
     elif key.startswith("falta:"):
         out.append(("vergonha", "culpa", 0.35, _motivo_generico(text), None))
     elif key.startswith("atraso:"):
-        out.append(("raiva", "frustracao", 0.4, "Perdeu a hora · chegou atrasada", None))
+        # 28/09 (atraso.py): "Chegou 15 min atrasada na aula de Ergodesign — perdeu o despertador…"
+        m = re.search(r"Chegou (\d+) min atrasada (?:na |no |em )?(.+?)(?: —|\.|$)", text)
+        if m:
+            out.append(("raiva", "frustracao", round(0.25 + min(0.3, int(m.group(1)) / 100), 2),
+                        _motivo("Chegou atrasada", m.group(2)), None))
+        else:
+            out.append(("raiva", "frustracao", 0.4, "Perdeu a hora · chegou atrasada", None))
     elif key.startswith("facul:sessao:"):
         if "virando a noite" in low:
             out.append(("medo", "ansiedade", 0.5, "Virando a noite · trabalho da facul", None))

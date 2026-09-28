@@ -124,14 +124,15 @@ class MorningTest(_Base):
              patch.object(college, "SKIP_CHANCE_BAD_SLEEP", 1.0):
             self.assertIsNone(self.c.skip_reason(day, AcademicLife(self.db).blocks_on(day)))
 
-    def test_late_for_real_when_she_oversleeps(self):
+    def test_late_is_no_longer_logged_here(self):
+        """28/09: o atraso de verdade é do atraso.py (empurra a ida e registra na chegada), não da manhã."""
         day = self._class_day()
         first = min(datetime.fromisoformat(b["start_at"]) for b in AcademicLife(self.db).blocks_on(day))
         late_wake = first - timedelta(minutes=35)
         with patch.object(SleepPlan, "wake", return_value=late_wake), \
              patch.object(College, "skip_reason", return_value=None):
-            self.assertEqual(self.c.morning(late_wake + timedelta(minutes=2)), "atraso")
-        self.assertTrue(any("atrasada" in e for e in self._events("atraso:%")))
+            self.assertIsNone(self.c.morning(late_wake + timedelta(minutes=2)))
+        self.assertEqual(self._events("atraso:%"), [])
 
     def test_prompt_lists_real_deadlines(self):
         text = "\n".join(self.c.prompt_lines(datetime.combine(self.start, time(12, 0))))

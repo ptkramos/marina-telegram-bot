@@ -254,7 +254,7 @@ class Rituals:
         passo = agenda.passo_atual(etapa, now)
         if not passo or passo.texto != "Tomando banho":
             return
-        seguinte = next((p.inicio for p in etapa.passos if p.inicio > passo.inicio), etapa.fim)
+        seguinte = next((p.inicio for p in etapa.passos if p.inicio > passo.inicio and not p.aviso), etapa.fim)
         minutos = max(8, min(30, int((seguinte - now).total_seconds() // 60) - 2))
         if etapa.prep_tipo == "faculdade":
             key = f"{PREFIX}{day.isoformat()}:cotidiano:banho_manha"     # o bom dia lê essa marca

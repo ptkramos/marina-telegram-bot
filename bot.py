@@ -4461,6 +4461,10 @@ _PROACTIVE_INSTRUCTIONS = {
     'agenda_mudou': ("{detail} Conte pro Patrick, do seu jeito e curto, como quem desabafa com o namorado: o que "
                      "você decidiu e por quê. Não peça permissão nem se justifique demais. Não invente "
                      "acontecimento novo."),
+    # 28/09 (atraso de verdade): ela vai chegar atrasada e conta pra ele no meio da correria.
+    'atraso': ("{detail} Avise o Patrick agora, do seu jeito e curto, no meio da correria: que vai chegar "
+               "atrasada e o que aconteceu. Pode reclamar um pouco, como quem conta pro namorado. Não peça nada "
+               "nem se justifique demais. Não invente acontecimento novo."),
     # 26/09 (Patrick): antes de fazer as unhas, às vezes ela pede a opinião dele sobre a cor.
     'unhas_cor': ("{detail} Pergunte pro Patrick qual das duas cores você faz, do seu jeito e curto (ex.: "
                   "'vermelho ou nude? escolhe vc'). Só as duas cores, sem explicar demais. Não invente "
@@ -4570,7 +4574,7 @@ async def _autonomous_routine_v36(application: Application):
         # 26/09 (Patrick): num compromisso, ela puxa conversa se o celular dela deixa ("Olha com frequência"
         # ou "de vez em quando": café sozinha, shopping, bar); aula, academia, médico e freela só no intervalo.
         # O convite do banheiro e o aviso de que saiu mal passam sempre.
-        if ocupada and why not in ('sexting_solo', 'saiu_mais_cedo', 'unhas_cor', 'cabelo_pergunta')                 and not _celular_na_mao(now):
+        if ocupada and why not in ('sexting_solo', 'saiu_mais_cedo', 'unhas_cor', 'cabelo_pergunta', 'atraso')                 and not _celular_na_mao(now):
             return
         gap = _minutos_desde_iniciativa(now)
         if gap < INITIATIVE_GAP_MIN:
@@ -4599,6 +4603,14 @@ async def _autonomous_routine_v36(application: Application):
             candidate = dict(candidate, reason='agenda_mudou', event_id=None, loop_id=None,
                              detail=viva.detalhe_aviso(aviso_agenda))
             viva.marca_aviso_enviado(now)
+        if why == 'atraso':
+            from atraso import Atraso
+            atrasada = Atraso(memory_manager.db)
+            aviso_atraso = atrasada.aviso(now)
+            if not aviso_atraso:
+                return
+            candidate = dict(candidate, reason='atraso', event_id=None, loop_id=None, detail=aviso_atraso['detail'])
+            atrasada.marca_aviso_enviado(now)
         if why == 'unhas_cor':
             from unhas import Unhas
             unhas = Unhas(memory_manager.db)
@@ -4678,6 +4690,8 @@ async def _autonomous_routine_v36(application: Application):
                 fallback = "amor tô indo pra casa, não tô legal… peguei um uber"
             elif reason == 'agenda_mudou':
                 fallback = "amor desisti… não tô no clima hoje"
+            elif reason == 'atraso':
+                fallback = "amor tô atrasada… depois te conto"
             elif reason == 'sexting_solo':
                 fallback = "Amor… tô aqui me tocando pensando em você. Vem cá?"
             elif reason == 'unhas_cor':

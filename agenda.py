@@ -118,6 +118,7 @@ class Etapa:
     chave: str = ""
     prep_tipo: str = ""
     compromisso: str = ""         # key do compromisso da agenda (agenda reativa)
+    fim_previsto: Optional[datetime] = None   # 28/09: a chegada que ela sabe agora (atraso do caminho só depois)
 
     @property
     def total(self) -> Optional[int]:
@@ -275,14 +276,18 @@ class Agenda:
             com = _com(c["friends"])
             # 1. Se arrumando
             rng = _rng(day, f"prep:{c['key']}")
+            # 28/09 (atraso de verdade): o Se arrumando conta da saída planejada; o que atrasou estica o fim dele
+            # (`sai_plan` é a saída que ela tinha em mente até a hora de sair — os passos não esticam pra trás).
+            base = ida.start - timedelta(minutes=ida.saida_atraso)
+            sai_plan = ida.start - timedelta(minutes=ida.saida_extra)
             if c["tipo"] == "faculdade":
-                inicio = max(wake or ida.start - timedelta(minutes=60), ida.start - timedelta(minutes=90))
+                inicio = max(wake or base - timedelta(minutes=60), base - timedelta(minutes=90))
             else:
-                inicio = ida.start - timedelta(minutes=rng.randint(*PREP_MIN.get(c["tipo"], (8, 12))))
+                inicio = base - timedelta(minutes=rng.randint(*PREP_MIN.get(c["tipo"], (8, 12))))
             inicio = max(inicio, fim_anterior)
             if c.get("decidido_em"):                     # decidiu na hora: se arruma a partir dali
                 decidiu = datetime.fromisoformat(c["decidido_em"])
-                inicio = (max(fim_anterior, decidiu) if ida.start - decidiu <= timedelta(minutes=30)
+                inicio = (max(fim_anterior, decidiu) if base - decidiu <= timedelta(minutes=30)
                           else max(inicio, decidiu))
             # refeição em casa que cai na janela: ela come primeiro e se arruma depois
             # 28/09 (Patrick): na faculdade o café é o 1º passo do Se arrumando, na hora real do meals — o card dizia
@@ -305,21 +310,35 @@ class Agenda:
                 final = ("Esperando carona" if ida.mode == "carona" else
                          "Chamando uber" if ida.mode in ("uber", "uber_dividido") else "Saindo")
                 if cafe:
-                    fim_cafe = min(cafe.end, ida.start)
-                    ini2, lista = self._prep_com_banho(passos + [(final, 10)], fim_cafe, ida.start, fim_anterior)
+                    fim_cafe = min(cafe.end, sai_plan)
+                    ini2, lista = self._prep_com_banho(passos + [(final, 10)], fim_cafe, sai_plan, fim_anterior)
                     inicio = min(cafe.at, ini2)
                     lista = sorted([Passo("Tomando café", cafe.at)] + lista, key=lambda p: p.inicio)
                 else:
-                    inicio, lista = self._prep_com_banho(passos + [(final, 10)], inicio, ida.start, fim_anterior)
+                    inicio, lista = self._prep_com_banho(passos + [(final, 10)], inicio, sai_plan, fim_anterior)
+                if ida.saida_extra:                      # segurou na hora de sair: a saída vai pro fim de verdade
+                    ultimo = timedelta(minutes=min(10, max(1, ida.saida_extra // 2)))
+                    lista = [p for p in lista if p.texto != final] + [Passo(final, max(sai_plan, ida.start - ultimo))]
+                lista += [Passo(t, at, aviso=True) for at, t in ida.avisos if at < ida.start]
+                lista.sort(key=lambda p: p.inicio)
                 lista = self._com_milo(day, lista, inicio, ida.start)
                 out.append(Etapa("arrumando", "Se arrumando", inicio, ida.start,
-                                 linha2=f"Vai sair {self._pra(place['name'])} às {aprox(ida.start)}",
+                                 linha2=f"Vai sair {self._pra(place['name'])} às {aprox(ida.start)}"
+                                        + (" · atrasada" if ida.saida_atraso else ""),
                                  lugar_key="marina_apartment", com=com, celular=CELULAR["arrumando"],
                                  passos=lista, chave=f"prep:{c['key']}", prep_tipo=c["tipo"]))
                 teve_make = teve_make or c["tipo"] in ("noite", "encontro", "jogo")
             # 2. A caminho
-            out.append(self._trajeto(ida, "caminho", "A caminho",
-                                     f"Chega {self._na(place['name'])} às {aprox(ida.end)}", place, c))
+            # 28/09: a chegada que ela sabe agora — o que o caminho atrasou só conta depois de acontecer
+            futuro = ida.caminho_atraso if ida.caminho_at and now < ida.caminho_at else 0
+            chega = ida.end - timedelta(minutes=futuro)
+            atras = ida.atraso - futuro
+            caminho = self._trajeto(ida, "caminho", "A caminho", f"Chega {self._na(place['name'])} às {aprox(chega)}"
+                                    + (f" · {duracao(timedelta(minutes=atras))} atrasada" if atras > 0 else ""), place, c)
+            caminho.fim_previsto = chega if futuro else None
+            caminho.passos += [Passo(t, at, aviso=True) for at, t in ida.avisos if at >= ida.start]
+            caminho.passos.sort(key=lambda p: p.inicio)
+            out.append(caminho)
             # 3. Lá
             out.append(self._la(c, place, com, now, volta))
             # 4. Voltando
@@ -561,7 +580,18 @@ class Agenda:
             cel = CELULAR["role"] if c["tipo"] != "freela" else CELULAR["aula"]
         fim_la = volta.start if volta else fim_real
         passos = self._reativa(c["key"], passos, fim_la)
-        return Etapa("la", titulo, c["inicio"], fim_la, linha2=f"Volta pra casa às {aprox(fim_la)}",
+        inicio = c["inicio"]
+        ida = c.get("ida")
+        if ida is not None and ida.atraso > 0 and ida.end > inicio:
+            # 28/09 (atraso de verdade): o compromisso começou sem ela — "Lá" começa quando ela chega
+            inicio = ida.end
+            antes = [p for p in passos if p.inicio < inicio and not p.aviso]
+            passos = [p for p in passos if p.inicio >= inicio or p.aviso]
+            if antes:                                    # entra no meio do que já estava rolando
+                passos.append(Passo(antes[-1].texto, inicio, valor=antes[-1].valor))
+            passos.append(Passo(f"Chegou {duracao(timedelta(minutes=ida.atraso))} atrasada", inicio, aviso=True))
+            passos.sort(key=lambda p: (p.inicio, not p.aviso))
+        return Etapa("la", titulo, inicio, fim_la, linha2=f"Volta pra casa às {aprox(fim_la)}",
                      lugar_key=c["place"], bairro=place["region"], com=com, celular=cel, passos=passos,
                      chave=f"la:{c['key']}")
 
@@ -680,15 +710,19 @@ class Agenda:
                 atual_passo = self.passo_atual(e, now)
                 for p in e.passos:
                     feito = p.inicio <= now
+                    if p.aviso and not feito:
+                        continue                    # 28/09: o imprevisto só aparece depois de acontecer
                     st = "aviso" if p.aviso and feito else "agora" if p is atual_passo else "feito" if feito else "depois"
                     if e.tipo == "la" and not feito and p.valor is not None:
                         continue                    # consumo só aparece depois de pedido
                     item["passos"].append({"texto": p.texto, "estado": st, "valor": p.valor if feito else None,
                                            "hora": hora(p.inicio) if feito else ""})
             linha.append(item)
+        fim_card = atual.fim_previsto or atual.fim
+        pos = (now - atual.inicio).total_seconds() / max(1, (fim_card - atual.inicio).total_seconds())
         return {"titulo": atual.titulo, "linha2": atual.linha2,
-                "barra": {"inicio": hora(atual.inicio), "fim": aprox(atual.fim), "pct": round(max(0, min(1, pos)) * 100),
-                          "meio": f"há {duracao(now - atual.inicio)}" + ("" if atual.tipo == "la" else f" · faltam ~{duracao(atual.fim - now)}")},
+                "barra": {"inicio": hora(atual.inicio), "fim": aprox(fim_card), "pct": round(max(0, min(1, pos)) * 100),
+                          "meio": f"há {duracao(now - atual.inicio)}" + ("" if atual.tipo == "la" else f" · faltam ~{duracao(max(timedelta(0), fim_card - now))}")},
                 "grade": grade, "linha": linha}
 
     # ------------------------------------------------------ card em casa --

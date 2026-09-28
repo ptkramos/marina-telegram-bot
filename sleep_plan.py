@@ -488,7 +488,7 @@ class SleepPlan:
             lines.append("- Ontem à noite você " + "; ".join(why) + ".")
         late = self.overslept(day)
         if late:
-            lines.append(f"- Passou {late} min do despertador e saiu correndo pra não chegar atrasada.")
+            lines.append(f"- Passou {late} min do despertador e teve que se arrumar correndo.")
         wakes = self.micro_wakes(day - timedelta(days=1))
         if wakes:
             lines.append("- De madrugada você " + " e depois ".join(
@@ -518,7 +518,7 @@ def _first_departure(db_key: str, db, day: date) -> Optional[datetime]:
         leave = first - timedelta(minutes=40)
         try:
             from commute import Commute
-            ida = [leg for leg in Commute(db).legs_on(day) if leg.key.endswith(":puc:ida")]
+            ida = [leg for leg in Commute(db).legs_on(day, planejado=True) if leg.key.endswith(":puc:ida")]
             if ida:
                 leave = ida[0].start
         except Exception:
