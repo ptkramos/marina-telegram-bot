@@ -67,22 +67,22 @@ dividindo balão; vocabulário da masturbação; música que ele manda por link.
 3. Técnicas antigas (PLANO_VOZ 13).
 
 ## 4. Infra — skill `frente-infra`
-**Abertura:** "bora na frente de infra: pilha no limite e desempenho — plano do dia calculado uma vez, antes de construir mais"
+**Abertura:** "bora na frente de infra: API paga de rotas — quantas chamadas a produção faz por dia e o default local desligado"
+
+**Pronto (28/09, noite):** pilha no limite e desempenho (`1d40f4a`, na produção): o ciclo trechos → academia → sono →
+despertador → trechos (997/1000 níveis na VPS) cortado — pilha 75; plano do dia uma vez por rodada (`db.rodada`/`memo`,
+invalida sozinho quando algo grava); primeiro resolve na VPS 0,81 → 0,33 s; saída igual ao código antigo (só o
+despertador passa a seguir sempre a regra). Detalhe na AUDITORIA ("Frente de infra (28/09, noite)").
 
 **Próximo:**
-1. ✅ **Desempenho e pilha (28/09, noite):** a pilha era um ciclo (trechos → academia → sono → despertador →
-   trechos) que batia no limite a cada resolve (997/1000 na VPS); cortado (`Commute.ida_puc`), pilha 55. Plano do
-   dia uma vez por rodada (`db.rodada`/`memo`, cai sozinho quando algo grava): resolve 2,9 → 1,2 s na cópia local;
-   pré-visualização com conexão reaproveitada (Hoje ~65 s → ~1 s). Saída igual ao código antigo (só o despertador
-   passa a seguir sempre a regra). Detalhe na AUDITORIA ("Frente de infra (28/09, noite)").
-2. **API paga de rotas:** `commute._live_minutes` usa a `DISTANCE_MATRIX_KEY` do `.env` fora dos testes; varredura
+1. **API paga de rotas:** `commute._live_minutes` usa a `DISTANCE_MATRIX_KEY` do `.env` fora dos testes; varredura
    local deve rodar com `COMMUTE_LIVE_TIMES=false` (ou o default local ser desligado). Conferir também quantas
    chamadas a produção faz por dia (cache por trecho/dia?).
-3. Do Patrick (ele faz): trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot da VPS.
-4. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
+2. Do Patrick (ele faz): trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot da VPS.
+3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
-**Abertura:** "bora na frente de bugs: <o que você viu, com a hora>"
+**Abertura:** "bora na frente de bugs: item 14 — o Milo 'dormiu no sofá' às 17:21 com ela no passeio na Enseada, e ela confirmou no chat (e o look de antes)"
 
 Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
 
