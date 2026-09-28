@@ -4,8 +4,8 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 20:40 (bug 16 corrigido na frente de bugs; **freio decidido com o Patrick: fecha a
-lista abaixo e para tudo pro soak**; próxima conversa na frente da voz, item 2)._
+_Atualizado em 28/09/2026, 20:45 (bug 16 corrigido e na produção em `e9ba399`; **freio decidido com o Patrick:
+fecha a lista abaixo e para tudo pro soak**; próxima conversa na frente da voz, item 2 da seção 0)._
 
 ---
 
@@ -108,11 +108,16 @@ círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
 **Pronto (26/09):** balões inteiros e uma iniciativa por vez (fim das mensagens fora de ordem); ponto final
 dividindo balão; vocabulário da masturbação; música que ele manda por link.
 
-**Próximo:**
-1. Regras das fotos por promessa (PLANO_VOZ 15: quando ela cumpre) e auditoria do prompt do chat (PLANO_VOZ 16).
-2. Observar coerência entre turnos e qualidade das iniciativas no uso real (PLANO_VOZ 12, com /bom e /ruim).
-3. Técnicas antigas (PLANO_VOZ 13).
-4. Histórico puxando assunto velho (bug 14, 28/09): às 17:24, passeando na Enseada, ela disse "tô organizando umas referências de look" — repetição do que ela disse às 13:41. A causa principal (o sofá do Milo no prompt) saiu; se voltar a acontecer sem fato contraditório, é da voz.
+**Próximo (antes do soak: 1 e 2 juntos, nesta conversa):**
+1. Histórico puxando assunto velho (bugs 14 e 16, 28/09): às 17:24, passeando na Enseada, "tô organizando umas
+   referências de look" (repetia a fala das 13:41); às 18:58, na Bodytech, "sofá com o Milo, escolhendo umas
+   referências pro trabalho de Práticas Experimentais VI" (a fala das 17:24 + o bloco da faculdade). Os fatos que
+   brigavam saíram do prompt (sofá sem hora, academia como "probabilística"); o que sobra é o histórico — ver no
+   prompt remontado se a regra "NUNCA invente atividade por hábito do histórico" basta ou se a fala velha precisa de
+   hora/local no histórico.
+2. Regras das fotos por promessa (PLANO_VOZ 15: quando ela cumpre) e auditoria do prompt do chat (PLANO_VOZ 16).
+3. Depois do soak: observar coerência entre turnos e iniciativas (PLANO_VOZ 12, /bom e /ruim); técnicas antigas
+   (PLANO_VOZ 13).
 
 ## 4. Infra — skill `frente-infra`
 **Abertura:** "bora na frente de infra: relatório do soak" (freio: item 4 da seção 0 — relatório diário + API de rotas)
