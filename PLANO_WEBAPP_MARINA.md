@@ -210,13 +210,28 @@ então de manhã quase tudo tinha sumido.
   descida do Milo que cai em qualquer Se arrumando vira o passo "Descendo com o Milo" na hora dela (o seguinte espera
   ela subir). Ver AUDITORIA ("Bug: manhã de 28/09") e `tests/test_bug_manha_2809.py`.
 - **Aba nova "Por fora" (Patrick, 28/09):** tem coisa no Por dentro que é aparência, não sentimento — vai pra uma aba
-  Por fora (candidatos: Unhas e Cabelo; o resto decidir com ele). Fica pra frente dos apps depois do atraso de verdade
-  (frente do mundo), antes da Dinheiro e da Mundo.
+  Por fora. Feita na mesma tarde (seção abaixo).
 - **Código:** `por_dentro.py` (novo), `webapp_server` (`emocao_view`, `motivo_tela`, `_alguem` com "você", Ciclo),
   `emotion` (`day_log`, padrão dos motivos), `unhas.painel`, `cabelo.painel`/`_dia_lavagem`, `agenda_viva._sente`,
   `planner` (regra do `cause`), `bot._status_snapshot` (`ciclo_len`), `webapp/` (ordem, desenho, recarga, CSS). Testes em
   `tests/test_bastidores_textos.py` (+ Na cabeça, diário, Vocês dois, padrão do mundo), `test_unhas`, `test_cabelo`,
   `test_emotion_d14`.
+
+### Bastidores aba a aba — Por fora (28/09, tarde, no celular, com o banco da produção) ✅
+Aba nova entre Por dentro e Dinheiro (**Agora · Por dentro · Por fora · Dinheiro · Mundo**; as cinco cabem no
+celular com a largura de cada aba pelo texto). Escolhas do Patrick com mockup e múltipla escolha:
+- **Conteúdo (opção C):** Peso, Cabelo e Unhas agora; **roupa e make do momento** entram num bloco "Agora" no topo
+  quando existirem no mundo — hoje a roupa só nasce na hora da foto (sorteio do guarda-roupa do `photo_director`) e a
+  make só como passo do card ("Fazendo maquiagem", "Tirando maquiagem"). Registrado como item da frente do mundo.
+- **Ordem:** Peso → Cabelo → Unhas. Unhas e Cabelo saíram do Por dentro sem mudar o desenho.
+- **Peso** (novo, `Meals.painel_peso`): o número grande é o **peso de verdade** ("54,4 kg"; ela só sabe o da balança);
+  barra **Agência** que enche de 52 a 56 kg com a folga na direita ("Folga 1,6 kg"; "No limite"; "Passou 0,3 kg" em
+  amarelo); linhas **Pesou** ("Sáb, 54,0 kg", "Hoje, …", "Há 13 dias, …", "Ainda não"), **Dieta** ("Não" / "Até 03/10")
+  e **Altura** ("1,68 m").
+- **Textos que eu decidi (pra ele revisar):** rótulo "Agência", "Folga X kg" / "No limite" / "Passou X kg", "Pesou",
+  "Ainda não", "Dieta", "Até dd/mm", "Altura"; ícones scale, salad, ruler-2.
+- **Código:** `meals.painel_peso`/`_kg`, `webapp_server.api_bastidores` (`peso`), `webapp/` (aba, `ba-fora`, `.seg` com
+  cinco abas). Testes: `tests/test_por_fora.py` (5).
 
 ### Aba Agora — decisões com o Patrick, linha a linha (26/09; saída de casa implementada, atividades em casa a decidir)
 **Por quê:** o status só mostrava onde ela está e o que faz; não existia preparação nem "indo fazer" (fora a faculdade de manhã) — do "tempo livre em casa" ela pulava pro trajeto.

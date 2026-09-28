@@ -30,9 +30,13 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 3. Salão (Ophicina) ainda não é repensado pelo humor nem remarcado pela conversa (tem estado próprio em `unhas.py`/`cabelo.py`).
 4. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
 5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
+6. **Roupa e make de verdade** (Patrick, 28/09, aba Por fora opção C): hoje a roupa nasce na hora da foto (sorteio do
+   guarda-roupa) e a make é só passo do card. Virar estado: roupa pela etapa/lugar (pijama, treino, faculdade, sair,
+   camisa do Botafogo) e make feita no Se arrumando e tirada antes de dormir; a foto usa a mesma roupa; depois a frente
+   dos apps mostra no bloco "Agora" da Por fora.
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** "bora na frente dos apps: aba Por fora (aparência dela, saindo do Por dentro) e depois Dinheiro e Mundo"
+**Abertura:** "bora na frente dos apps: Bastidores, aba Dinheiro e depois Mundo"
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; **Instagram** no ar (27/09) com acervo refeito
@@ -42,9 +46,9 @@ fora à noite com luz de noite; post 6 refeito.
 **Próximo:**
 1. Bastidores **aba a aba** com ele: **Por dentro ✅ (28/09)** — ordem nova, Ciclo no Corpo, Hoje por dentro, Na
    cabeça (agenda viva à vista), motivos num padrão só em voz de painel, barras deslizando a cada 30 s.
-   **Por fora** (Patrick, 28/09): aba nova pra aparência dela — o que não faz sentido no Por dentro sai de lá
-   (candidatos: Unhas, Cabelo; decidir com ele o resto). Depois **Dinheiro** e **Mundo**, no celular, palavra por
-   palavra (PLANO_VOZ 14).
+   **Por fora ✅ (28/09, tarde)** — aba nova: Peso (novo) → Cabelo → Unhas; o bloco "Agora" (roupa e make do
+   momento) entra quando o mundo tiver isso (item 6 do mundo). Agora **Dinheiro** e **Mundo**, no celular, palavra
+   por palavra (PLANO_VOZ 14).
 2. Instagram no uso real: o próximo post de rolê da noite (luz e cabelo) e os textos ao vivo (tipo por pessoa, sem molde).
 3. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
 4. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).

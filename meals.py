@@ -149,6 +149,11 @@ def _rng(day: date, name: str) -> random.Random:
     return random.Random(f"marina-meal:{day.isoformat()}:{name}")
 
 
+def _kg(v: float) -> str:
+    """54.4 → '54,4' (painel)."""
+    return f"{v:.1f}".replace(".", ",")
+
+
 def _at(day: date, lo: time, hi: time, rng: random.Random) -> datetime:
     start = datetime.combine(day, lo)
     span = int((datetime.combine(day, hi) - start).total_seconds() // 60)
@@ -212,6 +217,29 @@ class Meals:
     def on_diet(self, day: date) -> bool:
         until = self.weight().get("diet_until")
         return bool(until) and day <= date.fromisoformat(until)
+
+    def painel_peso(self, now: datetime) -> dict:
+        """Seção "Peso" da aba Por fora (Patrick, 28/09): o peso de verdade (ela só sabe o da balança),
+        a barra de folga até o limite da agência (enche de 52 a 56 kg; amarela quando passa), Pesou, Dieta
+        e Altura."""
+        data = self.weight()
+        kg = float(data["kg"])
+        folga = self.AGENCY_MAX_KG - kg
+        palavra = (f"Folga {_kg(folga)} kg" if folga > 0.05 else "No limite" if folga > -0.05
+                   else f"Passou {_kg(-folga)} kg")
+        pesou = "Ainda não"
+        if data.get("known_at") and data.get("known_kg") is not None:
+            dias = (now.date() - datetime.fromisoformat(data["known_at"]).date()).days
+            quando = ("Hoje" if dias == 0 else "Ontem" if dias == 1
+                      else ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")[
+                          datetime.fromisoformat(data["known_at"]).weekday()] if dias < 7 else f"Há {dias} dias")
+            pesou = f"{quando}, {_kg(float(data['known_kg']))} kg"
+        until = data.get("diet_until")
+        dieta = f"Até {date.fromisoformat(until):%d/%m}" if until and now.date() <= date.fromisoformat(until) else "Não"
+        span = self.AGENCY_MAX_KG - self.HEALTH_MIN_KG
+        return {"kg": f"{_kg(kg)} kg", "barra": round(max(0.0, min(1.0, (kg - self.HEALTH_MIN_KG) / span)), 2),
+                "palavra": palavra, "alerta": folga < -0.05,
+                "linhas": [["scale", "Pesou", pesou], ["salad", "Dieta", dieta], ["ruler-2", "Altura", "1,68 m"]]}
 
     def day_plan(self, day: date) -> list[MealSlot]:
         """O dia de comida dela, determinístico por data."""

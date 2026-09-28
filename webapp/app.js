@@ -334,10 +334,19 @@ const loaders = {
       desenhaHoje();
 
       // Por dentro — 28/09 (Patrick, no celular): Corpo, Humor, Sentindo agora, Na cabeça, Hoje por dentro,
-      // Vocês dois, Unhas, Cabelo
+      // Vocês dois. Unhas e Cabelo foram pra aba Por fora (28/09).
       $("bd-corpo").innerHTML = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Tesão")).join("")
         + (e.linhas.length || e.no_clima ? `<div class="linhas sep">${e.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}
           ${e.no_clima ? `<div class="linha"><span class="li-ic">${ic("flame")}</span><span class="li-rot">No clima agora</span></div>` : ""}</div>` : "");
+      // Por fora — 28/09 (Patrick): Peso (barra de folga até a agência, amarela quando passa), Cabelo, Unhas
+      const ps = d.peso;
+      $("bf-peso-t").hidden = $("bf-peso").hidden = !ps;
+      if (ps) {
+        $("bf-peso").innerHTML = `<div class="big">${esc(ps.kg)}</div>
+          <div class="ca-barras"><div class="bar-row"><span>Agência</span><div class="bar${ps.alerta ? " alerta" : ""}"><i style="width:${pct(ps.barra)}%"></i></div>
+            <span class="w">${esc(ps.palavra)}</span></div></div>
+          <div class="linhas sep">${ps.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
+      }
       // 26/09 (Patrick): unhas em seção própria. 28/09: a barra ganha rótulo, igual ao Cabelo (Desgaste · estado)
       const u = d.unhas;
       $("bd-unhas-t").hidden = $("bd-unhas").hidden = !u;
