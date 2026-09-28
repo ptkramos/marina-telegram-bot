@@ -850,7 +850,8 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         prompt = (prompt.replace("Behind her, ", f"{friend_line} Behind them, ", 1) if "Behind her, " in prompt
                   else f"{prompt} {friend_line}")
     if luz:     # 28/09: "natural light" do molde puxava sol pra foto da noite
-        prompt = prompt.replace("natural light", "warm night-time light")
+        prompt = re.sub(r"\b([Nn])atural light", lambda m: ("W" if m.group(1) == "N" else "w") + "arm night-time light",
+                        prompt)
     # Gozo especial: se dedilhando (pose com o momento "fingers"), às vezes — o dobro no período fértil.
     special = (beat == "climax" and "fingers" in dict(pose.beats) and room in apartamento.ROOMS
                and rng.random() < SPECIAL_CLIMAX_CHANCE * (2 if fertile else 1))

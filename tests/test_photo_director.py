@@ -116,7 +116,10 @@ class DirectorTest(unittest.TestCase):
         self.assertNotIn("at night", dia.prompt)
         noite = self.shot("manda uma foto", camera=bar, now=tarde, send=False, scene_at=NOW - timedelta(days=1))
         self.assertIn("dark night street", noite.prompt)
-        self.assertNotIn("natural light", noite.prompt)
+        self.assertNotIn("natural light", noite.prompt.lower())
+        amiga = self.shot("manda uma foto", camera=bar, now=tarde, send=False, scene_at=NOW,
+                          force_pose="fora_amigas_alguem_tirando")
+        self.assertNotIn("natural light", amiga.prompt.lower(), "o molde da amiga tirando começa com maiúscula")
 
     def test_expression_follows_mood_and_arousal(self):
         self.assertIn("lustful", pd.expression(None, IntimacyTurn(state="active", arousal=0.9)))
