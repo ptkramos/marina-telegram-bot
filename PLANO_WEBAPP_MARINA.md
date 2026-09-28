@@ -204,6 +204,11 @@ então de manhã quase tudo tinha sumido.
   "ciuminho" pelo seu ciúme; a barra Saudade de Vocês dois só enche com ela acordada. Ver AUDITORIA ("Bug:
   Bastidores às 05:55") e `tests/test_bug_por_dentro_2809.py`. Na produção desde 28/09 09:53, com o banco limpo
   (carinhos falsos da manhã, noite de 27/09 = 00:29, linhas velhas do pai e do ciúme).
+- **Aba Agora, Se arrumando da faculdade (bug de 28/09, frente de bugs):** o card dizia "Tomando café" 07:36–07:46 e
+  "Tomando banho" até 08:06 com ela pulando o café e descendo com o Milo às 07:58. Agora (decisão do Patrick, "café
+  dentro") o café é o 1º passo, na hora real do meals, e o Se arrumando começa nele; pulou o café, sem passo. A
+  descida do Milo que cai em qualquer Se arrumando vira o passo "Descendo com o Milo" na hora dela (o seguinte espera
+  ela subir). Ver AUDITORIA ("Bug: manhã de 28/09") e `tests/test_bug_manha_2809.py`.
 - **Código:** `por_dentro.py` (novo), `webapp_server` (`emocao_view`, `motivo_tela`, `_alguem` com "você", Ciclo),
   `emotion` (`day_log`, padrão dos motivos), `unhas.painel`, `cabelo.painel`/`_dia_lavagem`, `agenda_viva._sente`,
   `planner` (regra do `cause`), `bot._status_snapshot` (`ciclo_len`), `webapp/` (ordem, desenho, recarga, CSS). Testes em

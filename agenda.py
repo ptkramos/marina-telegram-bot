@@ -40,7 +40,7 @@ PREP = {
     "noite": (("Tomando banho", 25), ("Secando cabelo", 20), ("Fazendo maquiagem", 25), ("Escolhendo roupa", 20)),
     "encontro": (("Tomando banho", 40), ("Fazendo maquiagem", 25), ("Escolhendo roupa", 25)),
     "freela": (("Tomando banho", 50), ("Escolhendo roupa", 35)),        # sem make: é feita lá
-    "faculdade": (("Tomando café", 25), ("Tomando banho", 35), ("Escolhendo roupa", 25)),
+    "faculdade": (("Tomando banho", 35), ("Escolhendo roupa", 25)),   # o café vem do meals (28/09)
     "praia": (("Colocando biquíni", 50), ("Passando protetor", 40)),
     "academia": (("Colocando roupa de treino", 60), ("Enchendo a garrafinha", 20)),
     # 26/09 — agenda única: passeio do Milo, saídas por vontade, mercado e médico
@@ -285,16 +285,33 @@ class Agenda:
                 inicio = (max(fim_anterior, decidiu) if ida.start - decidiu <= timedelta(minutes=30)
                           else max(inicio, decidiu))
             # refeição em casa que cai na janela: ela come primeiro e se arruma depois
+            # 28/09 (Patrick): na faculdade o café é o 1º passo do Se arrumando, na hora real do meals — o card dizia
+            # "Tomando café" 07:36–07:46 com ela pulando o café (07:52). Pulou: sem passo.
+            cafe = None
             for s in self._refeicoes_em_casa(day):
+                if c["tipo"] == "faculdade" and s.kind == "cafe":
+                    cafe = s
+                    continue
                 if s.at < ida.start and s.end > inicio:
                     inicio = max(inicio, s.end)
+            if cafe and not (inicio <= cafe.at < ida.start):
+                if cafe.at < inicio < cafe.end:
+                    inicio = cafe.end                    # o café atravessa o começo: se arruma depois dele
+                cafe = None
             if inicio < ida.start:
                 passos = list(PREP.get(c["tipo"], PREP["cafe"]))
                 if c["tipo"] == "faculdade" and rng.random() < FACULDADE_CABELO_CHANCE:
-                    passos.insert(2, ("Secando cabelo", 15))
+                    passos.insert(1, ("Secando cabelo", 15))
                 final = ("Esperando carona" if ida.mode == "carona" else
                          "Chamando uber" if ida.mode in ("uber", "uber_dividido") else "Saindo")
-                inicio, lista = self._prep_com_banho(passos + [(final, 10)], inicio, ida.start, fim_anterior)
+                if cafe:
+                    fim_cafe = min(cafe.end, ida.start)
+                    ini2, lista = self._prep_com_banho(passos + [(final, 10)], fim_cafe, ida.start, fim_anterior)
+                    inicio = min(cafe.at, ini2)
+                    lista = sorted([Passo("Tomando café", cafe.at)] + lista, key=lambda p: p.inicio)
+                else:
+                    inicio, lista = self._prep_com_banho(passos + [(final, 10)], inicio, ida.start, fim_anterior)
+                lista = self._com_milo(day, lista, inicio, ida.start)
                 out.append(Etapa("arrumando", "Se arrumando", inicio, ida.start,
                                  linha2=f"Vai sair {self._pra(place['name'])} às {aprox(ida.start)}",
                                  lugar_key="marina_apartment", com=com, celular=CELULAR["arrumando"],
@@ -340,6 +357,7 @@ class Agenda:
                             lista += self._distribui(resto, b_fim, bed)
                     else:
                         lista = self._distribui(resto, inicio, bed)
+                lista = self._com_milo(day, lista, inicio, bed)
                 out.append(Etapa("arrumando", "Se arrumando", inicio, bed, linha2=f"Vai dormir às {aprox(bed)}",
                                  lugar_key="marina_apartment", celular=CELULAR["arrumando"],
                                  passos=lista, chave=f"prep:dormir:{day}", prep_tipo="dormir"))
@@ -366,6 +384,45 @@ class Agenda:
         if b_fim < sai:
             lista += self._distribui(depois, b_fim, sai)
         return inicio, lista
+
+    def _com_milo(self, day: date, lista: list[Passo], inicio: datetime, fim: datetime) -> list[Passo]:
+        """28/09: o Milo desceu pro xixi às 07:58 e o card dizia "Tomando banho" (07:46–08:06). A descida do Milo
+        que cai no Se arrumando vira passo, na hora dela."""
+        try:
+            from milo import Milo
+            descidas = [(d["at"], d["at"] + timedelta(minutes=d["minutes"])) for d in Milo(self.db).day_plan(day)
+                        if d["minutes"] and not d["key"].endswith(":passeador")]
+        except Exception:
+            logger.exception("agenda.milo.error")
+            return lista
+        for ini, fim_d in descidas:
+            if inicio <= ini < fim:
+                lista = self._encaixa(lista, "Descendo com o Milo", ini, min(fim_d, fim), fim)
+        return lista
+
+    @staticmethod
+    def _encaixa(lista: list[Passo], texto: str, ini: datetime, fim: datetime, ate: datetime) -> list[Passo]:
+        """Um passo com hora marcada no meio do Se arrumando. O que começaria durante ele espera ele acabar; o que
+        estava rolando volta depois — menos o banho, que ela termina antes de descer (aí o passo seguinte adianta)."""
+        out = sorted(lista, key=lambda p: p.inicio)
+        atual = next((p for p in reversed(out) if p.inicio < ini and not p.aviso), None)
+        dentro = [p for p in out if ini <= p.inicio < fim and not p.aviso]
+        depois = next((p for p in out if p.inicio >= fim and not p.aviso), None)
+        if fim < ate:
+            if dentro:                                  # espremidos entre a volta e o passo seguinte
+                limite = depois.inicio if depois else ate
+                passo = (limite - fim) / len(dentro)
+                for n, p in enumerate(dentro):
+                    p.inicio = fim + passo * n
+            elif atual and depois and (atual.texto.startswith("Tomando banho")
+                                       or depois.inicio - fim < timedelta(minutes=3)):
+                depois.inicio = fim                     # banho não volta, e 1 min de volta só picota o card
+            elif atual and (not depois or depois.inicio > fim):
+                out.append(Passo(atual.texto, fim))
+        else:
+            out = [p for p in out if p not in dentro]
+        out.append(Passo(texto, ini))
+        return sorted(out, key=lambda p: p.inicio)
 
     def _banhos(self, ini: datetime, fim: datetime) -> list[tuple[datetime, datetime, bool]]:
         """Banhos de verdade (rituals.start_shower) que começaram entre `ini` e `fim`."""
@@ -562,7 +619,8 @@ class Agenda:
             return None
         passo = self.passo_atual(e, now)
         pra = "pra dormir" if e.prep_tipo == "dormir" else e.linha2.replace("Vai sair ", "pra sair ").split(" às ")[0]
-        texto = f"se arrumando {pra}" + (f" ({passo.texto.lower()})" if passo else "")
+        miudo = (passo.texto[:1].lower() + passo.texto[1:]) if passo else ""   # "descendo com o Milo", não "milo"
+        texto = f"se arrumando {pra}" + (f" ({miudo})" if passo else "")
         return {"activity": texto, "place_key": "marina_apartment", "start_at": e.inicio.isoformat(),
                 "end_at": e.fim.isoformat(), "passo": passo.texto if passo else "", "chave": e.chave,
                 "prep_tipo": e.prep_tipo}

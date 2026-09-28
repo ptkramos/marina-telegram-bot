@@ -118,6 +118,19 @@ class ProactivityService:
 
             return last_user_dt, last_auto_dt
 
+    def esperando_ele(self, now: datetime) -> bool:
+        """28/09: ele escreveu às 05:52 ("indo pro plantão"), ela respondeu às 07:47 e às 07:51 puxou "como tá o
+        plantão?". Ela falou por último há pouco: espera ele responder, como no depois de ele falar."""
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT timestamp FROM conversas WHERE role='assistant' ORDER BY id DESC LIMIT 1").fetchone()
+        if not row:
+            return False
+        dela = datetime.fromisoformat(row["timestamp"])
+        last_user, _ = self.get_last_messages_timestamps()
+        if last_user and last_user > dela:
+            return False
+        return now - dela < timedelta(minutes=settings.USER_IDLE_MINUTES_BEFORE_PROACTIVE)
+
     def get_autonomous_count_today(self, now: Optional[datetime] = None) -> int:
         """Conta quantas iniciativas autônomas a Marina já tomou hoje."""
         dt = now or datetime.now()
@@ -190,8 +203,11 @@ class ProactivityService:
         # que ela procuraria". A saudade passa por cima do teto diário e do
         # cooldown fixo; quem segura a repetição é a espera crescente quando ele
         # não responde.
+        # 28/09: acabou de falar com ele e ele ainda não respondeu — saudade, tesão e assunto esperam
+        # (os avisos com hora — saiu mal, desistiu, cabelo, unhas, convite do banheiro — não).
+        esperando = self.esperando_ele(dt)
         saudade = self.saudade(dt)
-        if saudade["trigger"]:
+        if saudade["trigger"] and not esperando:
             logger.info("proactivity.saudade level=%.2f hours=%.1f unanswered=%d",
                         saudade["level"], saudade["hours"], saudade["unanswered"])
             return True, "saudade"
@@ -242,7 +258,7 @@ class ProactivityService:
         except Exception:
             logger.exception("proactivity.sexting_solo")
 
-        if self.tesao_initiative(dt):
+        if not esperando and self.tesao_initiative(dt):
             # Assunto importante dele (compromisso pra perguntar como foi) vem antes.
             if self.determine_living_world_candidate(dt).get("rank", 0) < 70:
                 return True, "tesao"
@@ -266,6 +282,8 @@ class ProactivityService:
             minutos_desde_auto = (dt - last_auto_dt).total_seconds() / 60.0
             if minutos_desde_auto < settings.AUTONOMOUS_COOLDOWN_MINUTES:
                 return False, "autonomous_cooldown_active"
+        if esperando:
+            return False, "esperando_ele"
 
         # Fase B.5 — Marina de bobeira te procura mais; ocupada procura menos.
         # Fator multiplicativo sobre a chance estocástica; cooldown/teto diário

@@ -1601,6 +1601,18 @@ Achados da frente dos apps revisando o Por dentro com a cópia do banco (ela dor
 
 `tests/test_bug_por_dentro_2809.py`, 15 testes com os horários do caso.
 
+## Bug: manhã de 28/09 (Se arrumando da faculdade × café × Milo; iniciativa colada)
+Confirmado na produção (`world_state` 466–477, `life_events`, `conversas` 183–187, `estado_relacional`, journal):
+- **"Tomando café" 07:36–07:46 com o café pulado, mundo/card.** O Se arrumando da faculdade tinha o passo fixo "Tomando café"; quem decide o café é o `meals.day_plan` (em dia de aula, 15–40 min depois de acordar, às vezes pulado): `meal:2026-09-28:cafe` às 07:52, "Pulou o café da manhã". Quando ela comia, era pior: a refeição empurrava o começo do Se arrumando e o card ainda punha o passo. Agora (decisão do Patrick, "café dentro") o café é o 1º passo na hora real do meals e o Se arrumando começa nele; pulou, sem passo; café antes da janela fica no Em casa.
+- **"Tomando banho" com ela descendo com o Milo às 07:58, mundo/card.** O xixi da manhã (`milo.day_plan`, 5–25 min depois de acordar, `state=False`) não aparecia em lugar nenhum da agenda. `Agenda._com_milo`/`_encaixa`: a descida que cai em qualquer Se arrumando (inclusive o de dormir, com o xixi da noite) vira o passo "Descendo com o Milo" na hora dela; o que começaria durante espera ela subir, o que estava rolando volta depois (menos o banho, que termina antes — o passo seguinte adianta; e volta de menos de 3 min também não, só picotava o card). O `rituals._banho_prep` já mede o banho até o passo seguinte, então o banho de verdade acaba antes da descida. E o Milo não desce mais no meio do café dela (`Milo._cafe`: antes, se cabe; senão depois).
+- **"(descendo com o milo)", mundo.** `prep_activity` punha o passo todo em minúscula; agora só a primeira letra.
+- **Iniciativa 4 min depois da resposta, proatividade.** Ele escreveu às 05:52 ("Indo pro plantão"), ela respondeu às 07:47 e às 07:51 o `autonomous_routine` mandou "como tá o plantão até agora?" (`last_autonomous_reason=open_loop_checkin`, rank ≥ 70 — sai antes do log do `state_factor`, por isso o journal não dizia o motivo). A espera só olhava a última mensagem dele (2 h antes) e a última iniciativa. `ProactivityService.esperando_ele`: ela falou por último há menos de 45 min (`USER_IDLE_MINUTES_BEFORE_PROACTIVE`) e ele não respondeu → saudade, tesão, assunto e sorteio esperam; os avisos com hora (saiu mal, desistiu, cabelo, unhas, convite do banheiro) não.
+- **Visto e registrado pra frente do mundo (pergunta do Patrick):** atraso só existe na aula e desamarrado — o `college` registra "chegou 12 min atrasada" quando ela perde o despertador (15% dos dias de aula), mas a ida pra PUC tem hora fixa e o card mostra ela saindo na hora; rolê, freela, academia e consulta nunca atrasam.
+
+Conferido na cópia da produção: Se arrumando 07:33–08:19 = Tomando banho · Escolhendo roupa · Descendo com o Milo 07:58 · Saindo 08:11, sem café.
+
+`tests/test_bug_manha_2809.py`, 10 testes com os horários do caso (9 falham no código antigo). Suíte: 1298 testes; a única falha é a já registrada (`test_college_d7.test_she_skips_class_when_she_slept_terribly`, falha igual sem esta mudança).
+
 ## Frente de auditoria de funcionamento (27/09)
 O Patrick está achando muitos bugs depois do 26/09 (~50 commits em várias conversas). Frente nova, skill `frente-auditoria` e seção 7 do `FRENTES_MARINA.md`: conferir entrega por entrega, com prova na produção, se funciona e está amarrada com o resto, e se falta deploy. Ponto de partida: VPS em `afd81fd`, `main` em `f69d2d4` (dois commits da frente de imagens sem deploy).
 

@@ -28,6 +28,12 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 3. Salão (Ophicina) ainda não é repensado pelo humor nem remarcado pela conversa (tem estado próprio em `unhas.py`/`cabelo.py`).
 4. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
 5. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
+6. **Atraso de verdade** (pergunta do Patrick em 28/09, na frente de bugs): hoje ela só se atrasa pra aula, e
+   desamarrado. Quando perde o despertador (15% dos dias de aula, `sleep_plan.overslept`), o `college.morning` registra
+   "chegou 12 min atrasada", mas a ida pra PUC tem hora fixa (`commute`), o card mostra ela saindo na hora e, se acorda
+   depois da hora de sair, o Se arrumando some. Rolê, freela, academia e consulta nunca atrasam (o imprevisto do caminho
+   não empurra a chegada). Fazer: trajeto e Se arrumando a partir de quando ela acorda e do que atrasa (café, Milo,
+   banho, imprevisto), o compromisso começa sem ela, e ela avisa o Patrick ("vou chegar atrasada") pelo que sente.
 
 ## 2. Apps (Mini App) — skill `frente-apps`
 **Abertura:** "bora na frente dos apps: Bastidores aba a aba no celular, começando pela Por dentro"
@@ -66,7 +72,7 @@ dividindo balão; vocabulário da masturbação; música que ele manda por link.
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
-**Abertura:** "bora na frente de bugs: item 12 — manhã de 28/09, o Se arrumando da faculdade dizia café e banho com ela pulando o café e descendo com o Milo; e a iniciativa das 07:51 colada na resposta das 07:47"
+**Abertura:** "bora na frente de bugs: <o que você viu, com a hora>"
 
 Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
 
@@ -129,12 +135,20 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
      de 27/09 = 00:29, as linhas antigas do pai e os 3 "ciuminho" que eram dele. Conferido: retrato das 05:46 conta
      "desde 00:29", dormiu 7,1 h, Saudade 17% às 09:54, journal sem erro.
 
-**Abertos:**
-12. 🔴 **Manhã de 28/09: o Se arrumando da faculdade não sabe do café pulado nem do Milo.** Card e mundo disseram
-   "tomando café" 07:36–07:46 e "tomando banho" 07:46–08:06, mas as refeições registraram "Pulou o café da manhã"
-   (07:52) e o Milo desceu pro xixi às 07:58, no meio do "banho". No chat (08:24) ela disse, certo pelo mundo,
-   "desci rapidinho com o Milo… pulei o café". Camada: mundo/card (`agenda` × `meals` × `milo`). Também conferir:
-   resposta às 07:47 ("Bom plantão, amor") e iniciativa às 07:51 ("como tá o plantão até agora?"), 4 min depois.
+12. ✅ **Manhã de 28/09: o Se arrumando da faculdade não sabia do café pulado nem do Milo** — corrigido em 28/09
+   (`tests/test_bug_manha_2809.py`, 10 testes).
+   - **"Tomando café" com o café pulado.** Card e mundo disseram "tomando café" 07:36–07:46 e "tomando banho"
+     07:46–08:06; o meals registrou "Pulou o café" (07:52) e o Milo desceu às 07:58. No chat (08:24) ela disse, certo,
+     "desci rapidinho com o Milo… pulei o café". Agora (decisão do Patrick, "café dentro") o café é o 1º passo na hora
+     real do meals; pulou, sem passo. A descida do Milo em qualquer Se arrumando vira passo ("Descendo com o Milo"),
+     e o Milo não desce no meio do café. Camada: mundo/card (`agenda` × `meals` × `milo`).
+   - **Iniciativa 4 min depois da resposta.** Ele: "Indo pro plantão" (05:52); ela: "Bom plantão" (07:47) e, às
+     07:51, "como tá o plantão até agora?" (`open_loop_checkin`). A espera só olhava a última mensagem dele. Agora,
+     se ela falou por último há menos de 45 min e ele não respondeu, iniciativa espera (menos os avisos com hora).
+     Camada: proatividade.
+   - A pergunta dele ("ela nunca se atrasa?") virou o item 6 da frente do mundo.
+
+**Abertos:** nenhum.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** "bora na frente de imagens: quarto apagado com flash e foto de grupo das outras amigas"

@@ -94,12 +94,25 @@ class Milo:
         except Exception:
             return None
 
+    def _cafe(self, day: date):
+        try:
+            from meals import Meals
+            return next((s for s in Meals(self.db).day_plan(day)
+                         if s.kind == "cafe" and s.where == "casa" and not s.skipped), None)
+        except Exception:
+            return None
+
     def day_plan(self, day: date) -> list[dict]:
         iso = day.isoformat()
         plan = []
         rng = _rng(day, "manha")
         at = self._wake(day) + timedelta(minutes=rng.randint(5, 25))
         minutes = rng.randint(10, 15)
+        cafe = self._cafe(day)
+        if cafe and at < cafe.end and at + timedelta(minutes=minutes) > cafe.at:
+            # 28/09: o café (quando ela toma) e a descida não se atropelam — desce antes se dá, senão depois.
+            antes = cafe.at - timedelta(minutes=minutes + 1)
+            at = antes if antes >= self._wake(day) + timedelta(minutes=3) else cafe.end + timedelta(minutes=1)
         passeio = self._passeio(day)
         # 27/09 (auditoria): o xixi rapidinho saía 09:28 e o passeio planejado 09:41 — duas descidas em
         # 13 min. Com o passeio logo depois de acordar, o passeio é a saída da manhã.
