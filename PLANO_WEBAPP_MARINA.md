@@ -209,6 +209,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 - **Celular** em todo o app no padrão "Olha …" (também fora das etapas, pelo tipo de atividade).
 - **Conferido** na pré-visualização com o backup de antes do reset (`scripts/webapp_preview.py --db … --agora …`, rota `/dev/agora` só local): se arrumando pro bar, a caminho de carona, no bar com os pedidos, dia de aula com o imprevisto do açaí, se arrumando pra dormir.
 - Testes: `tests/test_agenda.py` (7).
+- **Desencontros de 27/09 (frente de bugs, 28/09):** o Se arrumando guarda o banho que já aconteceu (o uber combinado às 14:02 recomeçava o card no "Tomando banho"); o cinema tem sessão com filme em cartaz de verdade ("Vendo Idiotas", celular "Olha depois do filme") e o passeio depois (antes ficava 4 h em "Refri"); saída decidida em casa sai de casa (a farmácia aparecia "a caminho desde 19:00, andando do shopping" no lugar da volta de uber). `tests/test_bug_agora_2709.py`.
 - **Convite de antes do reset (26/09):** o reset tinha apagado o fim de semana (convites "chegados" antes da vida registrada eram descartados). Agora rolê futuro conta o convite como recebido no reset; o bar de sábado com a Bia voltou na produção (convite gravado 12:17, decisão dela às 19h).
 - **Pendências:** (a) conflito antigo do mundo — café às 15:30 em dia de aula até 15:00: a volta da PUC e a ida pro Starbucks se sobrepõem (o trajeto precisa decidir "direto da PUC"); (b) academia não tem preparação (é rotina sorteada, não compromisso com trajeto); (c) fora de uma etapa o card ainda é o antigo — é a etapa 3 (atividades em casa).
 
@@ -217,7 +218,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 - **O que ela pede** é função do rolê (data, lugar, amigos): o mesmo rolê sempre tem os mesmos pedidos, então card e extrato batem.
   - Quartinho Bar: 2 a 4 drinks (Gin tônica R$ 34, Chopp R$ 16, Caipirinha R$ 28, Drink de maracujá R$ 32; às vezes troca), porção dividida em 70% dos rolês (Fritas R$ 36, Bolinho de bacalhau R$ 44, Pastel de queijo R$ 38), às vezes uma água.
   - Starbucks da Gávea: **os mesmos itens e preços do iFood do app** (catálogo `starbucks-bf`): uma bebida e, em 60%, uma comida.
-  - Cinema no Shopping da Gávea: ingresso R$ 42, pipoca dividida R$ 34, às vezes refri.
+  - Cinema no Shopping da Gávea: ingresso R$ 42, pipoca dividida R$ 34, às vezes refri. A sessão (filme em cartaz, TMDB) é `cinema.py` (28/09).
   - Praia: cadeira e guarda-sol dividido (60%), água de coco, e 1–2 de mate, biscoito Globo, queijo coalho.
   - Uber: R$ 6 + R$ 1,30/min (dividido = metade).
 - **Cada pedido vira:** acontecimento do dia (`life_events` tipo `consumo`/`transporte`, "Pediu um gin tônica no Quartinho Bar (R$ 34)."), gasto no saldo (extrato "Quartinho Bar · Gin tônica"), e — se for comida no horário de uma refeição — **a refeição do horário** (`meal:{dia}:{tipo}:fora`), pra ela não jantar de novo em casa. Ela fica sabendo pelo `since_last` (o que aconteceu desde a última fala dela).

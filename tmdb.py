@@ -190,6 +190,15 @@ class TMDB:
                                       r.get("original_language", ""))}
                 for r in data.get("results", [])[:15]]
 
+    def now_playing(self) -> list[dict]:
+        """Filmes em cartaz nos cinemas do Brasil (27/09: o cinema com a Bia, sem filme inventado)."""
+        data = self._get("/movie/now_playing", {"region": REGION}, "discover")
+        if data is UNAVAILABLE:
+            return []
+        return [{"id": r["id"], "title": r.get("title"), "genre_ids": r.get("genre_ids") or [],
+                 "popularity": r.get("popularity", 0)}
+                for r in data.get("results", []) if r.get("title") and not r.get("adult")]
+
     def where_to_watch(self, media: str, tmdb_id: int) -> list[str]:
         data = self._get(f"/{media}/{tmdb_id}/watch/providers", {}, "providers")
         if data is UNAVAILABLE:

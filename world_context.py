@@ -17,6 +17,12 @@ from world_repository import WorldBibleRepository
 from world_state import WorldStateManager
 
 
+def _no(de: str) -> str:
+    """ "do Shopping da Gávea" → "no Shopping da Gávea" (só a primeira palavra)."""
+    primeira, _, resto = de.partition(" ")
+    return f"{ {'do': 'no', 'da': 'na', 'dos': 'nos', 'das': 'nas'}.get(primeira, primeira)} {resto}".strip()
+
+
 class WorldContextBuilder:
     def __init__(self, db: DatabaseManager, *, cycle_mgr=None, retriever=None, stale_minutes: int = 60):
         self.db = db
@@ -77,10 +83,9 @@ class WorldContextBuilder:
         }
         certainty = certainty_map.get(reason, "inferência de rotina (probabilística)")
         binding = reason in ("confirmed_commitment", "explicit_plan", "announced_transition")
-        if (True
-                and source.get('calendar_event_id') and location != 'Apartamento da Marina'
-                and not self._is_social_outing(source.get('calendar_event_id'))):
-            location = 'local reservado'
+        # 27/09, 19:37: o "local reservado" (máscara antiga pra compromisso que não era saída social) escondia a
+        # Drogarias Pacheco, e ela disse "tô no Shopping da Gávea ainda". Tudo na agenda dela é vida dela: o lugar
+        # aparece.
 
         control = CONTROL_EN if control_language == "en" else CONTROL_PT
         # Bloco de estado atual: FATO, não descrição. O LLM precisa de instrução
@@ -135,12 +140,21 @@ class WorldContextBuilder:
                     "fingir que está no apartamento."
                 )
 
-        chegada = self._chegada(now) if location_line == "Apartamento da Marina" else None
+        chegada = (self._chegada(now) if location_line == "Apartamento da Marina"
+                   else self._saiu_de_novo(now, location_line))
         if chegada:
             world_state_lines.append(chegada)
         banho = self._banho(now)
         if banho:
             world_state_lines.append(banho)
+        if source.get("calendar_event_id"):
+            try:                                          # 27/09: "A Princesinha" — o filme é o da sessão
+                import cinema
+                filme = cinema.linha_prompt(self.db, source["calendar_event_id"], now)
+                if filme:
+                    world_state_lines.append(filme)
+            except Exception:
+                pass
 
         data_channel = DATA_CHANNEL_POLICY_PT if control_language == "pt-BR" else DATA_CHANNEL_POLICY_EN
         blocks = [
@@ -440,13 +454,6 @@ class WorldContextBuilder:
 
         return "\n".join(blocks)
 
-    def _is_social_outing(self, event_id) -> bool:
-        """Saída do dia social (Auditoria #6): o lugar não é privado — a
-        própria atividade já diz "no Quartinho Bar"."""
-        with self.db.get_connection() as conn:
-            row = conn.execute("SELECT source_key FROM eventos_pendentes WHERE id=?", (event_id,)).fetchone()
-        return bool(row and (row["source_key"] or "").startswith("outing:"))
-
     def _chegada(self, now: datetime) -> Optional[str]:
         """27/09 (volta do Quartinho): em casa desde 00:05, ela disse às 00:19 "vou pedir o Uber pra voltar"
         — o histórico ("te aviso quando chegar") venceu o fato. A volta que terminou há pouco vira fato."""
@@ -461,6 +468,20 @@ class WorldContextBuilder:
                 f"{volta.end:%H:%M}. Você JÁ ESTÁ EM CASA: não diga que ainda está na rua, lá ou esperando "
                 "o uber, mesmo que a conversa de antes diga outra coisa. Se prometeu avisar quando chegasse "
                 "e ainda não avisou, diga agora que chegou.")
+
+    def _saiu_de_novo(self, now: datetime, onde: str) -> Optional[str]:
+        """27/09, 19:37: voltou do shopping de uber (19:18), foi à farmácia e disse "tô no Shopping da Gávea ainda".
+        Uma volta pra casa que já terminou, com ela fora agora, quer dizer que ela chegou e saiu de novo."""
+        try:
+            from commute import Commute
+            volta = Commute(self.db).ultima_volta(now, janela=timedelta(minutes=120))
+        except Exception:
+            return None
+        if not volta:
+            return None
+        return (f"[VOLTOU E SAIU DE NOVO — FATO] Você voltou {volta.destination} {volta.how} e chegou em casa às "
+                f"{volta.end:%H:%M}; depois saiu de novo, e agora está no lugar acima ({onde}). Você NÃO está mais "
+                f"{_no(volta.destination)}: não diga que ainda está lá.")
 
     def _banho(self, now: datetime) -> Optional[str]:
         """27/09, 01:57: "banhou já?" → "ainda não", com banho às 00:31. O último banho (até 8 h) vira fato."""

@@ -4434,10 +4434,17 @@ _PROACTIVE_INSTRUCTIONS = {
                           "espontânea, do seu jeito (surpresa, dengo, gratidão, provocação carinhosa). Se tinha "
                           "bilhete, reaja ao bilhete. Se tinha acabado de comer, pode rir disso em vez de fingir "
                           "fome. Não invente detalhe além do que está aqui."),
+    # 27/09: ele tinha avisado no chat que pediu (não é surpresa).
+    'presente_delivery_avisado': ("{detail} Ele tinha te avisado no chat que pediu, então você já esperava: "
+                                  "conte que chegou e reaja à comida do seu jeito (gratidão, dengo, fome). Se ele "
+                                  "escolheu diferente do que você pediu, pode comentar. Não invente detalhe além "
+                                  "do que está aqui."),
     # 25/09: ela mandou algo de surpresa pro Patrick (pedido_dela.py); a mensagem leva o link de acompanhar.
     'surpresa_pra_ele': ("{detail} Conte pra ele numa mensagem curtinha, do seu jeito (carinho, um pouco de marra, "
                          "mistério: 'fiz uma coisinha pra você', 'acompanha aí', 'abre a porta daqui a pouco'). "
                          "Sua mensagem vai com o link de acompanhar a entrega, então não precisa descrever tudo."),
+    'aviso_indo_pra_casa': ("{detail}, e tinha prometido avisar o Patrick quando estivesse indo pra casa. Mande o aviso "
+                    "curtinho, do seu jeito. Não invente acontecimento novo."),
     'aviso_chegada': ("{detail} e tinha prometido avisar o Patrick. Mande o aviso curtinho, do seu jeito "
                       "('cheguei, amor', 'chegueeei'); se aconteceu algo no caminho, pode comentar. Não "
                       "invente acontecimento novo."),
@@ -4739,8 +4746,14 @@ async def _ritual_routine(application: Application):
         promise = arrival_promise.due(memory_manager.db, now)
         if promise:
             # Ela prometeu avisar quando chegasse: chegou, avisa.
-            text = await asyncio.to_thread(
-                _proactive_text, 'aviso_chegada', f"Você acabou de chegar {promise['where']}", "Cheguei, amor 🖤")
+            if promise.get("kind") == "saida":       # 27/09: "te aviso quando estiver indo pra casa"
+                text = await asyncio.to_thread(
+                    _proactive_text, 'aviso_indo_pra_casa',
+                    f"Você acabou de sair e está voltando {promise['where']} pra casa {promise.get('how', '')}".rstrip(),
+                    "Tô indo pra casa, amor")
+            else:
+                text = await asyncio.to_thread(
+                    _proactive_text, 'aviso_chegada', f"Você acabou de chegar {promise['where']}", "Cheguei, amor 🖤")
             sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
             if sent:
                 memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
@@ -5208,7 +5221,9 @@ async def _delivery_gift_routine(application: Application):
         gift = delivery.gift_to_announce(memory_manager.db)
         if not gift:
             return
-        detail = f"O Patrick te mandou de surpresa {gift['what']} do {gift['restaurant']} pelo app de delivery"
+        avisou = delivery.avisado(memory_manager.db, gift, now)
+        detail = (f"O Patrick te mandou {'' if avisou else 'de surpresa '}{gift['what']} do {gift['restaurant']} "
+                  "pelo app de delivery")
         if gift.get("waited") == "dormindo":
             detail += "; chegou enquanto você dormia e o Seu Jorge guardou na portaria, você pegou agora"
         elif gift.get("waited"):
@@ -5220,8 +5235,12 @@ async def _delivery_gift_routine(application: Application):
         if gift.get("note"):
             detail += f". Veio com um bilhete dele: \"{gift['note']}\""
         detail += "."
-        text = await asyncio.to_thread(_proactive_text, 'presente_delivery', detail,
-                                       "Amooor, você mandou comida pra mim?? 🥺")
+        if avisou:        # 27/09: ele tinha avisado ("pedi, tá chegando") — não é surpresa
+            text = await asyncio.to_thread(_proactive_text, 'presente_delivery_avisado', detail,
+                                           "Chegou, amor! Obrigada 🥺")
+        else:
+            text = await asyncio.to_thread(_proactive_text, 'presente_delivery', detail,
+                                           "Amooor, você mandou comida pra mim?? 🥺")
         sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
         if isinstance(getattr(sent, 'message_id', None), int) and sent.message_id > 0:
             memory_manager.db.registrar_iniciativa_marina(text, media_type='text')

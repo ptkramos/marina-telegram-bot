@@ -91,6 +91,7 @@ class Leg:
     incident: str = ""
     incident_at: Optional[datetime] = None
     origem: str = ""        # emenda (27/09): de onde ela sai, quando vai direto de um lugar pro outro ("da PUC")
+    decidido_em: Optional[datetime] = None   # item decidido na hora (vontade): onde ela estava quando decidiu
 
     @property
     def how(self) -> str:
@@ -110,7 +111,7 @@ class Leg:
         return text
 
 
-_FEMININE = ("praia", "agência", "agencia", "enseada", "puc")
+_FEMININE = ("praia", "agência", "agencia", "enseada", "puc", "drogaria")
 
 
 def _pra(name: str) -> str:
@@ -353,6 +354,11 @@ class Commute:
                         and l is not volta), None)
             if ida is None or volta not in out:
                 continue
+            if ida.decidido_em and ida.decidido_em > volta.start:      # (a vontade só nasce com ela livre em casa)
+                # 27/09, 19:23: voltou do Shopping da Gávea às 19:18 e, já em casa, deu vontade de ir à Pacheco.
+                # A ida saiu "do Shopping da Gávea, a pé" desde 19:00 e a volta de uber sumiu: decidiu em casa,
+                # sai de casa.
+                continue
             direto = replace(ida, start=volta.start, end=max(ida.end, volta.start + timedelta(minutes=5)),
                              origem=volta.destination, incident="", incident_at=None)
             out[out.index(ida)] = direto
@@ -400,8 +406,9 @@ class Commute:
             ini, fim = datetime.fromisoformat(r["event_at"]), datetime.fromisoformat(r["end_at"])
             modo, mins = meta.get("modo", "a_pe"), int(meta.get("ida_min", 10))
             volta_min = int(meta.get("volta_min", mins))
+            decidido = datetime.fromisoformat(meta["decidido_em"]) if meta.get("decidido_em") else None
             out.append(Leg(f"commute:{r['source_key']}:ida", ini - timedelta(minutes=mins), ini, modo, "ida",
-                           _pra(place["name"]), place.get("region") or "Botafogo"))
+                           _pra(place["name"]), place.get("region") or "Botafogo", decidido_em=decidido))
             out.append(Leg(f"commute:{r['source_key']}:volta", fim, fim + timedelta(minutes=volta_min),
                            meta.get("modo_volta", modo), "volta", _de(place["name"]), place.get("region") or "Botafogo"))
         return out

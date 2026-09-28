@@ -824,6 +824,14 @@ class WorldStateManager:
         elif confirmed_commitment and confirmed_commitment.get("start_at") and self._active_plan(confirmed_commitment, now):
             chosen = confirmed_commitment
             reason = "confirmed_commitment"
+            try:                                         # 27/09: dentro do cinema, o mundo diz o filme
+                import cinema
+                s = cinema.na_sessao(self.db, confirmed_commitment.get("calendar_event_id"), now)
+                if s:
+                    chosen = {**confirmed_commitment,
+                              "activity": f"{confirmed_commitment.get('activity')} ({cinema.atividade(s)})"}
+            except Exception:
+                logger.exception("cinema.sessao.error")
         elif self._active_plan(explicit_plan, now):
             chosen = explicit_plan
             reason = "explicit_plan"

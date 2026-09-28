@@ -44,6 +44,9 @@ Agora decidida linha a linha (card layout D); tela inicial só com os apps; Inst
    ajustar palavra por palavra (PLANO_VOZ 14).
 2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
 3. Fotos provisórias de marca e logos marcados "conferir"; redes sociais dela (Etapa 5).
+4. Legenda do post real de 27/09 (18:58, `instagram.post id=6 motivo=role_amiga`): "noite gostosa com minha pessoa"
+   numa tarde de cinema com a Bia — a legenda de rolê com amiga não pode soar como date, nem "noite" de tarde
+   (achado na varredura da frente de bugs, 28/09).
 
 ## 3. Voz e chat — skill `frente-voz`
 **Abertura:** "bora na frente da voz"
@@ -94,8 +97,17 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
 8. ✅ **Acordou "tomando café" com o café 1h30 depois (27/09)** — corrigido: sem café agora, "acabou de acordar, ainda de pijama… (o café fica pra umas 10:37)".
 9. ✅ **Linha do tempo (26/09):** "Montou looks" × academia e música × banho (o bloco em casa é cortado quando outra coisa começa) e convite às 04:19 (visto ao acordar). `tests/test_bug_mundo_2709.py`.
 
-**Abertos:**
-10. 🔴 **Desencontros com a aba Agora (Patrick, 28/09)** — (a) o mundo (`world_state`/agenda) e o card da aba Agora mostrando coisas diferentes; (b) o que ela diz no chat não bate com a Agora. Começar pedindo ao Patrick os exemplos (print ou hora), capturar banco/log da produção naquele momento e comparar mundo × card (`agenda.card`/`card_casa`) × prompt (`world_context`) × fala.
+10. ✅ **Desencontros com a aba Agora (varredura de 27/09, a pedido do Patrick em 28/09)** — corrigido em 28/09 (`tests/test_bug_agora_2709.py`). Varredura das 24 h: mundo × card recalculado numa cópia do banco × chat.
+   - **Dois banhos no Se arrumando (13:49–14:34).** Banho real 13:51–13:59; o "vai de uber" das 14:02 mudou a ida e o card e o mundo voltaram pro "Tomando banho" até 14:16. O banho que aconteceu fica como o banho do card. Camada: mundo e card.
+   - **"Refri" das 15:13 às 19:00.** O cinema só tinha as compras; ela inventou o filme. Agora tem sessão com filme em cartaz de verdade (TMDB), passeio depois, e o prompt sabe o filme. Camada: mundo e card.
+   - **Farmácia "saindo do Shopping" (19:23).** Voltou de uber às 19:20 e, em casa, decidiu ir à Pacheco; a ida saiu do shopping, a pé, desde 19:00. Decidiu em casa, sai de casa. Camada: mundo.
+   - **"Tô no Shopping ainda" na farmácia (19:37).** O prompt dizia "local reservado" e não dizia que ela voltou. A máscara saiu e entrou "[VOLTOU E SAIU DE NOVO — FATO]". Camada: prompt.
+   - **Belisco saindo de casa (19:28).** Sem belisco em etapa da Agora. Camada: mundo.
+   - **Não avisou que estava indo pra casa (19:44).** Promessa de saída agora é cumprida no começo da volta. Camada: mundo.
+   - **Tapioca com o McDonald's a caminho (21:32).** Ele avisou que pediu; o jantar agora espera e ela não reage como surpresa. Camada: mundo e prompt.
+   - Pros apps: post das 18:58 "noite gostosa com minha pessoa" numa tarde de cinema com a Bia.
+
+**Abertos:** nenhum. Deploy das correções de 28/09 feito junto (ver seção 7 se faltar).
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** "bora na frente de imagens: quarto apagado com flash e foto de grupo das outras amigas"

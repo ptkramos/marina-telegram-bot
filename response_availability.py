@@ -468,6 +468,10 @@ class ResponseAvailabilityPolicy:
         reservado = classe_disponibilidade(act)
         if reservado:
             return reservado
+        # 27/09: dentro da sessão de cinema — celular no silencioso, olha como quem olha na aula
+        # (antes das palavras-chave: o título do filme pode ter "dorm", "banho"...).
+        if '(na sessão' in act:
+            return 'CLASS'
         # 26/09: antes do 'dorm' — "se arrumando pra dormir" não é dormindo.
         if act.startswith('se arrumando'):
             return 'GETTING_READY'

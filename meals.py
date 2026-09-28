@@ -473,6 +473,8 @@ class Meals:
                 # fora de casa: espera ela voltar. 27/09: passada a janela, a pipoca "vendo série" das 21:07
                 # era registrada com ela no Quartinho Bar.
                 continue
+            if slot.where == "casa" and not slot.skipped and self._comida_chegando(now):
+                continue      # 27/09: comida a caminho (dela, ou do Patrick com aviso) — é essa que ela come
             if slot.where == "casa" and not slot.skipped and self._away_at(slot.at):
                 # 26/09: o chocolate das 16:39 foi registrado com ela voltando da academia a pé.
                 # Chegou em casa: come agora (lanche que passou de 1 h da hora não acontece mais).
@@ -499,7 +501,7 @@ class Meals:
         proxima = next((s for s in self.day_plan(now.date()) if s.at > now and not s.skipped), None)
         if proxima and proxima.at - now < timedelta(minutes=60):
             return 0                                      # segura pra próxima refeição
-        if self._comida_chegando(now):
+        if self._comida_chegando(now) or self._numa_etapa(now):
             return 0
         with self.db.get_connection() as conn:
             row = conn.execute("SELECT MAX(event_at) FROM life_events WHERE event_type IN ('meal','snack') "
@@ -520,6 +522,15 @@ class Meals:
         logger.info("meal.belisco dish=%s", slot.dish)
         return 1
 
+    def _numa_etapa(self, now: datetime) -> bool:
+        """27/09, 19:28: "beliscou iogurte com granola" com ela já saindo pra farmácia — o retrato do mundo ainda
+        dizia "em casa". Se arrumando, a caminho, lá ou voltando (aba Agora): não é hora de beliscar em casa."""
+        try:
+            from agenda import Agenda
+            return Agenda(self.db).agora(now) is not None
+        except Exception:
+            return False
+
     def _comida_chegando(self, now: datetime) -> bool:
         """26/09, 16:40: chegou da academia com fome e beliscou um chocolate, com o sanduíche que o Patrick
         mandou esperando na portaria desde 16:26 (pegou às 16:41). Presente na portaria ela pega ao subir;
@@ -532,7 +543,14 @@ class Meals:
         if not cur:
             return False
         if cur.get("by") == "patrick":
-            return cur.get("status") == "portaria" and cur.get("eats", True)
+            if cur.get("status") == "portaria":
+                return cur.get("eats", True)
+            # 27/09: ele avisou no chat que pediu — ela espera a comida dele (não janta tapioca às 21:32)
+            try:
+                return (cur.get("eats", True) and delivery.avisado(self.db, cur, now)
+                        and datetime.fromisoformat(cur["eta_at"]) - now <= delivery.AVISADO_ESPERA)
+            except (KeyError, TypeError, ValueError):
+                return False
         try:
             return datetime.fromisoformat(cur["eta_at"]) - now <= timedelta(minutes=45)
         except (KeyError, TypeError, ValueError):

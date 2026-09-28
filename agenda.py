@@ -64,6 +64,8 @@ PREP_MIN = {"milo": (3, 5), "cafe": (8, 12), "acai": (6, 10), "farmacia": (5, 8)
             "pronto_atendimento": (8, 12), "manicure": (8, 12), "cabelo": (8, 12),
             "academia": (10, 15), "noite": (60, 90), "encontro": (30, 45), "jogo": (40, 55), "freela": (40, 55), "praia": (15, 20), "dormir": (30, 45)}
 BANHO_DORMIR_JANELA = timedelta(minutes=90)     # banho de chegada tão perto da cama vira o banho do Se arrumando
+PREP_BANHO_JANELA = timedelta(minutes=120)      # banho de verdade até 2 h antes de sair é o banho do Se arrumando
+PREP_BANHO_ANTES = timedelta(minutes=45)        # ...e o Se arrumando começa nele se foi até 45 min antes do previsto
 # o que acontece lá (quando não é consumo nem aula)
 LA_PASSOS = {
     "milo": (("Passeando", 70), ("Xixi do Milo", 30)),
@@ -292,11 +294,11 @@ class Agenda:
                     passos.insert(2, ("Secando cabelo", 15))
                 final = ("Esperando carona" if ida.mode == "carona" else
                          "Chamando uber" if ida.mode in ("uber", "uber_dividido") else "Saindo")
+                inicio, lista = self._prep_com_banho(passos + [(final, 10)], inicio, ida.start, fim_anterior)
                 out.append(Etapa("arrumando", "Se arrumando", inicio, ida.start,
                                  linha2=f"Vai sair {self._pra(place['name'])} às {aprox(ida.start)}",
                                  lugar_key="marina_apartment", com=com, celular=CELULAR["arrumando"],
-                                 passos=self._distribui(passos + [(final, 10)], inicio, ida.start),
-                                 chave=f"prep:{c['key']}", prep_tipo=c["tipo"]))
+                                 passos=lista, chave=f"prep:{c['key']}", prep_tipo=c["tipo"]))
                 teve_make = teve_make or c["tipo"] in ("noite", "encontro", "jogo")
             # 2. A caminho
             out.append(self._trajeto(ida, "caminho", "A caminho",
@@ -342,6 +344,28 @@ class Agenda:
                                  lugar_key="marina_apartment", celular=CELULAR["arrumando"],
                                  passos=lista, chave=f"prep:dormir:{day}", prep_tipo="dormir"))
         return out
+
+    def _prep_com_banho(self, passos: list, inicio: datetime, sai: datetime,
+                        fim_anterior: datetime) -> tuple[datetime, list[Passo]]:
+        """27/09, 14:03: banho de verdade às 13:51–13:59; o "vai de uber" das 14:02 mudou a ida, o Se arrumando
+        recomeçou às 14:02 e o card (e o mundo) voltaram pro "Tomando banho". O banho que já aconteceu é o banho do
+        Se arrumando: fica na hora dele, e o resto se distribui depois."""
+        if not any(t == "Tomando banho" for t, _ in passos):
+            return inicio, self._distribui(passos, inicio, sai)
+        banho = next(iter(self._banhos(max(fim_anterior, sai - PREP_BANHO_JANELA), sai)), None)
+        if not banho:
+            return inicio, self._distribui(passos, inicio, sai)
+        b_ini, b_fim, lavou = banho
+        i = next(n for n, (t, _) in enumerate(passos) if t == "Tomando banho")
+        antes, depois = passos[:i], passos[i + 1:]
+        if b_ini < inicio - PREP_BANHO_ANTES:            # tomou banho bem antes (ex.: depois da academia): só tira o passo
+            return inicio, self._distribui(antes + depois, inicio, sai)
+        inicio = min(inicio, b_ini)
+        lista = self._distribui(antes, inicio, b_ini) if antes and inicio < b_ini else []
+        lista.append(Passo("Tomando banho e lavando o cabelo" if lavou else "Tomando banho", b_ini))
+        if b_fim < sai:
+            lista += self._distribui(depois, b_fim, sai)
+        return inicio, lista
 
     def _banhos(self, ini: datetime, fim: datetime) -> list[tuple[datetime, datetime, bool]]:
         """Banhos de verdade (rituals.start_shower) que começaram entre `ini` e `fim`."""
@@ -470,6 +494,13 @@ class Agenda:
             from consumo import plan
             for item in plan(c["outing"]):
                 passos.append(Passo(item.nome + (" (dividiu)" if item.dividido else ""), item.at, valor=item.valor))
+            import cinema
+            s = cinema.sessao(self.db, c["outing"])
+            if s:                                        # 27/09: "Refri" das 15:13 às 19:00 — o cinema tem sessão
+                passos.append(Passo(cinema.passo_sessao(s), s["inicio"]))
+                if c["fim"] - s["fim"] >= timedelta(minutes=15):
+                    passos += self._distribui(list(cinema.DEPOIS), s["fim"], c["fim"])
+                passos.sort(key=lambda p: p.inicio)
             cel = CELULAR["role"] if c["tipo"] != "freela" else CELULAR["aula"]
         fim_la = volta.start if volta else fim_real
         passos = self._reativa(c["key"], passos, fim_la)
@@ -560,7 +591,11 @@ class Agenda:
         if saiu and atual.tipo in ("la", "voltando") and now >= datetime.fromisoformat(saiu["at"]):
             from agenda_reativa import AgendaReativa
             grade.append(["alert-circle", "Motivo", AgendaReativa.motivo_curto(saiu)])
-        grade.append(["device-mobile", "Celular", atual.celular])
+        celular = atual.celular
+        passo = self.passo_atual(atual, now)
+        if atual.tipo == "la" and passo and (passo.texto.startswith("Vendo ") or passo.texto == "Na sessão"):
+            celular = "Olha depois do filme"
+        grade.append(["device-mobile", "Celular", celular])
         # linha do tempo: a cadeia do compromisso atual + a próxima etapa
         i = etapas.index(atual)
         ini = i

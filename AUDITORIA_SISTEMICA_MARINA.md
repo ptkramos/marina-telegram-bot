@@ -1573,6 +1573,19 @@ Foto de grupo de ponta a ponta (28/09): a amiga do rolê chega na câmera e entr
 
 `tests/test_bug_hoje_card.py`, 6 testes com os horários do caso.
 
+## Bug: desencontros com a aba Agora (varredura de 27/09)
+Varredura das 24 h (26/09 22:30 → 27/09 22:35) comparando o mundo (`world_state`), o card da Agora recalculado numa cópia do banco (`sqlite3 .backup`) e o chat. A madrugada já estava corrigida; o dia teve sete desencontros:
+- **Dois banhos no Se arrumando (13:49–14:34), mundo e card.** Banho real 13:51–13:59; o "vai de uber" das 14:02 mudou a ida, o Se arrumando recomeçou às 14:02 e o card e o mundo voltaram pro "Tomando banho". `agenda._prep_com_banho`: banho real até 2 h antes de sair é o banho do Se arrumando (fica na hora dele; o resto vem depois); banho mais de 45 min antes do previsto só tira o passo. Mesma regra do "pra dormir".
+- **"Refri" das 15:13 às 19:00, mundo e card.** O rolê do cinema só tinha as compras como passos, e ela inventou o filme ("A Princesinha"). `cinema.py`: sessão com filme em cartaz de verdade (`TMDB.now_playing`, região BR, pelo gosto dela), gravado no compromisso; começa 10–20 min depois do ingresso e dura trailers + filme; depois, "Olhando vitrines"/"Provando roupa". O mundo diz "(na sessão de X)", a disponibilidade vira `CLASS` (celular "Olha depois do filme") e o prompt tem "[CINEMA — FATO]".
+- **Farmácia "saindo do Shopping", mundo e card.** Voltou de uber (19:00–19:20), em casa deu vontade de ir à Pacheco (19:23), e a emenda (`Commute._emendas`) fez a ida sair do shopping, a pé, desde 19:00, apagando a volta. Item decidido na hora (`Leg.decidido_em`) depois do começo da volta não emenda: ela decidiu em casa, sai de casa.
+- **"Tô no Shopping da Gávea ainda" às 19:37, prompt.** O prompt dizia "Local: local reservado" (máscara antiga pra compromisso que não era saída social) e não dizia que ela tinha voltado. A máscara saiu; fora de casa com uma volta já terminada, entra "[VOLTOU E SAIU DE NOVO — FATO]".
+- **Belisco saindo pra farmácia (19:28), mundo.** O retrato do mundo ainda dizia "em casa". `meals._numa_etapa`: em qualquer etapa da Agora não tem belisco.
+- **"Te aviso quando estiver indo pra casa" (19:42), mundo.** Só existia promessa de chegada. `arrival_promise` agora reconhece promessa de saída e amarra no começo da próxima volta (aviso 0–2 min depois; não repete se ela já disse que saiu).
+- **Tapioca com o McDonald's a caminho (21:32), mundo e prompt.** Ele avisou ("vou pedir tua comida", "pedi, tá chegando"), e o presente do app era sempre surpresa. `delivery.avisado`: fala dele de 3 h antes do pedido em diante; avisado e chegando em até 1 h, a refeição de casa e o belisco esperam, o prompt diz que está chegando e a reação não é de surpresa.
+- Fora da frente (pros apps): às 18:58 ela postou no Instagram "noite gostosa com minha pessoa" numa tarde de cinema com a Bia.
+
+`tests/test_bug_agora_2709.py`, 17 testes com os horários do caso.
+
 ## Frente de auditoria de funcionamento (27/09)
 O Patrick está achando muitos bugs depois do 26/09 (~50 commits em várias conversas). Frente nova, skill `frente-auditoria` e seção 7 do `FRENTES_MARINA.md`: conferir entrega por entrega, com prova na produção, se funciona e está amarrada com o resto, e se falta deploy. Ponto de partida: VPS em `afd81fd`, `main` em `f69d2d4` (dois commits da frente de imagens sem deploy).
 

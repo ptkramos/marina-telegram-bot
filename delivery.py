@@ -158,6 +158,35 @@ def _saciedade(db, key: str, at: datetime, end: datetime, what: str) -> tuple[Op
 # ou no banho, fica com o Seu Jorge na portaria até ela poder pegar. Ele paga: o evento
 # é "meal:…:presente", que as finanças não cobram (elas cobram só "meal:…:delivery").
 GIFT_SHOW_AFTER = timedelta(hours=3)
+# 27/09, 21:28–21:31: "vou pedir tua comida, tá com vontade de quê?" … "Pedi, tá chegando em uns 30 minutos".
+# Às 21:32 ela jantou tapioca e às 22:01 recebeu o Big Mac "de surpresa", guardando pra depois. Quando ele avisa
+# no chat, o presente não é surpresa: ela sabe que está chegando e espera pra comer.
+AVISO_RE = re.compile(r"\b(?:vou|vo|deixa\s+eu|posso)\s+(?:te\s+)?pedir\b|\b(?:j[aá]\s+|acabei\s+de\s+)?pedi\b"
+                      r"|\b(?:t[aá]|est[aá])\s+chegando\b|\bchega\s+em\b", re.I)
+AVISO_ANTES = timedelta(hours=3)
+AVISADO_ESPERA = timedelta(minutes=60)      # avisado e chegando em até 1 h: ela segura a refeição
+
+
+def avisado(db, cur: Optional[dict] = None, now: Optional[datetime] = None) -> bool:
+    """O Patrick contou no chat que pediu comida pra ela (até 3 h antes do pedido, ou depois)?"""
+    cur = cur if cur is not None else _load(db)
+    if not cur or cur.get("by") != "patrick":
+        return False
+    if cur.get("avisado"):
+        return True
+    try:
+        ordered = datetime.fromisoformat(cur["ordered_at"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    ate = cur.get("received_at") or (now or datetime.now()).isoformat()
+    with db.get_connection() as conn:
+        rows = conn.execute("SELECT content FROM conversas WHERE role='user' AND timestamp>=? AND timestamp<=?",
+                            ((ordered - AVISO_ANTES).isoformat(), ate)).fetchall()
+    if not any(AVISO_RE.search(r["content"] or "") for r in rows):
+        return False
+    cur["avisado"] = True
+    _save(db, cur)
+    return True
 
 
 def open_order(db) -> Optional[dict]:
@@ -212,10 +241,11 @@ def gift_tick(db, now: datetime, *, can_receive: bool, why_not: str = "", ate_re
     what, rest = cur["what"], cur["restaurant"]
     portaria = " (tinha ficado na portaria com o Seu Jorge)" if cur.get("waited") else ""
     eats_now = cur.get("eats", True) and not ate_recently
+    surpresa = "" if avisado(db, cur, now) else "de surpresa "
     if eats_now:
-        summary = f"O Patrick mandou de surpresa {what} do {rest} pelo app; ela recebeu{portaria} e foi comer."
+        summary = f"O Patrick mandou {surpresa}{what} do {rest} pelo app; ela recebeu{portaria} e foi comer."
     else:
-        summary = (f"O Patrick mandou de surpresa {what} do {rest} pelo app; ela recebeu{portaria}"
+        summary = (f"O Patrick mandou {surpresa}{what} do {rest} pelo app; ela recebeu{portaria}"
                    + (" e guardou pra depois, porque tinha acabado de comer." if ate_recently else "."))
     if cur.get("note"):
         summary += f" Bilhete que ele escreveu pra ela: \"{cur['note']}\"."
@@ -267,14 +297,21 @@ def prompt_lines(db, now: datetime) -> list[str]:
     if not cur:
         return []
     if cur.get("by") == "patrick":
-        # Surpresa: até receber ela não sabe de nada.
+        conta = avisado(db, cur, now)
         if cur.get("status") != "recebido" or not cur.get("received_at"):
-            return []
+            if not conta:
+                return []                             # surpresa: até receber ela não sabe de nada
+            eta = datetime.fromisoformat(cur["eta_at"])
+            if cur.get("status") == "portaria":
+                return [f"[DELIVERY] A comida que o Patrick pediu pra você chegou às {eta:%H:%M} e está na portaria "
+                        "com o Seu Jorge; você pega quando puder."]
+            return [f"[DELIVERY] O Patrick pediu comida pra você pelo app (ele te contou); chega lá pelas {eta:%H:%M}. "
+                    "Não jante nem belisque outra coisa antes: você está esperando essa comida."]
         got = datetime.fromisoformat(cur["received_at"])
         if now - got > GIFT_SHOW_AFTER:
             return []
-        line = (f"[DELIVERY] O Patrick te mandou de surpresa {cur['what']} do {cur['restaurant']} pelo app; "
-                f"chegou pra você às {got:%H:%M}")
+        line = (f"[DELIVERY] O Patrick te mandou {'' if conta else 'de surpresa '}{cur['what']} do "
+                f"{cur['restaurant']} pelo app; chegou pra você às {got:%H:%M}")
         if cur.get("ate_recently"):
             line += " (você tinha acabado de comer e guardou pra depois)"
         if cur.get("note"):
