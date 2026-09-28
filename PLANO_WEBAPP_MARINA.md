@@ -202,7 +202,8 @@ então de manhã quase tudo tinha sumido.
   o Sono bate com o mundo (o deitar acompanha o banho que passa da hora; noite de 27/09 corrigida pra 00:29); o
   Sentindo agora e o Hoje por dentro sem sentimento repetido nem inflado (a fusão só olha pra trás e não repete), sem
   "ciuminho" pelo seu ciúme; a barra Saudade de Vocês dois só enche com ela acordada. Ver AUDITORIA ("Bug:
-  Bastidores às 05:55") e `tests/test_bug_por_dentro_2809.py`.
+  Bastidores às 05:55") e `tests/test_bug_por_dentro_2809.py`. Na produção desde 28/09 09:53, com o banco limpo
+  (carinhos falsos da manhã, noite de 27/09 = 00:29, linhas velhas do pai e do ciúme).
 - **Código:** `por_dentro.py` (novo), `webapp_server` (`emocao_view`, `motivo_tela`, `_alguem` com "você", Ciclo),
   `emotion` (`day_log`, padrão dos motivos), `unhas.painel`, `cabelo.painel`/`_dia_lavagem`, `agenda_viva._sente`,
   `planner` (regra do `cause`), `bot._status_snapshot` (`ciclo_len`), `webapp/` (ordem, desenho, recarga, CSS). Testes em

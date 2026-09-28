@@ -124,8 +124,10 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
    - **"Com ciuminho" pelo ciúme dele.** Três vezes em dois dias. Ciume é o dela; ciúme dele de brincadeira é
      provocação (ela se diverte) e desconfiança séria é `desconfiou` (chateada de leve, ~1h30) — decisão do Patrick.
      Camada: prompt (planner).
-   - Banco da produção limpo (backup antes): os 4 carinhos falsos da manhã, a noite de 27/09 = 00:29, as linhas antigas
-     do pai e os 3 "ciuminho" que eram dele.
+   - Na produção desde 28/09 09:53 (`9891835`). Banco limpo em seguida (backup
+     `backups/marin_memory_antes_limpeza_bugs_20260928_1254.db`): os 5 carinhos falsos da manhã (07:47–08:52), a noite
+     de 27/09 = 00:29, as linhas antigas do pai e os 3 "ciuminho" que eram dele. Conferido: retrato das 05:46 conta
+     "desde 00:29", dormiu 7,1 h, Saudade 17% às 09:54, journal sem erro.
 
 **Abertos:**
 12. 🔴 **Manhã de 28/09: o Se arrumando da faculdade não sabe do café pulado nem do Milo.** Card e mundo disseram
