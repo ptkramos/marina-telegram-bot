@@ -90,6 +90,33 @@ async def foto_marina(db, n: int, at: datetime, pose: str = ""):
     return shot, gen.image
 
 
+async def foto_post_real(db, p: dict, pose: str = ""):
+    """Foto nova de um post de verdade dela (28/09: post 6, rolê da noite com luz de dia): cena, roupa e luz na hora
+    do acontecimento (life_events), como o bot faria."""
+    import photo_director
+    from photo_director import HOME
+    from sd_client import sd_client
+    ev = ig._rows(db, "SELECT event_at FROM life_events WHERE event_key=?", (p["motivo_chave"],))
+    at = datetime.fromisoformat(ev[0]["event_at"] if ev else p["criado_em"])
+    motivo = p["motivo"]
+    amiga = next(iter(json.loads(p["marcados_json"] or "[]")), "")
+    lugar = ig._place_key(db, p["local"]) if p["local"] else ""
+    rng = random.Random(f"refoto:{p['id']}:{datetime.now():%H%M}")
+    ctx = SimpleNamespace(place_key=lugar or HOME, presence_assertable=True,
+                          present_people=(amiga,) if amiga else (), activity="", sublocation="", weather=None,
+                          snapshot_id=None)
+    ocasiao = ig.ocasiao_da_roupa(motivo, at.hour)
+    roupa = ig.escolher_roupa(db, ocasiao, rng) if ocasiao else None
+    dela = ig.escolher_roupa(db, ocasiao, rng, evitar=(roupa,), simples=True) if ocasiao and amiga else None
+    shot = photo_director.direct(db, at, camera_ctx=ctx, turn=SimpleNamespace(state="cut", arousal=0.0), rng=rng,
+                                 force_pose=pose or ig.escolher_pose(db, motivo, rng, amiga),
+                                 outfit_override=roupa, friend_outfit_override=dela, scene_at=at,
+                                 expression_override="a natural confident smile, looking great for an Instagram post")
+    print(f"cena às {at:%d/%m %H:%M} · {shot.pose_id} · {shot.outfit}\n{shot.prompt}")
+    gen = await sd_client.generate_directed(shot)
+    return shot, gen.image
+
+
 def textos_do_post(db, p: dict, rng: random.Random, *, legenda: bool = True, ja: frozenset = frozenset()) -> None:
     """Legenda (com a memória de quem posta) e comentários no passado, logo depois do post."""
     pid, at = p["id"], datetime.fromisoformat(p["criado_em"])
@@ -146,6 +173,14 @@ async def refoto(db, pid: int, pose: str) -> None:
         ig._exec(db, "UPDATE ig_posts SET imagem=?, roupa=?, pose=?, marcados_json=?, descricao=? WHERE id=?",
                  (nome, shot.outfit, shot.pose_id, json.dumps([shot.friend] if shot.friend else []),
                   MARINA[n][7], pid))
+    elif p["fonte"] != "acervo":
+        shot, img = await foto_post_real(db, p, pose)
+        if not img:
+            print("falhou")
+            return
+        nome = ig.salvar_imagem(img.getvalue())
+        ig._exec(db, "UPDATE ig_posts SET imagem=?, roupa=?, pose=? WHERE id=?",
+                 (nome, shot.outfit, shot.pose_id, pid))
     else:
         amiga, tema_i = next((a, t) for i, (a, t, _, _) in enumerate(AMIGAS) if chave == f"acervo:{a}:{i}")
         dados = await civitai_images.friend_scene(amiga, ig.TEMAS[amiga][tema_i][1])

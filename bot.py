@@ -5345,7 +5345,7 @@ def _ig_shot(plano: dict, now: datetime, feeling):
                           sublocation="", weather=None, snapshot_id=None)
     import instagram
     # 27/09 (Patrick): guarda-roupa do Instagram, sem repetir roupa; praia é de biquíni (a amiga também)
-    # 28/09: roupa pela hora do rolê, não da hora em que ela posta (rolê da noite postado no dia seguinte)
+    # 28/09: roupa e luz pela hora do rolê, não da hora em que ela posta (rolê da noite postado no dia seguinte)
     quando = datetime.fromisoformat(plano["at"]) if plano.get("at") else now
     ocasiao = instagram.ocasiao_da_roupa(motivo, quando.hour)
     roupa = instagram.escolher_roupa(memory_manager.db, ocasiao, rng) if ocasiao else None
@@ -5354,7 +5354,8 @@ def _ig_shot(plano: dict, now: datetime, feeling):
     return photo_director.direct(memory_manager.db, now, camera_ctx=ctx, feeling=feeling,
                                  turn=SimpleNamespace(state="cut", arousal=0.0), rng=rng,
                                  force_pose=plano.get("pose"), outfit_override=roupa, friend_outfit_override=dela,
-                                 expression_override="a natural confident smile, looking great for an Instagram post")
+                                 expression_override="a natural confident smile, looking great for an Instagram post",
+                                 scene_at=quando)
 
 
 def _ig_comentarios(pid: int, now: datetime, autores: list) -> None:

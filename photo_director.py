@@ -668,6 +668,14 @@ def save_session(db, session: dict) -> None:
     db.set_estado_relacional(SESSION_KEY, json.dumps(session, ensure_ascii=False))
 
 
+def _luz_fora(hour: int) -> str:
+    """Luz da cena fora de casa pela hora. 28/09: o Quartinho às 21h saiu com sol na janela — o lugar sozinho
+    ("evening indoor ambient light") não segurou; diz o que a câmera vê lá fora, não o que falta."""
+    if hour >= 18 or hour < 5:
+        return ", at night: warm artificial lights, and any window or doorway shows the dark night street with city lights"
+    return ""
+
+
 def _default_room(level: int, now: datetime, rng: random.Random) -> str:
     if level >= 2:
         return "closet" if rng.random() < 0.3 else "quarto"
@@ -714,8 +722,9 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
            feeling=None, her_initiative: bool = False, chooser: Optional[Callable] = None,
            rng: Optional[random.Random] = None, fertile: bool = False, force_pose: Optional[str] = None,
            expression_override: str = "", outfit_override: Optional[str] = None,
-           friend_outfit_override: Optional[str] = None) -> DirectedShot:
-    """Decide a foto inteira e devolve o prompt pronto pro Krea 2."""
+           friend_outfit_override: Optional[str] = None, scene_at: Optional[datetime] = None) -> DirectedShot:
+    """Decide a foto inteira e devolve o prompt pronto pro Krea 2. `scene_at`: a hora da cena quando a foto é de
+    antes (post do rolê de ontem à noite); a luz de fora segue ela."""
     from visual_profile import krea2_zoom_prompt
     rng = rng or random.Random()
     session = load_session(db, now)
@@ -814,11 +823,13 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         action = action.replace(DILDO_TEXT, DILDO_CLEAR_TEXT)    # os dois dildos dela: rosa e transparente
     weather = getattr(camera_ctx, "weather", None) if camera_ctx else None
     rain = "chuva" if weather and (weather.get("heavy_rain") or "rain" in json.dumps(weather).lower()) else None
+    luz = ""
     if room == "fora":
         from camera_world import PLACE_VISUAL
         visual = PLACE_VISUAL.get(place or "", "a street in Botafogo, Rio de Janeiro")
         visual = re.sub(r",?\s*candid (indoor )?smartphone photo", "", visual)
-        setting, backdrop = visual, f"{visual.split(',')[0]} in soft focus"
+        luz = _luz_fora((scene_at or now).hour)
+        setting, backdrop = f"{visual}{luz}", f"{visual.split(',')[0]} in soft focus{luz}"
     else:
         setting, backdrop = apartamento.setting(room, now, rain), apartamento.backdrop(room, now, rain)
     lora_weights = {}
@@ -838,6 +849,8 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         friend_line = _friend_sentence(in_photo, friend_outfit)
         prompt = (prompt.replace("Behind her, ", f"{friend_line} Behind them, ", 1) if "Behind her, " in prompt
                   else f"{prompt} {friend_line}")
+    if luz:     # 28/09: "natural light" do molde puxava sol pra foto da noite
+        prompt = prompt.replace("natural light", "warm night-time light")
     # Gozo especial: se dedilhando (pose com o momento "fingers"), às vezes — o dobro no período fértil.
     special = (beat == "climax" and "fingers" in dict(pose.beats) and room in apartamento.ROOMS
                and rng.random() < SPECIAL_CLIMAX_CHANCE * (2 if fertile else 1))
@@ -854,7 +867,7 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     nails = _nails(db, now)                  # 26/09: a cor de verdade das unhas dela (unhas.py)
     if nails:
         prompt = f"{prompt} {nails}"
-    prompt = _hair(db, now, prompt, action)  # 26/09: o cabelo de agora — cor, corte e penteado (cabelo.py)
+    prompt = _hair(db, now, prompt, action, cena_passada=scene_at is not None)  # 26/09: o cabelo de agora — cor, corte e penteado (cabelo.py)
     where = apartamento.ROOMS[room]["pt"] if room in apartamento.ROOMS else "na rua"
     facts = f"lugar: {where}; pose: {pose.pt}; roupa: {outfit or 'pelada'}"
     if beat:
@@ -888,13 +901,17 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
 _HAIR_DA_POSE = re.compile(r"\b(?:wet|damp|tangled|spread)\b", re.IGNORECASE)
 
 
-def _hair(db, now: datetime, prompt: str, action: str) -> str:
+def _hair(db, now: datetime, prompt: str, action: str, *, cena_passada: bool = False) -> str:
     """Troca o cabelo fixo do perfil pelo de agora. Se a pose já diz como o cabelo está (molhado, espalhado
-    no travesseiro, embaraçado), o penteado fica o da pose."""
+    no travesseiro, embaraçado), o penteado fica o da pose. Cena passada (post do rolê de ontem): o estado guarda
+    só a última lavagem, então molhado/touca/banho seriam os de hoje — fica o penteado do perfil (28/09)."""
     from visual_profile import HAIR_COLOR, HAIR_STYLE
     try:
-        from cabelo import Cabelo
-        cor, estilo = Cabelo(db).visual(now)
+        from cabelo import ESTILOS, Cabelo
+        cab = Cabelo(db)
+        cor, estilo = cab.visual(now)
+        if cena_passada and cab.penteado(now) in ("molhado", "secando", "touca", "banho"):
+            estilo = ESTILOS["natural"][1]
     except Exception:
         logger.exception("photo_director.cabelo")
         return prompt

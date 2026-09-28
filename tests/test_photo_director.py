@@ -108,6 +108,16 @@ class DirectorTest(unittest.TestCase):
         self.assertEqual(s.room, "fora")
         self.assertNotEqual(pd.BY_ID[s.pose_id].framing, "friend", "sozinha: sem 'amiga tirando'")
 
+    def test_light_outside_follows_the_scene_hour(self):
+        """28/09: rolê da noite postado às 18:58 do dia seguinte saiu com sol na janela."""
+        bar = ctx(place_key="quartinho_bar", present_people=())
+        tarde = NOW.replace(hour=15)
+        dia = self.shot("manda uma foto", camera=bar, now=tarde, send=False)
+        self.assertNotIn("at night", dia.prompt)
+        noite = self.shot("manda uma foto", camera=bar, now=tarde, send=False, scene_at=NOW - timedelta(days=1))
+        self.assertIn("dark night street", noite.prompt)
+        self.assertNotIn("natural light", noite.prompt)
+
     def test_expression_follows_mood_and_arousal(self):
         self.assertIn("lustful", pd.expression(None, IntimacyTurn(state="active", arousal=0.9)))
         self.assertIn("pleasure", pd.expression(None, IntimacyTurn(state="climax")))

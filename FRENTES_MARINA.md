@@ -39,13 +39,13 @@ Agora decidida linha a linha (card layout D); tela inicial só com os apps; Inst
 0. 🟡 **Instagram da Marina** (Etapa 5): no ar desde 27/09 (@masalles; ela posta pelo dia dela, amigas comentam e postam; textos sem bordão, roupa sem repetir, praia de biquíni). Acervo refeito (folhas, fotos e textos). Falta:
    a. ✅ Folhas das quatro amigas prontas (27/09, noite). Ligadas: amiga sozinha parte da folha; troca de rosto usa a 3x4 só com a cabeça (a folha vazou o body cinza no biquíni). Foto 7 refeita (novo7c + cabeça da Carol).
    c. ✅ Fotos 3, 5, 9 e 13 refeitas e aprovadas; textos refeitos (tipo de comentário por pessoa, começos proibidos, só emoji liberado; conversa do Patrick no post 8 preservada).
-   d. 🟡 Gerador revisado com ele (28/09: legenda com tipo, memória de tipo por pessoa, falam com quem postou, marcada estava lá, rolê mais recente ganha) e no ar. **Falta:** ele revisar no app os textos novos (cópia local em `…/74d4f8ca…/scratchpad/ig_copy.db`, pré-visualização `miniapp-insta`), copiar esses textos exatos pra produção (acervo + post 6, sem gerar de novo) e refazer a foto do post 6 (rolê da noite com luz de dia).
+   d. 🟡 Gerador revisado com ele (28/09) e no ar; textos revisados no app (sete ajustes dele) e **na produção** (28/09, manhã). Luz da foto de fora pela hora do rolê (noite de verdade). **Falta:** a foto nova do post 6 aprovada por ele (`instagram_acervo.py --refoto 6`).
 1. Bastidores **aba a aba** com ele (Por dentro, Dinheiro, Mundo), como foi a Agora — ele quer ver no celular e
    ajustar palavra por palavra (PLANO_VOZ 14).
 2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
 3. Fotos provisórias de marca e logos marcados "conferir"; redes sociais dela (Etapa 5).
 4. ✅ Legenda do post real de 27/09: era o Quartinho da noite de 26/09 (não o cinema); "minha pessoa" soava date. Refeita
-   ("no quartinho bar, ontem à noite"), entra na produção junto com o item 0.d.
+   ("no quartinho bar, ontem à noite"), na produção desde 28/09.
 
 ## 3. Voz e chat — skill `frente-voz`
 **Abertura:** "bora na frente da voz"
