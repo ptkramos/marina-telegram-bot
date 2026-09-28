@@ -1845,3 +1845,6 @@ Pedido do Patrick (aba Por fora, opção C): o look do momento existir no mundo,
 - **Na produção (19:22):** o estado nasceu com ela ainda na academia e a saída aplicou o preparo das 18:23 (top e
   legging, "Academia", desde 18:23). Achado: a roupa de casa da partida foi pro histórico "de 19:22 até 18:23"; troca
   retroativa antes da roupa atual agora a substitui (teste `test_troca_retroativa_nao_deixa_historico_invertido`).
+
+## Freio e soak (28/09, 19:40 — decisão do Patrick)
+Nada de funcionalidade nova até o soak fechar. Antes do soak: bug 16, voz (histórico velho, auditoria do prompt, promessa de foto), mundo (lista de compras, bateria social, sementes, revisão de textos), infra (relatório diário do soak + API de rotas) e auditoria de funcionamento rodada 3. Soak: 7 dias reais + 3 limpos; relatório gerado na VPS às 05:10 cobrindo 05:00→05:00. Detalhe e lista "Depois do soak" na seção 0 do `FRENTES_MARINA.md`.

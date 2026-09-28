@@ -1318,3 +1318,6 @@ alteração de código.
 
 **Owner:** Patrick + assistant (Claude Opus 4.7)
 **Última revisão:** 2026-09-19
+
+## Freio e soak (28/09, 19:40 — decisão do Patrick)
+Nada de funcionalidade nova até o soak fechar. Antes do soak: bug 16, voz (histórico velho, auditoria do prompt, promessa de foto), mundo (lista de compras, bateria social, sementes, revisão de textos), infra (relatório diário do soak + API de rotas) e auditoria de funcionamento rodada 3. Soak: 7 dias reais + 3 limpos; relatório gerado na VPS às 05:10 cobrindo 05:00→05:00. Detalhe e lista "Depois do soak" na seção 0 do `FRENTES_MARINA.md`.

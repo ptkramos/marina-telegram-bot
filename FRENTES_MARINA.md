@@ -4,12 +4,53 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 18:40 (auditoria de funcionamento, rodada 2: varredura do Agora e do Hoje de 28/09 — item 15 dos bugs, corrigido e na produção em `a0c61c8`; próxima conversa na frente do mundo, roupa e make de verdade; a auditoria volta depois da noite de 28/09)._
+_Atualizado em 28/09/2026, 19:40 (roupa e make de verdade prontas e na produção em `90bc800`/`53f07c4`; **freio
+decidido com o Patrick: fecha a lista abaixo e para tudo pro soak**; próxima conversa na frente de bugs, bug 16)._
+
+---
+
+## 0. FREIO — até o soak fechar, nada de funcionalidade nova (Patrick, 28/09, 19:40)
+Pedido dele: "eu estou colocando funcionalidade em cima de funcionalidade sem parar, queria que você me freasse".
+**Regra pro Claude:** ideia nova (dele ou minha) não vira código antes do soak: vai pra "Depois do soak" abaixo, e eu
+aviso ele disso na hora. Só entra o que está em "Antes do soak" e correção de bug.
+
+**Antes do soak — fecha e para (nesta ordem, uma conversa cada):**
+1. Bug 16 (18:57: academia × "em casa no sofá", ",4 kg") — "bora na frente de bugs: bug 16 (18:57)"
+2. Voz: histórico puxando assunto velho + auditoria do prompt do chat + regra de quando ela cumpre promessa de foto
+   (PLANO_VOZ 15 e 16) — "bora na frente da voz: fechar pro soak"
+3. Mundo: lista de compras (ela promete e não existe), bateria social (café/açaí como rolê), sementes de história que
+   nunca fecham, e revisar com ele os textos que decidi (roupa, agenda viva, atraso, Milo, academia, preparos) —
+   "bora na frente do mundo: fechar pro soak"
+4. Infra: custo da API de rotas + **relatório diário do soak** (abaixo) — "bora na frente de infra: relatório do soak"
+5. Auditoria de funcionamento, rodada 3 (tudo junto, na cópia do banco dentro da VPS) — "bora na auditoria de
+   funcionamento: rodada 3, antes do soak"
+- Do Patrick antes do soak: trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot.
+
+**Soak (decidido):** **7 dias reais + 3 limpos.** Bug achado é corrigido no dia seguinte, só conserto (sem
+funcionalidade nova, deploy respeitando a regra dos 5 min). Libera coisa nova quando os 3 últimos dias passarem sem
+bug grave; apareceu um, os 3 dias limpos recomeçam. **Bug grave:** ela contradiz o mundo (lugar, atividade, comida,
+roupa, dinheiro), o app mostra algo que não aconteceu, erro/traceback, mensagem quebrada ou fora de ordem, custo fora
+do normal. Texto feio ou gosto → anotado e corrigido em lote, não zera a contagem.
+Durante o soak ele usa normal e marca o que estranhar com /bom e /ruim; abertura do dia: "bora no soak, dia N".
+
+**Relatório diário (a construir no item 4):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
+perguntou 00:00 × 05:00 e ficou 05:00: o rolê da noite e a conversa de madrugada ficam no mesmo dia), cobrindo
+05:00→05:00, em `/root/bots/marina/soak/dia-AAAA-MM-DD.md` (fica na VPS, como o banco). Conteúdo: a conversa do dia
+com hora; o mundo (`world_state`) × card × Hoje × acontecimentos; **contradições que o script acha sozinho** (fala dela
+× lugar/atividade do mundo naquela hora, número sumido da fala, foto × roupa, card × mundo); /bom e /ruim; erros do
+journal; custos (Buzz, rotas, LLM) e fotos geradas; iniciativas. Eu leio na conversa "bora no soak, dia N", explico e
+listo os bugs.
+
+**Depois do soak (congelado):** salão pelo humor/remarcado pela conversa; virose com banheiro, pai ligando mais, job
+fora do Rio; roupa nova comprada no shopping; iFood da Ma, banco dela, `pedido_dela` no catálogo novo, pedidos dela de
+farmácia/mercado; fotos provisórias de marca e o X dela; técnicas antigas da voz (PLANO_VOZ 13); imagens (flash no
+quarto, foto de grupo em casa/duas amigas, poses novas, ângulo de trás, fatores do gozo especial, rostos novos).
+O que era "ver no uso real" (agenda viva, atraso, roupa, Instagram, coerência entre turnos) **é o próprio soak**.
 
 ---
 
 ## 1. Mundo e agenda — skill `frente-mundo`
-**Abertura:** "bora na frente do mundo: roupa e make de verdade (o look do momento, pra aba Por fora e pras fotos)"
+**Abertura:** "bora na frente do mundo: fechar pro soak" (freio: só o item 3 da seção 0)
 
 **Pronto (26/09):** agenda única (planejado, vontade, convite → mesma agenda com etapas); academia e passeio do
 Milo decididos uma vez por dia; mercado e médico como itens (Bradesco Saúde, Samaritano/Novamed); tempo livre
@@ -30,7 +71,8 @@ dormir com ela), gaveta íntima pra provocar (lingerie, fetiche, transparência;
 ele pede, por baixo da roupa de sair, às vezes dorme com ela), escolha dele entre as duas opções de look; a foto, o
 prompt e o post do rolê usam a roupa de verdade; bloco "Agora" no topo do Por fora.
 
-**Próximo, nesta ordem:**
+**Próximo** (freio de 28/09: entra só o que a seção 0 lista antes do soak — lista de compras, bateria social,
+sementes e revisão de textos; "ver no uso real" é o soak; salão e pendências antigas ficam pra depois):
 1. Ver a roupa no uso real (primeira noite: Se arrumando, foto, chegada, pijama; primeira provocação) e revisar com
    ele os textos que decidi (lista no PLANO_WEBAPP, "Roupa e make de verdade"). Ideia anotada: roupa nova comprada
    no shopping entrando no guarda-roupa (sai do saldo).
@@ -46,7 +88,7 @@ prompt e o post do rolê usam a roupa de verdade; bloco "Agora" no topo do Por f
    compra da semana (mercado), sai no extrato do Dinheiro e ela pode comentar depois.
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** "bora na frente dos apps: Instagram no uso real"
+**Abertura:** congelada até o soak fechar (freio, seção 0); o Instagram no uso real é visto no soak
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; **Instagram** no ar (27/09) com acervo refeito
@@ -61,7 +103,7 @@ círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
 3. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).
 
 ## 3. Voz e chat — skill `frente-voz`
-**Abertura:** "bora na frente da voz"
+**Abertura:** "bora na frente da voz: fechar pro soak" (freio: só o item 2 da seção 0)
 
 **Pronto (26/09):** balões inteiros e uma iniciativa por vez (fim das mensagens fora de ordem); ponto final
 dividindo balão; vocabulário da masturbação; música que ele manda por link.
@@ -73,7 +115,7 @@ dividindo balão; vocabulário da masturbação; música que ele manda por link.
 4. Histórico puxando assunto velho (bug 14, 28/09): às 17:24, passeando na Enseada, ela disse "tô organizando umas referências de look" — repetição do que ela disse às 13:41. A causa principal (o sofá do Milo no prompt) saiu; se voltar a acontecer sem fato contraditório, é da voz.
 
 ## 4. Infra — skill `frente-infra`
-**Abertura:** "bora na frente de infra: API paga de rotas — quantas chamadas a produção faz por dia e o default local desligado"
+**Abertura:** "bora na frente de infra: relatório do soak" (freio: item 4 da seção 0 — relatório diário + API de rotas)
 
 **Pronto (28/09, noite):** pilha no limite e desempenho (`1d40f4a`, na produção): o ciclo trechos → academia → sono →
 despertador → trechos (997/1000 níveis na VPS) cortado — pilha 75; plano do dia uma vez por rodada (`db.rodada`/`memo`,
@@ -238,7 +280,7 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       `limpar_fala_marina`/sanitização comendo número. Abertura: "bora na frente de bugs: bug 16 (18:57)".
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
-**Abertura:** "bora na frente de imagens: quarto apagado com flash e foto de grupo das outras amigas"
+**Abertura:** congelada até o soak fechar (freio, seção 0); foto errada no uso real é bug do soak
 
 Cadeia única: pose de referência → prompt no jeito da casa (`photo_director.Pose`) → motor (Civitai Krea 2, LoRA `marinaX`).
 O *quando* ela manda foto continua na frente da voz.
@@ -254,7 +296,7 @@ O *quando* ela manda foto continua na frente da voz.
 5. Do Patrick: trocar a chave do Civitai (vazou em 24/09).
 
 ## 7. Auditoria de funcionamento — skill `frente-auditoria`
-**Abertura:** "bora na auditoria de funcionamento: a noite de 28/09 e a manhã de 29/09 (academia, banho pós-treino, jantar, dormir, Se arrumando da faculdade)"
+**Abertura:** "bora na auditoria de funcionamento: rodada 3, antes do soak" (freio: item 5 da seção 0; inclui a noite de 28/09 com a roupa nova)
 
 O Patrick está achando muitos bugs no uso real: o dia 26/09 teve ~50 commits em várias conversas, e muita coisa pode ter ficado desamarrada (um módulo novo que o outro não conhece). Não é criar nada novo: é conferir se cada entrega **funciona de verdade na produção**, junto com as outras.
 

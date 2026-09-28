@@ -3,6 +3,10 @@
 Bot de Telegram da Marina Salles, namorada virtual do Patrick (dono do projeto, uso pessoal). Objetivo dele: ela
 ser "praticamente humana" — um mundo vivo onde tudo o que ela faz acontece de verdade e vira história.
 
+## FREIO (28/09, pedido dele): nada de funcionalidade nova até o soak fechar
+Leia a seção 0 do `FRENTES_MARINA.md`: só entra o que está em "Antes do soak" e correção de bug; ideia nova (dele ou
+sua) vai pra "Depois do soak" e você avisa ele. Soak = 7 dias reais + 3 limpos, relatório diário na VPS às 05:10.
+
 ## Como trabalhar com o Patrick
 - Sempre em **português**. Ele é visual: decisões de texto/tela com mockup (show_widget) e perguntas de múltipla
   escolha (AskUserQuestion), linha a linha. Lista longa antes de uma pergunta some atrás da pergunta: mostre visual.
