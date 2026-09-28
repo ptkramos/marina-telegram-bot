@@ -44,9 +44,19 @@ MOVS_KEEP = 30
 def _load(db) -> dict:
     try:
         raw = db.get_estado_relacional(KEY)
-        return json.loads(raw) if raw else {}
+        st = json.loads(raw) if raw else {}
     except Exception:
         return {}
+    if "movs" in st and "meses" not in st:     # 28/09: totais do mês (o extrato só guarda os últimos 30)
+        st["meses"] = {}
+        for m in st["movs"]:
+            _soma_mes(st, m["at"], m["valor"])
+    return st
+
+
+def _soma_mes(st: dict, at: str, valor: int) -> None:
+    mes = st.setdefault("meses", {}).setdefault(at[:7], {"entrou": 0, "saiu": 0})
+    mes["entrou" if valor >= 0 else "saiu"] += abs(int(valor))
 
 
 def _save(db, st: dict) -> None:
@@ -62,9 +72,15 @@ def _init(st: dict, now: datetime) -> dict:
     return st
 
 
-def _mov(st: dict, at: datetime, valor: int, desc: str) -> None:
+def _mov(st: dict, at: datetime, valor: int, desc: str, key: str = "") -> None:
     st["saldo"] = int(st["saldo"]) + int(valor)
-    st["movs"].append({"at": at.isoformat(timespec="minutes"), "valor": int(valor), "desc": desc})
+    mov = {"at": at.isoformat(timespec="minutes"), "valor": int(valor), "desc": desc}
+    if key:
+        mov["key"] = key                        # 28/09: o extrato agrupa por saída pela chave do acontecimento
+    st["movs"].append(mov)
+    _soma_mes(st, mov["at"], int(valor))
+    for velho in sorted(st["meses"])[:-3]:
+        del st["meses"][velho]
 
 
 def _event(db, key: str, at: datetime, summary: str, now: datetime, share: float = 0.6) -> None:
@@ -103,15 +119,15 @@ def materialize(db, now: datetime) -> int:
         if key.startswith("freela:"):
             m = _AMOUNT.search(row["summary"] or "")
             if m:
-                _mov(st, at, int(m.group(1)), "cachê do freela")
+                _mov(st, at, int(m.group(1)), "cachê do freela", key)
         elif key.endswith(":contas_dela"):
-            _mov(st, at, -CONTAS_DELA, "contas dela (celular e streamings)")
+            _mov(st, at, -CONTAS_DELA, "contas dela (celular e streamings)", key)
         elif key.startswith(("consumo:", "transporte:", "compra:")):  # 26/09: rolê, uber e o que ela compra (livros)
             m = _AMOUNT.search(row["summary"] or "")
             if m:
-                _mov(st, at, -int(m.group(1)), row["title"] or "rolê")
+                _mov(st, at, -int(m.group(1)), row["title"] or "rolê", key)
         else:
-            _mov(st, at, -_delivery_price(row["summary"] or ""), "delivery")
+            _mov(st, at, -_delivery_price(row["summary"] or ""), "delivery", key)
         st["vistos"].append(key)
         changed += 1
         if key.endswith(":cache"):

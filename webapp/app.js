@@ -94,6 +94,7 @@ const abreAs = (h) => `Abre às ${String(h).padStart(2, "0")}:00`;
 
 const HOJE_ABERTOS = new Set();   // períodos passados que ele abriu no Hoje (sobrevivem à recarga de 30 s)
 let DIARIO_ABERTO = false;        // "Ver o dia todo" no Hoje por dentro (idem)
+const EXTRATO_ABERTOS = new Set(); // saídas abertas no extrato da aba Dinheiro (idem)
 let BAST_CARREGANDO = false;      // uma carga dos Bastidores por vez
 
 // 28/09 (Patrick): na recarga dos Bastidores a barra desliza do valor antigo pro novo, em vez de pular.
@@ -266,7 +267,7 @@ const loaders = {
   },
 
   // 26/09 (Patrick): abas Agora · Por dentro · Dinheiro · Mundo. O servidor já manda o texto pronto
-  // (status_view, emocao_view, world_panel, mov_desc); aqui é só desenho.
+  // (status_view, emocao_view, world_panel, extrato); aqui é só desenho.
   async bastidores() {
     if (BAST_CARREGANDO) return;              // 28/09: abrir a tela e a recarga de 30 s não pedem duas vezes
     BAST_CARREGANDO = true;
@@ -396,18 +397,32 @@ const loaders = {
       $("bd-voces").innerHTML = e.voces.map((b) => bar(b.label, b.value, null, b.label === "Desejo")).join("")
         + ((e.voces_linhas || []).length ? `<div class="linhas sep">${e.voces_linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>` : "");
 
-      // Dinheiro
+      // Dinheiro — 28/09 (Patrick, no celular): saldo, entrou/saiu no mês, próximo cachê e contas;
+      // extrato por dia, saída agrupada com o total (toca e abre os itens, como no Hoje)
       $("bn-saldo").textContent = brl(g.saldo);
-      $("bn-linhas").innerHTML = [g.devendo && linha("arrow-back-up", "Deve a você", brl(g.devendo)),
-        g.pedido && linha("alert-circle", `Precisa de ${brl(g.pedido.valor)}`, cap(g.pedido.motivo))].filter(Boolean).join("");
-      $("bn-linhas").hidden = !g.devendo && !g.pedido;
-      $("bn-extrato").innerHTML = g.movs.length ? g.movs.slice(0, 20).map((mv) => {
-        const dt = new Date(mv.at);
-        const when = dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " · " +
-          dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-        return `<div class="mov"><div class="mov-txt"><div>${esc(mv.desc)}</div><div class="d">${when}</div></div>
-          <div class="mov-val ${mv.valor >= 0 ? "plus" : "minus"}">${mv.valor >= 0 ? "+" : "−"} ${brl(Math.abs(mv.valor))}</div></div>`;
-      }).join("") : vazio("Nenhuma movimentação ainda.");
+      const tp = g.topo;
+      $("bn-mes").innerHTML = `<div><span class="d">Entrou em ${esc(tp.mes)}</span><b class="plus">+ ${brl0(tp.entrou)}</b></div>
+        <div><span class="d">Saiu em ${esc(tp.mes)}</span><b>− ${brl0(tp.saiu)}</b></div>`;
+      $("bn-linhas").innerHTML = [...tp.linhas.map(([i, r, v]) => linha(i, r, v)),
+        g.devendo && linha("arrow-back-up", "Deve a você", brl0(g.devendo)),
+        g.pedido && linha("alert-circle", "Precisa de", `${brl0(g.pedido.valor)} · ${g.pedido.motivo}`)].filter(Boolean).join("");
+      const valor = (v) => `${v >= 0 ? "+" : "−"} ${brl0(Math.abs(v))}`;
+      const mov = (x, extra = "") => `<span class="mov-txt">${esc(x.texto)}${extra}${x.sub ? `<span class="mov-sub">${esc(x.sub)}</span>` : ""}</span>
+        <span class="mov-val${x.valor >= 0 ? " plus" : ""}">${valor(x.valor)}<span class="mov-sub">${esc(x.hora)}</span></span>`;
+      const desenhaExtrato = () => {
+        $("bn-extrato").innerHTML = g.extrato.length ? g.extrato.map((d) => `<h2>${esc(d.dia)}</h2><div class="card">${d.itens.map((x) => {
+          if (!x.filhos.length) return `<div class="mov">${mov(x)}</div>`;
+          const id = `${d.dia}|${x.hora}|${x.texto}`, aberto = EXTRATO_ABERTOS.has(id);
+          return `<button class="mov${aberto ? " aberto" : ""}" data-ext="${esc(id)}">${mov(x, ic(aberto ? "chevron-up" : "chevron-down"))}</button>
+            ${aberto ? `<div class="mov-filhos">${x.filhos.map((f) => `<div class="mov">${mov(f)}</div>`).join("")}</div>` : ""}`;
+        }).join("")}</div>`).join("") : `<h2>Extrato</h2><div class="card">${vazio("Nenhuma movimentação ainda.")}</div>`;
+        $("bn-extrato").querySelectorAll("[data-ext]").forEach((b) => b.addEventListener("click", () => {
+          const id = b.dataset.ext;
+          EXTRATO_ABERTOS.has(id) ? EXTRATO_ABERTOS.delete(id) : EXTRATO_ABERTOS.add(id);
+          desenhaExtrato();
+        }));
+      };
+      desenhaExtrato();
 
       // Mundo
       $("bm-pessoas").innerHTML = m.pessoas.map((p) => `<div class="pessoa">${p.foto

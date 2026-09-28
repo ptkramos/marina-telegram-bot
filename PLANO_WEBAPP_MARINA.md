@@ -144,7 +144,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 - **Decisões do Patrick:** abas (Agora · Por dentro · Dinheiro · Mundo) e **voz híbrida**: rótulos, status, números, dinheiro e mundo falam como painel ("você"); o que é sentimento (motivo de cada um) fala do jeito dela.
 - **Agora:** atividade em destaque, "Em casa · Botafogo" (não "Apartamento da Marina (Botafogo)"), linhas rotuladas com ícone: Celular ("Responde quando acordar", sem 🌙), Ciclo ("Dia 24 · TPM"), Saúde, Próximo ("Aula de Projeto, segunda 14h"), Plano. **Hoje** em linha do tempo; os eventos gravados em 3ª pessoa viram voz de painel ("Você fez um Pix de R$ 150 pra ela").
 - **Por dentro:** barras do corpo; dormindo, a Energia mostra "dormindo" e não "exausta" (era pressão de sono). A frase "dormiu 8,7 h · TPM · última vez há 30 h" virou linhas: Sono ("dormiu 8h40 · acordou às 9h05"), Último orgasmo, Desconforto, "No clima agora". Sentindo agora com preposição certa ("com saudade dele", "chateada com ele", "grata à Bia") e o motivo na voz dela ("Ele me elogiou", "Ele fez um Pix pra mim"); pílulas "3 vezes" e "até resolver". "Com você" virou **Vocês dois**.
-- **Dinheiro:** saldo grande, "Deve a você", "Precisa de R$ X"; extrato em voz de painel ("Seu Pix · pro açaí", "Seu presente: …", "Delivery pra você: …", "Celular e streamings"). Aqui entram o banco dela e o iFood da Ma.
+- **Dinheiro:** saldo grande, "Deve a você", "Precisa de R$ X"; extrato em voz de painel ("Seu Pix · pro açaí", "Seu presente: …", "Delivery pra você: …", "Celular e streamings"). Aqui entram o banco dela e o iFood da Ma. (Refeita em 28/09 à tarde: topo do mês e extrato agrupado por saída — ver "Dinheiro" mais abaixo.)
 - **Mundo:** o texto colado do `/mundo` ("Henrique Salles — último contato sem contato ainda; 0 nos últimos 30 dias") virou cartões: iniciais, nome ("Bia Andrade"), quem é, curto (`social_day.QUEM`: pai, melhor amiga, porteiro…), "hoje, 08:15" / "Sem contato ainda" e "4 vezes no mês" (o `weekly` do cânone não é contagem e não aparece). Rolando agora, Planos e Lugares em listas.
 - **Código:** `webapp_server.status_view`, `emocao_view`, `voz_painel`, `voz_dela`, `mov_desc`; `SocialDay.world_panel`. O `/status`, `/emocao` e `/mundo` do chat não mudaram. Testes: `tests/test_bastidores_textos.py` (11).
 - **Seu Jorge (26/09):** pegar o delivery na portaria agora conta como contato com ele (`delivery._contato_portaria`); antes o Mundo mostrava "Sem contato ainda" logo depois de ela pegar o presente.
@@ -232,6 +232,30 @@ celular com a largura de cada aba pelo texto). Escolhas do Patrick com mockup e 
   "Ainda não", "Dieta", "Até dd/mm", "Altura"; ícones scale, salad, ruler-2.
 - **Código:** `meals.painel_peso`/`_kg`, `webapp_server.api_bastidores` (`peso`), `webapp/` (aba, `ba-fora`, `.seg` com
   cinco abas). Testes: `tests/test_por_fora.py` (5).
+
+### Bastidores aba a aba — Dinheiro (28/09, tarde, no celular, com o banco da produção) ✅
+Escolhas do Patrick com mockup e múltipla escolha:
+- **Topo:** saldo grande; embaixo, em duas colunas, **Entrou em setembro** (+ R$ 300, verde) e **Saiu em setembro**
+  (− R$ 345); linhas **Próximo cachê** ("R$ 400 · até 02/10", "R$ 400 · job dia 03/10", "Nenhum marcado") e **Contas**
+  ("Dia 6 · R$ 189"; pagas, "Pagas dia 6 · R$ 189"; dia passado sem conta registrada, a do mês que vem "Dia 6/10");
+  "Deve a você" e "Precisa de" (R$ X · motivo) continuam quando existem.
+- **Extrato agrupado por saída (opção B):** dias como título ("Hoje", "Ontem", "Sáb, 26/09"); cada saída é uma linha
+  **"Foi no Shopping da Gávea"** com o resumo cinza embaixo ("Cinema, pipoca, refri e uber"; repetido vira "2 gin
+  tônicas"; quantidade tipo "250 ml" sai do resumo), o total e a hora da primeira coisa; **toca e abre** os itens
+  (Uber · Ida, Cinema, Pipoca · Dividiu com a Bia, Uber · Volta, dividiu com a Bia). Fora de saída, a ação no passado
+  na linha e o detalhe embaixo: **Recebeu seu Pix** (sem recado, nada embaixo — decisão dele; com recado, o recado),
+  Usou seu Pix · o que comprou, Mandou um delivery pra você · o quê, Devolveu seu empréstimo, Pagou as contas ·
+  Celular e streamings, Recebeu metade/o resto do cachê · o job, Pediu delivery, Comprou um livro · título, Fez o
+  cabelo/as unhas na Ophicina · serviço.
+- **Mundo por baixo:** o movimento agora guarda a chave do acontecimento (`financas._mov(..., key)`); os antigos acham
+  pelo título e pela hora. Os totais do mês ficam em `financas_json.meses` (os 3 últimos meses; o extrato só guarda
+  30 movimentos), calculados dos movimentos antigos na primeira leitura.
+- **Textos que eu decidi (pra ele revisar):** "Entrou em {mês}" / "Saiu em {mês}", "Nenhum marcado", "R$ X · até
+  dd/mm", "R$ X · job dia dd/mm", "Dia N · R$ 189", "Pagas dia N", "Dia N/mm", "Precisa de" · "R$ X · motivo", "Foi no/na
+  {lugar}", "Saiu" (saída sem lugar), "Ida"/"Volta", "Dividiu com …", e os textos fora de saída listados acima.
+- **Código:** `extrato.py` (novo: `extrato_view`, `topo_view`), `financas` (`_mov` com chave, `_soma_mes`, `meses`),
+  `webapp_server.api_banco` (sai `mov_desc`), `webapp/` (topo, extrato por dia, abre/fecha como o Hoje). Testes:
+  `tests/test_extrato.py` (9).
 
 ### Aba Agora — decisões com o Patrick, linha a linha (26/09; saída de casa implementada, atividades em casa a decidir)
 **Por quê:** o status só mostrava onde ela está e o que faz; não existia preparação nem "indo fazer" (fora a faculdade de manhã) — do "tempo livre em casa" ela pulava pro trajeto.

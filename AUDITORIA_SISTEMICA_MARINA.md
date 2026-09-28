@@ -1701,3 +1701,11 @@ Etapa 5 do PLANO_WEBAPP, decidida com o Patrick por mockup (formato, bio, abertu
 - **Achado sistêmico — roupa e make não existem como estado:** a roupa nasce na hora da foto (sorteio do guarda-roupa por sessão, `photo_session_json`) e a maquiagem só como passo do card. O Patrick escolheu ter "o look do momento" no topo da aba; antes precisa virar estado do mundo (a roupa do dia pela etapa e pelo lugar, a make feita no Se arrumando e tirada antes de dormir) e a foto passa a usar a mesma roupa. Registrado na frente do mundo.
 - **Cinco abas no celular:** a barra de abas passou de quatro colunas iguais pra largura pelo texto; "Por dentro" cabe inteiro em 375 px.
 - Testes: `tests/test_por_fora.py` (5) + `test_bastidores_textos` verdes.
+
+## Frente dos apps (28/09, tarde): aba Dinheiro
+- **Achado sistêmico — o extrato não sabia de onde vinha cada gasto:** o movimento guardava só o título ("Uber", "Shopping da Gávea · Cinema"), então não dava pra juntar o que foi da mesma saída nem dizer ida/volta. Agora o movimento guarda a chave do acontecimento (`consumo:outing:…:N`, `transporte:commute:…:ida`) e o extrato agrupa por saída; os antigos acham a chave pelo título e pela hora em `life_events`.
+- **Totais do mês:** o extrato só guarda 30 movimentos (~3 dias de rolê), então "saiu no mês" contado dali mentiria; o mês vira contador próprio (`financas_json.meses`), preenchido dos movimentos antigos na primeira leitura.
+- **Contas dela antes da vida registrada:** o dia das contas de setembro (6) passou antes de 26/09, sem registro; o painel mostra a do mês que vem ("Dia 6/10") em vez de "Dia 6" no passado.
+- **Artigo do lugar:** o consumo grava sempre "no {lugar}" ("no Drogarias Pacheco"); o extrato usa o `vontade.no` ("na Drogarias Pacheco"). O resumo do mundo continua com "no" — anotado, não mexi (frente do mundo).
+- Testes: `tests/test_extrato.py` (9); `test_bastidores_textos` sem o teste do `mov_desc` (saiu).
+

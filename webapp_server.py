@@ -482,22 +482,6 @@ def emocao_view(e: dict, dormindo: bool, now: Optional[datetime] = None, ciclo: 
             "humor_barras": e["mood_bars"], "sentindo": sentindo, "voces": e["bond"]}
 
 
-MOVS = ((re.compile(r"^pix do Patrick(?:: (.+))?$"), lambda m: "Seu Pix" + (f" · {m.group(1)}" if m.group(1) else "")),
-        (re.compile(r"^presente do Patrick: (.+?)(?: \(ele disse: .*\))?$"), lambda m: f"Seu presente: {m.group(1)}"),
-        (re.compile(r"^delivery pro Patrick: (.+)$"), lambda m: f"Delivery pra você: {m.group(1)}"),
-        (re.compile(r"^devolveu o empréstimo do Patrick$"), lambda m: "Devolveu seu empréstimo"),
-        (re.compile(r"^contas dela \((.+)\)$"), lambda m: cap(m.group(1))))
-
-
-def mov_desc(desc: str) -> str:
-    """Extrato em voz de painel: 'pix do Patrick: pro açaí' → 'Seu Pix · pro açaí'."""
-    for rx, fmt in MOVS:
-        m = rx.match(desc or "")
-        if m:
-            return fmt(m)
-    return cap(desc or "")
-
-
 async def api_bastidores(request: web.Request) -> web.Response:
     hooks: Hooks = request.app["hooks"]
     now = hooks.now()
@@ -561,8 +545,9 @@ async def api_banco(request: web.Request) -> web.Response:
         financas.materialize(hooks.db, now)
         st = financas._load(hooks.db)
         devendo = sum(e["valor"] for e in st.get("emprestimos", []) if not e.get("devolvido_at"))
-        movs = [{**m, "desc": mov_desc(m.get("desc", ""))} for m in reversed(st.get("movs", []))]
-        return {"saldo": st.get("saldo", 0), "movs": movs,
+        import extrato                               # 28/09 (Patrick): topo do mês e extrato agrupado por saída
+        return {"saldo": st.get("saldo", 0), "topo": extrato.topo_view(hooks.db, st, now),
+                "extrato": extrato.extrato_view(hooks.db, st.get("movs", []), now),
                 "devendo": devendo, "pedido": st.get("pedido")}
     return _json(await asyncio.to_thread(collect))
 

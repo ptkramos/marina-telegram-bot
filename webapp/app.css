@@ -337,10 +337,24 @@ button.primary:disabled { opacity: .5; }
 .pilulas { display: flex; gap: 6px; margin-top: 5px; }
 .pilula { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
 .saldo-bast { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.mov { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
-.mov:last-child { border-bottom: 0; }
-.mov-txt { min-width: 0; }
-.mov-val { flex: none; text-align: right; font-variant-numeric: tabular-nums; }
+/* 28/09 (Patrick): Dinheiro — entrou/saiu no mês em duas colunas; extrato por dia, saída agrupada que abre ao tocar */
+.bn-mes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+.bn-mes .d { display: block; }
+.bn-mes b { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bn-linhas .linha { grid-template-columns: 22px 108px 1fr; }
+.mov { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; width: 100%; padding: 9px 0;
+  border: 0; border-bottom: 1px solid var(--line); background: none; font: inherit; color: inherit; text-align: left; }
+.mov:last-child, .mov.aberto { border-bottom: 0; }
+button.mov { cursor: pointer; }
+.mov-txt { min-width: 0; font-size: 14px; }
+.mov-txt .ti { font-size: 14px; color: var(--muted); margin-left: 4px; }
+.mov-sub { display: block; font-size: 12px; color: var(--muted); }
+.mov-val { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mov-val .mov-sub { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 400; }
+.mov-filhos { margin: 0 0 6px 4px; padding-left: 12px; border-left: 1.5px solid var(--line); border-bottom: 1px solid var(--line); }
+.mov-filhos:last-child { border-bottom: 0; }
+.mov-filhos .mov { padding: 6px 0; border-bottom: 0; }
+.mov-filhos .mov-txt, .mov-filhos .mov-val { font-size: 13.5px; }
 .pessoa { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .pessoa:last-child { border-bottom: 0; }
 .avatar-ini { width: 38px; height: 38px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 14%, transparent);

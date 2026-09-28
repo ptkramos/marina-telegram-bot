@@ -217,8 +217,10 @@
       <h2 id="bd-unhas-t" hidden>Unhas</h2><div id="bd-unhas" class="card" hidden></div>
     </div>
     <div class="bast-aba" id="ba-dinheiro" hidden>
-      <div class="card"><div class="muted small">Saldo</div><div class="saldo-bast" id="bn-saldo"></div><div id="bn-linhas" class="linhas"></div></div>
-      <h2>Extrato</h2><div id="bn-extrato" class="card"></div>
+      <!-- 28/09 (Patrick): saldo, entrou/saiu no mês, próximo cachê, contas; extrato agrupado por saída -->
+      <div class="card"><div class="muted small">Saldo</div><div class="saldo-bast" id="bn-saldo"></div>
+        <div class="bn-mes" id="bn-mes"></div><div id="bn-linhas" class="linhas sep bn-linhas"></div></div>
+      <div id="bn-extrato"></div>
     </div>
     <div class="bast-aba" id="ba-mundo" hidden>
       <h2>Pessoas</h2><div id="bm-pessoas" class="card"></div>

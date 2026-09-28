@@ -179,13 +179,6 @@ class VozTest(unittest.TestCase):
         self.assertEqual(w.voz_painel("Devolveu o empréstimo do Patrick"), "Devolveu o seu empréstimo")
         self.assertEqual(w.voz_painel("Pediu comida pro Patrick"), "Pediu comida pra você")
 
-    def test_extrato(self):
-        self.assertEqual(w.mov_desc("pix do Patrick: pro açaí"), "Seu Pix · pro açaí")
-        self.assertEqual(w.mov_desc("presente do Patrick: um jantar (ele disse: aproveita)"), "Seu presente: um jantar")
-        self.assertEqual(w.mov_desc("contas dela (celular e streamings)"), "Celular e streamings")
-        self.assertEqual(w.mov_desc("delivery pro Patrick: suco verde"), "Delivery pra você: suco verde")
-        self.assertEqual(w.mov_desc("cachê do freela"), "Cachê do freela")
-
 
 class MundoTest(unittest.TestCase):
     def test_pessoas_com_quem_e_e_ultimo_contato(self):
