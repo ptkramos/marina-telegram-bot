@@ -1709,3 +1709,9 @@ Etapa 5 do PLANO_WEBAPP, decidida com o Patrick por mockup (formato, bio, abertu
 - **Artigo do lugar:** o consumo grava sempre "no {lugar}" ("no Drogarias Pacheco"); o extrato usa o `vontade.no` ("na Drogarias Pacheco"). O resumo do mundo continua com "no" — anotado, não mexi (frente do mundo).
 - Testes: `tests/test_extrato.py` (9); `test_bastidores_textos` sem o teste do `mov_desc` (saiu).
 
+## Frente dos apps (28/09, tarde): aba Mundo
+- **Fio de sistema no painel:** "Rolando agora" mostrava "Contato de Henrique · Com o pai" — a semente `father_check_in` fica aberta em `story_threads` desde 26/09 ("quando e como Marina responderá ainda não está definido"). O Hoje já escondia essas sementes (`hoje.FORA`); o Mundo agora usa o mesmo filtro (`social_day.SEMENTES`). Achado: a semente nunca fecha — anotado pra frente do mundo, não mexi no banco.
+- **Lugares sem informação:** a lista era dos lugares descobertos com a familiaridade ("Conhece"), sem dizer quando nem com quem. Virou "Onde ela foi": as saídas do mês em `eventos_pendentes` (o `status` continua `pending` depois da saída, por isso o filtro é pela hora e por `confirmed`), com os amigos do `metadata_json.friends` e o filme quando é cinema.
+- **Quando com maiúscula:** "hoje, 13:50" era a única direita em minúscula no Bastidores; `_quando_curto` só é usado pelo painel.
+- Testes: `test_bastidores_textos` com o círculo, o onde foi e a semente escondida.
+

@@ -424,19 +424,22 @@ const loaders = {
       };
       desenhaExtrato();
 
-      // Mundo
-      $("bm-pessoas").innerHTML = m.pessoas.map((p) => `<div class="pessoa">${p.foto
+      // Mundo — 28/09 (Patrick, no celular): pessoas por círculo (quando e vezes no mês na direita, se houve contato);
+      // Rolando agora sem os fios de sistema; Planos; Onde ela foi no mês (com quem, quando, vezes)
+      const vezes = (n) => n ? `<div class="d">${n} ${n > 1 ? "vezes" : "vez"} no mês</div>` : "";
+      const bloco = (titulo, itens) => itens.length ? `<h2>${titulo}</h2><div class="card">${itens.join("")}</div>` : "";
+      const pessoa = (p) => `<div class="pessoa">${p.foto
         ? `<img class="avatar-ini avatar-foto" src="/static/${esc(p.foto)}" alt="">`
         : `<span class="avatar-ini">${esc(p.iniciais)}</span>`}
-        <div class="ps-txt"><div class="t">${esc(p.nome)}</div><div class="d">${esc(cap(p.quem))}</div></div>
-        <div class="ps-dir"><div class="d">${p.falaram ? esc(p.falaram) : "Sem contato ainda"}</div>
-        ${p.vezes_30d ? `<div class="d">${p.vezes_30d} ${p.vezes_30d > 1 ? "vezes" : "vez"} no mês</div>` : ""}</div></div>`).join("")
-        || vazio("Ninguém ainda.");
-      const bloco = (titulo, itens) => itens.length ? `<h2>${titulo}</h2><div class="card">${itens.join("")}</div>` : "";
+        <div class="ps-txt"><div class="t">${esc(p.titulo)}</div>${p.sub ? `<div class="d">${esc(p.sub)}</div>` : ""}</div>
+        <div class="ps-dir"><div class="d">${p.falaram ? esc(p.falaram) : "Sem contato ainda"}</div>${p.falaram ? vezes(p.vezes_30d) : ""}</div></div>`;
+      $("bm-pessoas").innerHTML = m.circulos.map((c) => bloco(c, m.pessoas.filter((p) => p.circulo === c).map(pessoa))).join("")
+        || `<h2>Pessoas</h2><div class="card">${vazio("Ninguém ainda.")}</div>`;
       $("bm-resto").innerHTML =
         bloco("Rolando agora", m.rolando.map((r) => `<div class="item-m"><div>${esc(cap(r.titulo))}</div>${r.com.length ? `<div class="d">Com ${esc(r.com.join(", "))}</div>` : ""}</div>`))
         + bloco("Planos", m.planos.map((p) => `<div class="item-m dois-lados"><span>${esc(cap(p.descricao))}</span><span class="d">${esc(p.quando)}</span></div>`))
-        + bloco("Lugares", m.lugares.map((l) => `<div class="item-m dois-lados"><span>${esc(l.nome)}</span><span class="d">${esc(l.quanto)}</span></div>`));
+        + bloco("Onde ela foi", m.lugares.map((l) => `<div class="item-m lugar"><div><div>${esc(l.nome)}</div><div class="d">${esc(l.com)}</div></div>
+          <div class="ps-dir"><div class="d">${esc(l.quando)}</div>${vezes(l.vezes)}</div></div>`));
       deslizaBarras(antes);
     } catch (err) { failIn($("ag-card"), err); }
     finally { BAST_CARREGANDO = false; }

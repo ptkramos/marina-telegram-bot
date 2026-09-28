@@ -91,6 +91,18 @@ NPC_POOLS = {
     ),
 }
 NPC_INDEX = {row[0]: row for pool in NPC_POOLS.values() for row in pool}
+NPC_POOL = {row[0]: pool for pool, rows in NPC_POOLS.items() for row in rows}
+
+# Aba Mundo por círculo (Patrick, 28/09): o círculo é o título; embaixo do nome, só o que o título não diz.
+CIRCULOS = ("Família", "Amigos", "Faculdade e trabalho", "Prédio", "Conhecidos novos")
+CIRCULO = {"henrique_salles": ("Família", "Henrique Salles"), "bia_andrade": ("Amigos", "Melhor amiga"),
+           "julia_azevedo": ("Amigos", "Faculdade"), "theo_martins": ("Amigos", "Faculdade"),
+           "carol_menezes": ("Amigos", "Academia"), "helena_prado": ("Faculdade e trabalho", "Professora"),
+           "livia_vasconcelos": ("Faculdade e trabalho", "Agente"), "jorge_almeida": ("Prédio", "Porteiro"),
+           "celia_ribeiro": ("Prédio", "Vizinha"), "neide_souza": ("Prédio", "Faxineira, vai às quintas")}
+DE_ONDE = {"puc": "Da PUC", "gym": "Da academia", "walk": "Do passeio do Milo", "outing": "Dos rolês"}
+SEMENTES = {"father_check_in", "thread_consequence"}      # fios de sistema: o Hoje também não mostra
+ONDE_FOI = ("outing:", "vontade:", "mercado:", "medico:", "cabelo:", "unhas:")
 
 
 def proximidade(genero: str, nivel: str = "ephemeral") -> str:
@@ -988,19 +1000,14 @@ class SocialDay:
 
     def world_panel(self, now: datetime) -> dict:
         """O mesmo mundo do /mundo, estruturado pros Bastidores (26/09): quem é cada um,
-        quando falaram, lugares, o que está rolando e planos. Sem assunto de conversa."""
-        fam = {"discovered": "Acabou de descobrir", "known": "Conhece", "habitual": "Vai sempre",
-               "occasional": "De vez em quando", "favorite": "Favorito"}
+        quando falaram, lugares, o que está rolando e planos. Sem assunto de conversa.
+        28/09 (Patrick): pessoas por círculo e lugares onde ela foi no mês."""
         with self.db.get_connection() as conn:
             people = conn.execute(
                 """SELECT w.canonical_key, w.display_name, w.character_type, w.canon_locked, w.relationship_to_marina,
                           r.last_interaction_at, r.contact_frequency
                    FROM world_characters w JOIN social_relationships r ON r.character_key=w.canonical_key
                    WHERE w.active=1 AND w.canonical_key NOT IN ('marina','patrick_ramos')""").fetchall()
-            places = conn.execute(
-                """SELECT p.name, COALESCE(s.familiarity, p.familiarity) AS familiarity
-                   FROM world_places p LEFT JOIN social_place_state s ON s.place_key=p.canonical_key
-                   WHERE p.canon_locked=0 AND p.active=1""").fetchall()
         pessoas = []
         for p in people:
             key = p["canonical_key"]
@@ -1014,7 +1021,15 @@ class SocialDay:
                 apelido = nome.split(" (")[1].split(")")[0]
                 nome = " ".join([apelido] + nome.split(") ")[1].split()) if ") " in nome else apelido
             last = datetime.fromisoformat(p["last_interaction_at"]) if p["last_interaction_at"] else None
-            pessoas.append({"nome": nome, "iniciais": "".join(w[0] for w in nome.replace("Dona ", "").replace("Seu ", "").split()[:2]).upper(),
+            if key in CIRCULO:
+                circulo, sub = CIRCULO[key]
+            elif key in NPC_POOL:                                 # 28/09: canônico vai pro círculo de onde veio
+                circulo = "Conhecidos novos" if novo else ("Faculdade e trabalho" if NPC_POOL[key] == "puc" else "Amigos")
+                sub = DE_ONDE.get(NPC_POOL[key], "") if novo else quem[:1].upper() + quem[1:]
+            else:
+                circulo, sub = "Conhecidos novos", quem[:1].upper() + quem[1:]
+            pessoas.append({"titulo": "Pai" if key == "henrique_salles" else nome, "sub": sub, "circulo": circulo,
+                            "nome": nome, "iniciais": "".join(w[0] for w in nome.replace("Dona ", "").replace("Seu ", "").split()[:2]).upper(),
                             "foto": f"avatars/{key}.jpg" if (AVATARS_DIR / f"{key}.jpg").is_file() else None,
                             "quem": quem,
                             "novo": novo, "falaram": self._quando_curto(last, now) if last else None,
@@ -1022,10 +1037,13 @@ class SocialDay:
         pessoas.sort(key=lambda x: x.pop("_last"), reverse=True)
         rolando = []
         for s in self.open_stories():
-            com = [short_name(k) for k in json.loads(s["metadata_json"] or "{}").get("participants", []) if k != "marina"]
+            meta = json.loads(s["metadata_json"] or "{}")
+            if meta.get("seed_key") in SEMENTES:                 # 28/09: "Contato de Henrique" aberto desde 26/09
+                continue
+            com = [short_name(k) for k in meta.get("participants", []) if k != "marina"]
             rolando.append({"titulo": s["title"], "com": com})
-        return {"pessoas": pessoas,
-                "lugares": [{"nome": p["name"], "quanto": fam.get(p["familiarity"], p["familiarity"])} for p in places],
+        return {"pessoas": pessoas, "circulos": [c for c in CIRCULOS if any(p["circulo"] == c for p in pessoas)],
+                "lugares": self._onde_foi(now),
                 "rolando": rolando,
                 "planos": [{"descricao": p["description"], "quando": self._dia_hora(datetime.fromisoformat(p["event_at"]), now)}
                            for p in self.upcoming_outings(now)]}
@@ -1034,10 +1052,36 @@ class SocialDay:
     def _quando_curto(moment: datetime, now: datetime) -> str:
         dias = (now.date() - moment.date()).days
         if dias == 0:
-            return f"hoje, {moment:%H:%M}"
+            return f"Hoje, {moment:%H:%M}"
         if dias == 1:
-            return f"ontem, {moment:%H:%M}"
-        return f"há {dias} dias"
+            return f"Ontem, {moment:%H:%M}"
+        return f"Há {dias} dias"
+
+    def _onde_foi(self, now: datetime) -> list[dict]:
+        """Lugares das saídas do mês (Patrick, 28/09): com quem foi da última vez, quando e quantas vezes.
+        Rotina (faculdade, academia, passeio do Milo, freela) fica de fora."""
+        with self.db.get_connection() as conn:
+            rows = conn.execute(
+                "SELECT e.source_key, e.event_at, e.location_key, e.metadata_json, p.name FROM eventos_pendentes e "
+                "LEFT JOIN world_places p ON p.canonical_key=e.location_key WHERE e.confirmed=1 "
+                "AND e.status != 'cancelled' AND e.event_at >= ? AND e.event_at <= ? AND e.location_key IS NOT NULL "
+                "AND (" + " OR ".join("e.source_key LIKE ?" for _ in ONDE_FOI) + ") ORDER BY e.event_at",
+                (f"{now:%Y-%m}-01", now.isoformat(), *(k + "%" for k in ONDE_FOI))).fetchall()
+        lugares: dict[str, dict] = {}
+        for r in rows:
+            meta = json.loads(r["metadata_json"] or "{}")
+            amigos = [short_name(k) for k in meta.get("friends") or []]
+            com = ("com " + " e ".join(amigos)) if amigos else "sozinha"
+            if meta.get("filme"):
+                com = f"cinema {com}"
+            at = datetime.fromisoformat(r["event_at"])
+            dias = (now.date() - at.date()).days
+            quando = ("Hoje" if dias == 0 else "Ontem" if dias == 1
+                      else ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")[at.weekday()] if dias < 7 else f"{at:%d/%m}")
+            lugar = lugares.setdefault(r["location_key"], {"nome": r["name"] or r["location_key"], "vezes": 0})
+            lugar.update(com=com[:1].upper() + com[1:], quando=quando, vezes=lugar["vezes"] + 1, _at=at)
+        out = sorted(lugares.values(), key=lambda l: l.pop("_at"), reverse=True)
+        return out
 
     @staticmethod
     def _dia_hora(at: datetime, now: datetime) -> str:

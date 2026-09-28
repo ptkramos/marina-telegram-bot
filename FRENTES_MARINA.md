@@ -36,7 +36,7 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
    dos apps mostra no bloco "Agora" da Por fora.
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** "bora na frente dos apps: Bastidores, aba Mundo"
+**Abertura:** "bora na frente dos apps: Instagram no uso real"
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; **Instagram** no ar (27/09) com acervo refeito
@@ -48,7 +48,8 @@ fora à noite com luz de noite; post 6 refeito.
    cabeça (agenda viva à vista), motivos num padrão só em voz de painel, barras deslizando a cada 30 s.
    **Por fora ✅ (28/09, tarde)** — aba nova: Peso (novo) → Cabelo → Unhas; o bloco "Agora" (roupa e make do
    momento) entra quando o mundo tiver isso (item 6 do mundo). **Dinheiro ✅ (28/09, tarde)** — entrou/saiu no mês,
-   próximo cachê, contas; extrato agrupado por saída. Falta **Mundo**, no celular, palavra por palavra (PLANO_VOZ 14).
+   próximo cachê, contas; extrato agrupado por saída. **Mundo ✅ (28/09, tarde)** — pessoas por círculo, Onde
+   ela foi no mês, Rolando agora sem fio de sistema. **Bastidores revisado inteiro** (PLANO_VOZ 14 ✅).
 2. Instagram no uso real: o próximo post de rolê da noite (luz e cabelo) e os textos ao vivo (tipo por pessoa, sem molde).
 3. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
 4. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).

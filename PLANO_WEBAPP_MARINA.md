@@ -257,6 +257,26 @@ Escolhas do Patrick com mockup e múltipla escolha:
   `webapp_server.api_banco` (sai `mov_desc`), `webapp/` (topo, extrato por dia, abre/fecha como o Hoje). Testes:
   `tests/test_extrato.py` (9).
 
+### Bastidores aba a aba — Mundo (28/09, tarde, no celular, com o banco da produção) ✅
+Escolhas do Patrick com mockup e múltipla escolha:
+- **Pessoas por círculo (opção C) + vezes no mês quando houve contato:** Família → Amigos → Faculdade e trabalho →
+  Prédio → Conhecidos novos (círculo vazio some). Embaixo do nome só o que o título não diz: o pai vira **"Pai"** com
+  "Henrique Salles" embaixo; Bia "Melhor amiga", Júlia e Theo "Faculdade", Carol "Academia", Lívia "Agente", Helena
+  "Professora", Seu Jorge "Porteiro", Dona Célia "Vizinha", Dona Neide "Faxineira, vai às quintas"; conhecido novo
+  mostra de onde veio ("Da PUC", "Da academia", "Do passeio do Milo", "Dos rolês") e, ao virar cânone, vai pro
+  círculo de onde veio (PUC → Faculdade e trabalho; o resto → Amigos) com quem é. Direita: **"Hoje, 13:50" / "Ontem,
+  22:01" / "Há 2 dias"** (com maiúscula, como as outras abas) e "N vezes no mês" só com contato; sem contato, "Sem
+  contato ainda".
+- **Rolando agora:** sem os fios de sistema (check-in do pai, consequência) — o "Contato de Henrique · Com o pai"
+  aberto desde 26/09 sumiu, mesmo filtro do Hoje.
+- **Onde ela foi (novo, no lugar de Lugares/"Conhece"):** lugares das saídas do mês (rolê, vontade, mercado, médico,
+  salão; faculdade, academia, Milo e freela ficam de fora), do mais recente pro mais antigo: nome, **com quem foi da
+  última vez** ("Com a Bia", "Cinema com a Bia", "Sozinha"), quando ("Ontem", "Sáb", "12/09") e "N vezes no mês".
+- **Textos que eu decidi (pra ele revisar):** nomes dos círculos, os "sub" de cada um, "Da PUC"/"Da academia"/"Do
+  passeio do Milo"/"Dos rolês", título "Onde ela foi", "Sozinha", "Cinema com …".
+- **Código:** `social_day` (`CIRCULOS`, `CIRCULO`, `DE_ONDE`, `SEMENTES`, `_onde_foi`, `_quando_curto` com maiúscula),
+  `webapp/` (círculos, Onde ela foi). Testes: `tests/test_bastidores_textos.py` (+ círculos, onde foi, sementes).
+
 ### Aba Agora — decisões com o Patrick, linha a linha (26/09; saída de casa implementada, atividades em casa a decidir)
 **Por quê:** o status só mostrava onde ela está e o que faz; não existia preparação nem "indo fazer" (fora a faculdade de manhã) — do "tempo livre em casa" ela pulava pro trajeto.
 

@@ -366,6 +366,7 @@ button.mov { cursor: pointer; }
 .item-m:last-child { border-bottom: 0; }
 .dois-lados { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .dois-lados > .d { flex: none; }
+.item-m.lugar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
 .ps-txt .d, .ps-txt .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ps-dir .d { white-space: nowrap; }
 

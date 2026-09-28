@@ -1,5 +1,6 @@
 """Bastidores com texto de gente (Patrick, 26/09): voz híbrida — rótulos e dados falam como
 painel ("você"), o que é sentimento fala do jeito dela. Nada de código cru, emoji ou 3ª pessoa."""
+import json
 import tempfile
 import unittest
 from datetime import datetime
@@ -199,7 +200,7 @@ class MundoTest(unittest.TestCase):
             por_nome = {p["nome"]: p for p in m["pessoas"]}
             self.assertEqual(m["pessoas"][0]["nome"], "Bia Andrade", "quem falou por último vem primeiro")
             self.assertEqual((por_nome["Bia Andrade"]["quem"], por_nome["Bia Andrade"]["falaram"],
-                              por_nome["Bia Andrade"]["vezes_30d"]), ("melhor amiga", "hoje, 08:15", 4))
+                              por_nome["Bia Andrade"]["vezes_30d"]), ("melhor amiga", "Hoje, 08:15", 4))
             self.assertEqual(por_nome["Henrique Salles"]["quem"], "pai")
             self.assertIsNone(por_nome["Henrique Salles"]["falaram"])
             self.assertEqual(por_nome["Seu Jorge Almeida"]["iniciais"], "JA")
@@ -259,6 +260,59 @@ class NaCabecaTest(unittest.TestCase):
         self.assertEqual(pd._estado(Av(0.3, []), longe, now, f, {}), ("", None, ""), "longe da hora: ainda não pensou")
         self.assertEqual(pd._estado(Av(0.3, []), it, now, f, {it["key"]: {"vai": True, "vontade": 0.62}}), ("Vai", 0.62, ""))
 
+
+
+class MundoCirculosTest(unittest.TestCase):
+    """28/09 (Patrick): pessoas por círculo, Rolando agora sem fio de sistema, Onde ela foi no mês."""
+
+    def setUp(self):
+        import canon_extras
+        from seed_world_bible_v36 import seed_world_bible
+        from social_world import seed_social
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.db = DatabaseManager(Path(self.tmp.name) / "m.db")
+        seed_world_bible(self.db)
+        seed_social(self.db)
+        canon_extras.ensure(self.db)
+        self.now = datetime(2026, 9, 28, 13, 20)
+
+    def _painel(self):
+        from social_day import SocialDay
+        return SocialDay(self.db).world_panel(self.now)
+
+    def test_circulos_e_o_pai(self):
+        m = self._painel()
+        self.assertEqual(m["circulos"][:4], ["Família", "Amigos", "Faculdade e trabalho", "Prédio"])
+        pai = next(p for p in m["pessoas"] if p["nome"] == "Henrique Salles")
+        self.assertEqual((pai["circulo"], pai["titulo"], pai["sub"]), ("Família", "Pai", "Henrique Salles"))
+        bia = next(p for p in m["pessoas"] if p["nome"] == "Bia Andrade")
+        self.assertEqual((bia["circulo"], bia["sub"]), ("Amigos", "Melhor amiga"))
+
+    def test_sementes_nao_aparecem_no_rolando_agora(self):
+        with self.db.get_connection() as conn:
+            conn.execute("""INSERT INTO story_threads(thread_key, thread_type, title, summary, status, started_at,
+                            last_event_at, metadata_json) VALUES ('seed:pai', 'seed', 'Contato de Henrique', 'x', 'open', '2026-09-26T11:00', '2026-09-26T11:00',
+                                    '{"seed_key": "father_check_in", "participants": ["marina", "henrique_salles"]}')""")
+            conn.commit()
+        self.assertEqual([r["titulo"] for r in self._painel()["rolando"]], [])
+
+    def test_onde_ela_foi_no_mes(self):
+        with self.db.get_connection() as conn:
+            for chave, at, lugar, meta in (
+                    ("outing:2026-09-26:c1", "2026-09-26T21:00:00", "quartinho_bar", {"friends": ["bia_andrade"]}),
+                    ("outing:2026-09-27:c3", "2026-09-27T15:00:00", "shopping_gavea",
+                     {"friends": ["bia_andrade"], "filme": {"titulo": "Idiotas"}}),
+                    ("puc:2026-09-28", "2026-09-28T07:40:00", "puc_rio", {}),            # rotina fica de fora
+                    ("outing:2026-09-29:c1", "2026-09-29T20:00:00", "quartinho_bar", {})):  # ainda não foi
+                conn.execute("""INSERT INTO eventos_pendentes(event_type, description, event_at, end_at, status,
+                                created_at, location_key, source_key, confirmed, metadata_json)
+                                VALUES ('saida', 'x', ?, ?, 'pending', ?, ?, ?, 1, ?)""",
+                             (at, at, at, lugar, chave, json.dumps(meta)))
+            conn.commit()
+        lugares = self._painel()["lugares"]
+        self.assertEqual([(l["com"], l["quando"], l["vezes"]) for l in lugares],
+                         [("Cinema com a Bia", "Ontem", 1), ("Com a Bia", "Sáb", 1)])
 
 if __name__ == "__main__":
     unittest.main()
