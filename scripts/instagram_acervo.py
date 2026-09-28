@@ -89,7 +89,7 @@ async def foto_marina(db, n: int, at: datetime, pose: str = ""):
     return shot, gen.image
 
 
-def textos_do_post(db, p: dict, rng: random.Random, *, legenda: bool = True) -> None:
+def textos_do_post(db, p: dict, rng: random.Random, *, legenda: bool = True, ja: frozenset = frozenset()) -> None:
     """Legenda (com a memória de quem posta) e comentários no passado, logo depois do post."""
     pid, at = p["id"], datetime.fromisoformat(p["criado_em"])
     if legenda:
@@ -104,6 +104,7 @@ def textos_do_post(db, p: dict, rng: random.Random, *, legenda: bool = True) -> 
         autores = [a for a in ig.AMIGAS if a != p["autor"] and rng.random() < 0.4] + rng.sample(ig.DE_FORA, rng.randint(0, 1))
         if rng.random() < 0.6:
             autores.append("marina")
+    autores = [a for a in autores if a not in ja]   # quem já tem comentário mantido no post não comenta de novo
     textos = ig.resposta_json(llm(ig.pedido_comentarios(db, p, autores)))
     respostas = 0
     for autor in autores:
@@ -118,7 +119,7 @@ def textos_do_post(db, p: dict, rng: random.Random, *, legenda: bool = True) -> 
             quem = ig.PERFIS[autor]["nome"].split()[0]
             resp = ig._limpa(llm(f"Quem responde: {ig.QUEM_ESCREVE['marina']}. Na sua foto ({p['descricao']}; "
                                  f"legenda \"{p['legenda']}\"), {quem} comentou \"{texto}\". Escreva só a sua "
-                                 "resposta, curtinha (até 8 palavras), sem @, no máximo 1 emoji."
+                                 "resposta, curtinha (até 8 palavras), sem @, no máximo 1 emoji ou só emoji; carinho de amiga, sem flerte."
                                  + ig._nao_repita(db, "marina"), 80))
             if resp:
                 ig.comentar(db, pid, "marina", resp, c_at + timedelta(minutes=rng.randint(5, 90)), pai_id=cid)
@@ -179,20 +180,37 @@ def colocar(db, pid: int, arquivo: str) -> None:
     print(f"FOTO {nome}")
 
 
+def conversas_do_patrick(db) -> set[int]:
+    """Ids dos comentários das conversas em que o Patrick entrou (o comentário de cima e tudo embaixo dele)."""
+    todos = {c["id"]: c["pai_id"] for c in ig._rows(db, "SELECT id, pai_id FROM ig_comentarios")}
+    raizes = set()
+    for c in ig._rows(db, "SELECT id FROM ig_comentarios WHERE autor='patrick'"):
+        i = c["id"]
+        while todos.get(i):
+            i = todos[i]
+        raizes.add(i)
+
+    def raiz(i):
+        while todos.get(i):
+            i = todos[i]
+        return i
+    return {i for i in todos if raiz(i) in raizes}
+
+
 def refazer_textos(db) -> None:
-    """Apaga legendas e comentários e refaz tudo em ordem de data (a memória de não repetir vai se formando)."""
-    ig._exec(db, "DELETE FROM ig_comentarios")
+    """Refaz legendas e comentários dos posts do acervo em ordem de data (a memória de não repetir vai se formando).
+    27/09 (Patrick): post de verdade não é tocado, e conversa em que ele comentou fica inteira."""
+    manter = conversas_do_patrick(db)
+    acervo = [p["id"] for p in ig._rows(db, "SELECT id FROM ig_posts WHERE tipo='feed' AND fonte='acervo'")]
+    for pid in acervo:
+        for c in ig._rows(db, "SELECT id FROM ig_comentarios WHERE post_id=?", (pid,)):
+            if c["id"] not in manter:
+                ig._exec(db, "DELETE FROM ig_comentarios WHERE id=?", (c["id"],))
     ig._exec(db, "UPDATE ig_posts SET legenda='' WHERE tipo='feed' AND fonte='acervo'")
-    for p in ig._rows(db, "SELECT * FROM ig_posts WHERE tipo='feed' ORDER BY criado_em"):
+    for p in ig._rows(db, "SELECT * FROM ig_posts WHERE tipo='feed' AND fonte='acervo' ORDER BY criado_em"):
         rng = random.Random(f"textos:{p['id']}")
-        if p["fonte"] == "acervo":
-            textos_do_post(db, p, rng)
-        else:
-            # post de verdade: legenda fica; comentários como a rotina faz (chegam espalhados, ela vê ao abrir)
-            autores = ig.quem_comenta(p["id"], json.loads(p["marcados_json"] or "[]"), rng)
-            textos = ig.resposta_json(llm(ig.pedido_comentarios(db, p, autores)))
-            ig.agendar_comentarios(db, p["id"], datetime.fromisoformat(p["criado_em"]),
-                                   {a: textos.get(a, "") for a in autores})
+        ja = frozenset(c["autor"] for c in ig._rows(db, "SELECT autor FROM ig_comentarios WHERE post_id=?", (p["id"],)))
+        textos_do_post(db, p, rng, ja=ja)
         p = ig.post(db, p["id"])
         print(f"{p['id']:>3} {p['autor']:<14} {p['legenda']}")
         for c in ig._rows(db, "SELECT autor, texto, pai_id FROM ig_comentarios WHERE post_id=? ORDER BY id", (p["id"],)):

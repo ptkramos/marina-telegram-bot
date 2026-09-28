@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 00:30 (frente dos apps: folhas das quatro amigas prontas e ligadas; fotos 7, 3, 5, 9 e 13 refeitas; falta refazer os textos)._
+_Atualizado em 28/09/2026, 01:30 (frente dos apps: acervo do Instagram refeito — folhas, fotos e textos; falta o Patrick revisar os textos no app)._
 
 ---
 
@@ -36,10 +36,10 @@ foto da mão depois; a cor em toda foto; seção Unhas no Por dentro); **cabelo*
 Agora decidida linha a linha (card layout D); tela inicial só com os apps.
 
 **Próximo:**
-0. 🟡 **Instagram da Marina** (Etapa 5): no ar desde 27/09 (@masalles; ela posta pelo dia dela, amigas comentam e postam; textos sem bordão, roupa sem repetir, praia de biquíni). Acervo gerado, sendo refeito. Nesta ordem:
+0. 🟡 **Instagram da Marina** (Etapa 5): no ar desde 27/09 (@masalles; ela posta pelo dia dela, amigas comentam e postam; textos sem bordão, roupa sem repetir, praia de biquíni). Acervo refeito (folhas, fotos e textos). Falta:
    a. ✅ Folhas das quatro amigas prontas (27/09, noite). Ligadas: amiga sozinha parte da folha; troca de rosto usa a 3x4 só com a cabeça (a folha vazou o body cinza no biquíni). Foto 7 refeita (novo7c + cabeça da Carol).
-   c. ✅ Fotos 3, 5, 9 e 13 refeitas e aprovadas. Falta `--textos` (na VPS) e mostrar o resultado ao Patrick.
-   d. Revisar com ele os textos que decidi sozinho (fim da seção "Etapa 5 — Instagram" do PLANO_WEBAPP).
+   c. ✅ Fotos 3, 5, 9 e 13 refeitas e aprovadas; textos refeitos (tipo de comentário por pessoa, começos proibidos, só emoji liberado; conversa do Patrick no post 8 preservada).
+   d. Revisar com ele, **no app**, as legendas e comentários refeitos (deslizes já vistos: post 11 a Carol fala com a Marina; Theo convida demais) e os textos que decidi sozinho (fim da seção "Etapa 5 — Instagram" do PLANO_WEBAPP).
 1. Bastidores **aba a aba** com ele (Por dentro, Dinheiro, Mundo), como foi a Agora — ele quer ver no celular e
    ajustar palavra por palavra (PLANO_VOZ 14).
 2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.

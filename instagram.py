@@ -60,12 +60,14 @@ COMENTA = {"bia_andrade": 0.7, "theo_martins": 0.45, "julia_azevedo": 0.35, "car
 JEITO = {
     "bia_andrade": "a Bia, 20 anos, melhor amiga da Marina, de Laranjeiras; intensa, exagerada, impulsiva e muito "
                    "carinhosa, solteira e namoradeira; escreve rápido, em caixa baixa, do jeito que fala",
-    "theo_martins": "o Theo, 21 anos, amigo da Marina da faculdade de moda, gay, da Glória; observador, sarcástico e "
-                    "leal; humor seco, escreve bem e sem exagero",
+    # 27/09 (2ª rodada do acervo): "humor seco, escreve bem" virou aforismo com ponto final em todo comentário, e
+    # "pontuação certinha" deixou a Carol formal. Aqui fica a pessoa; o formato vem do tipo sorteado por comentário.
+    "theo_martins": "o Theo, 21 anos, amigo da Marina da faculdade de moda, gay, da Glória; observador, leal e às "
+                    "vezes irônico; escreve em caixa baixa como todo mundo no Insta",
     "julia_azevedo": "a Júlia, 20 anos, colega de faculdade da Marina, do Jardim Botânico; artista, fotógrafa amadora, "
                      "meio distraída; escreve pouco e de um jeito doce",
     "carol_menezes": "a Carol, 22 anos, amiga da Marina da academia, estudante de nutrição, de Botafogo; prática, "
-                     "organizada e carinhosa; escreve direto, com pontuação certinha",
+                     "organizada e carinhosa; escreve direto, sem floreio",
 }
 QUEM_ESCREVE = {"marina": "a Marina (@masalles), 20 anos, paulista morando em Botafogo, estudante de Design de Moda "
                           "na PUC-Rio e modelo freelance, dona do Milo (Shih Tzu); no Insta escreve curtinho, em "
@@ -80,12 +82,39 @@ def ja_escreveu(db, autor: str, n: int = 10) -> list[str]:
     return [r["texto"] for r in rows]
 
 
+def _comecos(feitos: list[str], n: int = 6) -> list[str]:
+    """A primeira palavra dos últimos textos (só pedir "não repita o começo" o modelo ignorava: a Bia começou 6 de
+    8 comentários com "essa/esse")."""
+    out = []
+    for t in feitos[:n]:
+        m = re.match(r"\W*(\w+)", t or "")
+        if m and m.group(1).lower() not in out:
+            out.append(m.group(1).lower())
+    return out
+
+
 def _nao_repita(db, autor: str) -> str:
     feitos = ja_escreveu(db, autor)
     if not feitos:
         return ""
     return (" O que já escreveu por último no Instagram (não repita palavra marcante, emoji, começo nem estrutura "
-            "dessas): " + " / ".join(f"\"{t}\"" for t in feitos) + ".")
+            "dessas): " + " / ".join(f"\"{t}\"" for t in feitos) + ". Não comece com: "
+            + ", ".join(f"\"{c}\"" for c in _comecos(feitos)) + ".")
+
+
+# 27/09 (Patrick): cada comentário sai de um tipo diferente, senão cada pessoa vira uma fórmula. Só emoji pode.
+TIPOS_COMENTARIO = (
+    "uma pergunta pra quem postou, sobre algo da foto ou do dia",
+    "uma lembrança ou piada interna de algo que viveram juntos",
+    "uma reação curtíssima, de 1 a 3 palavras",
+    "só emojis (1 a 3), sem nenhuma palavra",
+    "um elogio a um detalhe pequeno e específico da foto",
+    "uma zoeira carinhosa",
+    "um convite ou plano pra fazerem algo juntos",
+    "um comentário sobre o lugar ou o momento, não sobre a pessoa",
+)
+# quem é de fora só conhece de vista: nada de lembrança, zoeira ou convite
+TIPOS_DE_FORA = (TIPOS_COMENTARIO[2], TIPOS_COMENTARIO[3], TIPOS_COMENTARIO[4], TIPOS_COMENTARIO[7])
 
 
 def _foto_pros_outros(p: dict) -> str:
@@ -600,22 +629,30 @@ def agendar_comentarios(db, pid: int, now: datetime, textos: dict[str, str]) -> 
         comentar(db, pid, autor, texto, at)
 
 
-def pedido_comentarios(db, p: dict, autores: list[str]) -> str:
+def pedido_comentarios(db, p: dict, autores: list[str], rng: Optional[random.Random] = None) -> str:
     """Prompt (texto interno) pra gerar os comentários de todo mundo de uma vez, em JSON."""
     from social_day import short_name
+    rng = rng or random.Random(f"ig:tipo:{p['id']}")
     dona = "da Marina (@masalles)" if p["autor"] == "marina" else f"de {short_name(p['autor'])}"
+    tipos = rng.sample(TIPOS_COMENTARIO, len(TIPOS_COMENTARIO))
     linhas = []
     for a in autores:
+        tipo = next((t for t in tipos if a in QUEM_ESCREVE or t in TIPOS_DE_FORA), TIPOS_DE_FORA[0])
+        if tipo in tipos:
+            tipos.remove(tipo)   # cada tipo uma vez por post
+        tipo = f" Este comentário: {tipo}."
         if a in QUEM_ESCREVE:
-            linhas.append(f"- \"{a}\": {QUEM_ESCREVE[a]}.{_nao_repita(db, a)}")
+            linhas.append(f"- \"{a}\": {QUEM_ESCREVE[a]}.{tipo}{_nao_repita(db, a)}")
         else:
-            linhas.append(f"- \"{a}\": seguidor(a) de fora, conhece de vista; comentário curtinho")
+            linhas.append(f"- \"{a}\": seguidor(a) de fora, conhece de vista; comentário curtinho.{tipo}")
     return (f"Post no Instagram {dona}. A foto: {_foto_pros_outros(p)}. Legenda: \"{p['legenda']}\"."
             + (f" Local: {p['local']}." if p["local"] else "")
             + " Escreva o comentário de cada pessoa abaixo, como gente de verdade comenta no Instagram de uma "
-              "amiga: curto (2 a 12 palavras), português informal, no máximo 1 emoji e só se ela usaria, sem "
-              "hashtag. Cada um reage a algo diferente e concreto desta foto, desta legenda ou da vida delas; "
-              "o jeito da pessoa aparece em como ela escreve, não em assunto fixo. Ninguém repete o que o outro "
+              "amiga: curto (até 12 palavras), português informal, em caixa baixa, sem ponto final, no máximo 1 "
+              "emoji (no tipo só emojis, de 1 a 3 e nada mais), sem hashtag. Cada um faz o tipo de comentário "
+              "pedido e reage a algo diferente e concreto desta foto, desta legenda ou da vida delas; o jeito da "
+              "pessoa aparece em como ela escreve, não em assunto fixo. Entre as amigas o carinho é de amiga, sem "
+              "flerte. Ninguém repete o que o outro "
               "disse nem o que já escreveu antes. O Patrick (@ptkramos) é o namorado da Marina; dá pra citar ele "
               "de vez em quando, não sempre.\n" + "\n".join(linhas)
             + "\nResponda só com um JSON: {\"chave\": \"comentário\", ...}")
@@ -699,7 +736,8 @@ def marina_olha(db, now: datetime, fala: Callable[[str], str], rng: Optional[ran
                 f"Você abriu o Instagram e viu que {quem} comentou \"{c['texto']}\" {onde}"
                 + (f" (legenda: \"{c['legenda']}\")" if c["legenda"] else "")
                 + ". Escreva só a sua resposta a esse comentário, como você responderia no Instagram: curtinha "
-                  "(até 10 palavras), sem aspas, sem @, no máximo 1 emoji." + _nao_repita(db, "marina")))
+                  "(até 10 palavras), sem aspas, sem @, no máximo 1 emoji, ou só emoji; com amiga, carinho de "
+                  "amiga, sem flerte." + _nao_repita(db, "marina")))
             if texto:
                 comentar(db, c["post_id"], "marina", texto, now + timedelta(minutes=rng.randint(1, 3)),
                          pai_id=c["pai_id"] or c["id"])
@@ -717,7 +755,7 @@ def marina_olha(db, now: datetime, fala: Callable[[str], str], rng: Optional[ran
                 f"Você abriu o Instagram e viu que {short_name(p['autor'])} postou uma foto: {p['descricao']}"
                 + (f", legenda \"{p['legenda']}\"" if p["legenda"] else "")
                 + ". Escreva só o seu comentário no post dela, curtinho (até 8 palavras), do jeito que você fala "
-                  "com ela, sem aspas, no máximo 1 emoji." + _nao_repita(db, "marina")))
+                  "com ela, sem aspas, no máximo 1 emoji, ou só emoji." + _nao_repita(db, "marina")))
             if texto:
                 comentar(db, p["id"], "marina", texto, now + timedelta(minutes=rng.randint(1, 4)))
                 linha += f" e comentou \"{texto}\""
