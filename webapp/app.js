@@ -288,7 +288,7 @@ const loaders = {
       if (c) {
         const passos = (ps) => ps.length ? `<div class="ag-sub">${ps.map((p) => `<div class="ag-st ${p.estado}">
           <span class="ag-dot"></span><span class="ag-tx">${esc(p.texto)}</span><span class="ag-vl">${p.valor ? brl0(p.valor) : ""}</span>
-          <span class="ag-hr">${esc(p.hora)}</span></div>`).join("")}</div>` : "";
+          <span class="ag-hr">${esc(p.hora)}</span>${p.nota ? `<span class="ag-nota">${esc(p.nota)}</span>` : ""}</div>`).join("")}</div>` : "";
         const b = c.barra;
         // sem hora de fim: duração e "desde" à direita do título (decisão do Patrick)
         const topo = b.pct == null
@@ -345,7 +345,7 @@ const loaders = {
       $("bf-agora-t").hidden = $("bf-agora").hidden = !rp;
       if (rp) {
         $("bf-agora").innerHTML = `<div class="big">${esc(rp.look)}</div>
-          ${rp.make ? `<div class="ca-barras"><div class="bar-row"><span>Make</span><div class="bar${rp.make.alerta ? " alerta" : ""}"><i style="width:${pct(rp.make.valor)}%"></i></div>
+          ${rp.make ? `<div class="ca-barras"><div class="bar-row"><span>Estado</span><div class="bar${rp.make.alerta ? " alerta" : ""}"><i style="width:${pct(rp.make.valor)}%"></i></div>
             <span class="w">${esc(rp.make.palavra)}</span></div></div>` : ""}
           <div class="linhas sep">${rp.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
       }

@@ -61,8 +61,8 @@ class RoupaTest(unittest.TestCase):
     def test_partida_em_casa_sem_make(self):
         p = self.r.painel(T)
         self.assertIn(tuple(self.st()["atual"]["look"]), LOOKS["casa_dia"])
-        self.assertEqual(p["linhas"], [["hanger", "Pra quê", "Ficar em casa, desde 15:00"],
-                                       ["brush", "Make", "Sem make"]])
+        self.assertEqual(p["linhas"], [["hanger", "Para", "Ficar em casa, desde 15:00"],
+                                       ["brush", "Maquiagem", "Sem maquiagem"]])
         self.assertIsNone(p["make"])
         self.assertIn("Make: sem make", "\n".join(self.r.prompt_lines(T)))
 
@@ -83,9 +83,9 @@ class RoupaTest(unittest.TestCase):
         self.assertIn(tuple(st["atual"]["look"]), LOOKS["sair"])
         self.assertEqual(st["atual"]["desde"][11:16], "20:10", "na hora do passo, não na hora do tick")
         p = self.r.painel(datetime(2026, 9, 26, 20, 20))
-        self.assertEqual(p["linhas"][0], ["hanger", "Pra quê", "Sair à noite, desde 20:10"])
+        self.assertEqual(p["linhas"][0], ["hanger", "Para", "Sair à noite, desde 20:10"])
         self.assertEqual(p["make"]["palavra"], "Intacta")
-        self.assertEqual(p["linhas"][-1][1:], ["Feita", f"{p['linhas'][-1][2].split(',')[0]}, às 19:45"])
+        self.assertEqual(p["linhas"][-1][1:], ["Maquiagem", f"{p['linhas'][-1][2].split(',')[0]}, às 19:45"])
         # na rua continua com a mesma roupa
         self.etapa, self.casa = None, False
         self.r.tick(datetime(2026, 9, 26, 21, 0))
@@ -176,7 +176,7 @@ class RoupaTest(unittest.TestCase):
         self.assertTrue(peca)
         st = self.st()
         self.assertEqual(st["atual"]["ocasiao"], "provocar")
-        self.assertEqual(self.r.painel(noite)["linhas"][0], ["hanger", "Pra quê", "Pra te provocar, desde 22:10"])
+        self.assertEqual(self.r.painel(noite)["linhas"][0], ["hanger", "Para", "Te provocar, desde 22:10"])
         self.assertIn("pra provocar o Patrick", self.eventos("roupa:provocar:%")[0])
         en = self.r.pro_clima(noite + timedelta(minutes=5), 2)
         self.assertEqual(en, self.r.pro_clima(noite + timedelta(minutes=9), 1), "mesma peça a sessão toda")
@@ -188,11 +188,20 @@ class RoupaTest(unittest.TestCase):
 
     def test_pedido_dele_nivel_1_depois_2(self):
         self.r.tick(T)
+        # bug 17 (28/09, Patrick): nível 1 já é a lingerie com algo por cima; no 2 ela tira o de cima
+        from roupa import COBRE, POR_BAIXO
         en1 = self.r.pro_clima(T, 1)
-        self.assertIn(en1, [v[1] for v in INTIMO.values() if v[2] == 1])
+        cobre, peca = self.st()["atual"]["look"]
+        self.assertIn(cobre, COBRE)
+        self.assertIn(peca, POR_BAIXO)
+        self.assertIn(" over ", en1)
+        self.assertIn("por cima", nome_look([cobre, peca]))
+        self.assertEqual(en1, self.r.pro_clima(T + timedelta(minutes=1), 1), "nível 1 de novo: a mesma")
         en2 = self.r.pro_clima(T + timedelta(minutes=3), 2)
-        self.assertIn(self.st()["atual"]["look"][0], [k for k, v in INTIMO.items() if v[2] == 2])
-        self.assertNotEqual(en1, en2, "pediu lingerie: troca a peça de provocar pela lingerie")
+        self.assertEqual(self.st()["atual"]["look"], [peca], "tirou o de cima, a mesma lingerie")
+        self.assertTrue(en1.endswith(en2))
+        self.assertEqual(en2, self.r.pro_clima(T + timedelta(minutes=6), 2))
+        self.assertEqual(en2, self.r.pro_clima(T + timedelta(minutes=8), 1), "não volta a pôr o de cima")
 
     def test_por_baixo_aparece_depois_que_ela_conta(self):
         self.r.tick(T)

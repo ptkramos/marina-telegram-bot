@@ -69,6 +69,22 @@ class SocialBatteryTests(unittest.TestCase):
         valor = self.db.get_estado_emocional(now=datetime(2026, 9, 23, 3))["social_battery"]["valor"]
         self.assertAlmostEqual(valor, 0.3)
 
+    def test_cafe_sozinha_nao_e_role(self):
+        """28/09 (achado de 26/09): café/açaí/mercado sozinha é OUT_SOLO; com amiga continua rolê."""
+        from social_battery import _kind_da_agenda
+        from vontade import Vontade
+        v = Vontade(self.db)
+        ini = datetime(2026, 9, 25, 16, 0)
+        fim = datetime(2026, 9, 25, 16, 40)
+        cafe = v.agendar("cafe", "loja_x", ini, fim, "Tomando um café no X", origem="vontade", decidido_em=ini,
+                         chave="vontade:2026-09-25:cafe")
+        milo = v.agendar("milo", "enseada_botafogo", ini.replace(hour=18), fim.replace(hour=18), "Passeando com o Milo",
+                         origem="vontade", decidido_em=ini, chave="vontade:2026-09-25:milo")
+        self.assertEqual(_kind_da_agenda(self.db, {"calendar_event_id": cafe}), "OUT_SOLO")
+        self.assertEqual(_kind_da_agenda(self.db, {"calendar_event_id": milo}), "PET_WALK")
+        self.assertIsNone(_kind_da_agenda(self.db, {"calendar_event_id": cafe, "people": ["bia_andrade"]}))
+        self.assertIsNone(_kind_da_agenda(self.db, {"calendar_event_id": None}))
+
     def test_prompt_deixa_claro_que_nao_e_cansaco_do_patrick(self):
         root = Path(__file__).resolve().parent.parent
         ctx = (root / "world_context.py").read_text(encoding="utf-8")

@@ -37,7 +37,7 @@ class AcademiaTest(unittest.TestCase):
         self.assertEqual(prep.fim, TREINO["inicio"] - timedelta(minutes=12))
         self.assertEqual(ida.como, "A pé")
         self.assertEqual((la.inicio, la.fim), (TREINO["inicio"], TREINO["fim"]))
-        self.assertEqual(la.passos[0].texto, "Aquecendo na esteira")
+        self.assertEqual(la.passos[0].texto, "Cardio na esteira")
         self.assertEqual(volta.fim, TREINO["fim"] + timedelta(minutes=12))
 
     def test_card_na_academia_tem_barra(self):

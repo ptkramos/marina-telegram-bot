@@ -160,7 +160,7 @@ HOOKS = {
     "helena_prado": [("academic_feedback_observed", "academic_feedback"),
                      ("feedback_observed", "positive_feedback")],
     "carol_menezes": [("help_received_observed", "minor_help_received")],
-    "henrique_salles": [("father_contact_observed", "father_check_in")],
+    # 28/09 (Patrick): o pai fala com ela todo dia — não vira semente ("Contato de Henrique" nunca fechava).
     "livia_vasconcelos": [("professional_feedback_observed", "professional_feedback"),
                           (None, "unexpected_work_opportunity")],
 }
@@ -213,6 +213,15 @@ INVITE_BASE_YES = 0.65
 
 HOOK_CHANCE = 0.70  # dia com gancho; o StoryEngine ainda aplica cadência e orçamento
 CONTINUE_AFTER_DAYS = (1, 4)
+# 28/09 (Patrick): a semente vira assunto concreto — título com quem, sem "ainda não está definido".
+TITULO_SEMENTE = {
+    "support_for_friend": "{Nome} precisando de apoio", "friend_plan_cancelled": "{Nome} desmarcou um plano",
+    "small_disagreement": "Desentendimento pequeno com {nome}", "unexpected_invitation": "Convite {de}",
+    "small_favor_requested": "{Nome} pediu uma ajuda", "minor_embarrassment": "Mico na frente {de}",
+    "minor_help_received": "{Nome} ofereceu uma ajuda", "academic_feedback": "Retorno {de} sobre o projeto",
+    "positive_feedback": "Elogio {de}", "professional_feedback": "Retorno {de} sobre um trabalho",
+    "unexpected_work_opportunity": "{Nome} falou de uma possível oportunidade de job",
+}
 
 # Plano do dia é função da data, da grade e das histórias abertas; recalcular a
 # cada resolve custava ~80 ms de SQLite. Cache por processo.
@@ -417,22 +426,27 @@ class SocialDay:
             people = [p for p in meta.get("participants", []) if p in SHORT_NAME or p in NPC_INDEX]
             if not people:
                 continue
-            # Conta da última vez que o assunto apareceu: uma continuação que não
-            # resolve agenda a próxima, em vez de deixar a história morrer.
+            # 28/09 (Patrick): fecha no próximo contato de verdade com a pessoa (dia seguinte em diante);
+            # sem contato com ela, a pessoa procura em 1–4 dias. Antes esperava um dia exato e às vezes
+            # não fechava (o "Contato de Henrique" ficou aberto com o pai falando com ela todo dia).
             last = datetime.fromisoformat(thread["last_event_at"]).date()
-            rng = _rng(day, f"cont:{thread['thread_key']}")
-            wait = random.Random(f"{thread['thread_key']}:{last.isoformat()}").randint(*CONTINUE_AFTER_DAYS)
-            if (day - last).days != wait:
+            if day <= last:
                 continue
             person = people[0]
-            same_day = [c for c in contacts if c.character_key == person]
-            at = (same_day[0].at + timedelta(minutes=5)) if same_day else _at(day, time(19, 0), time(22, 0), rng)
+            same_day = [c for c in contacts if c.character_key == person and not c.continues and not c.hook]
+            if same_day:
+                primeiro = same_day[0]
+                i = contacts.index(primeiro)
+                contacts[i] = Contact(**{**primeiro.__dict__, "continues": thread["thread_key"], "resolves": True})
+                continue
+            rng = _rng(day, f"cont:{thread['thread_key']}")
+            wait = random.Random(f"{thread['thread_key']}:{last.isoformat()}").randint(*CONTINUE_AFTER_DAYS)
+            if (day - last).days < wait:
+                continue
             extra.append(Contact(
-                key=f"social:{day.isoformat()}:{person}:continua", at=at, character_key=person,
-                channel=same_day[0].channel if same_day else "mensagem",
-                place_key=same_day[0].place_key if same_day else None,
-                topic=f"\"{thread['title']}\" (continuação)", continues=thread["thread_key"],
-                resolves=rng.random() < 0.6))
+                key=f"social:{day.isoformat()}:{person}:continua", at=_at(day, time(19, 0), time(22, 0), rng),
+                character_key=person, channel="mensagem", place_key=None,
+                topic=f"\"{thread['title']}\" (continuação)", continues=thread["thread_key"], resolves=True))
         return extra
 
     # ---------------------------------------------------------------- saídas
@@ -652,7 +666,8 @@ class SocialDay:
                 except ValueError:
                     inv["status"], inv["reason"] = "declined", "já tinha compromisso"
             else:
-                inv["status"], inv["reason"] = "declined", reason
+                # 28/09: topava, mas viu em cima da hora — o motivo não fica vazio ("…): .")
+                inv["status"], inv["reason"] = "declined", reason or "viu o convite em cima da hora"
             if inv["status"] == "declined":
                 self._log(f"{key}:resposta", now, inv["friends"][0],
                           f"Recusou o convite ({inv['text']}): {inv['reason']}.")
@@ -918,9 +933,28 @@ class SocialDay:
         if flag:
             context[flag] = True
         try:
-            StoryEngine(self.db).daily_tick(contact.at, context=context)
+            res = StoryEngine(self.db).daily_tick(contact.at, context=context)
         except Exception:
             logger.exception("social_day.story.error key=%s", contact.key)
+            return
+        self._concretiza(res, contact)
+
+    def _concretiza(self, res: Optional[dict], contact: Contact) -> None:
+        """28/09 (Patrick): o assunto aberto diz com quem e de que conversa veio, não "ainda não está definido"."""
+        if not res or not res.get("event_key") or res.get("seed_key") not in TITULO_SEMENTE:
+            return
+        nome = short_name(contact.character_key)
+        titulo = TITULO_SEMENTE[res["seed_key"]].format(nome=nome, Nome=nome[:1].upper() + nome[1:],
+                                                        de=self._de(contact.character_key))
+        with self.db.get_connection() as conn:
+            origem = conn.execute("SELECT summary FROM life_events WHERE event_key=?", (contact.key,)).fetchone()
+            resumo = f"Começou nesta conversa: {origem['summary']}" if origem else f"Começou numa conversa com {nome}."
+            thread_key = res["event_key"].rsplit(":start", 1)[0]
+            conn.execute("UPDATE story_threads SET title=?, summary=? WHERE thread_key=? AND status='open'",
+                         (titulo, resumo, thread_key))
+            conn.execute("UPDATE life_events SET title=?, summary=? WHERE event_key=?",
+                         (titulo, resumo, res["event_key"]))
+            conn.commit()
 
     def _continue_story(self, contact: Contact, name: str) -> None:
         from story_engine import StoryEngine

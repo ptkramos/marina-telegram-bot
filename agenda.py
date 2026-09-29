@@ -68,7 +68,7 @@ PREP_BANHO_JANELA = timedelta(minutes=120)      # banho de verdade até 2 h ante
 PREP_BANHO_ANTES = timedelta(minutes=45)        # ...e o Se arrumando começa nele se foi até 45 min antes do previsto
 # o que acontece lá (quando não é consumo nem aula)
 LA_PASSOS = {
-    "milo": (("Passeando", 70), ("Xixi do Milo", 30)),
+    "milo": (("Passeando", 70), ("Necessidades do Milo", 30)),
     "orla": (("Caminhando na orla", 80), ("Olhando o Pão de Açúcar", 20)),
     "shopping": (("Olhando vitrines", 60), ("Provando roupa", 40)),
     "mercado_semana": (("Pegando frutas e verduras", 35), ("Enchendo o carrinho", 45), ("No caixa", 20)),
@@ -101,6 +101,7 @@ class Passo:
     valor: Optional[int] = None
     aviso: bool = False
     encontro: bool = False        # 28/09 (Patrick): "Encontrou a Gabi 17:07" no Lá — marca a hora, não vira o passo atual
+    nota: str = ""                # 28/09: linha cinza embaixo do passo (os itens da lista no mercado)
 
 
 @dataclass
@@ -323,9 +324,11 @@ class Agenda:
                 lista += [Passo(t, at, aviso=True) for at, t in ida.avisos if at < ida.start]
                 lista.sort(key=lambda p: p.inicio)
                 lista = self._com_milo(day, lista, inicio, ida.start)
+                if c["tipo"] == "mercado_semana":
+                    self._nota_lista(lista, "Fazendo a lista", c["key"], now)
                 out.append(Etapa("arrumando", "Se arrumando", inicio, ida.start,
                                  linha2=f"Vai sair {self._pra(place['name'])} às {aprox(ida.start)}"
-                                        + (" · atrasada" if ida.saida_atraso else ""),
+                                        + (" (atrasada)" if ida.saida_atraso else ""),
                                  lugar_key="marina_apartment", com=com, celular=CELULAR["arrumando"],
                                  passos=lista, chave=f"prep:{c['key']}", prep_tipo=c["tipo"]))
                 teve_make = teve_make or c["tipo"] in ("noite", "encontro", "jogo")
@@ -335,7 +338,7 @@ class Agenda:
             chega = ida.end - timedelta(minutes=futuro)
             atras = ida.atraso - futuro
             caminho = self._trajeto(ida, "caminho", "A caminho", f"Chega {self._na(place['name'])} às {aprox(chega)}"
-                                    + (f" · {duracao(timedelta(minutes=atras))} atrasada" if atras > 0 else ""), place, c)
+                                    + (f" ({duracao(timedelta(minutes=atras))} atrasada)" if atras > 0 else ""), place, c)
             caminho.fim_previsto = chega if futuro else None
             caminho.passos += [Passo(t, at, aviso=True) for at, t in ida.avisos if at >= ida.start]
             caminho.passos.sort(key=lambda p: p.inicio)
@@ -389,6 +392,18 @@ class Agenda:
                                  lugar_key="marina_apartment", celular=CELULAR["arrumando"],
                                  passos=lista, chave=f"prep:dormir:{day}", prep_tipo="dormir"))
         return out
+
+    def _nota_lista(self, passos: list, texto: str, chave: str, now: datetime) -> None:
+        """28/09: a lista de compras de verdade embaixo do passo (lista_compras.py)."""
+        try:
+            from lista_compras import ListaCompras
+            nota = ListaCompras(self.db).nota(chave, now)
+        except Exception:
+            logger.exception("agenda.lista_compras")
+            return
+        for p in passos:
+            if p.texto == texto:
+                p.nota = nota
 
     def _prep_com_banho(self, passos: list, inicio: datetime, sai: datetime,
                         fim_anterior: datetime) -> tuple[datetime, list[Passo]]:
@@ -573,13 +588,15 @@ class Agenda:
         elif c["tipo"] in LA_PASSOS:
             passos = self._distribui(list(LA_PASSOS[c["tipo"]]), c["inicio"], c["fim"])
             cel = CELULAR["aula"] if c["tipo"] in ("medico", "pronto_atendimento", "mercado_semana") else CELULAR["role"]
+            if c["tipo"] == "mercado_semana":
+                self._nota_lista(passos, "Enchendo o carrinho", c["key"], now)
             if c["tipo"] == "manicure":                      # 26/09: o valor na direita, como o consumo do rolê
                 from unhas import PRECO_SALAO
                 passos[-1].valor = PRECO_SALAO
         elif c["tipo"] == "academia":
             rng = _rng(c["inicio"].date(), "treino")
-            meio = rng.choice((("Musculação · pernas", 55), ("Musculação · superiores", 55), ("Funcional", 55)))
-            passos = self._distribui([("Aquecendo na esteira", 15), meio, ("Abdominais", 15), ("Alongando", 15)],
+            meio = rng.choice((("Inferiores", 55), ("Superiores", 55)))     # 28/09 (Patrick): textos do card
+            passos = self._distribui([("Cardio na esteira", 15), meio, ("Abdominais", 15), ("Alongando", 15)],
                                      c["inicio"], c["fim"])
             cel = CELULAR["aula"]
         else:
@@ -754,7 +771,7 @@ class Agenda:
                     if e.tipo == "la" and not feito and p.valor is not None:
                         continue                    # consumo só aparece depois de pedido
                     item["passos"].append({"texto": p.texto, "estado": st, "valor": p.valor if feito else None,
-                                           "hora": hora(p.inicio) if feito else ""})
+                                           "hora": hora(p.inicio) if feito else "", "nota": p.nota})
             linha.append(item)
         fim_card = atual.fim_previsto or atual.fim
         pos = (now - atual.inicio).total_seconds() / max(1, (fim_card - atual.inicio).total_seconds())
@@ -934,7 +951,7 @@ class Agenda:
             inicio, fim = t0, t1
             linha2 = f"Volta pra casa às {aprox(t1)}"
             passos = self._distribui([("Colocando a coleira", 10), ("Descendo", 10),
-                                      ("Xixi do Milo" if rapidinho else "Passeando", 70), ("Subindo", 10)], t0, t1)
+                                      ("Necessidades do Milo" if rapidinho else "Passeando", 70), ("Subindo", 10)], t0, t1)
             grade_extra = [["dog", "Com", "Milo"]]
         elif "academia" in low:
             titulo, linha2 = "Na academia", "Treinando"

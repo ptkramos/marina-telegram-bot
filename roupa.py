@@ -157,6 +157,11 @@ INTIMO = {
 ACESSORIOS = {"choker": ("choker de couro com argola", "a black leather choker with a small silver ring"),
               "salto": ("salto alto preto", "black stiletto heels")}
 POR_BAIXO = ("renda_branca", "renda_rosa", "renda_preta", "renda_vinho", "body_renda_preto", "cinta_liga")
+# 28/09 (bug 17, Patrick): no sexting, a foto provocante (nível 1) já é a lingerie com algo por cima; no nível 2 ela
+# tira o de cima — a peça íntima é a mesma do começo ao fim da sessão.
+COBRE = {"moletom_aberto": ("moletom cinza largo aberto", "an oversized grey zip hoodie left open"),
+         "camisetao_por_cima": ("camisetão branco", "an oversized white t-shirt slipping off one shoulder"),
+         "robe_cetim": ("robe de cetim rosa", "a short light pink satin robe loosely tied")}
 
 # make → (nome no painel, como vai no prompt da foto, quanto borra por hora)
 MAKE = {
@@ -177,7 +182,7 @@ PRA = {"noite": "Sair à noite", "encontro": "Encontro", "jogo": "Jogo do Botafo
        "cafe": "Café", "acai": "Açaí", "farmacia": "Farmácia", "mercado": "Mercado", "mercado_semana": "Mercado",
        "shopping": "Shopping", "medico": "Médico", "pronto_atendimento": "Pronto atendimento", "manicure": "Unhas",
        "cabelo": "Salão", "milo": "Passeio do Milo", "dormir": "Dormir"}
-PRA_OCASIAO = {"casa": "Ficar em casa", "pijama": "Dormir", "provocar": "Pra te provocar", "rua": "Sair",
+PRA_OCASIAO = {"casa": "Ficar em casa", "pijama": "Dormir", "provocar": "Te provocar", "rua": "Sair",
                "treino": "Treino", "praia": "Praia", "sair": "Sair à noite", "jogo": "Jogo do Botafogo"}
 RUA_OK = ("rua", "sair", "jogo", "praia", "treino", "casa")      # dá pra pôr o pé na rua assim (casa: short e camiseta)
 LEVE_IMPLICITA = ("faculdade", "cafe", "acai", "medico", "manicure", "cabelo")   # rímel e gloss junto com a roupa
@@ -196,15 +201,18 @@ CLIMA_VESTE_CHANCE = 0.35                  # entrou no clima em casa: às vezes 
 
 
 def _nome(pid: str) -> str:
-    return (PECAS.get(pid) or INTIMO.get(pid) or ACESSORIOS.get(pid) or (pid,))[0]
+    return (PECAS.get(pid) or INTIMO.get(pid) or ACESSORIOS.get(pid) or COBRE.get(pid) or (pid,))[0]
 
 
 def _en(pid: str) -> str:
-    return (PECAS.get(pid) or INTIMO.get(pid) or ACESSORIOS.get(pid) or ("", pid))[1]
+    return (PECAS.get(pid) or INTIMO.get(pid) or ACESSORIOS.get(pid) or COBRE.get(pid) or ("", pid))[1]
 
 
 def nome_look(look: list) -> str:
     """"Camiseta branca e jeans claro" (acessório entra com "com")."""
+    if look and look[0] in COBRE:                    # "Conjunto de renda preta com moletom cinza largo aberto por cima"
+        txt = nome_look(look[1:]) + f" com {_nome(look[0])} por cima"
+        return txt[:1].upper() + txt[1:]
     base = [p for p in look if p not in ACESSORIOS]
     acc = [p for p in look if p in ACESSORIOS]
     txt = " e ".join(_nome(p) for p in base)
@@ -214,6 +222,8 @@ def nome_look(look: list) -> str:
 
 
 def en_look(look: list) -> str:
+    if look and look[0] in COBRE:
+        return f"{_en(look[0])} over {en_look(look[1:])}"
     base = [p for p in look if p not in ACESSORIOS]
     acc = [p for p in look if p in ACESSORIOS]
     txt = " and ".join(_en(p) for p in base)
@@ -652,10 +662,11 @@ class Roupa:
                    or at - datetime.fromisoformat(usado[k]) >= INTIMO_SEM_REPETIR] or list(pool)
         return rng.choice(frescos)
 
-    def _provocar(self, st: dict, at: datetime, motivo: str, nivel: int = 2, peca: Optional[str] = None) -> str:
+    def _provocar(self, st: dict, at: datetime, motivo: str, nivel: int = 2, peca: Optional[str] = None,
+                  cobre: Optional[str] = None) -> str:
         peca = peca or self._peca_intima(st, at, nivel=nivel, semente=f"{motivo}:{at:%Y%m%d%H%M}")
-        look = [peca]
-        if INTIMO[peca][3] == "fetiche":
+        look = [cobre, peca] if cobre else [peca]
+        if INTIMO[peca][3] == "fetiche" and not cobre:
             rng = random.Random(f"roupa:acessorio:{peca}:{at:%Y%m%d%H}")
             if rng.random() < 0.4 and peca not in ("policial", "empregada"):
                 look.append("choker")
@@ -695,12 +706,22 @@ class Roupa:
         if not atual:
             return None
         if atual["ocasiao"] == "provocar":
-            principal = atual["look"][0]
-            if INTIMO.get(principal, ("", "", 2))[2] >= level:
-                return en_look(atual["look"])
+            look = atual["look"]
+            if look[0] in COBRE:
+                if level < 2:
+                    return en_look(look)
+                self._vestir(st, look[1:], "provocar", now, PRA_OCASIAO["provocar"])   # tirou o de cima
+                self._save(st)
+                return en_look(look[1:])
+            if INTIMO.get(look[0], ("", "", 2))[2] >= level:
+                return en_look(look)
         pb = st.get("por_baixo")
         if level >= 2 and pb and atual["ocasiao"] in ("sair", "jogo", "rua"):
             en = self._provocar(st, now, "tirou a roupa", peca=pb["peca"])
+        elif level == 1:                                  # bug 17: a lingerie já vai por baixo
+            rng = random.Random(f"roupa:cobre:{now:%Y%m%d%H%M}")
+            peca = self._peca_intima(st, now, pool=list(POR_BAIXO), semente=f"cobre:{now:%Y%m%d%H%M}")
+            en = self._provocar(st, now, "pedido", peca=peca, cobre=rng.choice(list(COBRE)))
         else:
             en = self._provocar(st, now, "pedido", nivel=level)
         self._save(st)
@@ -822,18 +843,18 @@ class Roupa:
         banho = self._no_banho(now)
         out = {"look": "No banho" if banho else nome_look(atual["look"]), "linhas": [], "make": None}
         if not banho:
-            out["linhas"].append(["hanger", "Pra quê", f"{atual.get('pra') or PRA_OCASIAO.get(atual['ocasiao'], '')}, "
+            out["linhas"].append(["hanger", "Para", f"{atual.get('pra') or PRA_OCASIAO.get(atual['ocasiao'], '')}, "
                                                       f"desde {_hhmm(datetime.fromisoformat(atual['desde']))}"])
             pb = st.get("por_baixo")
             if pb and pb.get("contou") and atual["ocasiao"] in ("sair", "jogo", "rua"):
                 out["linhas"].append(["heart", "Por baixo", _nome(pb["peca"])[:1].upper() + _nome(pb["peca"])[1:]])
         nivel = mk.get("nivel", "sem")
         if nivel == "sem":
-            out["linhas"].append(["brush", "Make", "Sem make"])
+            out["linhas"].append(["brush", "Maquiagem", "Sem maquiagem"])
         else:
             d = self.make_desgaste(now)
             out["make"] = {"valor": d, "palavra": self._palavra_make(d), "alerta": d >= 0.7}
-            out["linhas"].append(["brush", "Feita", f"{MAKE[nivel][0]}, às {_hhmm(datetime.fromisoformat(mk['feita_em']))}"])
+            out["linhas"].append(["brush", "Maquiagem", f"{MAKE[nivel][0]}, às {_hhmm(datetime.fromisoformat(mk['feita_em']))}"])
         return out
 
     def prompt_lines(self, now: datetime) -> list[str]:

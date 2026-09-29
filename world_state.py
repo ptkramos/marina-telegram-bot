@@ -734,6 +734,12 @@ class WorldStateManager:
         except Exception:
             logger.exception("consumo.materialize.error")
         try:
+            # 28/09: o que estava na lista é comprado na compra da semana (lista_compras.py)
+            from lista_compras import ListaCompras
+            ListaCompras(self.db).materialize(now)
+        except Exception:
+            logger.exception("lista_compras.materialize.error")
+        try:
             # Fase D1: refeições cuja hora chegou viram acontecimento (e estado, em casa).
             from meals import Meals
             Meals(self.db).materialize(now)

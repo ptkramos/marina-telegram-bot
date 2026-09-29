@@ -128,6 +128,31 @@ class SocialDayTests(unittest.TestCase):
             row = conn.execute("SELECT status, last_event_at FROM story_threads WHERE id=?",
                                (created["id"],)).fetchone()
         self.assertGreater(row["last_event_at"], created["last_event_at"])
+        # 28/09 (Patrick): fecha no próximo contato de verdade com a pessoa, e o assunto é concreto
+        self.assertEqual(row["status"], "resolved")
+        self.assertEqual(created["title"], "A Bia precisando de apoio")
+        self.assertIn("Começou nesta conversa: Trocou mensagens com a Bia", created["summary"])
+        self.assertNotIn("não está definid", created["summary"])
+
+    def test_pai_nao_vira_semente_e_a_antiga_fecha_no_proximo_contato(self):
+        from social_day import HOOKS
+        self.assertNotIn("henrique_salles", HOOKS)
+        with self.db.get_connection() as conn:
+            conn.execute("""INSERT INTO story_threads (thread_key, thread_type, title, summary, status, started_at,
+                            last_event_at, metadata_json) VALUES ('father_check_in:2026-09-26', 'family',
+                            'Contato de Henrique', 'x', 'open', '2026-09-26T11:00', '2026-09-26T11:00',
+                            '{"seed_key": "father_check_in", "participants": ["marina", "henrique_salles"]}')""")
+            tid = conn.execute("SELECT id FROM story_threads WHERE thread_key='father_check_in:2026-09-26'").fetchone()[0]
+            conn.execute("""INSERT INTO life_events (event_key, event_at, event_type, title, summary, source_type,
+                            autonomy_level, importance, participants_json, thread_id, share_worthy, created_at)
+                            VALUES ('father_check_in:2026-09-26:start', '2026-09-26T11:00', 'father_check_in',
+                            'Contato de Henrique', 'x', 'simulated', 1, 0.15, '["marina", "henrique_salles"]', ?, 0,
+                            '2026-09-26T11:00')""", (tid,))
+            conn.commit()
+        self.day.materialize(datetime(2026, 9, 27, 23, 59))
+        with self.db.get_connection() as conn:
+            st = conn.execute("SELECT status FROM story_threads WHERE thread_key='father_check_in:2026-09-26'").fetchone()
+        self.assertEqual(st["status"], "resolved")
 
     def test_prompt_mostra_o_dia_e_o_ultimo_contato_com_quem_foi_citado(self):
         from context_builder import ContextBuilder

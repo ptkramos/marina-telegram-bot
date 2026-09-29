@@ -700,7 +700,11 @@ def _roupa_de_agora(db, pose: Pose, level: int, at: datetime, at_home: bool, int
         r = Roupa(db)
         if pose.outfit:
             m = _TROCAVEL.search(pose.outfit)
-            return r.en_em(at) if m and r.ocasiao_em(at) == _OCASIAO_TROCAVEL[m.group(0)] else None
+            if m:
+                return r.en_em(at) if r.ocasiao_em(at) == _OCASIAO_TROCAVEL[m.group(0)] else None
+            # bug 17 (28/09): no clima, a peça que ela pôs pra ele ganha da roupa fixa da pose (menos a toalha)
+            if not (at_home and intimo and level >= 1) or "towel" in pose.outfit:
+                return None
         if at_home and intimo and level >= 1:
             return r.pro_clima(at, level)
         if level == 2 and r.ocasiao_em(at) != "provocar":

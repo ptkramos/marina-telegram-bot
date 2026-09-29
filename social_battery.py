@@ -15,6 +15,7 @@ silêncio de 10h durante a noite conta como sono, não como "o último estado".
 """
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
@@ -56,7 +57,9 @@ def _kind_at(db: DatabaseManager, moment: datetime) -> str:
             return "CLASS"
         if any(x in (commitment.get("activity") or "").lower() for x in ("unhas n", "cabelo n")):
             return "MANICURE"
-        return "HOME" if commitment.get("place_key") == "marina_apartment" else "SOCIAL"
+        if commitment.get("place_key") == "marina_apartment":
+            return "HOME"
+        return _kind_da_agenda(db, commitment) or "SOCIAL"
     engine = RoutineEngine(db)
     has_class = bool(AcademicLife(db).blocks_on(moment.date()))
     chosen, _ = engine.pick(moment, engine.candidates(moment, has_class=has_class), has_class=has_class)
@@ -64,6 +67,28 @@ def _kind_at(db: DatabaseManager, moment: datetime) -> str:
         "sleep": "SLEEPING", "wake": "WAKING", "pet_walk": "PET_WALK",
         "gym": "GYM", "gym_indoor": "GYM",
     }.get(chosen.routine_type, "HOME")
+
+
+# 28/09 (achado de 26/09): item da agenda única pelo tipo — café, açaí, mercado sozinha não são rolê.
+KIND_POR_TIPO = {"milo": "PET_WALK", "academia": "GYM", "orla": "SOLO",
+                 "cafe": "OUT_SOLO", "acai": "OUT_SOLO", "shopping": "OUT_SOLO", "praia": "OUT_SOLO",
+                 "mercado": "OUT_SOLO", "farmacia": "OUT_SOLO", "mercado_semana": "OUT_SOLO",
+                 "medico": "OUT_SOLO", "pronto_atendimento": "OUT_SOLO",
+                 "manicure": "MANICURE", "cabelo": "MANICURE"}
+
+
+def _kind_da_agenda(db: DatabaseManager, commitment: dict) -> Optional[str]:
+    """Saída da agenda única sem amiga junto: o tipo dela decide. Com amiga (ou sem tipo), é rolê."""
+    if commitment.get("people") or not commitment.get("calendar_event_id"):
+        return None
+    with db.get_connection() as conn:
+        row = conn.execute("SELECT metadata_json FROM eventos_pendentes WHERE id=?",
+                           (commitment["calendar_event_id"],)).fetchone()
+    try:
+        meta = json.loads(row["metadata_json"] or "{}") if row else {}
+    except (TypeError, ValueError):
+        return None
+    return KIND_POR_TIPO.get(meta.get("tipo"))
 
 
 def accrue(db: DatabaseManager, now: datetime) -> Optional[float]:

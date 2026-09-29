@@ -18,10 +18,8 @@ aviso ele disso na hora. Só entra o que está em "Antes do soak" e correção d
 1. ✅ Bug 16 (18:57: academia × "em casa no sofá", ",4 kg") — corrigido em 28/09 (seção 5, item 16)
 2. ✅ Voz: histórico puxando assunto velho + auditoria do prompt do chat + regra de quando ela cumpre promessa de foto
    — feito em 28/09 (`4b29e31`, seção 3)
-3. Mundo: lista de compras (ela promete e não existe), bateria social (café/açaí como rolê), sementes de história que
-   nunca fecham (a do "Contato de Henrique" aparece no prompt, `[SEU DIA ATÉ AGORA]`), bug 17 (lingerie trocada no
-   meio do sexting, `roupa.py`), e revisar com ele os textos que decidi (roupa, agenda viva, atraso, Milo, academia, preparos) —
-   "bora na frente do mundo: fechar pro soak"
+3. ✅ Mundo: lista de compras, bateria social, sementes de história, bug 17 e revisão dos textos — feito em 28/09,
+   noite (seção 1, "Pronto (28/09, noite — fechado pro soak)")
 4. Infra: custo da API de rotas + **relatório diário do soak** (abaixo) — "bora na frente de infra: relatório do soak"
 5. Auditoria de funcionamento, rodada 3 (tudo junto, na cópia do banco dentro da VPS) — "bora na auditoria de
    funcionamento: rodada 3, antes do soak"
@@ -72,21 +70,22 @@ dormir com ela), gaveta íntima pra provocar (lingerie, fetiche, transparência;
 ele pede, por baixo da roupa de sair, às vezes dorme com ela), escolha dele entre as duas opções de look; a foto, o
 prompt e o post do rolê usam a roupa de verdade; bloco "Agora" no topo do Por fora.
 
-**Próximo** (freio de 28/09: entra só o que a seção 0 lista antes do soak — lista de compras, bateria social,
-sementes e revisão de textos; "ver no uso real" é o soak; salão e pendências antigas ficam pra depois):
+**Pronto (28/09, noite — fechado pro soak):** **lista de compras** (`lista_compras.py`: o que ele pede e ela topa
+entra; prompt, card do mercado e compra de verdade com o dinheiro do pai; Hoje "Comprou X / Da lista, pedido do
+Patrick"); **bateria social** (café/açaí/mercado sozinha não é rolê); **sementes** (o pai não vira semente, títulos
+concretos, fecham no próximo contato com a pessoa); **bug 17** (lingerie por baixo desde a 1ª foto do clima); **textos
+revisados com ele** (sem "·", atraso amarelo no Hoje, academia e Milo novos, Por fora Para/Maquiagem/Estado).
+
+**Próximo** (congelado até o soak fechar; "ver no uso real" é o próprio soak):
 1. Ver a roupa no uso real (primeira noite: Se arrumando, foto, chegada, pijama; primeira provocação) e revisar com
    ele os textos que decidi (lista no PLANO_WEBAPP, "Roupa e make de verdade"). Ideia anotada: roupa nova comprada
    no shopping entrando no guarda-roupa (sai do saldo).
 2. Ver a agenda viva e o atraso no uso real (primeira desistência, emenda, amiga chamada, primeiro atraso e aviso) e calibrar os pesos com ele se algo soar forçado.
-3. Revisar com ele os textos que decidi sozinho (listas no PLANO_WEBAPP: Milo, academia, preparos, "Na calçada", aviso de saída e Pix do uber, "Agenda viva" e "Atraso de verdade").
+3. ✅ Textos de Milo, academia, preparos, "Na calçada", agenda viva, atraso e roupa revisados com ele (28/09, noite).
 4. Salão (Ophicina) ainda não é repensado pelo humor nem remarcado pela conversa (tem estado próprio em `unhas.py`/`cabelo.py`).
 5. Pendências antigas do mundo (PLANO_VOZ 4, 5, 6, 8): virose com banheiro, pai ligando mais, job fora do Rio…
-6. Bateria social: saídas sozinha (café, açaí) contam como rolê (SOCIAL) em `social_battery._kind_at` (achado 26/09).
-7. Sementes de história que nunca fecham (`story_threads` "Contato de Henrique", `father_check_in`, aberta desde
-   26/09; o painel já esconde) — achado da aba Mundo (o "no Drogarias Pacheco" foi corrigido na auditoria de 28/09).
-8. **Lista de compras** (Patrick, 28/09, frente de bugs): às 08:52 ele pediu barrinhas na próxima compra da semana e
-   ela prometeu "vou colocar na lista" — não existe lista no mundo. O que ela ou ele pedem no chat entra na próxima
-   compra da semana (mercado), sai no extrato do Dinheiro e ela pode comentar depois.
+6. Revisar os textos novos desta rodada (lista no PLANO_WEBAPP, "Mundo fechado pro soak") e os "·" que sobraram
+   em outras telas (barra do card, "Manhã · 7", motivo do Por dentro, "Precisa de") — anotado, sem pressa.
 
 ## 2. Apps (Mini App) — skill `frente-apps`
 **Abertura:** congelada até o soak fechar (freio, seção 0); o Instagram no uso real é visto no soak
@@ -134,7 +133,7 @@ despertador passa a seguir sempre a regra). Detalhe na AUDITORIA ("Frente de inf
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
-**Abertura:** "bora na frente de bugs" (aberto: 17, lingerie trocada no sexting — vai junto com o item 3 da seção 0)
+**Abertura:** "bora na frente de bugs" (nenhum aberto)
 
 Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
 
@@ -289,11 +288,13 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       17:43)"). As referências de Práticas Experimentais VI vieram do bloco da faculdade e do histórico das 17:24.
     - **"Mais, seu guloso" (18:57) estava certo:** a pesagem anterior foi 54,0 kg (26/09).
 
-**Abertos:**
-17. **Lingerie trocada no meio do sexting (achado na suíte, 28/09, frente da voz)** — `test_roupa.test_foto_usa_a_roupa_e_a_make_de_agora`
-    falha 3 em 20. O nível da foto é sorteado a cada foto; se a 1ª sai nível 1 ("manda de lingerie" → moletom e
-    calcinha) e a 2ª nível 2, `Roupa.pro_clima` veste outra peça (fantasia de empregada 3 min depois) — a regra é a
-    peça ficar a mesma na sessão. Camada: imagens/mundo (`roupa.py`, `photo_director._roupa_de_agora`). Antes do soak.
+17. ✅ **Lingerie trocada no meio do sexting (achado na suíte, 28/09, frente da voz)** — corrigido em 28/09, noite, na
+    frente do mundo. Duas causas: o diretor "provoca antes de entregar" (nível 1 → 2) e `Roupa.pro_clima` vestia outra
+    peça; e a pose `cama_perna_pra_camera` tem roupa própria (moletom azul) que passava por cima. Decisão do Patrick:
+    **lingerie por baixo** — nível 1 é a lingerie com algo por cima, no 2 ela tira o de cima; no clima a peça dela
+    ganha da roupa da pose (menos a toalha). 0 falhas em 40 rodadas (antes 3 em 20).
+
+**Abertos:** nenhum.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** congelada até o soak fechar (freio, seção 0); foto errada no uso real é bug do soak

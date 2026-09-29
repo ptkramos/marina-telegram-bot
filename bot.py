@@ -4047,6 +4047,14 @@ async def process_incoming_batch(
         except Exception:
             logger.exception("agenda_reativa.observe.error")
         try:
+            # 28/09: "vou colocar na lista" vira lista de verdade (modelo barato só quando fala de lista/mercado)
+            from lista_compras import LISTA_RE, ListaCompras
+            if LISTA_RE.search(f"{texto_usuario or ''} {fala_limpa}"):
+                asyncio.create_task(asyncio.to_thread(
+                    ListaCompras(memory_manager.db).observe, fala_limpa, texto_usuario, datetime.now()))
+        except Exception:
+            logger.exception("lista_compras.observe.error")
+        try:
             # 26/09 (Patrick): ele respondeu a cor da unha → é essa que ela faz.
             from unhas import Unhas
             Unhas(memory_manager.db).observe_patrick(texto_usuario, datetime.now())

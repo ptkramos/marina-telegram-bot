@@ -42,7 +42,7 @@ class TextoCurtoTest(unittest.TestCase):
 
     def test_xixi_do_milo_vira_calcada(self):
         c = curto(ev("routine", "Desceu rapidinho com o Milo pro xixi da manhã.", title="Milo"))
-        self.assertEqual((c["texto"], c["filhos"]), ("Foi pra calçada", [{"texto": "Xixi do Milo"}]))
+        self.assertEqual((c["texto"], c["filhos"]), ("Foi pra calçada", [{"texto": "Necessidades do Milo"}]))
 
     def test_bloco_em_casa_usa_o_titulo(self):
         c = curto(ev("tempo_livre", "Ficou olhando o Instagram no quarto.", title="Olhando o Instagram"))
@@ -58,15 +58,15 @@ class TextoCurtoTest(unittest.TestCase):
             (ev("gift", "Mandou Cappuccino do Rei do Mate pro Patrick pelo app de surpresa (R$ 18)."),
              ("Mandou um presente pra você", "Cappuccino do Rei do Mate", 18)),
             (ev("midia", 'Ouviu "Espresso" (Sabrina Carpenter), que o Patrick mandou: curtiu e botou na playlist dela.'),
-             ("Ouviu a música que você mandou", '"Espresso", Sabrina Carpenter · curtiu', None)),
+             ("Ouviu a música que você mandou", '"Espresso", Sabrina Carpenter, curtiu', None)),
             (ev("consumo", "Cabelo na Ophicina: repicado (o Patrick escolheu) e escova · R$ 220."),
-             ("Fez o cabelo", "Repicado e escova · você escolheu", 220)),
+             ("Fez o cabelo", "Repicado e escova, você escolheu", 220)),
             (ev("consumo", "Fez as unhas em gel (mão e pé) na Ophicina do Cabelo: vermelho (R$ 180)."),
-             ("Fez as unhas", "Gel · vermelho", 180)),
+             ("Fez as unhas", "Gel, vermelho", 180)),
             (ev("tempo_livre", "Fez as unhas em casa, esmalte nude rosado.", title="Fez as unhas em casa"),
              ("Fez as unhas", "Esmalte nude rosado", None)),
             (ev("routine", "Trabalhou no seminário de Moda e Cultura (entrega 02/10), rendendo bem.", title="faculdade"),
-             ("Trabalhou no seminário de Moda e Cultura", "Entrega 02/10 · rendendo bem", None)),
+             ("Trabalhou no seminário de Moda e Cultura", "Entrega 02/10, rendendo bem", None)),
             (ev("commute", "No caminho (ida, ônibus): ônibus veio lotado."), ("Ônibus veio lotado", "", None)),
             (ev("routine", "Desistiu de sair pro Starbucks: começou a chover.", title="agenda reativa"),
              ("Desistiu de sair pro Starbucks", "Começou a chover", None)),
@@ -75,9 +75,23 @@ class TextoCurtoTest(unittest.TestCase):
             c = curto(e)
             self.assertEqual((c["texto"], c["sub"], c["valor"]), (texto, sub, valor), e["summary"])
 
+    def test_sem_ponto_separador_e_atraso_em_amarelo(self):
+        """28/09 (Patrick): atraso em amarelo na linha, embaixo o porquê enxuto; nada de "·" no Hoje."""
+        c = curto(ev("routine", "Chegou 15 min atrasada na aula de Ergodesign — perdeu o despertador e o ônibus demorou.",
+                     title="atraso"))
+        self.assertEqual((c["texto"], c["sub"], c["aviso"]),
+                         ("Chegou 15 min atrasada", "Ergodesign, perdeu o despertador, o ônibus demorou", True))
+        c = curto(ev("routine", "Chegou 10 min atrasada no Quartinho Bar.", title="atraso"))
+        self.assertEqual((c["texto"], c["sub"], c["aviso"]), ("Chegou 10 min atrasada", "", True))
+        r = curto({"event_type": "agenda", "title": "agenda",
+                   "summary": "Remarcou pra domingo às 18:00: Saindo com a Bia no Quartinho Bar (chovendo)."})
+        self.assertEqual((r["texto"], r["sub"]), ("Remarcou", "Quartinho Bar, pra domingo 18:00"))
+        p = curto(ev("routine", "Se pesou na academia: 54,4 kg."))
+        self.assertEqual((p["texto"], p["sub"]), ("Se pesou", "54,4 kg"))
+
     def test_motivo_da_saida(self):
         self.assertEqual(curto(ev("routine", "Deu vontade e foi: café no Starbucks (tarde livre).", title="vontade"))["motivo"],
-                         "Resolveu sair · tarde livre")
+                         "Resolveu sair, tarde livre")
         self.assertEqual(curto(ev("routine", "O Patrick convenceu e ela saiu pra academia.", title="agenda reativa"))["motivo"],
                          "Você convenceu")
 

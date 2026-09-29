@@ -142,6 +142,12 @@ def _curto(ev: dict) -> dict:
         return out
     if tipo == "consumo" and s.startswith(("Cabelo na ", "Fez as unhas em gel")):
         return {**out, **_salao(s)}
+    if tipo == "consumo" and ev.get("event_key", "").startswith("lista:"):
+        # 28/09: o que estava na lista, comprado na compra da semana (o pai paga: sem valor)
+        m = re.match(r"(Comprou .+?) n[oa] .+? \(da lista, (.+)\)$", s)
+        if m:
+            out.update(ic="list-check", texto=m.group(1), sub=_cap(f"da lista, {m.group(2)}"))
+            return out
     if tipo == "consumo":
         m = re.match(r"(Pediu|Dividiu|Comprou) (.+?)(?: com .+?)? n[oa] .+? \(R\$ (\d+)", s)
         if m:
@@ -183,10 +189,17 @@ def _curto(ev: dict) -> dict:
             return out
         m = re.match(r"Se pesou(?: na academia)?: (.+)", s)
         if m:
-            out.update(ic="scale", texto=f"Se pesou · {m.group(1)}")
+            out.update(ic="scale", texto="Se pesou", sub=m.group(1))
             return out
         if "masturbou" in s or "se tocou" in s:             # Patrick: hand-love-you de cabeça pra baixo
             out.update(ic="masturbacao", **_masturbacao(s))
+            return out
+        m = re.match(r"(Chegou \d+ min atrasada)(?: (?:na|no|pra|pro) .+?)?(?: — (.+))?$", s)
+        if title == "atraso" and m:                       # 28/09 (Patrick): atraso em amarelo, o porquê enxuto embaixo
+            onde = re.search(r"na aula de (.+?)(?: — |$)", s)
+            porque = re.sub(r"\s+e\s+", ", ", m.group(2) or "")
+            sub = ", ".join(x for x in ((onde.group(1) if onde else ""), porque) if x)
+            out.update(ic="clock-exclamation", aviso=True, texto=m.group(1), sub=_cap(sub))
             return out
         if s.startswith("Cuidou da bagunça dela: "):        # Patrick: "Arrumou a casa" e o que fez embaixo
             out.update(ic="home-check", texto="Arrumou a casa", sub=_cap(s.split(": ", 1)[1]))
@@ -202,7 +215,7 @@ def _curto(ev: dict) -> dict:
             out.update(ic="dog", texto="Chamego com o Milo" if chamego else "Arte do Milo", sub=_cap(m.group(1)))
             return out
         if "Milo" in s and "xixi" in s:                  # Patrick: "Foi pra calçada" e o xixi recuado
-            out.update(ic="dog", texto="Foi pra calçada", filhos=[{"texto": "Xixi do Milo"}])
+            out.update(ic="dog", texto="Foi pra calçada", filhos=[{"texto": "Necessidades do Milo"}])
             if ev.get("end_at"):                         # 28/09: sem a volta, parecia que o Milo foi com ela pra PUC
                 out["fim"] = datetime.fromisoformat(ev["end_at"])
         elif "Milo" in s or title == "Milo":
@@ -213,7 +226,7 @@ def _curto(ev: dict) -> dict:
             out.update(ic="school")
             m = re.match(r"(Trabalhou n[oa] .+?) \(entrega ([^)]+)\)(?:, (.+))?$", s)
             if m:
-                out.update(texto=m.group(1), sub=f"Entrega {m.group(2)}" + (f" · {m.group(3)}" if m.group(3) else ""))
+                out.update(texto=m.group(1), sub=f"Entrega {m.group(2)}" + (f", {m.group(3)}" if m.group(3) else ""))
         elif title in ("vontade", "agenda reativa"):
             out.update(ic="bolt", **_decisao(s))
         elif title == "tv":
@@ -226,7 +239,7 @@ def _curto(ev: dict) -> dict:
         m = re.match(r'Ouviu "(.+?)" \((.+?)\), que o Patrick mandou: (.+)$', s)
         if m:
             out.update(texto="Ouviu a música que você mandou",
-                       sub=f'"{m.group(1)}", {m.group(2)} · ' + ("curtiu" if m.group(3).startswith("curtiu") else "não curtiu muito"))
+                       sub=f'"{m.group(1)}", {m.group(2)}, ' + ("curtiu" if m.group(3).startswith("curtiu") else "não curtiu muito"))
         m = re.match(r'Descobriu que saiu música nova de (.+?): "(.+?)"', s)
         if m:
             out.update(texto=f"Saiu música nova de {m.group(1)}", sub=f'"{m.group(2)}"')
@@ -246,7 +259,7 @@ def _masturbacao(s: str) -> dict:
     onde = f" {m.group(1)}" if m else (" antes de dormir" if s.startswith("Antes de dormir") else "")
     chamou = "chamou" in s
     if s.startswith("Bateu um tesão"):
-        return {"texto": f"Se masturbou{onde}", "sub": "Tesão muito alto" + (" · chamou você" if chamou else "")}
+        return {"texto": f"Se masturbou{onde}", "sub": "Tesão muito alto" + (", chamou você" if chamou else "")}
     return {"texto": f"Se masturbou{onde}", "sub": "Chamou você pra entrar no clima" if chamou else "Pensando em você"}
 
 
@@ -259,7 +272,7 @@ def _dinheiro(s: str) -> dict:
         sub = ("O que tinha prometido" if "prometido" in resto else "Pro uber" if "uber" in resto
                else "De presente" if "presente" in resto else "")
         if nota:
-            sub = (sub + " · " if sub else "") + f'"{nota.group(1)}"'
+            sub = (sub + ", " if sub else "") + f'"{nota.group(1)}"'
         return {"texto": "Você fez um Pix pra ela", "valor": int(m.group(1)), "sub": sub}
     m = re.match(r"Usou o pix do Patrick: comprou (.+?) \(R\$ (\d+)\)", s)
     if m:
@@ -269,23 +282,23 @@ def _dinheiro(s: str) -> dict:
         return {"texto": "Devolveu o seu Pix", "sub": "Caiu o cachê", "valor": int(m.group(1))}
     m = re.match(r"Aperto: (.+?) \(R\$ (\d+)\)", s)
     if m:
-        return {"texto": "Ficou no aperto", "sub": _cap(m.group(1)) + " · vai pedir ajuda pra você",
+        return {"texto": "Ficou no aperto", "sub": _cap(m.group(1)) + ", vai pedir ajuda pra você",
                 "valor": int(m.group(2))}
     if s.startswith("O dinheiro dela acabou"):
-        return {"texto": "Ficou no aperto", "sub": "O dinheiro acabou antes do cachê · vai pedir ajuda pra você"}
+        return {"texto": "Ficou no aperto", "sub": "O dinheiro acabou antes do cachê, vai pedir ajuda pra você"}
     return {}
 
 
 def _salao(s: str) -> dict:
     """Cabelo e unhas: "Fez o cabelo" / "Repicado e escova" e o valor na coluna."""
-    escolheu = " · você escolheu" if "Patrick escolheu" in s else ""
+    escolheu = ", você escolheu" if "Patrick escolheu" in s else ""
     m = re.match(r"Cabelo na .+?: (.+) · R\$ (\d+)$", s)
     if m:
         feito = m.group(1).replace(" (o Patrick escolheu)", "")
         return {"ic": "scissors", "texto": "Fez o cabelo", "sub": _cap(feito) + escolheu, "valor": int(m.group(2))}
     m = re.match(r"Fez as unhas em gel .+?: (.+?)(?: — .+)? \(R\$ (\d+)\)", s)
     if m:
-        return {"ic": "brush", "texto": "Fez as unhas", "sub": f"Gel · {m.group(1)}{escolheu}", "valor": int(m.group(2))}
+        return {"ic": "brush", "texto": "Fez as unhas", "sub": f"Gel, {m.group(1)}{escolheu}", "valor": int(m.group(2))}
     m = re.match(r"Fez as unhas em casa, esmalte (.+?)(?: — .+)?$", s)
     if m:
         return {"ic": "brush", "texto": "Fez as unhas", "sub": f"Esmalte {m.group(1)}{escolheu}"}
@@ -296,14 +309,14 @@ def _agenda(s: str) -> dict:
     """27/09 (agenda viva): o que ela decidiu pelo que sentia — ação na linha, motivo embaixo."""
     m = re.match(r"Saindo de lá, resolveu passar .+? antes de voltar \((.+)\)$", s)
     if m:
-        return {"ic": "bolt", "motivo": f"Emendou na volta · {m.group(1)}"}
+        return {"ic": "bolt", "motivo": f"Emendou na volta, {m.group(1)}"}
     m = re.match(r"Desistiu de ir: (.+?) \((.+?)\)(?:\. Avisou (.+?)(?: e combinaram outro dia)?)?$", s)
     if m:
-        sub = _cap(m.group(2)) + (f" · avisou {m.group(3)}" if m.group(3) else "")
+        sub = _cap(m.group(2)) + (f", avisou {m.group(3)}" if m.group(3) else "")
         return {"ic": "calendar-x", "texto": f"Desistiu de ir {_pra_onde(m.group(1))}", "sub": sub}
     m = re.match(r"Faltou a aula de hoje \((.+?)\): (.+?)\. Vai pegar", s)
     if m:
-        return {"ic": "school-off", "texto": "Faltou a aula", "sub": f"{m.group(1)} · {m.group(2)}"}
+        return {"ic": "school-off", "texto": "Faltou a aula", "sub": f"{m.group(1)}, {m.group(2)}"}
     m = re.match(r"Pegou a matéria da aula que faltou \((.+?)\) com (.+?) e", s)
     if m:
         return {"ic": "notebook", "texto": f"Pegou a matéria com {m.group(2)}", "sub": _cap(m.group(1))}
@@ -312,13 +325,13 @@ def _agenda(s: str) -> dict:
         topou = "topou" in s
         quando = _cap(m.group(2)) + (f" {m.group(3)}" if m.group(3) else "")
         return {"ic": "calendar-plus", "texto": f"Chamou {m.group(1)} pra sair",
-                "sub": f"{quando} · " + ("topou" if topou else "não podia")}
+                "sub": f"{quando}, " + ("topou" if topou else "não podia")}
     m = re.match(r"Remarcou pra (.+?) às (\d\d:\d\d): (.+?) \((.+)\)$", s)
     if m:
-        return {"ic": "calendar-time", "texto": "Remarcou", "sub": f"{_cap(m.group(3))} · pra {m.group(1)} {m.group(2)}"}
+        return {"ic": "calendar-time", "texto": "Remarcou", "sub": f"{_lugar_do_plano(m.group(3))}, pra {m.group(1)} {m.group(2)}"}
     m = re.match(r"Combinou com o Patrick: (.+?) (amanhã|segunda|terça|quarta|quinta|sexta|sábado|domingo) às (\d\d:\d\d)", s)
     if m:
-        return {"ic": "calendar", "texto": "Combinou com você", "sub": f"{_cap(m.group(1))} · {m.group(2)} {m.group(3)}"}
+        return {"ic": "calendar", "texto": "Combinou com você", "sub": f"{_cap(m.group(1))}, {m.group(2)} {m.group(3)}"}
     for padrao, texto in ((r"Desistiu de treinar hoje \((.+)\)$", "Desistiu de treinar"),
                           (r"Trocou a Bodytech pela academia do prédio \((.+)\)$", "Treinou no prédio"),
                           (r"Deixou o passeio do Milo pra depois \((.+)\)$", "Adiou o passeio do Milo"),
@@ -338,16 +351,22 @@ def _decisao(s: str) -> dict:
     """Por que saiu (vira a linha cinza da saída) ou desistência (linha própria)."""
     m = re.match(r"Deu vontade e foi: .+? \((.+)\)$", s)
     if m:
-        return {"motivo": f"Resolveu sair · {m.group(1)}"}
+        return {"motivo": f"Resolveu sair, {m.group(1)}"}
     if s.startswith("O Patrick convenceu"):
         return {"motivo": "Você convenceu"}
     m = re.match(r"Combinou com o Patrick[^:]*(?:: (.+))?$", s)
     if m:
-        return {"motivo": "Combinou com você" + (f" · {m.group(1)}" if m.group(1) else "")}
+        return {"motivo": "Combinou com você" + (f", {m.group(1)}" if m.group(1) else "")}
     m = re.match(r"Desistiu de (.+?)(?: hoje)?(?:: (.+))?$", s)
     if m:
         return {"texto": f"Desistiu de {m.group(1)}", "sub": _cap(m.group(2) or "")}
     return {}
+
+
+def _lugar_do_plano(plano: str) -> str:
+    """'Saindo com a Bia no Quartinho Bar' → 'Quartinho Bar' (28/09: descritivo enxuto no Hoje)."""
+    m = re.search(r" (?:no|na|nos|nas) (.+)$", plano)
+    return m.group(1) if m else _cap(plano)
 
 
 def _pra_onde(plano: str) -> str:
@@ -365,7 +384,7 @@ def _min(txt: str) -> str:
 def _refeicao(ev: dict, s: str) -> dict:
     """26/09 (Patrick): a refeição na linha 1 e o prato embaixo; presente seu: a loja em cima, os itens embaixo."""
     fim = datetime.fromisoformat(ev["end_at"]) if ev.get("end_at") else None
-    estufada = " · comeu além da conta" if "estufada" in s else ""
+    estufada = ", comeu além da conta" if "estufada" in s else ""
     if s.startswith("Pulou"):                       # 28/09 (auditoria): "Pulou o café 07:52–08:05" — pulou não dura
         return {"ic": "tools-kitchen-2", "texto": _painel(s.split(":")[0]), "fim": None,
                 "sub": _cap(s.split(": ", 1)[1].rstrip(".")) if ": " in s else ""}

@@ -678,3 +678,46 @@ Nada de funcionalidade nova até o soak fechar. Antes do soak: bug 16, voz (hist
 mais tempo na lista (espera ela sair do banho/aula e olhar o celular; "quando eu chegar" espera a chegada); quando
 vence, some da lista como antes (a dívida fica só no prompt dela). No prompt, o Instagram de ontem passou a dizer
 "ontem, HH:MM" e "no post da Bia". Detalhe na Auditoria ("Frente da voz (28/09, noite)").
+
+### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
+Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
+- **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que
+  ele pede e ela topa, ou o que ela diz que vai comprar no mercado, entra na lista (modelo barato, só quando o trecho
+  fala de lista/mercado/compra da semana; também tira o que ela desistiu). **Pago com o dinheiro do pai** (compras da
+  semana, fora do saldo e do extrato — D9). **No card do mercado**: embaixo de "Fazendo a lista" (Se arrumando) e de
+  "Enchendo o carrinho" (Lá), em cinza, os itens ("barrinhas de proteína, granola") — conferido na pré-visualização em
+  tamanho de celular (`miniapp-lista`). Na compra, o que foi anotado até ela encher o carrinho é comprado: no **Hoje**,
+  dentro da saída, "Comprou barrinhas de proteína" / "Da lista, pedido do Patrick" (ícone `list-check`, sem valor).
+  Não foi ao mercado: a lista espera; anotado depois do carrinho: fica pra próxima.
+- **Bateria social:** café, açaí, farmácia, mercado, shopping, praia e médico sozinha não gastam mais como rolê
+  (quase neutro); orla sozinha recarrega; Milo é passeio; academia, academia. Com amiga continua rolê.
+- **Sementes de história:** o pai não vira mais semente; as outras ganham título com quem ("A Bia precisando de
+  apoio", "Convite da Bia", "Retorno da Helena sobre o projeto") e fecham no próximo contato de verdade com a pessoa
+  (sem contato, ela procura em 1–4 dias); sem ninguém, fecham em 2 dias. Na aba Mundo, "Rolando agora" mostra o
+  título novo. O "Contato de Henrique" aberto desde 26/09 fecha na próxima mensagem do pai.
+- **Bug 17 (roupa no sexting):** foto provocante (nível 1) já é a lingerie com algo por cima (moletom cinza aberto,
+  camisetão branco ou robe de cetim rosa); no nível 2 ela tira o de cima; não volta a pôr. No Por fora: "Conjunto de
+  renda preta com moletom cinza largo aberto por cima". Pose com roupa própria (moletom azul na cama) não troca mais a
+  peça dela no clima.
+- **Textos revisados com o Patrick (28/09, noite):**
+  - Academia (card, Lá): **Cardio na esteira · Superiores ou Inferiores · Abdominais · Alongando** (era Aquecendo na
+    esteira · Musculação/Funcional).
+  - Milo: **Necessidades do Milo** no lugar de "Xixi do Milo" (card e Hoje).
+  - **Sem ponto separador "·"** (regra dele): atraso no card "Vai sair pra PUC às ~06:45 (atrasada)", "Chega na PUC às
+    ~07:15 (15min atrasada)"; no Hoje tudo com vírgula ("Moda e Corpo, dormiu mal", "Sábado 21:00, topou",
+    "Emendou na volta, empolgada", "Se pesou" / "54,4 kg" embaixo, "Gel, vermelho").
+  - **Atraso no Hoje em amarelo** na linha principal ("Chegou 15 min atrasada"), embaixo o porquê enxuto
+    ("Ergodesign, perdeu o despertador, o ônibus demorou"). "Remarcou" / "Quartinho Bar, pra domingo 18:00".
+  - Por fora: **"Pra quê" → "Para"** ("Te provocar" no lugar de "Pra te provocar"), **"Feita" → "Maquiagem"** ("Sem
+    maquiagem"), a barra da make se chama **"Estado"**.
+  - Aprovados como estavam: avisos do atraso, passos do Milo e do "Na calçada", Hoje da agenda viva, nomes das peças.
+- **Textos que decidi sozinho nesta rodada (pra ele revisar):** "Comprou X" / "Da lista, pedido do Patrick" (ou "Da
+  lista, ela tinha anotado"); títulos das sementes (lista acima, mais "{Nome} desmarcou um plano", "Desentendimento
+  pequeno com {nome}", "{Nome} pediu uma ajuda", "Mico na frente {da pessoa}", "{Nome} ofereceu uma ajuda", "Elogio
+  {da pessoa}", "Retorno {da pessoa} sobre um trabalho", "{Nome} falou de uma possível oportunidade de job"); peças
+  de cima "moletom cinza largo aberto", "camisetão branco", "robe de cetim rosa"; "Sem maquiagem"; convite recusado
+  em cima da hora ganhou motivo ("viu o convite em cima da hora" — antes "Recusou o convite (…): .").
+- Ainda com "·", aprovados antes ou fora desta revisão (perguntar antes de mexer): barra do card "há 4min · faltam
+  ~6min", "Manhã · 7", motivo do sentimento no Por dentro ("Viu Paradise Kiss · eps 1 e 2"), "Precisa de R$ X · motivo".
+- Testes: `tests/test_lista_compras.py` (8), `test_social_battery_audit5` (+1), `test_social_day_audit6` (+1 e o
+  fechamento), `test_roupa` (bug 17, 0 falhas em 40 rodadas), `test_hoje` (+1).

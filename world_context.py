@@ -624,7 +624,9 @@ class WorldContextBuilder:
         from social_day import SocialDay
         day = SocialDay(self.db)
         contatos = day.today_so_far(now)
-        historias = day.open_stories()
+        from social_day import SEMENTES              # 28/09: fio de sistema (o pai) não vai pro prompt, como no app
+        historias = [h for h in day.open_stories()
+                     if json.loads(h.get("metadata_json") or "{}").get("seed_key") not in SEMENTES]
         planos = day.upcoming_outings(now)
         # Fase D1: a comida do dia tem bloco próprio (fome, disfarce, dieta, peso) —
         # sem ele o modelo inventava o jantar.
@@ -645,6 +647,8 @@ class WorldContextBuilder:
             comida += promessa_lines(self.db, now)      # 25/09: foto que ela prometeu mandar
             from financas import prompt_lines as financas_lines
             comida += financas_lines(self.db, now)   # 24/09: saldo, aperto, /pix
+            from lista_compras import ListaCompras
+            comida += ListaCompras(self.db).prompt_lines(now)   # 28/09: a lista da compra da semana
             from watch import Watching
             comida += Watching(self.db).prompt_lines()
             from musica import Musica                   # 26/09: mídia real (música, leitura, Botafogo)

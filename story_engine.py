@@ -289,6 +289,10 @@ class StoryEngine:
         dormant_days = getattr(settings, 'STORY_THREAD_DORMANT_DAYS', 7)
         with self.db.get_connection() as c:
             c.execute("UPDATE story_threads SET status='dormant' WHERE status='open' AND last_event_at<?",((now-timedelta(days=dormant_days)).isoformat(),))
+            # 28/09 (Patrick): assunto sem ninguém além dela pra continuar fecha em 2 dias
+            c.execute("""UPDATE story_threads SET status='abandoned' WHERE status='open' AND last_event_at<?
+                         AND COALESCE(json_array_length(json_extract(metadata_json,'$.participants')),0)<=1""",
+                      ((now-timedelta(days=2)).isoformat(),))
             c.execute("""UPDATE story_threads SET status='abandoned'
                          WHERE status='dormant' AND last_event_at<?
                            AND thread_type NOT IN ('academic', 'professional')

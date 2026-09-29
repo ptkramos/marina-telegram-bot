@@ -1925,3 +1925,46 @@ calcinha) e a 2ª nível 2, `Roupa.pro_clima` troca a peça no meio da sessão (
 - **Testes:** `tests/test_historico_pausas.py` (10), `tests/test_promessa_foto.py` (+4), ajustes em
   `test_v360_acceptance` e `test_world_context`. Suíte: 1.394 testes, 1 falha (a instável acima, de antes desta
   conversa; passa sozinha, 17 em 20).
+
+## Frente do mundo (28/09, noite): fechar pro soak
+Item 3 da lista "antes do soak" (freio). Quatro achados, cada um conferido no código e na produção antes de mexer.
+
+**Lista de compras que não existia.** 28/09, 08:52: "quando for fazer compra da semana, compra umas barrinhas" →
+"vou colocar barrinhas na lista da semana". Não havia lista no mundo; o mercado da semana (`vontade.mercado_semana`,
+pago pelo pai) não tinha itens. Agora `lista_compras.py`: modelo barato (o mesmo da agenda reativa) lê a fala dela e a
+mensagem dele só quando o trecho fala de lista/mercado/compra da semana e devolve o que entra ou sai; estado em
+`estado_relacional["lista_compras_json"]`; prompt `[LISTA DE COMPRAS DA SEMANA — anotada de verdade]` com quem pediu e
+a próxima compra (a de hoje/amanhã na agenda ou o dia do `casa.day_plan`); `world_state.resolve` compra na hora do
+"Enchendo o carrinho" (35% do Lá) se ela estava lá (`CalendarWorld.current` com a chegada de verdade) — acontecimento
+`lista:<compra>:<item>` (tipo consumo, sem valor; o extrato só lê `consumo:`/`transporte:`/`compra:`, então fica fora,
+como a comida que o pai paga); por 48 h o prompt diz que comprou e que está em casa. Card: `Passo.nota` embaixo de
+"Fazendo a lista" e "Enchendo o carrinho" (`agenda._nota_lista`, `.ag-nota` no app).
+
+**Bateria social: café sozinha contava como rolê.** `social_battery._kind_at` devolvia SOCIAL (−0,10/h) pra todo
+compromisso fora de casa, e o valor OUT_SOLO (+0,01/h) nunca era usado. Agora o tipo do item da agenda única decide
+(`KIND_POR_TIPO`): café, açaí, farmácia, mercado, shopping, praia, médico sozinha → OUT_SOLO; orla → SOLO; Milo →
+PET_WALK; academia → GYM; unhas/cabelo → MANICURE. Com amiga (`people`) ou sem tipo, continua SOCIAL.
+
+**Semente que nunca fechava.** Produção: 1 história aberta, `father_check_in:2026-09-26` ("Contato de Henrique —
+Um contato de Henrique foi informado; quando e como Marina responderá ainda não está definido"), no prompt como
+"Assunto em andamento" desde 26/09, com ela falando com o pai 5 vezes depois. A continuação esperava um dia exato
+(sorteado 4 → 30/09) e, sem pessoa, nunca vinha. Agora: o pai sai dos ganchos (`HOOKS`); a continuação é o **próximo
+contato de verdade** com a pessoa (dia seguinte em diante) e fecha (`resolves=True`); sem contato, a pessoa procura em
+1–4 dias; sem ninguém além dela, fecha em 2 dias (`quiet_old_threads`). A semente nasce concreta
+(`SocialDay._concretiza`: título com quem, resumo "Começou nesta conversa: …"). Fio de sistema (`SEMENTES`) também não
+vai mais pro prompt, como no app. De passagem: convite que ela topava mas viu em cima da hora gravava "Recusou o
+convite (…): ." — agora "viu o convite em cima da hora".
+
+**Bug 17 — lingerie trocada no meio do sexting.** Duas causas: (1) o diretor "provoca antes de entregar" (nível 1 →
+2) e `Roupa.pro_clima` vestia uma peça nova no nível 2; (2) a pose `cama_perna_pra_camera` tem roupa própria (moletom
+azul e calcinha preta) e passava por cima da peça dela. Decisão do Patrick: **lingerie por baixo** — no nível 1 ela
+escolhe a lingerie (`POR_BAIXO`) e põe algo por cima (`COBRE`); no 2 tira o de cima; não volta. No clima em casa, a
+peça de verdade ganha da roupa fixa da pose (menos a toalha). `test_foto_usa_a_roupa_e_a_make_de_agora`: 0 falhas em
+40 rodadas (antes 3 em 20).
+
+**Textos revisados com o Patrick** (card, Hoje, Por fora): regra nova, sem "·" em texto visível (vírgula ou
+parênteses); atraso amarelo no Hoje; academia "Cardio na esteira · Superiores/Inferiores"; "Necessidades do Milo";
+Por fora "Para", "Maquiagem", barra "Estado". Lista completa no PLANO_WEBAPP ("Mundo fechado pro soak").
+- **Testes:** `tests/test_lista_compras.py` (8), `test_social_battery_audit5` (+1), `test_social_day_audit6` (+1 e o
+  fechamento no próximo contato), `test_roupa` (bug 17), `test_hoje` (+1), textos atualizados em `test_academia`,
+  `test_atraso`, `test_agenda_viva`. Suíte: 1.405 testes verdes (3 pulados).

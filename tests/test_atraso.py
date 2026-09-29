@@ -126,7 +126,7 @@ class DespertadorTest(Base):
         etapas = Agenda(self.db).etapas(self.day, self.plan.start + timedelta(minutes=12))
         prep = next(e for e in etapas if e.tipo == "arrumando")
         self.assertEqual(prep.inicio, self.wake, "o Se arrumando existe desde que ela acordou")
-        self.assertIn("· atrasada", prep.linha2)
+        self.assertIn("(atrasada)", prep.linha2)
         self.assertTrue(any(p.aviso and p.texto == "Perdeu o despertador" for p in prep.passos))
         caminho = next(e for e in etapas if e.tipo == "caminho")
         self.assertIn("10min atrasada", caminho.linha2)
