@@ -4,8 +4,8 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 21:30 (voz fechada pro soak e na produção em `4b29e31`; **freio decidido com o Patrick:
-fecha a lista abaixo e para tudo pro soak**; próxima conversa na frente do mundo, item 3 da seção 0)._
+_Atualizado em 28/09/2026, 23:15 (mundo fechado pro soak e na produção em `bb957aa`, item 3 da seção 0; próxima
+conversa na frente de infra, item 4: relatório diário do soak + API de rotas)._
 
 ---
 
@@ -19,7 +19,7 @@ aviso ele disso na hora. Só entra o que está em "Antes do soak" e correção d
 2. ✅ Voz: histórico puxando assunto velho + auditoria do prompt do chat + regra de quando ela cumpre promessa de foto
    — feito em 28/09 (`4b29e31`, seção 3)
 3. ✅ Mundo: lista de compras, bateria social, sementes de história, bug 17 e revisão dos textos — feito em 28/09,
-   noite (seção 1, "Pronto (28/09, noite — fechado pro soak)")
+   noite, na produção desde 23:06 (`bb957aa`; seção 1, "Pronto (28/09, noite — fechado pro soak)")
 4. Infra: custo da API de rotas + **relatório diário do soak** (abaixo) — "bora na frente de infra: relatório do soak"
 5. Auditoria de funcionamento, rodada 3 (tudo junto, na cópia do banco dentro da VPS) — "bora na auditoria de
    funcionamento: rodada 3, antes do soak"
@@ -77,6 +77,8 @@ concretos, fecham no próximo contato com a pessoa); **bug 17** (lingerie por ba
 revisados com ele** (sem "·", atraso amarelo no Hoje, academia e Milo novos, Por fora Para/Maquiagem/Estado).
 
 **Próximo** (congelado até o soak fechar; "ver no uso real" é o próprio soak):
+0. Pendente do OK do Patrick: pôr as barrinhas de 28/09 08:52 na lista da produção (a promessa foi antes da lista
+   existir; o auto mode barrou escrever no banco da VPS sem ele autorizar).
 1. Ver a roupa no uso real (primeira noite: Se arrumando, foto, chegada, pijama; primeira provocação) e revisar com
    ele os textos que decidi (lista no PLANO_WEBAPP, "Roupa e make de verdade"). Ideia anotada: roupa nova comprada
    no shopping entrando no guarda-roupa (sai do saldo).
