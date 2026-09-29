@@ -673,3 +673,8 @@ Escolhas do Patrick com mockup e múltipla escolha:
 
 ## Freio e soak (28/09, 19:40 — decisão do Patrick)
 Nada de funcionalidade nova até o soak fechar. Antes do soak: bug 16, voz (histórico velho, auditoria do prompt, promessa de foto), mundo (lista de compras, bateria social, sementes, revisão de textos), infra (relatório diário do soak + API de rotas) e auditoria de funcionamento rodada 3. Soak: 7 dias reais + 3 limpos; relatório gerado na VPS às 05:10 cobrindo 05:00→05:00. Detalhe e lista "Depois do soak" na seção 0 do `FRENTES_MARINA.md`.
+
+**28/09, noite (frente da voz, sem mudança de tela):** a promessa de foto pendente no Por dentro agora pode ficar
+mais tempo na lista (espera ela sair do banho/aula e olhar o celular; "quando eu chegar" espera a chegada); quando
+vence, some da lista como antes (a dívida fica só no prompt dela). No prompt, o Instagram de ontem passou a dizer
+"ontem, HH:MM" e "no post da Bia". Detalhe na Auditoria ("Frente da voz (28/09, noite)").

@@ -810,7 +810,9 @@ def marina_olha(db, now: datetime, fala: Callable[[str], str], rng: Optional[ran
     for c in nov["comentarios"]:
         quem = "o Patrick" if c["autor"] == "patrick" else short_name(c["autor"]) if c["autor"] in AMIGAS \
             else f"@{c['autor']}"
-        onde = f"na sua foto ({c['descricao']})" if c["dono"] == "marina" else f"no post de {short_name(c['dono'])}"
+        dono = short_name(c["dono"])            # "a Bia" → "no post da Bia" (era "no post de a Bia")
+        dono = f"d{dono}" if dono.startswith(("a ", "o ")) else f"de {dono}"
+        onde = f"na sua foto ({c['descricao']})" if c["dono"] == "marina" else f"no post {dono}"
         _exec(db, "UPDATE ig_comentarios SET visto_marina_em=? WHERE id=?", (n, c["id"]))
         curte = c["autor"] == "patrick" or c["autor"] in AMIGAS or rng.random() < 0.5
         if curte:
@@ -876,11 +878,14 @@ def prompt_lines(db, now: datetime) -> list[str]:
                 else f"há {(now.date() - quando.date()).days} dias"
             linhas.append(f"- Seu último post ({dia}, {quando:%H:%M}): {ult['descricao']}; legenda \"{ult['legenda']}\"; "
                           f"{curtidas(ult, now)} curtidas.")
+        def hora(iso: str) -> str:              # auditoria do prompt (28/09): o de ontem vinha só com a hora
+            t = datetime.fromisoformat(iso)
+            return f"{t:%H:%M}" if t.date() == now.date() else f"ontem, {t:%H:%M}"
         for s in stories_ativos(db, now, "marina"):
-            linhas.append(f"- Story no ar ({datetime.fromisoformat(s['criado_em']):%H:%M}): {s['descricao']}.")
+            linhas.append(f"- Story no ar ({hora(s['criado_em'])}): {s['descricao']}.")
         for x in _visto(db).get("log", []):
             if x["at"] >= (now - timedelta(hours=24)).isoformat():
-                linhas.append(f"- {datetime.fromisoformat(x['at']):%H:%M} você viu no Instagram: {x['txt']}.")
+                linhas.append(f"- {hora(x['at'])} você viu no Instagram: {x['txt']}.")
         if not linhas:
             return []
         return (["[SEU INSTAGRAM (@masalles) — aconteceu de verdade]"] + linhas +

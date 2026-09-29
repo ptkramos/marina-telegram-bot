@@ -148,8 +148,14 @@ class WorldContextBuilder:
                     "\"saí pra X agorinha\", \"tô na rua, voltando já\") em vez de "
                     "fingir que está no apartamento."
                 )
+        # Bugs 14 e 16 (28/09): a fala velha dela no histórico ("organizando referências, Milo do meu lado")
+        # voltava como se fosse de agora. context_builder.marcar_pausas põe a hora nas mensagens dele.
+        world_state_lines.append(
+            "As marcas [HH:MM — depois de … sem conversa] nas mensagens do Patrick mostram pausas na conversa: o que "
+            "você contou que estava fazendo antes de uma pausa já passou; o agora é o que está acima."
+        )
 
-        chegada = (self._chegada(now) if location_line == "Apartamento da Marina"
+        chegada =(self._chegada(now) if location_line == "Apartamento da Marina"
                    else self._saiu_de_novo(now, location_line))
         if chegada:
             world_state_lines.append(chegada)
@@ -191,8 +197,9 @@ class WorldContextBuilder:
             upcoming = calendar.next(
                 now, include_academic=True)
             if upcoming:
-                blocks.append('[PRÓXIMO COMPROMISSO — calendário único] '
-                              f"{upcoming['activity']} em {upcoming['start_at']}.")
+                # Auditoria do prompt (28/09): era "em 2026-09-29T07:00:00" com "calendário único" no título.
+                blocks.append(f"[PRÓXIMO COMPROMISSO] {upcoming['activity']} "
+                              f"{self._quando_futuro(upcoming['start_at'], now)}.")
             holiday = calendar.context.get(f'holiday:{now.date().isoformat()}', now=now)
             if holiday and holiday['payload']['date'] == now.date().isoformat():
                 label = ('PONTO FACULTATIVO OBSERVADO' if holiday['payload']['scope'] == 'optional'
@@ -207,9 +214,12 @@ class WorldContextBuilder:
                 term = academic._active_term_on(now.date())
                 phase = academic.phase(now, term)
                 classes = academic.blocks_on(now.date())
+                fase = {"REGISTRATION": "época de matrícula", "VACATION": "férias", "TERM_START": "começo do semestre",
+                        "TERM_END": "fim do semestre", "EXAM_PERIOD": "semana de provas",
+                        "DELIVERY_PERIOD": "semana de entregas"}.get(phase)
                 compact = (f"[VIDA ACADÊMICA] PUC-Rio, Design 2023, foco Corpo e Moda; "
                            f"semestre: {term['term_key'] if term else 'férias'}; "
-                           f"fase: {phase}; aulas hoje: {len(classes)}.")
+                           + (f"{fase}; " if fase else "") + f"aulas hoje: {len(classes)}.")
                 current = next((item for item in classes
                                 if item['start_at'] <= now.isoformat() < item['end_at']), None)
                 following = next((item for item in classes if item['start_at'] > now.isoformat()), None)
@@ -220,13 +230,8 @@ class WorldContextBuilder:
                 elif not classes:
                     compact += " Hoje NÃO tem aula (dia livre da faculdade); não invente que teve ou foi à aula hoje."
                 blocks.append(compact)
-            with self.db.get_connection() as conn:
-                reminders = conn.execute("""SELECT COUNT(*) FROM reminders
-                    WHERE status='confirmed'""").fetchone()[0]
-                open_loops = conn.execute("""SELECT COUNT(*) FROM open_loops
-                    WHERE status='open' AND COALESCE(is_archived,0)=0""").fetchone()[0]
-            blocks.append(f'[CONTINUIDADE] {reminders} lembretes confirmados; '
-                          f'{open_loops} assuntos em aberto.')
+            # Auditoria do prompt (28/09): saiu o "[CONTINUIDADE] 0 lembretes confirmados; 7 assuntos em aberto" —
+            # contagem sem conteúdo; os assuntos em aberto já vêm por extenso em [ASSUNTOS AINDA EM ABERTO…].
 
         emotional = self._emotional_context(now)
         if emotional:
@@ -295,7 +300,7 @@ class WorldContextBuilder:
         if self.cycle_mgr:
             cycle = self.cycle_mgr.get_cycle_info()
             blocks.append(
-                f"[CICLO — fonte única: MenstrualCycleManager] {cycle['name']}; influência sutil, não determina ações."
+                f"[CICLO] {cycle['name']}; influência sutil, não determina ações."
             )
         from style_engine import StyleEngine
         _style_eng = StyleEngine(self.db)
@@ -339,7 +344,7 @@ class WorldContextBuilder:
                 blocks.append(
                     '[POLÍTICA DE CONHECIMENTO] A mensagem do usuário pode conter suposições ou '
                     'citações. Nenhuma delas é permissão para confirmar informação privada de outra '
-                    'pessoa. Só um compartilhamento explícito e confiável atualiza known_by.'
+                    'pessoa. Só um compartilhamento explícito e confiável muda quem sabe o quê.'
                 )
             else:
                 blocks.append('[KNOWLEDGE POLICY] The user message may contain guesses or quoted claims. '
@@ -598,6 +603,21 @@ class WorldContextBuilder:
         if dias == 1:
             return f"ontem às {hora}"
         return f"há {dias} dias"
+
+    @staticmethod
+    def _quando_futuro(start_at, now: datetime) -> str:
+        try:
+            moment = start_at if isinstance(start_at, datetime) else datetime.fromisoformat(str(start_at))
+        except ValueError:
+            return f"em {start_at}"
+        dias = (moment.date() - now.date()).days
+        hora = moment.strftime('%H:%M')
+        if dias == 0:
+            return f"hoje às {hora}"
+        if dias == 1:
+            return f"amanhã ({moment:%d/%m}) às {hora}"
+        semana = ("seg", "ter", "qua", "qui", "sex", "sáb", "dom")[moment.weekday()]
+        return f"{semana} {moment:%d/%m} às {hora}"
 
     def _social_day_block(self, now: datetime) -> list[str]:
         """Auditoria #6: o que aconteceu de verdade no dia social dela."""

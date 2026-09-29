@@ -210,14 +210,16 @@ def generate_dynamic_speech(instruction: str, max_tokens: int = 120, temperature
     history = []
     if with_history:
         try:
+            from context_builder import marcar_pausas
             recent = memory_manager.get_historico_recente(limit=40)
             budget, used = 6000, 0
             for item in reversed(recent):
                 n = len(item.get("content", ""))
                 if used + n > budget:
                     break
-                history.insert(0, {"role": item["role"], "content": item["content"]})
+                history.insert(0, item)
                 used += n
+            history = marcar_pausas(history)
         except Exception:
             logger.exception('proactive.history.error')
     messages = [
@@ -2569,7 +2571,8 @@ async def _selfie_depois_do_gozo(context, chat_id: int, camera_ctx, feeling, fal
             max_tokens=50, temperature=0.75, model=intimate_model() or settings.LLM_MODEL)
         if not legenda or _is_policy_refusal(legenda):
             legenda = "não consigo nem levantar 🫠"
-        sent = await context.bot.send_photo(chat_id=chat_id, photo=gen.image, caption=legenda)
+        async with _outbound_lock(chat_id):      # sai 20–45 s depois: não pode cair no meio de outra resposta
+            sent = await context.bot.send_photo(chat_id=chat_id, photo=gen.image, caption=legenda)
         if getattr(sent, "message_id", None):
             photo_director.confirm_sent(memory_manager.db, shot)
     except Exception:
@@ -3461,6 +3464,9 @@ async def process_incoming_batch(
         planner_goal=plan.get("response_goal") if plan else None,
         planner_intent=plan.get("intent") if plan else None,
     )
+    # 28/09 (auditoria do prompt): o lote dele já está no fim do histórico (gravado ao chegar) e ia de novo no fim.
+    from context_builder import tirar_lote_do_historico
+    marca_pausa = tirar_lote_do_historico(messages, texto_usuario)
     from response_rhythm import select_policy, apply_policy
     response_policy = select_policy(
         texto_usuario, plan=plan, voice=pediu_audio,
@@ -3554,8 +3560,12 @@ async def process_incoming_batch(
     # 23/09: o antigo [TURN CONSTRAINT — CASUAL CADENCE] saiu — era a 3ª cópia
     # (em inglês) de "frases curtas / quebre em balões / Botafogo preto e branco",
     # e dizia "1 a 2 frases" enquanto o [RITMO DE RESPOSTA] diz "uma a três".
-    messages.append({"role": "user", "content": texto_usuario})
-    
+    messages.append({"role": "user", "content": f"{marca_pausa}{texto_usuario}"})
+    logger.info("prompt.payload system=%d historico=%d dicas=%d total=%d", len(messages[0]["content"]),
+                sum(len(m["content"]) for m in messages[1:] if m["role"] != "system"),
+                sum(len(m["content"]) for m in messages[1:] if m["role"] == "system"),
+                sum(len(m["content"]) for m in messages))
+
     try:
         # v3.7.1 voice split: penalties agressivos matam repetições humanas que
         # a Marina *deveria* fazer (amor, kkk, ai). Mantemos temperatura alta
@@ -3892,11 +3902,12 @@ async def process_incoming_batch(
                 audio_path = await voice_engine.synthesize(fala_limpa, context=voice_ctx)
             if audio_path and audio_path.exists():
                 with open(audio_path, "rb") as vf:
-                    sent_voice = await context.bot.send_voice(
-                        chat_id=chat_id,
-                        voice=vf,
-                        reply_to_message_id=reply_to_id
-                    )
+                    async with _outbound_lock(chat_id):
+                        sent_voice = await context.bot.send_voice(
+                            chat_id=chat_id,
+                            voice=vf,
+                            reply_to_message_id=reply_to_id
+                        )
                     # Auditoria #9: se o áudio é a 1ª fala desde o boot, a chave
                     # ainda não existe (só send_human_messages a criava) — KeyError
                     # depois do envio, e o turno não era gravado.
@@ -4154,11 +4165,12 @@ async def process_incoming_batch(
                     await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.UPLOAD_PHOTO)
                 except Exception:
                     pass
-                sent_photo = await context.bot.send_photo(
-                    chat_id=chat_id,
-                    photo=foto_stream,
-                    caption=legenda_dinamica
-                )
+                async with _outbound_lock(chat_id):
+                    sent_photo = await context.bot.send_photo(
+                        chat_id=chat_id,
+                        photo=foto_stream,
+                        caption=legenda_dinamica
+                    )
                 # Sessão e continuidade só depois do send_photo confirmado (message_id).
                 if getattr(sent_photo, 'message_id', None):
                     photo_director.confirm_sent(memory_manager.db, shot)
@@ -5092,6 +5104,8 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
     from sleep_plan import SleepPlan
     if SleepPlan(db).is_asleep(now):
         return                                   # espera ela acordar (ou a promessa expirar)
+    if not promessa_foto.olhou_o_celular(db, p, now):
+        return                                   # no banho/aula espera; livre, sai quando ela olha o celular
     if not promessa_foto.attempt(db):
         return
     from camera_world import CameraWorldBuilder
@@ -5189,14 +5203,16 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
     from chat_naturalness import strip_closing_periods
     legenda = strip_closing_periods(limpar_fala_marina(legenda))
     bot = application.bot
-    if len(images) > 1:
-        from telegram import InputMediaPhoto
-        sent = await bot.send_media_group(chat_id=settings.TARGET_CHAT_ID, media=[
-            InputMediaPhoto(img, caption=legenda if i == 0 else None) for i, img in enumerate(images)])
-        ok = bool(sent)
-    else:
-        sent = await bot.send_photo(chat_id=settings.TARGET_CHAT_ID, photo=images[0], caption=legenda)
-        ok = bool(getattr(sent, "message_id", None))
+    # 28/09 (voz, antes do soak): a foto saía sem a trava do chat e podia cair no meio dos balões de uma resposta.
+    async with _outbound_lock(settings.TARGET_CHAT_ID):
+        if len(images) > 1:
+            from telegram import InputMediaPhoto
+            sent = await bot.send_media_group(chat_id=settings.TARGET_CHAT_ID, media=[
+                InputMediaPhoto(img, caption=legenda if i == 0 else None) for i, img in enumerate(images)])
+            ok = bool(sent)
+        else:
+            sent = await bot.send_photo(chat_id=settings.TARGET_CHAT_ID, photo=images[0], caption=legenda)
+            ok = bool(getattr(sent, "message_id", None))
     if ok:
         for shot in shots:
             photo_director.confirm_sent(db, shot)

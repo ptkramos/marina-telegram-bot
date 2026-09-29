@@ -7,7 +7,8 @@ not go through bot.py. Reply turns in bot.py re-apply with turn-specific hints
 (availability_budget_hint). apply_policy is idempotent (strips prior rhythm block).
 """
 import logging
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 
 from memory_retriever import memory_retriever, MemoryRetriever
@@ -25,6 +26,57 @@ logger = logging.getLogger("ContextBuilder")
 # antigo chega pela memória consolidada e pelos resumos.
 MAX_HISTORY_CHARS = 12000
 MAX_TOTAL_CONTEXT_CHARS = 64000
+
+# Bugs 14 e 16 (28/09): o histórico ia sem hora. Às 18:58, treinando na Bodytech, ela disse "sofá com o Milo,
+# escolhendo umas referências" — a fala dela das 17:24 parecia de um minuto atrás. A primeira mensagem do Patrick
+# depois de uma pausa leva a hora e o tamanho da pausa (só nas dele: nas dela o modelo copiaria o formato).
+PAUSA_NO_HISTORICO = timedelta(minutes=20)
+
+
+def _duracao(d: timedelta) -> str:
+    minutos = int(d.total_seconds() // 60)
+    if minutos < 60:
+        return f"{minutos} min"
+    h, m = divmod(minutos, 60)
+    return f"{h}h{m:02d}" if m and h < 10 else f"{h}h"
+
+
+def marcar_pausas(history: List[Dict]) -> List[Dict[str, str]]:
+    """Histórico no formato do chat, com a marca de pausa na primeira mensagem dele depois de cada pausa."""
+    out, anterior, pausa, inicio = [], None, None, None
+    for item in history:
+        content = item.get("content", "")
+        try:
+            ts = datetime.fromisoformat(item["timestamp"]) if item.get("timestamp") else None
+        except (TypeError, ValueError):
+            ts = None
+        if ts and anterior and ts - anterior >= PAUSA_NO_HISTORICO:
+            if pausa is None:                 # a pausa pode vir antes de uma iniciativa dela: marca a dele seguinte
+                pausa, inicio = ts - anterior, anterior
+            else:
+                pausa += ts - anterior
+        if ts and pausa is not None and item.get("role") == "user":
+            quando = f"{ts:%d/%m, %H:%M}" if ts.date() != inicio.date() else f"{ts:%H:%M}"
+            content = f"[{quando} — depois de {_duracao(pausa)} sem conversa] {content}"
+            pausa = None
+        if ts:
+            anterior = ts
+        out.append({"role": item["role"], "content": content})
+    return out
+
+
+_MARCA_RE = re.compile(r"^\[[^\]]*sem conversa\] ")
+
+
+def tirar_lote_do_historico(messages: List[Dict[str, str]], texto_usuario: str) -> str:
+    """O lote dele já foi gravado ao chegar e está no fim do histórico; o turno o manda de novo no fim, depois
+    das dicas. Tira a cópia do histórico (senão ele aparece duas vezes) e devolve a marca de pausa, se houver."""
+    marca = ""
+    while (len(messages) > 1 and messages[-1]["role"] == "user"
+           and _MARCA_RE.sub("", messages[-1]["content"]).strip() in (texto_usuario or "")):
+        m = _MARCA_RE.match(messages.pop()["content"])
+        marca = m.group(0) if m else marca
+    return marca
 
 
 class ContextBuilder:
@@ -128,8 +180,7 @@ class ContextBuilder:
             safe_history.insert(0, item)
             history_chars += item_chars
 
-        for item in safe_history:
-            messages.append({"role": item["role"], "content": item["content"]})
+        messages.extend(marcar_pausas(safe_history))
 
         return messages
 

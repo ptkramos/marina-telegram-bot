@@ -1869,3 +1869,59 @@ Captura na produção: conversas 224–231, world_state 694–699, life_events 1
   Experimentais VI vieram do bloco da faculdade e da fala dela das 17:24 no histórico (item de voz "histórico puxando
   assunto velho", já na lista do soak).
 - **Testes:** `tests/test_bug16_academia_sofa.py` (6) + `test_reply_guards_v030`, `test_meals` + suíte inteira.
+
+## Frente da voz (28/09, noite): fechar pro soak — histórico velho, auditoria do prompt, promessa de foto
+Método: prompt das 18:58 remontado com o código novo numa cópia do banco e do código dentro da VPS (`/tmp`, produção
+intocada; script `remonta_prompt.py` com o relógio de `scripts_clock`), antes e depois.
+
+**Histórico puxando assunto velho (bugs 14 e 16).** O histórico ia pro modelo sem hora: 205 mensagens de dois dias,
+todas "agora". O bloco `since_last` ("desde a sua última mensagem… o que você disse pode ter ficado velho") existia,
+mas se ancorava na última fala *dela*: às 18:56 estava no prompt (última fala 17:24) e ela acertou; às 18:58 ela já
+tinha respondido às 18:57, o bloco sumiu, e o "organizando referências, Milo do meu lado" das 17:24 virou presente.
+- `context_builder.marcar_pausas`: a primeira mensagem do Patrick depois de ≥ 20 min sem conversa leva
+  `[18:56 — depois de 1h31 sem conversa]` (data quando muda o dia; a pausa antes de uma iniciativa dela marca a dele
+  seguinte). Só nas dele — nas dela o modelo copiaria o formato. Vale pro chat e pras iniciativas
+  (`generate_dynamic_speech`). `db.get_mensagens_recentes` passou a trazer o `timestamp`.
+- `since_last`: numa conversa que acabou de voltar de uma pausa (até 60 min), o bloco fica ancorado na última fala dela
+  antes da pausa ("[DESDE A SUA ÚLTIMA MENSAGEM ANTES DA PAUSA NA CONVERSA (às 17:24)]").
+- Bloco de estado explica a marca; `[FATOS]` deixou de dizer "trate os últimos turnos como autoridade" sem ressalva
+  (agora: autoridade sobre o que vocês conversaram; onde ela está e o que faz, manda o `[SEU ESTADO ATUAL]`) e de
+  chamar toda rotina de "probabilística" (o que o estado marca como fato é fato).
+
+**Auditoria do prompt (PLANO_VOZ 16).** Prompt real das 18:58: system 18.080 caracteres, histórico 11.986.
+- 🔴 **O lote dele ia duas vezes:** com a fila de disponibilidade (produção), a mensagem é gravada ao chegar e já está
+  no fim do histórico; o turno a mandava de novo no fim, depois das dicas. `tirar_lote_do_historico` tira a cópia
+  (só as do fim que estão no texto do turno; mensagem antiga sem resposta fica) e leva a marca de pausa pra de baixo.
+- Nomes de código e ruído fora: `[CONTINUIDADE] 0 lembretes confirmados; 7 assuntos em aberto` (contagem sem
+  conteúdo; os assuntos já vêm por extenso), "fonte única: MenstrualCycleManager", "atualiza known_by",
+  "calendário único", "fase: NORMAL" (a fase só aparece quando é de provas, entregas, férias…), data ISO do próximo
+  compromisso ("amanhã (29/09) às 07:00").
+- Instagram: story e "você viu" de ontem vinham só com a hora ("22:14", "08:56"); agora "ontem, 22:14". "no post de a
+  Bia" → "no post da Bia".
+- Mantidos: `[VOZ DA MARINA]`, `[LINHAS DURAS]` e `[RITMO]` (sobreposição pequena, voz ajustada com o Patrick; mexer
+  às vésperas do soak sem comparação seria mudar a voz no escuro).
+- Teto do teste (`test_world_context`, 11.500 → 12.000) mede só a estrutura fixa; o payload real passa a ser medido a
+  cada turno pelo log `prompt.payload system=… historico=… dicas=… total=…`, pro relatório do soak.
+- Achado pra frente do mundo (não mexido): a semente "Contato de Henrique — quando e como Marina responderá ainda não
+  está definido" aparece em `[SEU DIA ATÉ AGORA]` (item "sementes" da lista antes do soak).
+
+**Mensagens fora de ordem (achado nesta conversa).** A foto da promessa, a 2ª foto do gozo especial (sai 20–45 s
+depois) e a foto/áudio do próprio turno saíam sem a trava do chat (`_outbound_lock`) e podiam cair no meio dos
+balões de outra resposta. Agora passam pela trava.
+
+**Promessa de foto (PLANO_VOZ 15, decidido com o Patrick).** Produção desde 25/09: 5 promessas, 5 cumpridas.
+- Ocupada: no banho, na aula (e dormindo, se masturbando, no casting) espera ficar livre; livre, a foto só sai quando
+  ela olharia o celular — o tempo que ela levaria pra ver uma mensagem dele naquela atividade
+  (`response_availability`, sorteado uma vez por promessa). No clima e entre as opções de look não espera.
+- "Quando eu chegar (em casa)": segue o fim do trecho de verdade (+2–10 min); sem trajeto, 20–50 min como antes. A
+  validade vai até 1 h depois da hora marcada (mínimo 3 h).
+- Venceu ou falhou 3 vezes: por 12 h o prompt diz "[PROMESSA QUE FICOU] Às HH:MM você disse que ia mandar … e acabou
+  não mandando" — sem mensagem nova; se ele cobrar, ela admite do jeito dela. Foto mandada depois paga a dívida.
+
+**Achado pra frente de imagens (não mexido):** `test_roupa.test_foto_usa_a_roupa_e_a_make_de_agora` falha 3 em 20
+(sorteio). No sexting o nível da foto varia a cada foto; se a 1ª sai nível 1 ("manda de lingerie" → moletom e
+calcinha) e a 2ª nível 2, `Roupa.pro_clima` troca a peça no meio da sessão (fantasia de empregada 3 min depois).
+
+- **Testes:** `tests/test_historico_pausas.py` (10), `tests/test_promessa_foto.py` (+4), ajustes em
+  `test_v360_acceptance` e `test_world_context`. Suíte: 1.394 testes, 1 falha (a instável acima, de antes desta
+  conversa; passa sozinha, 17 em 20).

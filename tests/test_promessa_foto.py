@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 import photo_director
 import promessa_foto
@@ -155,6 +156,61 @@ class SextingNoBanhoTest(unittest.TestCase):
         self.assertIn("registros do banho", promessa_foto.prompt_lines(self.db, T)[0])
         self.assertIsNone(promessa_foto.due(self.db, T + timedelta(minutes=10)))
         self.assertEqual(promessa_foto.due(self.db, saida)["kind"], "intimo")
+
+
+class QuandoCumpreTest(unittest.TestCase):
+    """28/09 (Patrick, antes do soak): banho e aula esperam; sai quando ela olha o celular; "quando eu chegar"
+    segue a chegada de verdade; o que venceu fica como dívida no prompt."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.db = DatabaseManager(Path(self.temp.name) / "p.db")
+
+    def _disp(self, atividade, olha_em_min=4):
+        from types import SimpleNamespace
+        return patch("response_availability.ResponseAvailabilityPolicy.evaluate",
+                     side_effect=lambda *a, now=None, **k: SimpleNamespace(
+                         activity_type=atividade, selected_target_at=now + timedelta(minutes=olha_em_min)))
+
+    def test_aula_espera_e_livre_sai_quando_olha(self):
+        promessa_foto.observe_marina_line(self.db, "jaja te mando uma foto", "", T)
+        due = datetime.fromisoformat(promessa_foto.pending(self.db)["due_at"])
+        with self._disp("CLASS"):
+            self.assertFalse(promessa_foto.olhou_o_celular(self.db, promessa_foto.due(self.db, due), due))
+        livre = due + timedelta(minutes=30)
+        with self._disp("HOME_RELAXING", olha_em_min=4):
+            self.assertFalse(promessa_foto.olhou_o_celular(self.db, promessa_foto.due(self.db, livre), livre))
+            depois = livre + timedelta(minutes=4)
+            self.assertTrue(promessa_foto.olhou_o_celular(self.db, promessa_foto.due(self.db, depois), depois))
+
+    def test_no_clima_nao_espera(self):
+        promessa_foto.promise_intimate(self.db, "já te mando o estrago", T, T)
+        with self._disp("SHOWER"):
+            self.assertTrue(promessa_foto.olhou_o_celular(self.db, promessa_foto.pending(self.db), T))
+
+    def test_quando_eu_chegar_em_casa_segue_a_volta(self):
+        from commute import Leg
+        ida = Leg("i", T - timedelta(minutes=40), T - timedelta(minutes=10), "a_pe", "ida", "pro Quartinho", "Botafogo")
+        volta = Leg("v", T + timedelta(hours=2), T + timedelta(hours=2, minutes=20), "uber", "volta", "do Quartinho",
+                    "Botafogo")
+        with patch("commute.Commute.legs_on", return_value=[ida, volta]):
+            p = promessa_foto.observe_marina_line(
+                self.db, "te mando uma foto do look quando eu chegar em casa", "", T)
+        due = datetime.fromisoformat(p["due_at"])
+        self.assertTrue(volta.end + timedelta(minutes=2) <= due <= volta.end + timedelta(minutes=10))
+        self.assertIsNotNone(promessa_foto.pending(self.db))
+        self.assertIsNotNone(promessa_foto.due(self.db, due), "não vence antes de ela chegar")
+
+    def test_venceu_vira_divida_ate_mandar_foto(self):
+        promessa_foto.observe_marina_line(self.db, "jaja te mando uma foto do bolo", "", T)
+        self.assertIsNone(promessa_foto.due(self.db, T + timedelta(hours=4)))
+        linha = promessa_foto.prompt_lines(self.db, T + timedelta(hours=4))
+        self.assertIn("[PROMESSA QUE FICOU] Às 15:34", linha[0])
+        self.assertIn("a foto do bolo", linha[0])
+        self.assertEqual(promessa_foto.prompt_lines(self.db, T + timedelta(hours=13)), [], "12 h")
+        promessa_foto.close(self.db, "cumprida")
+        self.assertEqual(promessa_foto.prompt_lines(self.db, T + timedelta(hours=4)), [], "mandou foto: pagou")
 
 
 if __name__ == "__main__":

@@ -492,13 +492,14 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, role, content FROM conversas
+                SELECT id, timestamp, role, content FROM conversas
                 ORDER BY id DESC LIMIT ?
                 """,
                 (limit,)
             )
             rows = cursor.fetchall()
-            return [{"id": r["id"], "role": r["role"], "content": r["content"]} for r in reversed(rows)]
+            return [{"id": r["id"], "timestamp": r["timestamp"], "role": r["role"], "content": r["content"]}
+                    for r in reversed(rows)]
 
     def get_conversas_desde(self, since_id: int = 0, limit: int = 50) -> list[dict]:
         """Retorna todas as conversas registradas após um ID para consolidação contínua em lote."""

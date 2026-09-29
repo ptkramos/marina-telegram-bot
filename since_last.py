@@ -17,15 +17,34 @@ from typing import Optional
 
 MIN_GAP = timedelta(minutes=20)   # conversa corrida: nada mudou de verdade
 MAX_ITEMS = 8
+# Bug 16 (28/09): às 18:56 o bloco estava no prompt (última fala dela às 17:24); às 18:58 ela já tinha respondido
+# às 18:57 e o bloco sumiu — o "organizando referências, Milo do meu lado" das 17:24 voltou a parecer de agora.
+# Numa conversa que acabou de voltar de uma pausa, o bloco fica ancorado na última fala dela antes da pausa.
+RETOMADA = timedelta(minutes=60)
 
 
-def _last_her_message(db) -> Optional[datetime]:
+def _ancora(db, now: datetime) -> tuple[Optional[datetime], bool]:
+    """(última fala dela que conta, se veio de antes de uma pausa numa conversa que acabou de voltar)."""
     with db.get_connection() as conn:
-        row = conn.execute("SELECT timestamp FROM conversas WHERE role='assistant' ORDER BY id DESC LIMIT 1").fetchone()
-    try:
-        return datetime.fromisoformat(row["timestamp"]) if row else None
-    except (TypeError, ValueError):
-        return None
+        rows = conn.execute("SELECT timestamp, role FROM conversas ORDER BY id DESC LIMIT 80").fetchall()
+    msgs = []
+    for r in rows:
+        try:
+            msgs.append((datetime.fromisoformat(r["timestamp"]), r["role"]))
+        except (TypeError, ValueError):
+            continue
+    dela = next((t for t, role in msgs if role == "assistant"), None)
+    if not dela or now - dela >= MIN_GAP:
+        return dela, False
+    depois = now
+    for i, (t, _role) in enumerate(msgs):
+        if depois - t >= MIN_GAP:
+            if now - depois > RETOMADA:
+                return None, False
+            antes = next((u for u, role in msgs[i:] if role == "assistant"), None)
+            return antes, antes is not None
+        depois = t
+    return None, False
 
 
 def _legs(db, since: datetime, now: datetime) -> list[tuple[datetime, str]]:
@@ -70,14 +89,17 @@ def _now_activity(db, now: datetime) -> str:
 
 def prompt_lines(db, now: Optional[datetime] = None) -> list[str]:
     now = now or datetime.now()
-    last = _last_her_message(db)
+    last, retomada = _ancora(db, now)
     if not last or now - last < MIN_GAP:
         return []
     items = sorted(_legs(db, last, now) + _events(db, last, now), key=lambda x: x[0])
     agora = _now_activity(db, now)
     if not items and not agora:
         return []
-    lines = [f"[DESDE A SUA ÚLTIMA MENSAGEM PRO PATRICK (às {last:%H:%M}) — aconteceu de verdade]"]
+    if retomada:
+        lines = [f"[DESDE A SUA ÚLTIMA MENSAGEM ANTES DA PAUSA NA CONVERSA (às {last:%H:%M}) — aconteceu de verdade]"]
+    else:
+        lines = [f"[DESDE A SUA ÚLTIMA MENSAGEM PRO PATRICK (às {last:%H:%M}) — aconteceu de verdade]"]
     for at, text in items[-MAX_ITEMS:]:
         lines.append(f"- {at:%H:%M} — {text}")
     if agora:

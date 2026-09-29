@@ -53,7 +53,7 @@ class TestV360Acceptance(unittest.TestCase):
                      patch.object(settings, 'PROMPT_CONTROL_LANGUAGE', language):
                     prompt = self.builder.build_system_prompt(now=self.now)
                 self.assertIn(heading, prompt)
-                self.assertIn('fonte única: MenstrualCycleManager', prompt)
+                self.assertIn('[CICLO] ', prompt)
                 self.assertIn('Marina Salles', prompt)
             # Cada construção consulta o ciclo para o bloco canônico de contexto
             # (D14: a energia emocional lê a fase direto do motor, não do cycle_mgr).

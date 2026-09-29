@@ -26,6 +26,11 @@ logger = logging.getLogger(__name__)
 
 KEY = "promessas_foto_json"
 EXPIRE_AFTER = timedelta(hours=3)
+# 28/09 (Patrick, antes do soak): no banho e na aula ela espera ficar livre; e a foto só sai quando ela olharia o
+# celular — o mesmo tempo que ela levaria pra ver uma mensagem dele naquela atividade (response_availability).
+ESPERA_LIVRE = ("SHOWER", "CLASS", "SLEEPING", "SOLO", "CASTING")
+DEVENDO_POR = timedelta(hours=12)           # venceu ou falhou: ela sabe que ficou devendo
+_CHEGAR_RE = re.compile(r"\bquando\s+(?:eu\s+)?cheg(?:ar|o)\b(\s+(?:em|na|no)\s+casa)?", re.IGNORECASE)
 
 _SEND = r"(?:vou\s+te\s+mandar|te\s+mand(?:o|ar)|vou\s+(?:te\s+)?mostrar|te\s+mostro|mando\s+pra\s+(?:voc[eê]|vc))"
 PROMISE_RE = re.compile(rf"\b{_SEND}\b[^.!?\n]{{0,60}}", re.IGNORECASE)
@@ -97,13 +102,32 @@ def observe_marina_line(db, line: str, context: str, now: datetime, *, intimate:
     rng = random.Random(f"promessa:{now.isoformat()}")
     window = (20, 50) if _LATER_RE.search(seg) else (3, 10) if _SOON_RE.search(line) else (5, 15)
     due = now + timedelta(minutes=rng.randint(*window))
+    chegada = _chegada(db, line, now)
+    if chegada:                            # "te mando quando eu chegar": na chegada de verdade (28/09, Patrick)
+        due = chegada + timedelta(minutes=rng.randint(2, 10))
     promise = {"kind": kind, "count": count, "subject": subject, "said": line.strip()[:200],
-               "made_at": now.isoformat(), "due_at": due.isoformat(), "status": "pendente"}
+               "made_at": now.isoformat(), "due_at": due.isoformat(), "status": "pendente",
+               "expira_at": max(now + EXPIRE_AFTER, due + timedelta(hours=1)).isoformat()}
     st = _load(db)
     st["promessa"] = promise
     _save(db, st)
     logger.info("promessa_foto.made kind=%s count=%s due=%s", kind, count, due.isoformat(timespec="minutes"))
     return promise
+
+
+def _chegada(db, line: str, now: datetime) -> Optional[datetime]:
+    """Fim do trecho em andamento (ou do próximo) se ela prometeu pra quando chegar; "em casa" pega a volta."""
+    m = _CHEGAR_RE.search(line or "")
+    if not m:
+        return None
+    try:
+        from commute import Commute
+        legs = [leg for leg in Commute(db).legs_on(now.date()) if leg.end > now]
+    except Exception:
+        return None
+    if m.group(1):
+        legs = [leg for leg in legs if leg.direction == "volta"]
+    return min((leg.end for leg in legs), default=None)
 
 
 def pending(db) -> Optional[dict]:
@@ -115,10 +139,40 @@ def due(db, now: datetime) -> Optional[dict]:
     p = pending(db)
     if not p:
         return None
-    if now - datetime.fromisoformat(p["made_at"]) > EXPIRE_AFTER:
+    expira = (datetime.fromisoformat(p["expira_at"]) if p.get("expira_at")
+              else datetime.fromisoformat(p["made_at"]) + EXPIRE_AFTER)
+    if now > expira:
         close(db, "expirou")
         return None
     return p if datetime.fromisoformat(p["due_at"]) <= now else None
+
+
+def olhou_o_celular(db, p: dict, now: datetime) -> bool:
+    """Chegou a hora: ela está livre e já olhou o celular? (a espera é sorteada uma vez e fica guardada)"""
+    if p["kind"] == "intimo" or p.get("part", 1) > 1:
+        return True                        # no clima, ou já no meio das opções de look: está com o celular
+    try:
+        from response_availability import ResponseAvailabilityPolicy
+        d = ResponseAvailabilityPolicy(db).evaluate(p["said"], now=now, seed=f"promessa:{p['made_at']}")
+    except Exception:
+        logger.exception("promessa_foto.disponibilidade")
+        return True
+    if d.activity_type in ESPERA_LIVRE:
+        if p.get("olha_at"):
+            _set(db, olha_at=None)         # ficou ocupada de novo: sorteia quando sair
+        return False
+    if not p.get("olha_at"):
+        olha = d.selected_target_at
+        _set(db, olha_at=olha.isoformat())
+        return olha <= now
+    return datetime.fromisoformat(p["olha_at"]) <= now
+
+
+def _set(db, **campos) -> None:
+    st = _load(db)
+    if st.get("promessa"):
+        st["promessa"].update(campos)
+        _save(db, st)
 
 
 def promise_intimate(db, said: str, due_at: datetime, now: datetime, *, where: str = "banho") -> dict:
@@ -188,15 +242,36 @@ def attempt(db) -> bool:
 
 def close(db, how: str) -> None:
     st = _load(db)
+    if how == "cumprida":
+        st.pop("devendo", None)            # mandou foto: a dívida está paga
     if st.get("promessa") and st["promessa"].get("status") == "pendente":
         st["promessa"]["status"] = how
-        _save(db, st)
+        if how in ("expirou", "falhou"):
+            st["devendo"] = {"o_que": _o_que(st["promessa"]), "made_at": st["promessa"]["made_at"],
+                             "ate": (datetime.fromisoformat(st["promessa"]["made_at"]) + DEVENDO_POR).isoformat()}
         logger.info("promessa_foto.%s", how)
+    _save(db, st)
+
+
+def _o_que(p: dict) -> str:
+    return {"looks": "as opções de look" if p["count"] > 1 else "o look",
+            "comida": f"a foto {('do ' + p['subject']) if p['subject'] else 'da comida'}",
+            "selfie": "uma foto sua",
+            "unhas": f"a foto da mão com as unhas {p['subject']} prontas",
+            "cabelo": f"a foto do cabelo ({p['subject']})",
+            "intimo": ("os registros do banho (você se tocando e o depois) quando sair" if p["subject"] == "banho"
+                       else "a foto que você prometeu no clima")}.get(p["kind"], "uma foto")
 
 
 def prompt_lines(db, now: datetime) -> list[str]:
     p = pending(db)
     if not p:
+        d = _load(db).get("devendo")
+        if d and now.isoformat() < d["ate"]:
+            # 28/09 (Patrick): venceu ou não saiu — ela sabe que ficou devendo; sem mensagem nova, só se ele cobrar.
+            return [f"[PROMESSA QUE FICOU] Às {datetime.fromisoformat(d['made_at']):%H:%M} você disse que ia "
+                    f"mandar {d['o_que']} pro Patrick e acabou não mandando. Não finja que mandou; se ele cobrar, "
+                    "admita do seu jeito."]
         return []
     if p["kind"] == "looks" and p.get("part", 1) > 1:
         return [f"[SUA PROMESSA] Você já mandou a opção {p['part'] - 1} de look e tá trocando de roupa pra "
@@ -207,11 +282,5 @@ def prompt_lines(db, now: datetime) -> list[str]:
     if p["kind"] == "unhas":
         return [f"[FOTO DAS UNHAS] Suas unhas ({p['subject']}) acabaram de ficar prontas e você vai mandar a foto "
                 "da mão pro Patrick daqui a pouco. Não diga que já mandou."]
-    o_que = {"looks": "as opções de look" if p["count"] > 1 else "o look",
-             "comida": f"a foto {('do ' + p['subject']) if p['subject'] else 'da comida'}",
-             "selfie": "uma foto sua",
-             "unhas": f"a foto da mão com as unhas {p['subject']} prontas",
-             "intimo": ("os registros do banho (você se tocando e o depois) quando sair" if p["subject"] == "banho"
-                        else "a foto que você prometeu no clima")}[p["kind"]]
-    return [f"[SUA PROMESSA] Você disse que ia mandar {o_que} pro Patrick; vai mandar daqui a pouco. "
+    return [f"[SUA PROMESSA] Você disse que ia mandar {_o_que(p)} pro Patrick; vai mandar daqui a pouco. "
             "Não diga que já mandou e não prometa de novo."]

@@ -92,7 +92,10 @@ class TestWorldContext(unittest.TestCase):
         # translated RESPONSE RHYTHM/DATA CHANNEL/KNOWLEDGE POLICY blocks to
         # pt-BR (slightly larger) and Patch 022 added no-live-call + no-fake-
         # title rules. Ceiling raised to 11k to keep sanity check meaningful.
-        self.assertLess(len(birthday), 11500)
+        # 28/09 (auditoria do prompt, PLANO_VOZ 16): este teto mede só a estrutura fixa, num mundo vazio. O payload
+        # real (18:58 de 28/09: system 18k, histórico 12k) é medido a cada turno na produção pelo log
+        # "prompt.payload system=… historico=… dicas=… total=…", que o relatório do soak lê.
+        self.assertLess(len(birthday), 12000)
         # Retriever is optional for compact World Context; presence of canon is the contract.
         self.assertIn("Marina Salles", birthday)
 
