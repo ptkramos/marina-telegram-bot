@@ -31,6 +31,8 @@ FIRST_ASSIGNMENT_WEEK = 3
 PACE = (("adiantada", 0.30, 5), ("normal", 0.45, 3), ("ultima_hora", 0.25, 1))
 SESSION_WINDOW = (time(19, 30), time(23, 30))
 SESSION_MINUTES = (60, 150)
+SESSAO_ATRASO_MAX = timedelta(minutes=10)     # até 10 min atrasada (o mundo roda de 5 em 5), a hora planejada vale
+SESSAO_MIN_RESTANTE = timedelta(minutes=20)   # sobrou menos que isso até a hora de parar: hoje não senta
 SKIP_CHANCE_BASE = 0.03
 SKIP_CHANCE_BAD_SLEEP = 0.35      # dormiu menos de 5h30
 SKIP_CHANCE_RAIN = 0.10
@@ -222,7 +224,14 @@ class College:
         if self.morning(now):
             done += 1
         s = self.session_on(now.date())
-        if s and s["start"] <= now and s["start"] >= floor and meals._at_home():
+        if s and s["start"] <= now and s["start"] >= floor and meals._at_home() and not meals._transition_busy(now):
+            # 28/09 (auditoria, rodada 3): a sessão das 19:59 foi gravada às 20:29, quando ela chegou da academia,
+            # com a hora das 19:59 (o Hoje pôs o trabalho dentro do treino). Na rua, comendo ou no banho, a sessão
+            # espera; começa quando ela está livre em casa e vai até a hora planejada de parar.
+            start = s["start"] if now - s["start"] <= SESSAO_ATRASO_MAX else now
+            if s["end"] - start < SESSAO_MIN_RESTANTE:
+                return done       # não sobrou noite pra sentar e trabalhar
+            s = {**s, "start": start}
             a = s["assignment"]
             rng = _rng(f"{a['key']}:sessao:{now.date().isoformat()}:texto")
             vibe = ("virando a noite" if s["vespera"] and a["pace"] == "ultima_hora"

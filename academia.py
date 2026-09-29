@@ -48,7 +48,8 @@ class Planejada:
         p = self._decide(day)
         today = (now or datetime.now()).date()
         if day <= today:
-            desde = (today - timedelta(days=2)).isoformat()      # 27/09: o que ela combinou pra amanhã fica
+            # 27/09: o que ela combinou pra amanhã fica; 29/09: e o dia consultado também (relatório de um dia antigo)
+            desde = (min(today, day) - timedelta(days=2)).isoformat()
             st = {k: v for k, v in st.items() if k >= desde}
             st[day.isoformat()] = ({**p, "inicio": p["inicio"].isoformat(), "fim": p["fim"].isoformat()} if p else None)
             self.db.set_estado_relacional(self.key, json.dumps(st))

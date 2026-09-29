@@ -22,8 +22,8 @@ aviso ele disso na hora. Só entra o que está em "Antes do soak" e correção d
    noite, na produção desde 23:06 (`bb957aa`; seção 1, "Pronto (28/09, noite — fechado pro soak)")
 4. ✅ Infra: custo da API de rotas + **relatório diário do soak** — feito em 28/09, noite (seção 4; timer na VPS às
    05:10, `scripts/relatorio_soak.py`)
-5. Auditoria de funcionamento, rodada 3 (tudo junto, na cópia do banco dentro da VPS) — "bora na auditoria de
-   funcionamento: rodada 3, antes do soak"
+5. ✅ Auditoria de funcionamento, rodada 3 (tudo junto, na cópia do banco dentro da VPS) — feita em 28/09, 23:40
+   (seção 7; bug 18 na seção 5)
 - Do Patrick antes do soak: trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot.
 
 **Soak (decidido):** **7 dias reais + 3 limpos.** Bug achado é corrigido no dia seguinte, só conserto (sem
@@ -305,6 +305,21 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
     **lingerie por baixo** — nível 1 é a lingerie com algo por cima, no 2 ela tira o de cima; no clima a peça dela
     ganha da roupa da pose (menos a toalha). 0 falhas em 40 rodadas (antes 3 em 20).
 
+18. ✅ **A noite de 28/09 depois da academia (auditoria de funcionamento, rodada 3)** — corrigido em 28/09
+    (`tests/test_auditoria3_2809.py`, 15; `test_rituals_c3` atualizado). Mundo: treino 18:50–20:09, casa 20:21.
+    - **Milo no meio do jantar.** Xixi da noite 21:30–21:38, jantar 21:07–21:41, mundo em "jantando". O acontecimento
+      saía na hora sorteada. Agora espera ela terminar (comendo, banho, estudo) e desce em seguida. Camada: mundo
+      (`milo.py`).
+    - **"Trabalhou no trabalho de Práticas Experimentais VI" às 19:59, na academia.** Gravado às 20:29 com a hora
+      planejada; o Hoje pôs o trabalho dentro do treino. Agora começa quando ela está livre em casa; sobrando menos de
+      20 min, não senta. Camada: mundo (`college.py`).
+    - **Sem banho depois do treino.** Estudo e jantar pegaram a vez; banho só 21:52. Decisão do Patrick: **banho logo
+      ao chegar** — marcado pra chegada quando ela sai da academia; o resto espera. Camada: mundo (`rituals.py`).
+    - **"Vou deitar agora" (21:45) e banho 21:52–22:17.** Decisão do Patrick: **banho antes do boa noite** — o banho
+      da noite começa até 65 min antes de deitar; sem banho na hora do boa noite, toma primeiro; ocupada, o boa noite
+      espera e o deitar vai 15 min pra depois. Camada: mundo (`rituals.py`).
+    - De passagem: bloco em casa começando antes do fim do Milo (21:50 × 21:53). Camada: mundo (`tempo_livre.py`).
+
 **Abertos:** nenhum.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
@@ -324,7 +339,7 @@ O *quando* ela manda foto continua na frente da voz.
 5. Do Patrick: trocar a chave do Civitai (vazou em 24/09).
 
 ## 7. Auditoria de funcionamento — skill `frente-auditoria`
-**Abertura:** "bora na auditoria de funcionamento: rodada 3, antes do soak" (freio: item 5 da seção 0; inclui a noite de 28/09 com a roupa nova)
+**Abertura:** "bora na auditoria de funcionamento" (rodada 3 feita em 28/09, 23:40; a próxima é no próprio soak, pelo relatório diário)
 
 O Patrick está achando muitos bugs no uso real: o dia 26/09 teve ~50 commits em várias conversas, e muita coisa pode ter ficado desamarrada (um módulo novo que o outro não conhece). Não é criar nada novo: é conferir se cada entrega **funciona de verdade na produção**, junto com as outras.
 
@@ -346,6 +361,16 @@ O Patrick está achando muitos bugs no uso real: o dia 26/09 teve ~50 commits em
 Bug achado vira item na seção 5 (Bugs), com a correção feita aqui mesmo se for pequena.
 
 **Próxima rodada (pedido do Patrick, 28/09, bug 14):** ele sente que o Agora e o Hoje ainda têm muitas pontas soltas com tudo o que foi construído. Varredura do dia 28/09 inteiro numa cópia do banco (`.backup`, `COMMUTE_LIVE_TIMES=false`): `Agenda(db).card(t)` minuto a minuto × `world_state` × Hoje × `life_events` × conversa; cada desencontro vira item na seção 5. Olhar em especial acontecimento "de casa" com ela na rua (o Milo era um; conferir os outros sorteios do dia).
+
+**Rodada 3 (28/09, 23:40) — antes do soak, tudo junto:** item 18 da seção 5. Funciona: academia com as quatro etapas,
+jantar do iFood fora do saldo (D9), lista de compras (barrinhas, compra no sábado), semente do pai fora do prompt e
+fechando no primeiro contato (29/09 08:30), marca de pausa pra resposta adiada da madrugada, relatório do soak (timer
+05:10; rodado sobre 28/09, 0 erros de verdade), bug 16 sem `junk_reply` depois das 20:31. Quebrou e foi corrigido: Milo
+no meio do jantar, estudo às 19:59 dentro do treino, banho pós-treino perdido, "vou deitar" antes do banho. Não
+exercitado (o soak exercita): bug 17 com foto, bateria social pelo tipo da saída, card do mercado com a lista (sábado).
+Método novo: além da varredura, **a noite refeita com o código novo** (banco cortado às 20:05 numa cópia em `/tmp` e
+`Rituals.tick` de 5 em 5 min) — achou um efeito colateral da própria correção (boa noite perdido com o Milo) antes do
+deploy.
 
 **Rodada 2 (28/09, 18:00) — feita e na produção (`a0c61c8`, 18:33):** item 15 da seção 5. Funciona: PUC (se arrumando → metrô e ônibus com a
 Distance Matrix → aula → carona → casa), vontade Starbucks → emenda na Pacheco → volta com consumo no saldo, passeio

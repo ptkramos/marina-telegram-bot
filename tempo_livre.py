@@ -377,7 +377,15 @@ class TempoLivre:
             volta = Commute(self.db).ultima_volta(now, timedelta(minutes=15))
         except Exception:
             volta = None
-        return volta.end if volta else datetime.min
+        chegou = volta.end if volta else datetime.min
+        # 28/09 (auditoria, rodada 3): nem antes de acabar o que ela fazia em casa — "Brincando com o Milo" às
+        # 21:50 com o xixi da noite indo até 21:53.
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT MAX(end_at) FROM life_events WHERE end_at<=? AND end_at>=?",
+                               (now.isoformat(), (now - timedelta(minutes=15)).isoformat())).fetchone()
+        if row and row[0]:
+            chegou = max(chegou, datetime.fromisoformat(row[0]).replace(tzinfo=None))
+        return chegou
 
     def _ouviu(self, b: Bloco, now: datetime) -> None:
         try:

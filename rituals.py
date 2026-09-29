@@ -44,6 +44,9 @@ SHOWER_DURATION_MIN = (15, 30)
 SHOWER_DUE_WINDOW_MIN = 60   # se um jantar cobre o horário, o banho espera o próximo tick
 # D4 v2 (23/09): sem teto — o banho vem da necessidade dela. Só não toma dois colados.
 SHOWER_MIN_GAP = timedelta(hours=2)
+# o banho da noite começa até 65 min antes de deitar: dura até 30 e o boa noite sai 5–30 min antes de deitar
+SHOWER_EVENING_BEFORE_BED = timedelta(minutes=65)
+BOA_NOITE_DEPOIS_DO_BANHO = timedelta(minutes=15)   # boa noite esperando o banho/jantar/Milo: deita 15 min depois
 SHOWER_STREET_CHANCE = 0.35  # chegou da rua (+0.35 no calor, +0.2 voltando de rolê)
 SHOWER_HOT_C = 28
 
@@ -324,8 +327,33 @@ class Rituals:
         if kind == "SOCIAL":
             self._set(key, "skipped:na_rua", now)
             return None
+        if self._transition_busy(now):
+            # jantando, no banho, com o Milo: o boa noite vem quando ela terminar (e o deitar vai junto)
+            self._deitar_depois_da_transicao()
+            return None
+        noite = f"{PREFIX}{day.isoformat()}:cotidiano:banho_noite"
+        last = self._last_shower_at(day)
+        if not self._get(noite) and not (last and last >= datetime.combine(day, time(17, 0))):
+            # 28/09 (Patrick): boa noite de banho tomado — o banho da noite ainda não saiu, sai agora.
+            self._set(noite, "quiet", now)
+            self.start_shower(now, self._rng(day, "cotidiano:banho_noite").randint(*SHOWER_DURATION_MIN),
+                              told_patrick=False)
+            self._deitar_depois_da_transicao()
+            return None
         return Ritual("boa_noite", key, "ritual_boa_noite",
                       "Você está indo deitar agora." + self._chat_hint(now), "Boa noite, amor 🖤 dorme bem")
+
+    def _deitar_depois_da_transicao(self) -> None:
+        """O boa noite esperando o banho (ou o jantar, o Milo) acabar: o deitar vai pra 15 min depois do fim,
+        senão a janela do boa noite fecha no meio e ela dorme sem dar boa noite (réplica de 28/09 na auditoria)."""
+        try:
+            from sleep_plan import SleepPlan, enabled as sleep_plan_enabled
+            pend = json.loads(self.db.get_estado_relacional().get("pending_transition_json") or "{}")
+            if sleep_plan_enabled() and pend.get("transition_at") and pend.get("end_at"):
+                SleepPlan(self.db).acompanha(datetime.fromisoformat(pend["transition_at"]),
+                                             datetime.fromisoformat(pend["end_at"]) + BOA_NOITE_DEPOIS_DO_BANHO)
+        except Exception:
+            logger.exception("ritual.boa_noite.deitar")
 
     def _cotidiano(self, now, day, previous: Optional[str], kind: str, activity: str) -> Optional[Ritual]:
         moment = None
@@ -335,8 +363,7 @@ class Rituals:
             moment = "passeio_milo"
         elif previous == "GYM" and kind not in ("GYM", "SLEEPING"):
             moment = "saiu_academia"
-            gap = self._rng(day, "banho_pos_treino").randint(*SHOWER_AFTER_GYM_MIN)
-            self._set(f"{PREFIX}{day.isoformat()}:banho_at", (now + timedelta(minutes=gap)).isoformat(), now)
+            self._banho_pos_treino(now, day)
         if previous in ("SOCIAL", "COMMUTE") and kind == "HOME_RELAXING":
             self._plan_banho_rua(now, day, previous)
         if moment is None and kind == "HOME_RELAXING":
@@ -394,6 +421,31 @@ class Rituals:
         if rng.random() < chance:
             self._set(key, (now + timedelta(minutes=rng.randint(10, 30))).isoformat(), now)
 
+    def _banho_pos_treino(self, now: datetime, day) -> None:
+        """28/09 (auditoria, rodada 3; Patrick: "banho logo ao chegar"): ela chegou da academia às 20:21, o estudo
+        (20:29) e o jantar (21:07) pegaram a vez e o banho só veio às 21:52. Agora, saindo do treino a caminho de
+        casa, o banho fica marcado pra chegada — estudo, jantar, Milo e série esperam ela sair do banho."""
+        chegada = now
+        try:
+            from commute import Commute
+            leg = Commute(self.db).leg_at(now)
+        except Exception:
+            leg = None
+        if leg is not None and leg.direction != "volta":
+            # da academia foi pra outro lugar: banho quando chegar em casa, pela janela de antes
+            gap = self._rng(day, "banho_pos_treino").randint(*SHOWER_AFTER_GYM_MIN)
+            self._set(f"{PREFIX}{day.isoformat()}:banho_at", (now + timedelta(minutes=gap)).isoformat(), now)
+            return
+        if leg is not None:
+            chegada = max(now, leg.end)
+        key = f"{PREFIX}{day.isoformat()}:cotidiano:banho_treino"
+        last = self._last_shower_at(day)
+        if self._get(key) or (last and now - last < SHOWER_MIN_GAP) or self._transition_busy(now):
+            return
+        self._set(key, "quiet", now)
+        self.start_shower(now, self._rng(day, "banho_treino").randint(*SHOWER_DURATION_MIN), told_patrick=False,
+                          inicio=chegada + timedelta(minutes=2))
+
     def _shower_due(self, now: datetime, day) -> Optional[str]:
         planned = self._get(f"{PREFIX}{day.isoformat()}:banho_at")
         if planned:
@@ -406,6 +458,11 @@ class Rituals:
             if at <= now < at + timedelta(minutes=SHOWER_DUE_WINDOW_MIN):
                 return f"banho_rua_{at:%H%M}"
         lo, hi = (datetime.combine(day, time.fromisoformat(t)) for t in SHOWER_EVENING)
+        # 28/09 (auditoria, rodada 3; Patrick: "banho antes do boa noite"): o sorteio caiu às 21:50, com o deitar
+        # às 21:51 — boa noite às 21:45 e banho 21:52–22:17. O banho da noite acaba antes do boa noite.
+        bed = self.bed_at(day)
+        if bed:
+            hi = max(lo, min(hi, bed - SHOWER_EVENING_BEFORE_BED))
         at = lo + timedelta(minutes=self._rng(day, "banho").randint(0, int((hi - lo).total_seconds() // 60)))
         return "banho_noite" if at <= now < at + timedelta(minutes=SHOWER_DUE_WINDOW_MIN) else None
 
@@ -480,12 +537,14 @@ class Rituals:
         return Ritual("cotidiano", key, "ritual_cotidiano", detail, "Vou tomar banho, já volto 🖤",
                       "banho", {"shower_minutes": minutes})
 
-    def start_shower(self, now: datetime, minutes: int, *, told_patrick: bool = True) -> None:
-        """Ela entra no banho em 2 min e some por `minutes`; vira acontecimento do dia.
+    def start_shower(self, now: datetime, minutes: int, *, told_patrick: bool = True,
+                     inicio: Optional[datetime] = None) -> None:
+        """Ela entra no banho em 2 min (ou em `inicio`, a chegada em casa) e some por `minutes`; vira
+        acontecimento do dia.
 
         `told_patrick=False` é o banho quieto (ele não estava conversando): se ele
         escrever antes de ela sair do banho, a resposta precisa saber disso."""
-        start = now + timedelta(minutes=2)
+        start = inicio or now + timedelta(minutes=2)
         lavou = 0
         try:                                   # 26/09: dia de lavar o cabelo deixa o banho mais longo (cabelo.py)
             from cabelo import Cabelo

@@ -2009,3 +2009,47 @@ padrão. Agora só o bot rodando paga: `commute.BOT_VIVO` (o `main()` do `bot.py
 tabela. A suíte segue como antes (`ALLOW_LIVE_IN_TESTS`).
 - **Testes:** `tests/test_relatorio_soak.py` (11, com os casos reais de 28/09); `test_commute_c4`
   (`test_fora_do_bot_script_nunca_chama_a_api`). Suíte: 1.417 testes verdes (3 pulados).
+
+## Auditoria de funcionamento, rodada 3 (28/09, 23:40): tudo junto antes do soak
+Item 5 da lista "antes do soak" (freio). Produção em `017a631` = `main`, sem conversa com trabalho parado. Método da
+rodada 2: cópia do banco dentro da VPS (`/tmp`, `COMMUTE_LIVE_TIMES=false`), o próprio relatório do soak rodado sobre
+28/09 e, pra conferir a correção, a noite refeita com o código novo numa cópia do código em `/tmp` (banco cortado às
+20:05, `Rituals.tick` de 5 em 5 min, que é quem move o mundo quando ninguém fala com ela).
+
+**Funciona:** academia com preparo, ida e volta (18:24 → 18:38 → 18:50 → 20:09); jantar do iFood fora do saldo (o pai
+paga a comida, D9); lista de compras (barrinhas no prompt, compra no sábado ~10:58); semente do pai fora do prompt e
+fechando no primeiro contato dele (29/09 08:30); marca de pausa pra resposta adiada ("[22:58 — depois de 4h sem
+conversa]", "desde as 21:45: banho"), resposta ~05:35 com ela acordando 05:20 (aula 07:00); timer do relatório ativo
+e o relatório de 28/09 com 0 erros de verdade; nenhum `junk_reply` depois das 20:31 (bug 16). O `RecursionError` das
+rotas é das 17:24, do processo antigo. Não exercitado (o soak exercita): bug 17 (clima com foto), bateria social pelo
+tipo (nenhuma saída depois das 23:06), card do mercado com a lista (sábado).
+
+**Quebrou (bug 18, seção 5 do FRENTES), a noite de 28/09 depois da academia:**
+- **Milo no meio do jantar.** Xixi da noite 21:30–21:38 com o jantar 21:07–21:41; o mundo ficou em "jantando" (o
+  acontecimento saía na hora sorteada, só o estado respeitava a transição). Agora, comendo, no banho ou estudando, o
+  Milo espera; passou da hora, desce quando ela termina (`milo.materialize`).
+- **Trabalho da faculdade às 19:59 dentro do treino.** A sessão (19:59–21:01) foi gravada às 20:29, quando ela chegou,
+  com a hora planejada. Agora a sessão espera ela estar livre em casa e começa na hora em que começa de verdade (até
+  10 min de atraso vale a planejada); se sobram menos de 20 min até a hora de parar, não senta (`college.materialize`).
+- **Sem banho depois do treino** (decisão do Patrick: "banho logo ao chegar"). O banho pós-treino era marcado 20–40
+  min depois de sair da academia; o estudo (20:29) e o jantar (21:07) pegaram a vez e a janela de 60 min passou; só o
+  banho da noite, 21:52. Agora, saindo do treino a caminho de casa, o banho fica marcado pra chegada
+  (`Rituals._banho_pos_treino`, `start_shower(inicio=…)`), e estudo, jantar, Milo e série esperam. Se ele escreve no
+  caminho, o aviso diz que ela vai pro banho quando chegar (antes: "ia entrar no banho agora mesmo").
+- **"Vou deitar agora" antes do banho** (decisão do Patrick: "banho antes do boa noite"). Deitar 21:51, boa noite
+  21:45, banho da noite sorteado 21:50 (janela 19:30–22:30). Agora o banho da noite começa até 65 min antes de deitar
+  e, se na hora do boa noite ela ainda não tomou banho, toma primeiro; ocupada (jantar, banho, Milo), o boa noite
+  espera e o deitar vai pra 15 min depois do fim. A réplica mostrou por que: com o Milo esperando o jantar, ele desceu
+  21:45–21:53 e ela dormia às 21:55 sem boa noite.
+- **De passagem:** o bloco em casa começava até 5 min antes do agora ("Brincando com o Milo" 21:50 com o Milo até
+  21:53); agora também não começa antes do fim do que ela acabou de fazer (`TempoLivre._chegou`).
+
+Réplica da noite com o código novo: 20:09 voltando da Bodytech (banho marcado 20:23) → banho e cabelo 20:23–21:05 →
+jantar 21:07–21:41 → Milo 21:45–21:53 → brincando com o Milo 21:53 → boa noite 22:00 → dormindo 22:10. A sessão de
+estudo não aconteceu (sobrou pouco da janela) — como numa noite de treino de verdade.
+- **Relógio na suíte:** com a virada pra 29/09 no meio da suíte, `test_agenda_reativa` (academia remarcada/adiantada
+  em 26/09) quebrou também sem esta mudança: `Academia.plano` limpava os planos guardados pelo relógio de verdade (hoje
+  − 2 dias) e apagava o dia consultado. Na produção dá no mesmo; num relatório com `--dia` antigo, não. Agora a limpeza
+  nunca apaga o dia consultado. `test_tmdb_d6` falhou uma vez na suíte e passou 4 de 4 sozinho (instável, anotado).
+- **Testes:** `tests/test_auditoria3_2809.py` (15, com os casos reais), `test_rituals_c3` (boa noite com banho tomado;
+  banho pós-treino na chegada). Suíte: 1.432 testes verdes (3 pulados).

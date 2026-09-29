@@ -4399,6 +4399,10 @@ def _quiet_transition_hint(pending: dict, now: datetime) -> Optional[str]:
     pending["told_patrick"] = True
     memory_manager.db.set_estado_relacional("pending_transition_json", json.dumps(pending))
     logger.info("TRANSITION_TOLD type=shower")
+    if start - now > timedelta(minutes=5):
+        # 28/09 (auditoria, rodada 3): o banho pós-treino fica marcado pra quando ela chega em casa
+        return (f"[AVISO — faça nesta resposta] Assim que chegar em casa (lá pelas {start:%H:%M}) você vai "
+                "direto pro banho. Responda ao Patrick e, se couber, avise do seu jeito que vai sumir no banho quando chegar.")
     return ("[AVISO — faça nesta resposta] Você ia entrar no banho agora mesmo. Responda ao "
             "Patrick e avise, do seu jeito, que vai tomar banho e já volta.")
 

@@ -679,6 +679,8 @@ mais tempo na lista (espera ela sair do banho/aula e olhar o celular; "quando eu
 vence, some da lista como antes (a dívida fica só no prompt dela). No prompt, o Instagram de ontem passou a dizer
 "ontem, HH:MM" e "no post da Bia". Detalhe na Auditoria ("Frente da voz (28/09, noite)").
 
+**28/09, noite (auditoria de funcionamento, rodada 3, sem mudança de tela):** o Hoje da noite de treino fica na ordem em que aconteceu: "Tomou banho" logo depois de "Voltou pra casa" da academia, "Foi pra calçada" (Milo) depois do "Jantou" e não dentro dele, o trabalho da faculdade na hora em que ela sentou em casa (não às 19:59 dentro de "Foi pra academia") e o bloco em casa começando depois do Milo voltar. Detalhe na Auditoria ("Auditoria de funcionamento, rodada 3").
+
 **28/09, noite (frente de infra, sem mudança de tela):** o relatório diário do soak (VPS, 05:10) confere o app
 sozinho: o **card do Agora** de hora em hora e em cada fala dela contra o mundo, e a **aba Hoje** como ficou no fim do
 dia vai inteira no relatório, lado a lado com os acontecimentos. App mostrando o que não aconteceu é bug grave do

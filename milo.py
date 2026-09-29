@@ -183,6 +183,14 @@ class Milo:
             if item["state"] and not meals._at_home():
                 continue              # na rua: leva o Milo quando voltar
             at = item["at"]
+            if item["state"]:
+                # 28/09 (auditoria, rodada 3): o xixi da noite desceu 21:30–21:38 no meio do jantar (21:07–21:41)
+                # e o mundo ficou em "jantando". Comendo, no banho ou estudando, o Milo espera ela terminar.
+                if meals._transition_busy(now):
+                    continue
+                if now >= at + timedelta(minutes=item["minutes"]):
+                    at = now          # passou da hora esperando: desce agora
+            end = at + timedelta(minutes=item["minutes"])
             if item.get("em_casa"):
                 # 28/09 (bug 14): a arte é coisa de casa (sofá, meia, tapete). Se ela estava na rua na hora,
                 # o Milo apronta 20–40 min depois que ela chega — nunca durante o passeio nem perto de deitar.
@@ -203,10 +211,9 @@ class Milo:
                 conn.commit()
                 fresh = bool(cur.rowcount)
             created += int(fresh)
-            end = item["at"] + timedelta(minutes=item["minutes"])
-            if fresh and item["state"] and now < end and not meals._transition_busy(now):
+            if fresh and item["state"] and now < end:
                 payload = {"routine_type": "pet_walk", "activity": "passeio rapidinho com o Milo (xixi da noite)",
                            "place_key": "marina_apartment", "announced_at": now.isoformat(),
-                           "transition_at": item["at"].isoformat(), "end_at": end.isoformat()}
+                           "transition_at": at.isoformat(), "end_at": end.isoformat()}
                 self.db.set_estado_relacional("pending_transition_json", json.dumps(payload, ensure_ascii=False))
         return created

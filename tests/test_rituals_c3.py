@@ -71,6 +71,12 @@ class BomDiaTests(_Base):
 
 
 class BoaNoiteTests(_Base):
+    def setUp(self):
+        super().setUp()
+        # 28/09 (Patrick): boa noite de banho tomado — nestes casos o banho da noite já saiu.
+        bed = self.r.bed_at(self.class_day)
+        self.r.start_shower(bed - timedelta(hours=2), 20, told_patrick=False)
+
     def test_boa_noite_antes_de_deitar(self):
         from sleep_plan import SleepPlan
         bed = self.r.bed_at(self.class_day)
@@ -129,14 +135,11 @@ class CotidianoTests(_Base):
         saiu = self._tick(self._at(18, 5), ("HOME_RELAXING", "em casa"))
         self.r.mark(saiu, self._at(18, 5))
         self._msg("assistant", "saí da academia", self._at(18, 5), initiative=1)
-        planned = datetime.fromisoformat(self.r._get(f"ritual:{self.class_day.isoformat()}:banho_at"))
-        self.assertTrue(self._at(18, 25) <= planned <= self._at(18, 45))
-        with patch.object(rituals, "MIN_GAP_MIN", 0):
-            banho = self._tick(planned + timedelta(minutes=1), ("HOME_RELAXING", "em casa"))
-        self.assertEqual(banho.moment, "banho")
-        self.r.mark(banho, planned + timedelta(minutes=1))
+        # 28/09 (Patrick): chegou do treino, o banho vem primeiro (academia colada em casa: já)
         data = json.loads(self.db.get_estado_relacional()["pending_transition_json"])
         self.assertEqual(data["activity"], "tomando banho")
+        planned = datetime.fromisoformat(data["transition_at"]) - timedelta(minutes=1)
+        self.assertEqual(planned, self._at(18, 6))
         policy = ResponseAvailabilityPolicy(self.db)
         self.assertEqual(policy._map_place_activity("marina_apartment", "tomando banho"), "SHOWER")
         decision = policy.evaluate("amor?", now=planned + timedelta(minutes=5), telegram_message_id=7)
