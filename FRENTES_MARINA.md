@@ -73,12 +73,11 @@ prompt e o post do rolê usam a roupa de verdade; bloco "Agora" no topo do Por f
 **Pronto (28/09, noite — fechado pro soak):** **lista de compras** (`lista_compras.py`: o que ele pede e ela topa
 entra; prompt, card do mercado e compra de verdade com o dinheiro do pai; Hoje "Comprou X / Da lista, pedido do
 Patrick"); **bateria social** (café/açaí/mercado sozinha não é rolê); **sementes** (o pai não vira semente, títulos
-concretos, fecham no próximo contato com a pessoa); **bug 17** (lingerie por baixo desde a 1ª foto do clima); **textos
+concretos, fecham no próximo contato com a pessoa); as barrinhas de 08:52 já estão na lista da produção (OK do
+Patrick, 23:20; próxima compra sábado ~10:58); **bug 17** (lingerie por baixo desde a 1ª foto do clima); **textos
 revisados com ele** (sem "·", atraso amarelo no Hoje, academia e Milo novos, Por fora Para/Maquiagem/Estado).
 
 **Próximo** (congelado até o soak fechar; "ver no uso real" é o próprio soak):
-0. Pendente do OK do Patrick: pôr as barrinhas de 28/09 08:52 na lista da produção (a promessa foi antes da lista
-   existir; o auto mode barrou escrever no banco da VPS sem ele autorizar).
 1. Ver a roupa no uso real (primeira noite: Se arrumando, foto, chegada, pijama; primeira provocação) e revisar com
    ele os textos que decidi (lista no PLANO_WEBAPP, "Roupa e make de verdade"). Ideia anotada: roupa nova comprada
    no shopping entrando no guarda-roupa (sai do saldo).
