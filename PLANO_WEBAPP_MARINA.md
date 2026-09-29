@@ -679,6 +679,11 @@ mais tempo na lista (espera ela sair do banho/aula e olhar o celular; "quando eu
 vence, some da lista como antes (a dívida fica só no prompt dela). No prompt, o Instagram de ontem passou a dizer
 "ontem, HH:MM" e "no post da Bia". Detalhe na Auditoria ("Frente da voz (28/09, noite)").
 
+**28/09, noite (frente de infra, sem mudança de tela):** o relatório diário do soak (VPS, 05:10) confere o app
+sozinho: o **card do Agora** de hora em hora e em cada fala dela contra o mundo, e a **aba Hoje** como ficou no fim do
+dia vai inteira no relatório, lado a lado com os acontecimentos. App mostrando o que não aconteceu é bug grave do
+soak. Detalhe na Auditoria ("Frente de infra (28/09, noite): relatório diário do soak").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

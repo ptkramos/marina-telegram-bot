@@ -66,6 +66,8 @@ API_TRANSIT = {"onibus": "bus", "metro": "subway", "metro_onibus": "bus|subway"}
 API_CLAMP = (0.6, 2.5)      # em relação à tabela: fora disso é endereço mal geocodificado
 HOME_QUERY = "Botafogo, Rio de Janeiro, RJ, Brasil"
 ALLOW_LIVE_IN_TESTS = False    # só os testes da API ligam, com a rede simulada
+BOT_VIVO = False               # 28/09 (infra): só o bot rodando paga a API (o main do bot.py liga);
+                               # script, varredura e relatório do soak usam a tabela
 INCIDENT_CHANCE = 0.12
 INCIDENTS = {
     "onibus": ["o ônibus veio lotado", "o ônibus demorou uns 20 minutos pra passar"],
@@ -254,8 +256,11 @@ class Commute:
         if not key or not getattr(settings, "COMMUTE_LIVE_TIMES", True) or mode not in API_MODE:
             return None
         from db import _running_under_tests
-        if _running_under_tests() and not ALLOW_LIVE_IN_TESTS:
-            return None  # a suíte nunca chama a API real (dezenas de resolves por rodada)
+        if _running_under_tests():
+            if not ALLOW_LIVE_IN_TESTS:
+                return None  # a suíte nunca chama a API real (dezenas de resolves por rodada)
+        elif not BOT_VIVO:
+            return None      # fora do bot (cópia do banco, dias futuros) cada trecho novo seria uma chamada paga
         from zoneinfo import ZoneInfo
         depart = max(moment, datetime.now() + timedelta(minutes=1))
         dest = self._query(place)

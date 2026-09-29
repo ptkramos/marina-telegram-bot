@@ -1,0 +1,10 @@
+# 05:10 no horário dela (a VPS está em UTC): o dia vira às 5h, o relatório cobre 05:00 → 05:00.
+[Unit]
+Description=Marina - relatorio do soak as 05:10 (Sao Paulo)
+
+[Timer]
+OnCalendar=*-*-* 05:10:00 America/Sao_Paulo
+Persistent=true
+
+[Install]
+WantedBy=timers.target

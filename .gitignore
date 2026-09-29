@@ -71,3 +71,6 @@ references/
 
 # Instagram da Marina (fotos geradas; ficam só na VPS)
 data/instagram/
+
+# Relatórios do soak (ficam na VPS, como o banco)
+soak/

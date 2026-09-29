@@ -5745,6 +5745,8 @@ def main():
         for err in errors:
             logger.error(f"Erro de configuração: {err}")
         return
+    import commute
+    commute.BOT_VIVO = True     # só o bot rodando paga a API de rotas (scripts usam a tabela)
 
     tg_req = HTTPXRequest(read_timeout=60.0, write_timeout=60.0, connect_timeout=30.0)
     app = Application.builder().token(settings.TELEGRAM_BOT_TOKEN).request(tg_req).post_init(post_init).build()

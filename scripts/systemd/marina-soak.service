@@ -1,0 +1,12 @@
+# Relatório diário do soak (FRENTES_MARINA.md, seção 0). Instalado em /etc/systemd/system/.
+# Roda numa cópia do banco em /tmp e grava em /root/bots/marina/soak/dia-AAAA-MM-DD.md.
+[Unit]
+Description=Marina - relatorio diario do soak
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/bots/marina
+Environment=TZ=America/Sao_Paulo PYTHONUTF8=1 COMMUTE_LIVE_TIMES=false
+ExecStart=/root/bots/marina/venv/bin/python scripts/relatorio_soak.py
+Nice=10
+TimeoutStartSec=900

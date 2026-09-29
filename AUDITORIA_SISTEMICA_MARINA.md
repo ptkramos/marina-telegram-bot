@@ -1968,3 +1968,44 @@ Por fora "Para", "Maquiagem", barra "Estado". Lista completa no PLANO_WEBAPP ("M
 - **Testes:** `tests/test_lista_compras.py` (8), `test_social_battery_audit5` (+1), `test_social_day_audit6` (+1 e o
   fechamento no próximo contato), `test_roupa` (bug 17), `test_hoje` (+1), textos atualizados em `test_academia`,
   `test_atraso`, `test_agenda_viva`. Suíte: 1.405 testes verdes (3 pulados).
+
+## Frente de infra (28/09, noite): relatório diário do soak e a API paga de rotas
+Item 4 da seção 0 do FRENTES (antes do soak). Nada muda no que ela faz nem nas telas.
+
+**Relatório diário do soak** (`scripts/relatorio_soak.py`, timer `marina-soak.timer` na VPS). Às **05:10** (horário
+dela; a VPS está em UTC, o timer diz `America/Sao_Paulo`) copia o banco pra `/tmp` e grava
+`/root/bots/marina/soak/dia-AAAA-MM-DD.md`, cobrindo 05:00 → 05:00. Nunca grava na produção e não paga API: depois de
+ler o gasto do OpenRouter, apaga as chaves na memória do processo; rotas ficam na tabela (abaixo). ~15 s por dia.
+Conteúdo, nesta ordem:
+- **Resumo:** mensagens, iniciativas, fotos, suspeitas por tipo, erros de verdade × rede, reinícios, custos, /bom e /ruim.
+- **Suspeitas que o script acha sozinho** (quem decide se é bug é quem lê):
+  fala × mundo (onde ela diz que está, "tô em casa", "tô no uber", "tô na academia", e o que diz que está fazendo, "tô
+  organizando" com o mundo na rua; o estado de até 15 min antes/depois também vale); fala × o que ela fez no dia (comi um
+  X, desci com o Milo, treinei, almocei, tomei banho × acontecimentos e estados até aquela hora); card do Agora ×
+  mundo (nas falas dela e de hora em hora); fala quebrada (número sem a parte inteira, R$ sem valor, resto de código,
+  outro alfabeto, palavra colada repetida, mais os `llm.junk_reply` do log); foto × roupa do mundo; ordem e repetição.
+- **Conversa com o mundo:** a conversa com hora, com uma linha "mundo:" cada vez que o `world_state` muda.
+- **Aba Hoje** como ficou no fim do dia (`hoje_view` às 03:59 do dia seguinte), acontecimentos (`life_events`), fotos
+  que ela mandou com a roupa do mundo, Instagram dela, /bom e /ruim (lidos da biblioteca e da antibiblioteca pela data).
+- **Log e serviço:** erros de verdade com a exceção; rede do Telegram, Last.fm e atraso do agendador contados à parte
+  (não contam como bug); paradas e quedas do `journalctl`.
+- **Custos:** LLM pelo acumulado do OpenRouter (`/api/v1/credits`; foto do acumulado em `soak/.openrouter.json` a cada
+  dia, gasto = diferença; o 1º dia só marca), número de chamadas e tamanho do prompt (`prompt.payload`); Civitai (Buzz
+  somado do `civitai.submitted`, adultas, falhas); rotas; voz (áudios e segundos).
+- **Dia N:** conta a partir de `soak/inicio.txt` (AAAA-MM-DD, criado quando o soak começar); sem ele, "antes do soak".
+
+**Calibrado nos dias 26, 27 e 28/09 da produção:** 26 e 27 sem suspeita; 28 com 9, todas bugs de verdade já
+conhecidos: 18:58 "tô em casa" treinando na Bodytech e o ",4 kg" (bug 16), 17:24 "tô organizando uns looks aqui"
+passeando com o Milo na Enseada (bug 14), 13:41 "comi um sanduíche" sem sanduíche no mundo (corrigido à tarde em "Bug:
+o dia 28/09 visto pelo Patrick"), e as 4 respostas que o próprio bot pegou e refez. Achado de passagem: em 27/09, 21:06,
+o bot não subiu porque o Telegram não respondeu na partida (`Network Retry Loop … Timed out`, `status=1/FAILURE`) e o
+systemd subiu de novo — o relatório mostra isso na seção Serviço.
+
+**API paga de rotas (`DISTANCE_MATRIX_KEY`).** Produção: 2 a 10 chamadas por dia (26/09: 10, 27/09: 4, 28/09: 2 + 2
+falhas do `RecursionError` já corrigido), porque cada trecho é decidido uma vez e guardado (`world_bootstrap`
+`commute:DIA:trecho`). O risco era fora do bot: script, varredura na cópia do banco ou relatório resolvendo dias
+futuros chamam a API a cada trecho novo, e o `.env` do PC também tem a chave com `COMMUTE_LIVE_TIMES` ligado por
+padrão. Agora só o bot rodando paga: `commute.BOT_VIVO` (o `main()` do `bot.py` liga); fora dele o trecho usa a
+tabela. A suíte segue como antes (`ALLOW_LIVE_IN_TESTS`).
+- **Testes:** `tests/test_relatorio_soak.py` (11, com os casos reais de 28/09); `test_commute_c4`
+  (`test_fora_do_bot_script_nunca_chama_a_api`). Suíte: 1.417 testes verdes (3 pulados).

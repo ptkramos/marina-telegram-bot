@@ -4,8 +4,8 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 23:15 (mundo fechado pro soak e na produção em `bb957aa`, item 3 da seção 0; próxima
-conversa na frente de infra, item 4: relatório diário do soak + API de rotas)._
+_Atualizado em 28/09/2026, 23:30 (relatório diário do soak e API de rotas prontos, item 4 da seção 0; próxima
+conversa: auditoria de funcionamento, rodada 3 — item 5)._
 
 ---
 
@@ -20,7 +20,8 @@ aviso ele disso na hora. Só entra o que está em "Antes do soak" e correção d
    — feito em 28/09 (`4b29e31`, seção 3)
 3. ✅ Mundo: lista de compras, bateria social, sementes de história, bug 17 e revisão dos textos — feito em 28/09,
    noite, na produção desde 23:06 (`bb957aa`; seção 1, "Pronto (28/09, noite — fechado pro soak)")
-4. Infra: custo da API de rotas + **relatório diário do soak** (abaixo) — "bora na frente de infra: relatório do soak"
+4. ✅ Infra: custo da API de rotas + **relatório diário do soak** — feito em 28/09, noite (seção 4; timer na VPS às
+   05:10, `scripts/relatorio_soak.py`)
 5. Auditoria de funcionamento, rodada 3 (tudo junto, na cópia do banco dentro da VPS) — "bora na auditoria de
    funcionamento: rodada 3, antes do soak"
 - Do Patrick antes do soak: trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot.
@@ -32,7 +33,7 @@ roupa, dinheiro), o app mostra algo que não aconteceu, erro/traceback, mensagem
 do normal. Texto feio ou gosto → anotado e corrigido em lote, não zera a contagem.
 Durante o soak ele usa normal e marca o que estranhar com /bom e /ruim; abertura do dia: "bora no soak, dia N".
 
-**Relatório diário (a construir no item 4):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
+**Relatório diário (pronto, 28/09):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
 perguntou 00:00 × 05:00 e ficou 05:00: o rolê da noite e a conversa de madrugada ficam no mesmo dia), cobrindo
 05:00→05:00, em `/root/bots/marina/soak/dia-AAAA-MM-DD.md` (fica na VPS, como o banco). Conteúdo: a conversa do dia
 com hora; o mundo (`world_state`) × card × Hoje × acontecimentos; **contradições que o script acha sozinho** (fala dela
@@ -126,10 +127,19 @@ despertador → trechos (997/1000 níveis na VPS) cortado — pilha 75; plano do
 invalida sozinho quando algo grava); primeiro resolve na VPS 0,81 → 0,33 s; saída igual ao código antigo (só o
 despertador passa a seguir sempre a regra). Detalhe na AUDITORIA ("Frente de infra (28/09, noite)").
 
+**Pronto (28/09, noite — fechado pro soak):** **relatório diário do soak** (`scripts/relatorio_soak.py`, timer
+`marina-soak.timer` às 05:10 de São Paulo; `soak/dia-AAAA-MM-DD.md` na VPS; cópia do banco em /tmp, sem API paga):
+conversa com o mundo, Hoje, acontecimentos, /bom e /ruim, erros, custos e suspeitas automáticas (fala × lugar e
+atividade, fala × o que ela fez, card × mundo, fala quebrada, foto × roupa, ordem). Calibrado em 26–28/09: achou
+sozinho os bugs 14 e 16 e o sanduíche. **Dia N** conta de `soak/inicio.txt` — criar com a data do dia 1 quando o soak
+começar (`echo AAAA-MM-DD > /root/bots/marina/soak/inicio.txt`). Ler um dia sem esperar: `ssh … "cat
+/root/bots/marina/soak/dia-AAAA-MM-DD.md"`; gerar de novo: `venv/bin/python scripts/relatorio_soak.py --dia AAAA-MM-DD`.
+**API de rotas:** a produção faz 2–10 chamadas por dia (um trecho, uma chamada, guardada); agora só o bot rodando paga
+(`commute.BOT_VIVO`), script e varredura usam a tabela. Detalhe na AUDITORIA.
+
 **Próximo:**
-1. **API paga de rotas:** `commute._live_minutes` usa a `DISTANCE_MATRIX_KEY` do `.env` fora dos testes; varredura
-   local deve rodar com `COMMUTE_LIVE_TIMES=false` (ou o default local ser desligado). Conferir também quantas
-   chamadas a produção faz por dia (cache por trecho/dia?).
+1. Soak: ler o relatório de cada dia na conversa "bora no soak, dia N" e ajustar as regras de suspeita se acusarem
+   à toa (falso positivo) ou deixarem passar um bug que o Patrick viu.
 2. Do Patrick (ele faz): trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot da VPS.
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 

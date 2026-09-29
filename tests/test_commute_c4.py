@@ -240,6 +240,19 @@ class LiveTimesTests(unittest.TestCase):
             self.c._decide(self.when.date(), "z", "Gávea", self.when, place={"name": "PUC-Rio", "region": "Gávea"})
         net.assert_not_called()
 
+    def test_fora_do_bot_script_nunca_chama_a_api(self):
+        """Varredura, auditoria e relatório do soak rodam fora do bot: tabela, nunca a API paga."""
+        with patch("db._running_under_tests", return_value=False), \
+             patch.object(commute, "BOT_VIVO", False), \
+             patch("urllib.request.urlopen") as net:
+            self.c._decide(self.when.date(), "w", "Gávea", self.when, place={"name": "PUC-Rio", "region": "Gávea"})
+        net.assert_not_called()
+        with patch("db._running_under_tests", return_value=False), \
+             patch.object(commute, "BOT_VIVO", True), \
+             patch("urllib.request.urlopen", return_value=self._resp(31 * 60)) as net:
+            self.c._decide(self.when.date(), "v", "Gávea", self.when, place={"name": "PUC-Rio", "region": "Gávea"})
+        net.assert_called_once()
+
 
 def urllib_unquote(url):
     from urllib.parse import unquote_plus
