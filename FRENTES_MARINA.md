@@ -4,8 +4,9 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 23:30 (relatório diário do soak e API de rotas prontos, item 4 da seção 0; próxima
-conversa: auditoria de funcionamento, rodada 3 — item 5)._
+_Atualizado em 29/09/2026, 00:25 (auditoria rodada 3 feita e na produção, `c43911c`: lista "antes do soak"
+fechada. **Soak começou: dia 1 = terça 29/09 (05:00 → 05:00)**, relatório em `soak/dia-2026-09-29.md` na quarta
+05:10; próxima conversa: "bora no soak, dia 1" na quarta de manhã)._
 
 ---
 
@@ -24,7 +25,7 @@ aviso ele disso na hora. Só entra o que está em "Antes do soak" e correção d
    05:10, `scripts/relatorio_soak.py`)
 5. ✅ Auditoria de funcionamento, rodada 3 (tudo junto, na cópia do banco dentro da VPS) — feita em 28/09, 23:40
    (seção 7; bug 18 na seção 5)
-- Do Patrick antes do soak: trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot.
+- Do Patrick (não segura o soak, mas não esquecer): trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot.
 
 **Soak (decidido):** **7 dias reais + 3 limpos.** Bug achado é corrigido no dia seguinte, só conserto (sem
 funcionalidade nova, deploy respeitando a regra dos 5 min). Libera coisa nova quando os 3 últimos dias passarem sem
