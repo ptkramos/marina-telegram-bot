@@ -4,8 +4,8 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 28/09/2026, 20:45 (bug 16 corrigido e na produção em `e9ba399`; **freio decidido com o Patrick:
-fecha a lista abaixo e para tudo pro soak**; próxima conversa na frente da voz, item 2 da seção 0)._
+_Atualizado em 28/09/2026, 21:30 (voz fechada pro soak e na produção em `4b29e31`; **freio decidido com o Patrick:
+fecha a lista abaixo e para tudo pro soak**; próxima conversa na frente do mundo, item 3 da seção 0)._
 
 ---
 
@@ -16,10 +16,11 @@ aviso ele disso na hora. Só entra o que está em "Antes do soak" e correção d
 
 **Antes do soak — fecha e para (nesta ordem, uma conversa cada):**
 1. ✅ Bug 16 (18:57: academia × "em casa no sofá", ",4 kg") — corrigido em 28/09 (seção 5, item 16)
-2. Voz: histórico puxando assunto velho + auditoria do prompt do chat + regra de quando ela cumpre promessa de foto
-   (PLANO_VOZ 15 e 16) — "bora na frente da voz: fechar pro soak"
+2. ✅ Voz: histórico puxando assunto velho + auditoria do prompt do chat + regra de quando ela cumpre promessa de foto
+   — feito em 28/09 (`4b29e31`, seção 3)
 3. Mundo: lista de compras (ela promete e não existe), bateria social (café/açaí como rolê), sementes de história que
-   nunca fecham, e revisar com ele os textos que decidi (roupa, agenda viva, atraso, Milo, academia, preparos) —
+   nunca fecham (a do "Contato de Henrique" aparece no prompt, `[SEU DIA ATÉ AGORA]`), bug 17 (lingerie trocada no
+   meio do sexting, `roupa.py`), e revisar com ele os textos que decidi (roupa, agenda viva, atraso, Milo, academia, preparos) —
    "bora na frente do mundo: fechar pro soak"
 4. Infra: custo da API de rotas + **relatório diário do soak** (abaixo) — "bora na frente de infra: relatório do soak"
 5. Auditoria de funcionamento, rodada 3 (tudo junto, na cópia do banco dentro da VPS) — "bora na auditoria de
@@ -103,21 +104,19 @@ círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
 3. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).
 
 ## 3. Voz e chat — skill `frente-voz`
-**Abertura:** "bora na frente da voz: fechar pro soak" (freio: só o item 2 da seção 0)
+**Abertura:** congelada até o soak fechar (freio, seção 0); fala errada no uso real é bug do soak
 
 **Pronto (26/09):** balões inteiros e uma iniciativa por vez (fim das mensagens fora de ordem); ponto final
 dividindo balão; vocabulário da masturbação; música que ele manda por link.
 
-**Próximo (antes do soak: 1 e 2 juntos, nesta conversa):**
-1. Histórico puxando assunto velho (bugs 14 e 16, 28/09): às 17:24, passeando na Enseada, "tô organizando umas
-   referências de look" (repetia a fala das 13:41); às 18:58, na Bodytech, "sofá com o Milo, escolhendo umas
-   referências pro trabalho de Práticas Experimentais VI" (a fala das 17:24 + o bloco da faculdade). Os fatos que
-   brigavam saíram do prompt (sofá sem hora, academia como "probabilística"); o que sobra é o histórico — ver no
-   prompt remontado se a regra "NUNCA invente atividade por hábito do histórico" basta ou se a fala velha precisa de
-   hora/local no histórico.
-2. Regras das fotos por promessa (PLANO_VOZ 15: quando ela cumpre) e auditoria do prompt do chat (PLANO_VOZ 16).
-3. Depois do soak: observar coerência entre turnos e iniciativas (PLANO_VOZ 12, /bom e /ruim); técnicas antigas
-   (PLANO_VOZ 13).
+**Pronto (28/09, noite — fechada pro soak, `4b29e31`):** histórico com marca de pausa (`[18:56 — depois de 1h31 sem
+conversa]`) e aviso "desde a sua última mensagem antes da pausa" (fim do assunto velho dos bugs 14 e 16); a mensagem
+dele não vai mais duas vezes pro modelo; auditoria do prompt (FATOS, nomes de código, Instagram de ontem; log
+`prompt.payload` por turno pro relatório do soak); fotos e áudios pela trava do chat; promessa de foto decidida com
+ele (banho/aula esperam, sai quando ela olha o celular, "quando eu chegar" segue a chegada, vencida vira dívida 12 h).
+
+**Próximo (depois do soak):** coerência entre turnos e iniciativas (PLANO_VOZ 12, /bom e /ruim); técnicas antigas
+(PLANO_VOZ 13); enxugar VOZ/LINHAS DURAS/RITMO com comparação antes × depois (auditoria do prompt manteve).
 
 ## 4. Infra — skill `frente-infra`
 **Abertura:** "bora na frente de infra: relatório do soak" (freio: item 4 da seção 0 — relatório diário + API de rotas)
@@ -135,7 +134,7 @@ despertador passa a seguir sempre a regra). Detalhe na AUDITORIA ("Frente de inf
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
-**Abertura:** "bora na frente de bugs" (nenhum aberto; traga o print ou a hora)
+**Abertura:** "bora na frente de bugs" (aberto: 17, lingerie trocada no sexting — vai junto com o item 3 da seção 0)
 
 Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
 
@@ -290,7 +289,11 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       17:43)"). As referências de Práticas Experimentais VI vieram do bloco da faculdade e do histórico das 17:24.
     - **"Mais, seu guloso" (18:57) estava certo:** a pesagem anterior foi 54,0 kg (26/09).
 
-**Abertos:** nenhum.
+**Abertos:**
+17. **Lingerie trocada no meio do sexting (achado na suíte, 28/09, frente da voz)** — `test_roupa.test_foto_usa_a_roupa_e_a_make_de_agora`
+    falha 3 em 20. O nível da foto é sorteado a cada foto; se a 1ª sai nível 1 ("manda de lingerie" → moletom e
+    calcinha) e a 2ª nível 2, `Roupa.pro_clima` veste outra peça (fantasia de empregada 3 min depois) — a regra é a
+    peça ficar a mesma na sessão. Camada: imagens/mundo (`roupa.py`, `photo_director._roupa_de_agora`). Antes do soak.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** congelada até o soak fechar (freio, seção 0); foto errada no uso real é bug do soak
