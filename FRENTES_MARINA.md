@@ -404,6 +404,11 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
     - **13:06 "já tem cabelo novo"** — o "assunto do momento" do planner ainda era "ida ao salão e cuidados com o
       cabelo" (não foi limpo no desfazer do salão, falha minha). Lembrete falso "Contar como ficou o cabelo" fechado.
     - **15:14 "vai###"** — resto de formatação do modelo; `limpar_fala_marina` tira `##`+. Camada: voz.
+    - Texto feio (lote, não zera; print do Patrick 30/09): no Hoje, "Faltou a aula hoje (Acessórios de Moda e
+      Extensões do Corpo e Conteúdos Estruturantes: Projetar para a Sociedade e Projeto: Projetar em Sociedade): cólica
+      forte, ficou em casa" em 5 linhas. `hoje.curto` só reconhece o texto da agenda viva ("Faltou a aula **de** hoje
+      … Vai pegar a matéria"); o do `college.morning` ("Faltou a aula hoje (…): motivo") cai na frase interna inteira.
+      E mesmo o curto põe a lista de matérias no cinza. Vai pro catálogo de textos (o Patrick decide linha e cinza).
     - **Amanhã (01/10), visto antes de acontecer** (Patrick: "acho que a Marina vai se complicar amanhã"): aula
       07–15h, casting 15:30–17:00 e outro 17:00–18:30 na mesma agência. O planejado: almoço no Shopping da Gávea 15:18
       (com casting 15:30), volta da PUC 15:50 emendando no 2º casting, "voltando pra casa" do 1º às 17:00 e "a caminho"
