@@ -48,7 +48,8 @@ com hora; o mundo (`world_state`) × card × Hoje × acontecimentos; **contradi�
 journal; custos (Buzz, rotas, LLM) e fotos geradas; iniciativas. Eu leio na conversa "bora no soak, dia N", explico e
 listo os bugs.
 
-**Depois do soak (congelado):** salão pelo humor/remarcado pela conversa; virose com banheiro, pai ligando mais, job
+**Depois do soak (congelado):** **Hoje com bloco "Em casa"** (Patrick, 30/09: o que ela faz em casa, aninhado, como as
+saídas — 1º da frente de apps); salão pelo humor/remarcado pela conversa; virose com banheiro, pai ligando mais, job
 fora do Rio; roupa nova comprada no shopping; iFood da Ma, banco dela, `pedido_dela` no catálogo novo, pedidos dela de
 farmácia/mercado; fotos provisórias de marca e o X dela; técnicas antigas da voz (PLANO_VOZ 13); imagens (flash no
 quarto, foto de grupo em casa/duas amigas, poses novas, ângulo de trás, fatores do gozo especial, rostos novos).
@@ -107,6 +108,10 @@ fora à noite com luz de noite; post 6 refeito. **Bastidores revisado aba a aba 
 círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
 
 **Próximo:**
+0. **Depois do soak, o primeiro:** Hoje com bloco "Em casa" — o que ela faz em casa (celular, belisco, mensagens,
+   closet…) aninhado num bloco com hora e cômodo, como as saídas já são (esboço de 30/09: "Ficou em casa 17:00–17:32,
+   Sala" com TikTok, chocolate, manicure marcada e Bia dentro). A decidir linha a linha: onde o bloco começa e
+   termina, se banho, Milo na calçada, refeições, sessão de trabalho e o íntimo entram dentro ou ficam fora.
 1. Instagram no uso real: o próximo post de rolê da noite (luz e cabelo) e os textos ao vivo (tipo por pessoa, sem molde).
 2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
 3. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).
