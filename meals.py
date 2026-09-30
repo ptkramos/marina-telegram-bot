@@ -93,7 +93,7 @@ MENU = {
     "jantar_cozinha": ["omelete com queijo e tomate", "macarrão ao pesto que ela mesma fez",
                        "arroz, ovo frito e salada", "tapioca de queijo com presunto"],
     "lanche": ["pão de queijo", "um chocolate", "iogurte com granola", "um açaí pequeno",
-               "biscoito com café", "pipoca vendo série"],
+               "biscoito com café", "pipoca"],     # soak, dia 2: "pipoca vendo série" com ela no TikTok/closet
     "dieta": ["salada com frango grelhado", "omelete de claras com salada", "sopa de legumes"],
 }
 
@@ -351,7 +351,7 @@ class Meals:
         chance = 0.05 if diet else (0.25 + (0.25 if tpm else 0.0))
         if rng.random() < chance:
             night = at + timedelta(minutes=rng.randint(80, 150))
-            minutos, prato = dur("lanche", rng), rng.choice(["pipoca vendo série", "um chocolate", "um açaí pequeno"])
+            minutos, prato = dur("lanche", rng), rng.choice(["pipoca", "um chocolate", "um açaí pequeno"])
             # 28/09 (auditoria): o Hoje previa "~22:55 Lanche" depois de "~22:30 Dormir" — só se couber antes de deitar
             if night + timedelta(minutes=minutos) <= self._deitar(day) - LANCHE_NOITE_ANTES_DE_DEITAR:
                 slots.append(MealSlot("lanche", f"meal:{iso}:lanche:2", night, minutos, "casa", prato))

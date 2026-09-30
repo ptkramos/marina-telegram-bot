@@ -2156,3 +2156,6 @@ interrupção/uber/aviso da agenda reativa, voltou o cabelo (lavado 29/09 05:23,
   `_record` de refeição pulada fora do café: "não deu tempo entre os compromissos". Depois: PUC → agência
   15:00–15:30 → castings 15:30–18:30 → casa 18:55, almoço pulado, jantar 19:33, sem passeio do Milo (só o xixi).
 - **Testes:** `tests/test_soak_dia2.py` (+5).
+- *30/09, noite — "Beliscou pipoca vendo série"* (10:03 no closet, 18:41 no TikTok; o Patrick viu duas vezes): o
+  prato do lanche vinha com a cena ("pipoca vendo série") em `MENU["lanche"]` e no lanchinho da noite; o Hoje dizia
+  uma série que não houve. Prato agora é "pipoca". Teste em `test_soak_dia2` (+1).

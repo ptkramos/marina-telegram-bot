@@ -1353,3 +1353,6 @@ aconteceu; ver Auditoria, "a escova que não aconteceu"). Corrigidas no históri
 **30/09, tarde:** assunto em aberto dela não vira pergunta a ele (check-in: coisa dele pergunta, coisa dela conta);
 "vou fazer o trabalho agora" vira sessão de trabalho de verdade (decisão do Patrick: a fala vira mundo); "###" sai da
 fala. Detalhe na Auditoria ("30/09, tarde").
+
+**30/09, noite:** lanche sem cena pronta ("pipoca vendo série" saía com ela fazendo outra coisa; o prompt e o
+Hoje repetiam). Detalhe na Auditoria.

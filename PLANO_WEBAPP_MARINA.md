@@ -706,6 +706,9 @@ conserto na Auditoria ("a escova que não aconteceu").
 agência) sumia do card — agora aparece "Na agência" e a volta. Hoje de 01/10: almoço pulado aparece como "não deu
 tempo entre os compromissos". Detalhe na Auditoria ("30/09, tarde").
 
+**30/09, noite:** o Hoje dizia "Beliscou pipoca vendo série" com ela no closet ou no TikTok — o lanche agora é
+só "Beliscou pipoca". Detalhe na Auditoria ("pipoca vendo série").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

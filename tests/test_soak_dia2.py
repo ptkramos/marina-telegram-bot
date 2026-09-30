@@ -193,5 +193,14 @@ class DiaCheioDeAmanhaTest(Base):
         self.assertEqual(Meals(self.db)._saidas(date(2026, 10, 1)), [(at(15, 30), at(18, 30))])
 
 
+class LancheSemCenaTest(unittest.TestCase):
+    def test_lanche_nao_inventa_o_que_ela_estava_fazendo(self):
+        """10:03 e 18:41: "Beliscou pipoca vendo série" com ela no closet e no TikTok."""
+        import inspect
+        import meals
+        self.assertFalse([d for d in meals.MENU["lanche"] if "vendo" in d])
+        self.assertNotIn("vendo série", inspect.getsource(meals.Meals.day_plan))
+
+
 if __name__ == "__main__":
     unittest.main()

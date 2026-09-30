@@ -409,6 +409,9 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       forte, ficou em casa" em 5 linhas. `hoje.curto` só reconhece o texto da agenda viva ("Faltou a aula **de** hoje
       … Vai pegar a matéria"); o do `college.morning` ("Faltou a aula hoje (…): motivo") cai na frase interna inteira.
       E mesmo o curto põe a lista de matérias no cinza. Vai pro catálogo de textos (o Patrick decide linha e cinza).
+    - **"Beliscou pipoca vendo série" (10:03 no closet, 18:41 no TikTok)** — a segunda vez que o Patrick via. O
+      cardápio de lanche trazia a cena pronta ("pipoca vendo série"): o Hoje afirmava uma série que não existiu (app
+      mostrando o que não aconteceu). Agora o lanche é só "pipoca" (`meals.MENU["lanche"]` e o lanchinho da noite).
     - **Amanhã (01/10), visto antes de acontecer** (Patrick: "acho que a Marina vai se complicar amanhã"): aula
       07–15h, casting 15:30–17:00 e outro 17:00–18:30 na mesma agência. O planejado: almoço no Shopping da Gávea 15:18
       (com casting 15:30), volta da PUC 15:50 emendando no 2º casting, "voltando pra casa" do 1º às 17:00 e "a caminho"
