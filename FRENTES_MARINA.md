@@ -109,9 +109,10 @@ círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
 
 **Próximo:**
 0. **Depois do soak, o primeiro:** Hoje com bloco "Em casa" — o que ela faz em casa (celular, belisco, mensagens,
-   closet…) aninhado num bloco com hora e cômodo, como as saídas já são (esboço de 30/09: "Ficou em casa 17:00–17:32,
-   Sala" com TikTok, chocolate, manicure marcada e Bia dentro). A decidir linha a linha: onde o bloco começa e
-   termina, se banho, Milo na calçada, refeições, sessão de trabalho e o íntimo entram dentro ou ficam fora.
+   closet…) aninhado num bloco com hora e cômodo, como as saídas já são (esboço de 30/09, com TikTok, chocolate,
+   manicure marcada e Bia dentro). A decidir linha a linha: **o nome do bloco** (não é "Ficou em casa", Patrick
+   30/09 — só rascunho do esboço) e os textos; onde o bloco começa e termina; se banho, Milo na calçada, refeições,
+   sessão de trabalho e o íntimo entram dentro ou ficam fora.
 1. Instagram no uso real: o próximo post de rolê da noite (luz e cabelo) e os textos ao vivo (tipo por pessoa, sem molde).
 2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
 3. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).
