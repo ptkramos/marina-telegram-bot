@@ -35,7 +35,9 @@ roupa, dinheiro), o app mostra algo que não aconteceu, erro/traceback, mensagem
 do normal. Texto feio ou gosto → anotado e corrigido em lote, não zera a contagem.
 Durante o soak ele usa normal e marca o que estranhar com /bom e /ruim; abertura do dia: "bora no soak, dia N".
 **Placar:** dia 1 (ter 29/09) — 5 graves (lugar dela errado depois da aula e a fala seguindo, plantão "de amanhã",
-"boa noite" de manhã no banho), 2 médios, 4 textos feios; corrigidos em 30/09 (seção 5, item 19). Dias limpos: 0.
+"boa noite" de manhã no banho), 2 médios, 4 textos feios; corrigidos em 30/09 (seção 5, item 19). Dia 2 (qua 30/09), manhã, antes daquele
+deploy — "alucinada": [ELE ESTÁ DOENTE] com a pergunta dele, "dia livre" com ela faltando, check-in do peso dela,
+plantas 5x; corrigidos em 30/09 (item 20). Dias limpos: 0.
 
 **Relatório diário (pronto, 28/09):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
 perguntou 00:00 × 05:00 e ficou 05:00: o rolê da noite e a conversa de madrugada ficam no mesmo dia), cobrindo
@@ -356,6 +358,23 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
     - Texto feio (lote da voz, não zera): os 4 /ruim do dia — "Deu tudo tranquilo mesmo" (concordância), "Se achou,
       aguenta" (fora de contexto), "seu convencido" (repetido, sem motivo), "trabalho se achando importante" (sem
       sentido).
+
+20. ✅ **Soak, dia 2 (quarta 30/09, manhã) — "ela tá completamente alucinada"** (Patrick, ~09:00; tudo antes do
+    deploy do item 19, às 08:55). Olhado na hora em vez de esperar o relatório; corrigido em 30/09
+    (`tests/test_soak_dia2.py`).
+    - **08:38 "Kkkkk vc que tá dodói".** Ele perguntou "Tá dodói? O que houve?" (ela com cólica) e o
+      `[ELE ESTÁ DOENTE]` entrou por várias mensagens. Pergunta (frase com "?") ou fala com "vc/tu/tá dodói" é sobre
+      ela, não conta. Camada: voz (`health.patrick_sick_hint`).
+    - **"Hoje é dia livre" / "ainda bem que hoje não tem aula"** — ela faltou por cólica (05:22). Faltar cancela as
+      aulas e o prompt dizia "Hoje NÃO tem aula (dia livre)". Agora: "Hoje TINHA aula e você faltou — …", e o bom dia
+      também. Camada: voz (`world_context`, `rituals._bom_dia`, `College.falta`).
+    - **08:36 "Lembrei daquele papo do meu peso, tem alguma novidade ou continua tudo igual por aí?"** — o assunto
+      em aberto era "Esclarecer se o peso mencionado por Marina aumentou ou diminuiu". Assunto só dela (sem Patrick/
+      ele) não vira pergunta de check-in a ele. Camada: memória (`db.get_open_loops_para_checkin`).
+    - **"Regando as plantas" 07:01, 07:26, 07:39, 07:49 e 08:49**, a das 07:26 no fim do banho (07:03–07:30). Antes
+      das 8 só existia esse tipo; cada pedaço sorteava de novo. Agora não repete o que acabou de fazer, regar é uma
+      vez de manhã e uma à tarde (sem outra opção: celular ou o Milo), e o bloco não volta pra dentro do banho.
+      Camada: mundo (`tempo_livre.py`).
 
 **Abertos:** nenhum.
 

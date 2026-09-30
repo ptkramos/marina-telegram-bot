@@ -230,7 +230,13 @@ class WorldContextBuilder:
                 if following:
                     compact += f" Próxima: {following['display_name']} às {following['start_time']}."
                 elif not classes:
-                    compact += " Hoje NÃO tem aula (dia livre da faculdade); não invente que teve ou foi à aula hoje."
+                    from college import College
+                    falta = College(self.db).falta(now.date())
+                    if falta:                              # soak, dia 2: faltou não é dia livre
+                        compact += (f" Hoje TINHA aula e você faltou — {falta.rstrip('.')}. Não diga que hoje não "
+                                    "tem aula nem que é dia livre.")
+                    else:
+                        compact += " Hoje NÃO tem aula (dia livre da faculdade); não invente que teve ou foi à aula hoje."
                 blocks.append(compact)
             # Auditoria do prompt (28/09): saiu o "[CONTINUIDADE] 0 lembretes confirmados; 7 assuntos em aberto" —
             # contagem sem conteúdo; os assuntos em aberto já vêm por extenso em [ASSUNTOS AINDA EM ABERTO…].

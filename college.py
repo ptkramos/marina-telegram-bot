@@ -258,6 +258,14 @@ class College:
             conn.commit()
             return bool(cur.rowcount)
 
+    def falta(self, day: date) -> Optional[str]:
+        """O "Faltou a aula hoje (…): motivo." do dia, se ela faltou. Soak, dia 2 (30/09): faltar cancela as aulas e
+        o prompt passava a dizer "Hoje NÃO tem aula (dia livre)" — ela disse "ainda bem que hoje não tem aula"."""
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT summary FROM life_events WHERE event_key=?",
+                               (f"falta:{day.isoformat()}",)).fetchone()
+        return row["summary"] if row else None
+
     # ------------------------------------------------------------- prompt --
     def prompt_lines(self, now: datetime) -> list[str]:
         items = self.assignments(now.date(), horizon_days=7)

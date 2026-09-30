@@ -694,6 +694,10 @@ aparecem no Hoje ("Beliscou um pão de queijo na cantina da PUC"); fofoca do por
 varal só com ela em casa. O relatório diário ganhou "Mundo × mundo" (confere o Hoje contra o mundo). Detalhe na
 Auditoria ("Soak, dia 1").
 
+**30/09, manhã — soak, dia 2, sem mudança de tela:** o Hoje e o Agora mostravam "Regando as plantas" cinco vezes na
+manhã (uma no fim do banho). Agora regar é uma vez de manhã e uma à tarde, o bloco em casa não repete o anterior e não
+volta pra dentro do banho. Detalhe na Auditoria ("Soak, dia 2").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

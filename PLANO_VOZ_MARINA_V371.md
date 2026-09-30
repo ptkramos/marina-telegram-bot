@@ -1342,3 +1342,7 @@ velho (às 17:57 ela seguiu "termino esse trabalho" fazendo as unhas); assunto e
 horas antes ("Boa noite" às 05:36). Lote de texto feio (não zera o soak): os 4 /ruim de 29/09 — "Deu tudo tranquilo
 mesmo", "Se achou, aguenta", "seu convencido" repetido, "trabalho se achando importante". Detalhe na Auditoria
 ("Soak, dia 1").
+
+**30/09, manhã — soak, dia 2 ("alucinada"):** o `[ELE ESTÁ DOENTE]` não entra mais quando ele pergunta se ELA está
+dodói ("vc que tá dodói"); faltou a aula não é "dia livre" no prompt nem no bom dia; assunto em aberto só dela (o
+peso) não vira pergunta pra ele. Detalhe na Auditoria ("Soak, dia 2").

@@ -294,6 +294,13 @@ class Rituals:
             self._set(key, "skipped:patrick_primeiro", now)
             return None
         agenda = "hoje tem aula" if self._has_class(day) else "hoje é dia livre, sem aula"
+        try:
+            from college import College
+            falta = College(self.db).falta(day)
+            if falta:                                     # soak, dia 2: "Hoje é dia livre" com ela faltando
+                agenda = f"hoje tinha aula e você decidiu faltar ({falta.split(': ', 1)[-1].rstrip('.')})"
+        except Exception:
+            logger.exception("rituals.bom_dia.falta")
         agora = f" Agora você está: {activity}." if activity else ""
         if "se arrumando" in activity and not self._get(f"{PREFIX}{day.isoformat()}:cotidiano:banho_manha"):
             agora += " Já já você entra no banho pra se arrumar (se quiser, pode comentar)."

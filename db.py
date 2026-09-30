@@ -53,6 +53,13 @@ def ancorar_datas(texto: Optional[str], criado_em) -> str:
     return texto
 
 
+def _assunto_dela(texto: Optional[str]) -> bool:
+    """O assunto em aberto é só da Marina (o peso dela, a cólica dela) — nada do Patrick nele."""
+    import re as _re
+    t = (texto or "").casefold()
+    return "marina" in t and not _re.search(r"\b(?:patrick|ele|dele|nele|com ele)\b", t)
+
+
 def _loop_words(text: Optional[str]) -> set:
     import re as _re
     return {w for w in _re.findall(r"\w+", (text or "").casefold()) if len(w) >= 4}
@@ -1501,11 +1508,13 @@ class DatabaseManager:
                     next_check_after IS NOT NULL AND next_check_after <= ?
                 )
                 ORDER BY importance DESC, last_touched_at ASC
-                LIMIT ?
                 """,
-                (check_time, limit)
+                (check_time,)
             )
-            return [{**dict(r), "content": ancorar_datas(r["content"], r["created_at"])} for r in cursor.fetchall()]
+            # Soak, dia 2 (30/09, 08:36): "Esclarecer se o peso mencionado por Marina aumentou ou diminuiu" virou
+            # "tem alguma novidade ou continua tudo igual por aí?" pra ele. Assunto só dela não vira pergunta a ele.
+            linhas = [r for r in cursor.fetchall() if not _assunto_dela(r["content"])][:limit]
+            return [{**dict(r), "content": ancorar_datas(r["content"], r["created_at"])} for r in linhas]
 
     def resolver_open_loop(self, loop_id: int, resolution_notes: Optional[str] = None) -> bool:
         """Marca o open loop como resolvido com notas contextuais."""

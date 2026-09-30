@@ -96,9 +96,22 @@ PATRICK_SICK_HINT = (
 )
 
 
+_PERGUNTA_A_ELA = re.compile(r"\b(?:vc|voc[eê]|voce|tu|c[eê]|t[aá] (?:dod[oó]i|doente|passando mal|com))\b",
+                             re.IGNORECASE)
+
+
+def _ele_doente(texto: str) -> bool:
+    """Soak, dia 2 (30/09, 07:12): "Tá dodói? O que houve?" era ele perguntando DELA (cólica), e o [ELE ESTÁ
+    DOENTE] entrou; às 08:38 ela respondeu "vc que tá dodói". Pergunta ou fala sobre ela não conta."""
+    for frase in re.split(r"(?<=[.!?\n])", texto or ""):
+        if PATRICK_SICK_RE.search(frase) and not frase.rstrip().endswith("?") and not _PERGUNTA_A_ELA.search(frase):
+            return True
+    return False
+
+
 def patrick_sick_hint(his_recent_texts) -> str:
     """Hint quando ele falou que está doente nas últimas mensagens dele."""
-    return PATRICK_SICK_HINT if any(PATRICK_SICK_RE.search(t or "") for t in his_recent_texts) else ""
+    return PATRICK_SICK_HINT if any(_ele_doente(t) for t in his_recent_texts) else ""
 
 
 def _rng(key: str) -> random.Random:

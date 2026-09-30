@@ -2100,3 +2100,21 @@ novo numa cópia do projeto (`/tmp/marina_sim`) refazendo o dia 29 de 5 em 5 min
 O banho da manhã é ritual do bot (não roda na simulação): coberto por teste.
 
 - **Testes:** `tests/test_soak_dia1.py` (os casos reais acima).
+
+## Soak, dia 2 — manhã de 30/09: "ela tá completamente alucinada" (olhado na hora)
+Patrick perguntou se esperava o relatório de amanhã; olhei na hora (dia inteiro perdido se fosse grave; o relatório
+de 01/10 cobre o dia do mesmo jeito). Tudo antes do deploy do dia 1 (08:55). Quatro causas, nenhuma igual às de ontem:
+
+| Hora | O que se viu | Causa | Camada |
+|---|---|---|---|
+| 08:38 | "vc que tá dodói" (ele está bem) | "Tá dodói? O que houve?" (ele perguntando dela) casou com `PATRICK_SICK_RE` e o `[ELE ESTÁ DOENTE]` ficou por 8 mensagens | voz |
+| 05:21, 07:34 | "hoje é dia livre", "ainda bem que hoje não tem aula" | faltou por cólica: `cancel_class_occurrence` esvazia `blocks_on`, e o prompt e o bom dia liam "sem aula" | voz |
+| 08:36 | "lembrei do papo do meu peso, tem novidade por aí?" | open loop `waiting_reply` "Esclarecer se o peso mencionado por Marina…" no check-in | memória |
+| 07:01–08:49 | "Regando as plantas" 5x, uma às 07:26 no fim do banho | antes das 8 o único tipo era "plantas" e cada pedaço sorteava de novo; `_chegou` não via a transição acabada | mundo |
+
+**Correções:** `health._ele_doente` (frase com "?" ou com vc/tu/cê/"tá dodói" é sobre ela); `College.falta` e o
+`[VIDA ACADÊMICA]` diz "Hoje TINHA aula e você faltou — …", o bom dia "hoje tinha aula e você decidiu faltar (…)";
+`db._assunto_dela` tira do check-in assunto que fala da Marina sem o Patrick; `tempo_livre`: não repete o tipo
+anterior, `plantas`/`plantas_tarde` uma vez no dia, sem opção → Instagram/TikTok/Milo (`CORINGA`), e `_chegou`
+respeita o fim da transição (banho, refeição) dos últimos 15 min.
+- **Testes:** `tests/test_soak_dia2.py` (7); módulos vizinhos na cópia isolada iguais à produção.

@@ -63,6 +63,8 @@ TIPOS = (
     ("atoa", "Deitada à toa", ("quarto",), None, (13, 26), 1.0, (15, 30)),
     ("jogando", "Jogando {jogo}", ("sala", "quarto"), "tela", (14, 25), 1.0, (40, 90)),
 )
+UMA_VEZ_POR_DIA = ("plantas", "plantas_tarde")        # soak, dia 2: regar as plantas não se repete no dia
+CORINGA = ("instagram", "tiktok", "milo")              # quando o horário só deixava o que acabou de fazer
 MASTURBANDO = ("masturbando", "Se masturbando", ("quarto",), None, (8, 27), 0.0, (15, 25))
 # 26/09 (Patrick): unha gasta e entediada → faz em casa (esmalte comum; a vez em si mora no unhas.py)
 UNHAS = ("unhas", "Fazendo as unhas", ("quarto", "sala", "varanda"), None, (9, 23), 0.0, (40, 60))
@@ -135,6 +137,12 @@ class TempoLivre:
         keep = {(now.date() - timedelta(days=d)).isoformat() for d in range(3)}
         st = {k: v for k, v in st.items() if k in keep}
         self.db.set_estado_relacional(KEY, json.dumps(st, ensure_ascii=False))
+
+    def _feitos(self, dia: date, antes_de: datetime) -> list[str]:
+        """Tipos dos blocos do dia que começaram antes de `antes_de`, em ordem."""
+        blocos = [g for k, g in self._state().get(dia.isoformat(), {}).items() if not k.startswith("j")]
+        blocos = [g for g in blocos if datetime.fromisoformat(g["inicio"]) < antes_de]
+        return [g["tipo"] for g in sorted(blocos, key=lambda g: g["inicio"])]
 
     @staticmethod
     def _dia(now: datetime) -> date:
@@ -214,6 +222,16 @@ class TempoLivre:
         else:
             opcoes = [t for t in TIPOS if _hora(h, *t[4]) and not (t[0] == "sol" and chuva)
                       and not (t[0] == "plantas" and chuva)]
+            # Soak, dia 2 (30/09): "Regando as plantas" 07:01, 07:26, 07:39, 07:49 — cada pedaço sorteava de novo.
+            # O que ela acabou de fazer não se repete em seguida; regar as plantas é uma vez por dia.
+            feitos = self._feitos(dia, inicio)
+
+            def _pode(t) -> bool:
+                return t[0] != (feitos[-1] if feitos else None) and not (t[0] in UMA_VEZ_POR_DIA and t[0] in feitos)
+            sem_repetir = [t for t in opcoes if _pode(t)]
+            if not sem_repetir:                           # antes das 8 só havia "plantas": celular ou o Milo
+                sem_repetir = [t for t in TIPOS if t[0] in CORINGA and _pode(t)]
+            opcoes = sem_repetir or opcoes
             tipo = rng.choices(opcoes, weights=[t[5] for t in opcoes])[0] if opcoes else TIPOS[0]
             musica_dele = self._musica_dele()
             if musica_dele and any(t[0] == "musica" for t in opcoes) and rng.random() < 0.7:
@@ -385,6 +403,15 @@ class TempoLivre:
                                (now.isoformat(), (now - timedelta(minutes=15)).isoformat())).fetchone()
         if row and row[0]:
             chegou = max(chegou, datetime.fromisoformat(row[0]).replace(tzinfo=None))
+        try:
+            # Soak, dia 2 (30/09): "Regando as plantas" às 07:26 com o banho indo até 07:30 — o banho acabado (e a
+            # refeição) também é o que ela fazia em casa.
+            raw = self.db.get_estado_relacional("pending_transition_json")
+            fim = datetime.fromisoformat(json.loads(raw)["end_at"]) if raw else None
+            if fim and now - timedelta(minutes=15) <= fim <= now:
+                chegou = max(chegou, fim)
+        except (TypeError, ValueError, KeyError):
+            pass
         return chegou
 
     def _ouviu(self, b: Bloco, now: datetime) -> None:
