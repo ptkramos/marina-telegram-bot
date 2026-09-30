@@ -157,7 +157,7 @@ class TrabalhoDitoViraMundoTest(Base):
 
     def test_frases_que_contam(self):
         for t in ("Tô fechando o trabalho agora, amor kkk", "Vou salvar e abrir o arquivo agora, sem Stardew no meio",
-                  "agora vou fazer o trabalho de verdade"):
+                  "agora vou fazer o trabalho de verdade", "voltei pro arquivo, juro", "tô no trabalho, amor"):
             self.assertTrue(College.FAZ_AGORA.search(t), t)
         for t in ("Vou terminar isso e dps te dou atenção", "o trabalho tá se achando importante demais"):
             self.assertFalse(College.FAZ_AGORA.search(t), t)

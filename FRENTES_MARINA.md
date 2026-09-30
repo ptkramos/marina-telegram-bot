@@ -396,7 +396,8 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       às 20:21; ela prometeu "vou pegar firme", disse "tô fechando agora" (13:45) e "ainda tô no trabalho" (15:11)
       lendo mangá, vendo desfile e jogando Stardew. Decisão do Patrick: **a fala vira mundo** — livre em casa,
       "vou fazer/tô fazendo o trabalho agora" adianta a sessão do dia pra agora (`College.observe_marina_line`).
-      Camada: mundo.
+      Camada: mundo. 19:56 "voltei pro arquivo, juro" (no Instagram, antes do reconhecimento pegar "voltei pro") —
+      a frase entrou no reconhecimento e a sessão da noite foi marcada como começada às 19:56 na produção.
     - **17:56 "e a entrega de Práticas Experimentais VI, saiu alguma coisa?"** — de novo o assunto dela perguntado a
       ele (o lembrete não tinha nome nenhum). A instrução do check-in dizia "algo que o Patrick comentou, pergunte se
       tem novidade"; agora: coisa dele, pergunta; coisa dela, conta como está. Camada: voz (`proactivity_service`,

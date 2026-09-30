@@ -140,7 +140,10 @@ class College:
         r"\b(?:vou|j[aá] vou|agora vou|bora|t[oô] indo|voltei|t[oô])\b[^.!?\n]{0,35}?"
         r"\b(?:pegar firme|fazer|fechar|terminar|voltar pr[oa]|abrir|focar n[oa]|fechando|terminando|fazendo)\b"
         r"[^.!?\n]{0,25}?\b(?:trabalho|arquivo|projeto)\b"
-        r"|\b(?:vou|agora vou|bora)\b[^.!?\n]{0,30}?\bpegar firme\b", re.IGNORECASE)
+        r"|\b(?:vou|agora vou|bora)\b[^.!?\n]{0,30}?\bpegar firme\b"
+        # 30/09, 19:56: "voltei pro arquivo, juro" (ela estava no Instagram) — voltar/estar no trabalho também conta
+        r"|\b(?:voltei|t[oô] de volta|j[aá] t[oô]|t[oô])\s+(?:aqui\s+)?(?:pr[oa]|n[oa])\s+(?:o\s+|meu\s+)?"
+        r"(?:trabalho|arquivo|projeto)\b", re.IGNORECASE)
     DEPOIS = re.compile(r"\b(?:mais tarde|depois|amanh[aã]|de noite|à noite|a noite|antes de dormir|daqui a pouco)\b",
                         re.IGNORECASE)
 
