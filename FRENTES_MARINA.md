@@ -98,7 +98,12 @@ revisados com ele** (sem "·", atraso amarelo no Hoje, academia e Milo novos, Po
    em outras telas (barra do card, "Manhã · 7", motivo do Por dentro, "Precisa de") — anotado, sem pressa.
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** congelada até o soak fechar (freio, seção 0); o Instagram no uso real é visto no soak
+**Abertura:** congelada até o soak fechar (freio, seção 0); o Instagram no uso real é visto no soak.
+**Exceção liberada durante o soak (Patrick, 30/09): "bora na frente de apps: catálogo de textos"** — página com todos
+os textos visíveis por categoria (Hoje, card do Agora, Bastidores, iFood, Nubank, Instagram), cada um com exemplo
+real, onde/quando aparece e a marca **só tela / ela lê / os dois**; ele preenche no ritmo dele e eu aplico em lotes.
+Só tela entra no lote durante o soak (não zera); "ela lê" com cuidado (lote claro, ou depois do soak). Já na fila do
+catálogo: "Faltou a aula" gigante, belisco no Hoje, nome do bloco "Em casa".
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; **Instagram** no ar (27/09) com acervo refeito
