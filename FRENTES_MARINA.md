@@ -413,6 +413,9 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
     - **"Beliscou pipoca vendo série" (10:03 no closet, 18:41 no TikTok)** — a segunda vez que o Patrick via. O
       cardápio de lanche trazia a cena pronta ("pipoca vendo série"): o Hoje afirmava uma série que não existiu (app
       mostrando o que não aconteceu). Agora o lanche é só "pipoca" (`meals.MENU["lanche"]` e o lanchinho da noite).
+      Os dois de 30/09 corrigidos na produção ("Beliscou pipoca."). Decisão (Patrick + Claude, 30/09): o mundo
+      continua sabendo o que ela beliscou (a conversa e a conferência de comida do relatório dependem disso); como o
+      belisco aparece no Hoje (ex.: "Beliscou" na linha, o item em cinza) vai pro catálogo de textos.
     - **Amanhã (01/10), visto antes de acontecer** (Patrick: "acho que a Marina vai se complicar amanhã"): aula
       07–15h, casting 15:30–17:00 e outro 17:00–18:30 na mesma agência. O planejado: almoço no Shopping da Gávea 15:18
       (com casting 15:30), volta da PUC 15:50 emendando no 2º casting, "voltando pra casa" do 1º às 17:00 e "a caminho"
