@@ -1346,3 +1346,6 @@ mesmo", "Se achou, aguenta", "seu convencido" repetido, "trabalho se achando imp
 **30/09, manhã — soak, dia 2 ("alucinada"):** o `[ELE ESTÁ DOENTE]` não entra mais quando ele pergunta se ELA está
 dodói ("vc que tá dodói"); faltou a aula não é "dia livre" no prompt nem no bom dia; assunto em aberto só dela (o
 peso) não vira pergunta pra ele. Detalhe na Auditoria ("Soak, dia 2").
+
+**30/09, 11:37–11:40:** "saí mais cedo do salão" e "fui hoje sim, hoje era o cabelo" vinham do mundo (salão que não
+aconteceu; ver Auditoria, "a escova que não aconteceu"). Corrigidas no histórico a pedido do Patrick.

@@ -2118,3 +2118,20 @@ de 01/10 cobre o dia do mesmo jeito). Tudo antes do deploy do dia 1 (08:55). Qua
 anterior, `plantas`/`plantas_tarde` uma vez no dia, sem opção → Instagram/TikTok/Milo (`CORINGA`), e `_chegou`
 respeita o fim da transição (banho, refeição) dos últimos 15 min.
 - **Testes:** `tests/test_soak_dia2.py` (7); módulos vizinhos na cópia isolada iguais à produção.
+
+**30/09, 11:03–11:48 — a escova que não aconteceu (depois do deploy das 09:03).** Cadeia: `Cabelo.talvez_salao`
+("trabalho", job amanhã) sem olhar o corpo (cólica forte, desconforto 0,8 o dia todo), as aulas que ela faltou
+(07–13h) nem a comida que o Patrick estava pedindo → `atraso.py` empurrou a ida pra 11:45–11:55 (troca de roupa,
+celular com o Patrick, chave) → 11:36 a canja chegou e ela comeu em casa → `AgendaReativa._chances` (passando mal)
+→ `_atual` achava que ela estava "lá" desde o horário marcado (11:22), não desde a chegada → `interromper`: volta de
+uber às 11:41 de onde ela nunca esteve, `Cabelo.materialize` cobrou a escova no fim encurtado (R$ 70), uber R$ 12;
+às 11:48 a ida atrasada ainda estava de pé ("indo pro Ophicina a pé").
+**Correções:** `AgendaReativa._atual` só devolve o compromisso depois do fim da ida (vale pra interromper, pausar e o
+"está no meio de outra coisa"); `Vontade._sem_condicao` (usado por `_livre_ate`, portanto vontade, salão e unhas):
+desconforto ≥ `SAIR_DESCONFORTO_MAX` (0,5), antes do fim das aulas que ela faltou (`falta:<dia>:*`) ou com comida
+chegando (`Meals._comida_chegando`) → não sai. `test_unhas` ganhou a trava neutra (o sorteio em 0 do teste valia
+também pra saúde). **Produção, a pedido do Patrick ("desfaz tudo"):** evento cancelado às 11:52; com o bot parado,
+`desfaz_salao.py` tirou os 4 acontecimentos, devolveu R$ 82 ao saldo (chaves ficam em `vistos`), limpou a
+interrupção/uber/aviso da agenda reativa, voltou o cabelo (lavado 29/09 05:23, seco natural) e trocou as falas
+11:37 e 11:40; o que havia está em `soak/originais-2026-09-30-salao.json`.
+- **Testes:** `tests/test_soak_dia2.py` (+2).

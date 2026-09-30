@@ -89,5 +89,46 @@ class PlantasUmaVezTest(Base):
             self.assertEqual(TempoLivre(self.db)._chegou(at(7, 31)), at(7, 30))
 
 
+class SalaoComColicaTest(Base):
+    """11:03 decidiu escova na Ophicina (11:22) com cólica forte; a saída atrasou (ida 11:45–11:55); às 11:36 a
+    canja chegou, ela comeu em casa e o "passando mal" fez ela "sair mais cedo da Ophicina" — uber e escova cobrados."""
+
+    def test_nao_esta_la_antes_de_chegar(self):
+        from agenda_reativa import AgendaReativa
+        from commute import Leg
+        ida = Leg("commute:cabelo:2026-09-30:1103:ida", at(11, 45), at(11, 55), "a_pe", "ida", "pro Ophicina",
+                  "Botafogo")
+        volta = Leg("commute:cabelo:2026-09-30:1103:volta", at(12, 7), at(12, 17), "a_pe", "volta", "do Ophicina",
+                    "Botafogo")
+        c = {"tipo": "cabelo", "key": "cabelo:2026-09-30:1103", "place": "ophicina_do_cabelo",
+             "inicio": at(11, 22), "fim": at(12, 7), "ida": ida, "volta": volta}
+        with patch("agenda.Agenda._compromissos", side_effect=lambda d: [c] if d == DIA.date() else []):
+            r = AgendaReativa(self.db)
+            self.assertIsNone(r._atual(at(11, 36)))                         # ainda em casa, se arrumando
+            self.assertIsNone(r.interromper(at(11, 36), "passando_mal"))
+            self.assertEqual(r._atual(at(11, 58))["key"], "cabelo:2026-09-30:1103")
+
+    def test_mal_na_hora_da_aula_que_faltou_ou_com_comida_chegando_nao_sai(self):
+        from types import SimpleNamespace
+        from vontade import Vontade
+        bem = SimpleNamespace(discomfort=0.1)
+        with patch("emotion.EmotionEngine.feeling", return_value=SimpleNamespace(discomfort=0.8)):
+            self.assertTrue(Vontade(self.db)._sem_condicao(at(11, 3)))
+            self.assertIsNone(Vontade(self.db)._livre_ate(at(11, 3)))
+        with self.db.get_connection() as conn:
+            conn.execute("INSERT INTO eventos_pendentes (event_type, description, event_at, end_at, source_key, "
+                         "confirmed, status, created_at) VALUES ('falta', 'falta', ?, ?, 'falta:2026-09-30:2', 1, "
+                         "'pending', ?)",
+                         (at(11, 0).isoformat(), at(13, 0).isoformat(), at(5, 22).isoformat()))
+            conn.commit()
+        with patch("emotion.EmotionEngine.feeling", return_value=bem), \
+                patch("meals.Meals._comida_chegando", return_value=False):
+            self.assertTrue(Vontade(self.db)._sem_condicao(at(11, 3)))       # hora da aula que ela faltou
+            self.assertFalse(Vontade(self.db)._sem_condicao(at(13, 30)))
+        with patch("emotion.EmotionEngine.feeling", return_value=bem), \
+                patch("meals.Meals._comida_chegando", return_value=True):
+            self.assertTrue(Vontade(self.db)._sem_condicao(at(13, 30)))      # comida a caminho
+
+
 if __name__ == "__main__":
     unittest.main()

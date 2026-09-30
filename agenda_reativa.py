@@ -133,7 +133,11 @@ class AgendaReativa:
         for day in (now.date(), now.date() - timedelta(days=1)):
             for c in ag._compromissos(day):
                 fim = c["volta"].start if c.get("volta") else c["fim"]
-                if c["inicio"] <= now < fim:
+                # Soak, dia 2 (30/09, 11:36): a escova era 11:22, mas a saída atrasou (ida 11:45–11:55) e ela
+                # ainda estava em casa — "saiu mais cedo da Ophicina", uber de volta e escova cobrados. Só está
+                # "lá" quem chegou.
+                chegada = c["ida"].end if c.get("ida") else c["inicio"]
+                if max(c["inicio"], chegada) <= now < fim:
                     return c
         return None
 

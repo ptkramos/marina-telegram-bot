@@ -107,7 +107,9 @@ class UnhasTest(unittest.TestCase):
         self._atual("nude", "gel", 20, "salao")
         financas.materialize(self.db, T - timedelta(hours=1))      # dinheiro registrado desde antes
         saldo = financas._load(self.db)["saldo"]
-        with patch("unhas.random.Random.random", return_value=0.0):
+        # (o sorteio em 0 vale pra todo Random, inclusive o da saúde: a trava de "passando mal" fica de fora aqui)
+        with patch("unhas.random.Random.random", return_value=0.0), \
+                patch("vontade.Vontade._sem_condicao", return_value=False):
             cid = self.u.talvez_salao(T)
         self.assertIsNotNone(cid)
         from agenda import Agenda

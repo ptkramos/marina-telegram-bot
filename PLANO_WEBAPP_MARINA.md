@@ -698,6 +698,10 @@ Auditoria ("Soak, dia 1").
 manhã (uma no fim do banho). Agora regar é uma vez de manhã e uma à tarde, o bloco em casa não repete o anterior e não
 volta pra dentro do banho. Detalhe na Auditoria ("Soak, dia 2").
 
+**30/09, 11:41 — Nubank e Hoje com uma escova que não aconteceu:** "Ophicina do Cabelo · cabelo −R$ 70", "Uber −R$ 12",
+"Marcou o cabelo", "Saiu mais cedo na Ophicina". Desfeito a pedido do Patrick (saldo de volta a R$ 356). Causa e
+conserto na Auditoria ("a escova que não aconteceu").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

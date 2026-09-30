@@ -27,6 +27,7 @@ CATALOGO = Path(__file__).parent / "webapp" / "catalogo.json"
 MAX_POR_DIA = 3
 CHANCE_BASE = 0.10                  # por janela de 20 min livre em casa
 FOLGA_ANTES = timedelta(minutes=100)   # não sai se tem compromisso logo
+SAIR_DESCONFORTO_MAX = 0.5             # soak, dia 2: passando mal (cólica forte = 0,8) não sai por vontade
 HORAS = (7, 22)
 
 # tipo → lugar fixo ou categorias do catálogo, texto (mundo/card), minutos lá, janelas de hora, peso,
@@ -120,8 +121,31 @@ class Vontade:
                 "SELECT source_key, metadata_json FROM eventos_pendentes WHERE source_key LIKE ? AND status!='cancelled'",
                 (f"vontade:{day.isoformat()}:%",))]
 
+    def _sem_condicao(self, now: datetime) -> bool:
+        """Soak, dia 2 (30/09, 11:03): com cólica forte (desconforto 0,8), no horário das aulas que faltou por ela e
+        com o Patrick escolhendo a comida dela, marcou escova na Ophicina. Mal, na hora da aula que faltou ou com
+        comida chegando, ela não sai por vontade (salão, unhas, café…)."""
+        try:
+            from emotion import EmotionEngine
+            if EmotionEngine(self.db).feeling(now).discomfort >= SAIR_DESCONFORTO_MAX:
+                return True
+        except Exception:
+            logger.exception("vontade.sem_condicao.corpo")
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT MAX(end_at) FROM eventos_pendentes WHERE source_key LIKE ?",
+                               (f"falta:{now.date().isoformat()}:%",)).fetchone()
+        if row and row[0] and now < datetime.fromisoformat(row[0]):
+            return True
+        try:
+            from meals import Meals
+            return Meals(self.db)._comida_chegando(now)
+        except Exception:
+            return False
+
     def _livre_ate(self, now: datetime) -> Optional[datetime]:
         """Até quando ela está livre (próxima etapa da agenda ou refeição em casa)."""
+        if self._sem_condicao(now):
+            return None
         limite = datetime.combine(now.date(), time(23, 30))
         try:
             from agenda import Agenda

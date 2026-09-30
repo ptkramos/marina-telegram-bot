@@ -375,6 +375,16 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       das 8 só existia esse tipo; cada pedaço sorteava de novo. Agora não repete o que acabou de fazer, regar é uma
       vez de manhã e uma à tarde (sem outra opção: celular ou o Milo), e o bloco não volta pra dentro do banho.
       Camada: mundo (`tempo_livre.py`).
+    - **Manhã, depois do deploy — a escova que não aconteceu** (Patrick: "problemas sérios de rota de novo"). 11:03,
+      com cólica forte (desconforto 0,8), na hora das aulas que faltou e com ele escolhendo a comida dela, a vontade
+      marcou escova na Ophicina 11:22 ("job amanhã"). A saída atrasou de propósito (ida 11:45–11:55); às 11:36 a
+      canja chegou e ela comeu em casa, e o "passando mal" da agenda reativa tratou como "saiu mais cedo da
+      Ophicina": volta de uber de onde ela nunca esteve, R$ 70 de escova e R$ 12 de uber cobrados, "saí mais cedo do
+      salão" no chat, e às 11:48 ela "indo pro Ophicina a pé" de novo. Consertos: só está "lá" quem chegou
+      (`AgendaReativa._atual` conta a ida); saída por vontade (salão, unhas, café) não acontece passando mal
+      (desconforto ≥ 0,5), na hora da aula que faltou nem com comida a caminho (`Vontade._sem_condicao`). Camada: mundo.
+      Decisão do Patrick: **desfazer tudo** — escova cancelada, R$ 82 de volta ao saldo, fora do Hoje, cabelo como
+      estava, as duas falas do salão corrigidas no histórico (originais em `soak/originais-2026-09-30-salao.json`).
 
 **Abertos:** nenhum.
 
