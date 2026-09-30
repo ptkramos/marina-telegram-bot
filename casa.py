@@ -43,6 +43,8 @@ MISHAPS = (
     ("o Seu Jorge contou uma fofoca do prédio quando ela passou pela portaria", "alegria"),
     ("o elevador social ficou parado a tarde toda e ela teve que ir pelo de serviço", "raiva"),
 )
+EM_CASA = (":roupa", ":roupa_esquecida", ":varal", ":bagunca", ":perrengue")   # só acontece com ela em casa
+EM_CASA_ESPERA = timedelta(hours=4)
 FAXINEIRA = "neide_souza"
 PORTEIRO = "jorge_almeida"
 CLEANING_WEEKDAY = 3                 # quinta
@@ -167,12 +169,20 @@ class Casa:
             for item in self.day_plan(day):
                 if item["at"] > now or item["at"] < floor:
                     continue
+                at = item["at"]
+                if item["key"].endswith(EM_CASA) and "tava fora" not in item["summary"]:
+                    # Soak, dia 1 (29/09, 15:37): "o Seu Jorge contou uma fofoca quando ela passou pela portaria"
+                    # com ela almoçando na PUC. Coisa de casa espera ela estar em casa (até 4 h depois).
+                    if now - at > EM_CASA_ESPERA or not meals._at_home():
+                        continue
+                    if meals._away_at(at):
+                        at = now
                 with self.db.get_connection() as conn:
                     cur = conn.execute(
                         """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,
                            source_type,autonomy_level,importance,participants_json,share_worthy,created_at)
                            VALUES (?,?,'routine','casa',?,'simulated',1,0.1,?,0.3,?)""",
-                        (item["key"], item["at"].isoformat(), item["summary"],
+                        (item["key"], at.isoformat(), item["summary"],
                          json.dumps(["marina", *item.get("people", [])]),
                          now.isoformat()))
                     conn.commit()

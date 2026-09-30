@@ -88,10 +88,12 @@ class WorldContextBuilder:
             "milo_morning_walk": "passeio do Milo que você decidiu pro dia (é fato)",
             "getting_ready": "você está se arrumando pra sair (é fato)",
             "commute": "você está no caminho (é fato)",
+            # Soak, dia 1 (29/09): a aula acabou e ela ainda está por lá (almoço antes de voltar).
+            "pos_aula": "a aula acabou e você ainda está por lá antes de voltar (é fato)",
         }
         certainty = certainty_map.get(reason, "inferência de rotina (probabilística)")
         binding = reason in ("confirmed_commitment", "explicit_plan", "announced_transition", "gym_weekly",
-                             "gym_weekly:rain_fallback", "milo_morning_walk", "getting_ready", "commute")
+                             "gym_weekly:rain_fallback", "milo_morning_walk", "getting_ready", "commute", "pos_aula")
         # 27/09, 19:37: o "local reservado" (máscara antiga pra compromisso que não era saída social) escondia a
         # Drogarias Pacheco, e ela disse "tô no Shopping da Gávea ainda". Tudo na agenda dela é vida dela: o lugar
         # aparece.

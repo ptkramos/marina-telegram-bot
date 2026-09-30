@@ -4,9 +4,10 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 29/09/2026, 00:25 (auditoria rodada 3 feita e na produção, `c43911c`: lista "antes do soak"
-fechada. **Soak começou: dia 1 = terça 29/09 (05:00 → 05:00)**, relatório em `soak/dia-2026-09-29.md` na quarta
-05:10; próxima conversa: "bora no soak, dia 1" na quarta de manhã)._
+_Atualizado em 30/09/2026 (soak, dia 1 lido e corrigido: item 19 da seção 5 — mundo errado depois da aula, plantão
+"de amanhã", resposta adiada no banho, Milo no banho, belisco na PUC, relatório com mundo × mundo. `soak/inicio.txt`
+criado com 2026-09-29. **Soak: dia 1 = terça 29/09 (05:00 → 05:00)**; próxima conversa: "bora no soak, dia 2" na
+quinta de manhã, relatório `soak/dia-2026-09-30.md`)._
 
 ---
 
@@ -33,6 +34,8 @@ bug grave; apareceu um, os 3 dias limpos recomeçam. **Bug grave:** ela contradi
 roupa, dinheiro), o app mostra algo que não aconteceu, erro/traceback, mensagem quebrada ou fora de ordem, custo fora
 do normal. Texto feio ou gosto → anotado e corrigido em lote, não zera a contagem.
 Durante o soak ele usa normal e marca o que estranhar com /bom e /ruim; abertura do dia: "bora no soak, dia N".
+**Placar:** dia 1 (ter 29/09) — 5 graves (lugar dela errado depois da aula e a fala seguindo, plantão "de amanhã",
+"boa noite" de manhã no banho), 2 médios, 4 textos feios; corrigidos em 30/09 (seção 5, item 19). Dias limpos: 0.
 
 **Relatório diário (pronto, 28/09):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
 perguntou 00:00 × 05:00 e ficou 05:00: o rolê da noite e a conversa de madrugada ficam no mesmo dia), cobrindo
@@ -320,6 +323,39 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       da noite começa até 65 min antes de deitar; sem banho na hora do boa noite, toma primeiro; ocupada, o boa noite
       espera e o deitar vai 15 min pra depois. Camada: mundo (`rituals.py`).
     - De passagem: bloco em casa começando antes do fim do Milo (21:50 × 21:53). Camada: mundo (`tempo_livre.py`).
+
+19. ✅ **Soak, dia 1 (terça 29/09)** — relatório de 30/09 05:10 com 0 suspeitas; lido na conversa "bora no soak, dia
+    1" e corrigido em 30/09 (`tests/test_soak_dia1.py`). O Patrick: "a maioria é inconsistência de onde ela está".
+    - **15:01 "Cheguei em casa" com a aula até 15:00** (ele pegou na hora). Almoçou na PUC às 15:18 e a volta saiu
+      16:06, mas entre 15:00 e 16:06 o mundo não tinha estado "na PUC" e caiu na rotina de casa. Agora, entre o fim
+      da última aula e a volta, ela está por lá ("saindo da aula, indo almoçar", "almoçando no restaurante da PUC").
+      Camada: mundo (`world_state._depois_da_aula`).
+    - **16:06 "indo da PUC pra Enseada a pé".** O passeio do Milo foi marcado 16:25 contando a chegada sem o almoço, e
+      o trajeto emendou a volta da PUC com a ida pro passeio. A volta da PUC conta o almoço por lá; a faculdade ocupa
+      até ela chegar; passeio do Milo nunca emenda (sai de casa e volta pra casa). Camada: mundo (`commute.py`,
+      `world_state.RoutineEngine._class_busy`).
+    - **16:13–18:13 "terminando o trabalho" passeando e fazendo as unhas.** Às 16:13 o mundo dizia o absurdo acima e
+      ela inventou; às 17:57 o prompt dizia "fazendo as unhas na Ophicina" e ela seguiu a história. Com o mundo certo
+      a origem some; o bloco "desde a sua última mensagem" agora diz que o que ela disse que estava fazendo também
+      ficou velho. Camada: voz (`since_last.py`).
+    - **19:01 "o plantão de amanhã" e 19:37 "seu plantão"** (ele de folga, próximo é quinta). O assunto em aberto
+      "Patrick terá um plantão amanhã" era de 27/09 e seguia "amanhã". Data relativa vira o dia de quando foi anotado
+      ("na segunda (28/09)"), no que entra e no que é lido. Camada: memória (`db.ancorar_datas`).
+    - **05:36 "Boa noite, te amo demais tb" de manhã, no chuveiro.** Resposta adiada da madrugada. No banho nada sai
+      da fila; a resposta atrasada sabe quando ele escreveu e que é agora. Camada: voz (`bot.py`).
+    - **Milo 05:39 no meio do banho (05:23–05:47).** O xixi da manhã espera o banho/café (até 1 h). Camada: mundo
+      (`milo.py`).
+    - **"Morrendo de fome" 11:47, nada até 15:18** (quatro aulas seguidas). Decisão do Patrick: **conserto agora** —
+      com fome, ela belisca na cantina na troca de aula. Camada: mundo (`meals._belisca_na_puc`).
+    - **15:37 "o Seu Jorge contou uma fofoca quando ela passou pela portaria"** (achado na simulação, com ela na PUC).
+      Coisa de casa (portaria, lâmpada, máquina de roupa, varal) espera ela estar em casa. Camada: mundo (`casa.py`).
+    - **Relatório com 0 suspeitas.** Ganhou "mundo × mundo" (teleporte, trajeto saindo do lugar errado, refeição ×
+      lugar, coisa no meio do banho), "trabalho" dito na rua e saudação fora de hora. No dia 29 acusa todos os de cima;
+      em 27 e 28, só casos reais daqueles dias. Camada: infra (`scripts/relatorio_soak.py`).
+    - Ruído: agenda reativa com resposta vazia do modelo vira aviso, não traceback.
+    - Texto feio (lote da voz, não zera): os 4 /ruim do dia — "Deu tudo tranquilo mesmo" (concordância), "Se achou,
+      aguenta" (fora de contexto), "seu convencido" (repetido, sem motivo), "trabalho se achando importante" (sem
+      sentido).
 
 **Abertos:** nenhum.
 

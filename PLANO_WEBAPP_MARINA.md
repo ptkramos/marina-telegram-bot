@@ -686,6 +686,14 @@ sozinho: o **card do Agora** de hora em hora e em cada fala dela contra o mundo,
 dia vai inteira no relatório, lado a lado com os acontecimentos. App mostrando o que não aconteceu é bug grave do
 soak. Detalhe na Auditoria ("Frente de infra (28/09, noite): relatório diário do soak").
 
+**30/09 — soak, dia 1 (29/09), sem mudança de tela:** o Hoje e o Agora de 29/09 mostravam "Foi pra PUC 06:22–15:00"
+sem volta, "Brincou com o Milo" às 14:58 e "Almoçou no restaurante da PUC" com ela tomando sol no prédio, e o passeio
+do Milo "da PUC pra Enseada". Com o mundo corrigido, dia de almoço na PUC tem a volta depois do almoço (16:06–16:51)
+e o passeio sai de casa; "Foi pra calçada" (xixi da manhã) não cai mais dentro do banho; beliscos na cantina da PUC
+aparecem no Hoje ("Beliscou um pão de queijo na cantina da PUC"); fofoca do porteiro, lâmpada, máquina de roupa e
+varal só com ela em casa. O relatório diário ganhou "Mundo × mundo" (confere o Hoje contra o mundo). Detalhe na
+Auditoria ("Soak, dia 1").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

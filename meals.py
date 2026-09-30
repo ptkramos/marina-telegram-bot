@@ -534,7 +534,7 @@ class Meals:
         region = (state.get("location_region") or "").casefold()
         source = state.get("source_json")
         source = json.loads(source or "{}") if isinstance(source, str) else (source or {})
-        if source.get("reason") in ("confirmed_commitment", "commute"):
+        if source.get("reason") in ("confirmed_commitment", "commute", "pos_aula"):
             return True                                   # num compromisso ou no caminho: não está em casa
         away = ("dorm", "a caminho", "uber", "ônibus", "metrô", "carona", "academia", "trein",
                 "faculdade", "aula", "com amig", "bar", "praia", "saindo com", "voltando", "a pé", "passeando")
@@ -595,6 +595,7 @@ class Meals:
                         and not self._transition_busy(now)):
                     self._start_eating(slot, slot.at, sac["fim"], now)
         created += self._belisca(now, floor)
+        created += self._belisca_na_puc(now, floor)
         self._weigh_in(now)
         return created
 
@@ -626,6 +627,48 @@ class Meals:
         if not self._transition_busy(now):
             self._start_eating(slot, slot.at, sac["fim"], now)
         logger.info("meal.belisco dish=%s", slot.dish)
+        return 1
+
+    BELISCO_PUC = ("um pão de queijo na cantina da PUC", "um salgado na cantina da PUC",
+                   "uma barrinha de cereal entre as aulas", "um café com biscoito na cantina da PUC")
+
+    def _belisca_na_puc(self, now: datetime, floor: datetime) -> int:
+        """Soak, dia 1 (29/09): quatro aulas seguidas (07–15h), "morrendo de fome" às 11:47 e nada até o almoço das
+        15:18 — o belisco só existia em casa. Com fome na PUC, belisca na troca de aula (até 10 min depois de uma
+        aula começar), longe da próxima refeição."""
+        if now < floor or self._transition_busy(now):
+            return 0
+        try:
+            from academic_life import AcademicLife
+            blocks = AcademicLife(self.db).blocks_on(now.date())
+        except Exception:
+            return 0
+        inicios = [datetime.fromisoformat(b["start_at"]) for b in blocks]
+        if not any(i <= now < i + timedelta(minutes=10) for i in inicios[1:]):
+            return 0                                      # só na troca de aula, não na primeira
+        latest = WorldStateRepository(self.db).latest() or {}
+        src = latest.get("source_json")
+        src = json.loads(src or "{}") if isinstance(src, str) else (src or {})
+        if not src.get("academic_block_id"):
+            return 0                                      # não está na aula (faltou ou já saiu): não é aqui
+        if self.hunger(now) < BELISCO_FOME:
+            return 0
+        proxima = next((s for s in self.day_plan(now.date()) if s.at > now and not s.skipped), None)
+        if proxima and proxima.at - now < timedelta(minutes=60):
+            return 0
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT MAX(event_at) FROM life_events WHERE event_type IN ('meal','snack') "
+                               "AND event_at<=?", (now.isoformat(),)).fetchone()
+            n = conn.execute("SELECT COUNT(*) FROM life_events WHERE event_key LIKE ?",
+                             (f"meal:{now.date().isoformat()}:lanche:b%",)).fetchone()[0]
+        if row and row[0] and now - datetime.fromisoformat(row[0]) < BELISCO_GAP:
+            return 0
+        rng = _rng(now.date(), f"belisco:{n}")
+        slot = MealSlot("lanche", f"meal:{now.date().isoformat()}:lanche:b{n + 1}", now,
+                        rng.randint(*DURATION_MIN["lanche"]), "puc", rng.choice(self.BELISCO_PUC))
+        if self._record(slot, now, motivo="fome") is None:
+            return 0
+        logger.info("meal.belisco_puc dish=%s", slot.dish)
         return 1
 
     def _na_cama(self, now: datetime) -> bool:

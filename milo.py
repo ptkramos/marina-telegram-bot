@@ -30,6 +30,7 @@ ANTICS_CHANCE = 0.25
 ARTE_ANTES_DE_DORMIR = timedelta(minutes=30)   # arte adiada (ela estava na rua) não entra na hora de deitar
 ARTE_DEPOIS_DE_CHEGAR = (20, 40)   # 28/09 (auditoria): adiada, vem 20–40 min depois que ela chega, não no minuto
 XIXI_ANTES_DO_PASSEIO = timedelta(minutes=90)   # passeio mais perto que isso do xixi: só o passeio
+MANHA_ESPERA_MAX = timedelta(minutes=60)        # soak, dia 1: xixi da manhã que esperou o banho, até 1 h
 ANTICS = ("roubou uma meia e saiu correndo pela casa", "latiu pro entregador do iFood",
           "pediu colo e não quis mais sair", "deitou em cima da roupa que ela ia usar",
           "ficou encarando ela até ganhar um petisco", "fez xixi no tapete do banheiro",
@@ -40,6 +41,17 @@ CHAMEGO = ("dormiu encostado nela no sofá", "pediu colo e não quis mais sair")
 
 def _rng(day: date, name: str) -> random.Random:
     return random.Random(f"marina-milo:{day.isoformat()}:{name}")
+
+
+def _saiu(db) -> bool:
+    """Ela já saiu de casa (a caminho ou num compromisso)? "se arrumando pra faculdade" ainda é em casa."""
+    try:
+        from world_repository import WorldStateRepository
+        src = (WorldStateRepository(db).latest() or {}).get("source_json")
+        src = json.loads(src or "{}") if isinstance(src, str) else (src or {})
+        return src.get("reason") in ("commute", "confirmed_commitment", "pos_aula")
+    except Exception:
+        return False
 
 
 class Milo:
@@ -183,6 +195,15 @@ class Milo:
             if item["state"] and not meals._at_home():
                 continue              # na rua: leva o Milo quando voltar
             at = item["at"]
+            if item["key"].endswith(":manha"):
+                # Soak, dia 1 (29/09): o xixi da manhã desceu 05:39 no meio do banho (05:23–05:47). Comendo ou no
+                # banho, o Milo espera; passou 1 h (ela já saiu), a descida da manhã não acontece mais.
+                if meals._transition_busy(now) or _saiu(self.db):
+                    continue
+                if now - at > MANHA_ESPERA_MAX:
+                    continue
+                if now >= at + timedelta(minutes=item["minutes"]):
+                    at = now
             if item["state"]:
                 # 28/09 (auditoria, rodada 3): o xixi da noite desceu 21:30–21:38 no meio do jantar (21:07–21:41)
                 # e o mundo ficou em "jantando". Comendo, no banho ou estudando, o Milo espera ela terminar.

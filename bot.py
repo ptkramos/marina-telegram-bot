@@ -3489,6 +3489,10 @@ async def process_incoming_batch(
     transition_hint = _maybe_announce_transition()
     if transition_hint:
         messages.append({"role": "system", "content": transition_hint})
+    if pending_batch_id:
+        atrasada = _hint_resposta_atrasada(pending_batch_id, datetime.now())
+        if atrasada:
+            messages.append({"role": "system", "content": atrasada})
     if not intimacy_turn.expanded:
         try:
             from health import patrick_sick_hint
@@ -4860,11 +4864,40 @@ class _PendingDeliveryBot:
         return await self._send(self._bot.send_photo, **kwargs)
 
 
+def _hint_resposta_atrasada(batch_id: int, now: datetime) -> Optional[str]:
+    """Soak, dia 1 (29/09): ele mandou "cheguei bem, boa noite" às 22:59; ela dormia e respondeu às 05:36 "Boa
+    noite, te amo demais tb". A resposta adiada sabe quando ele escreveu e que ela só está vendo agora."""
+    try:
+        from calendar_world import local_time
+        items = availability_service.repo.list_items(batch_id)
+        primeira = min(local_time(datetime.fromisoformat(i["received_at"])) for i in items)
+    except Exception:
+        return None
+    if now - primeira < RESPOSTA_ATRASADA:
+        return None
+    if primeira.date() == now.date():
+        quando = f"às {primeira:%H:%M}"
+    elif primeira.date() == now.date() - timedelta(days=1):
+        quando = f"ontem às {primeira:%H:%M}"
+    else:
+        quando = f"em {primeira:%d/%m} às {primeira:%H:%M}"
+    return (f"[RESPOSTA ATRASADA] Essas mensagens do Patrick chegaram {quando}; você só está vendo agora, às "
+            f"{now:%H:%M}. Responda de agora: a hora do dia e o que você está fazendo são os de agora, não os do "
+            "momento em que ele escreveu (se ele se despediu pra dormir, isso já passou).")
+
+
+RESPOSTA_ATRASADA = timedelta(minutes=60)
+
+
 async def pending_response_routine(application: Application):
     """Claim and send due deferred conversational batches (v3.7.0)."""
     try:
         if availability_service.policy._shower_until(datetime.now()) is None:
             availability_service.repo.release_after_shower(datetime.now())
+        else:
+            # Soak, dia 1 (29/09, 05:36): a resposta adiada da madrugada ("vou ver quando acordar") saiu com ela no
+            # chuveiro. No banho nada sai; a fila anda quando ela sai.
+            return
         availability_service.repo.mark_ready_due(datetime.now())
         owner = f'worker-{id(application)}'
         batch = availability_service.repo.claim_due(datetime.now(), owner=owner)

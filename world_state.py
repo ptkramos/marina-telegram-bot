@@ -58,6 +58,7 @@ WEEKLY_QUOTA = {"3_to_5_days_per_week": (3, 5)}
 CLASS_DAY_PET_WALK_WINDOW = ("07:00", "19:00")
 CLASS_PREP_MINUTES = 60          # arrumar + ir pra PUC
 CLASS_COMMUTE_BACK_MINUTES = 45  # voltar da Gávea pra Botafogo
+_BUSY_CALCULANDO: set = set()    # (banco, dia) com a volta da PUC sendo calculada (RoutineEngine._class_busy)
 
 
 
@@ -358,8 +359,23 @@ class RoutineEngine:
             return None
         first = min(datetime.fromisoformat(b["start_at"]) for b in blocks)
         last = max(datetime.fromisoformat(b["end_at"]) for b in blocks)
-        self._busy_cache[day] = (first - timedelta(minutes=CLASS_PREP_MINUTES),
-                                 last + timedelta(minutes=CLASS_COMMUTE_BACK_MINUTES))
+        fim = last + timedelta(minutes=CLASS_COMMUTE_BACK_MINUTES)
+        self._busy_cache[day] = (first - timedelta(minutes=CLASS_PREP_MINUTES), fim)
+        chave = (id(self.db), day)
+        if chave not in _BUSY_CALCULANDO:
+            # Soak, dia 1 (29/09): almoçou na PUC depois da aula das 15:00 e chegou 16:51; o passeio do Milo ficou
+            # 16:25, contando só a volta direta. Ocupada até chegar de verdade (a trava corta o ciclo trecho →
+            # energia → rotina → aqui).
+            _BUSY_CALCULANDO.add(chave)
+            try:
+                from commute import Commute
+                volta = Commute(self.db).volta_puc(day)
+                if volta and volta.end > fim:
+                    self._busy_cache[day] = (self._busy_cache[day][0], volta.end)
+            except Exception:
+                logger.exception("routine.class_busy.volta")
+            finally:
+                _BUSY_CALCULANDO.discard(chave)
         return self._busy_cache[day]
 
     def _placement(self, day, row, routine_type: str, has_class: Optional[bool]):
@@ -582,6 +598,38 @@ class WorldStateManager:
         except Exception:
             logger.exception("world_state.last_conversation.error")
         return None
+
+    def _depois_da_aula(self, now: datetime) -> Optional[dict]:
+        """Soak, dia 1 (29/09, 15:01): a aula acabou às 15:00, ela almoçou na PUC e a volta saiu 16:06 — nesse meio o
+        mundo caiu na rotina de casa ("em casa, brincando com o Milo") e ela disse "cheguei em casa". Entre o fim da
+        última aula e a saída da volta ela ainda está por lá."""
+        try:
+            from academic_life import AcademicLife
+            blocks = AcademicLife(self.db).blocks_on(now.date())
+            if not blocks:
+                return None
+            last = max(datetime.fromisoformat(b["end_at"]) for b in blocks)
+            if now < last:
+                return None
+            from commute import Commute
+            volta = Commute(self.db).volta_puc(now.date())
+            if volta is None or not (last <= now < volta.start):
+                return None
+            from meals import Meals
+            almoco = Meals(self.db).almoco_pos_aula(now.date(), volta.mode)
+        except Exception:
+            logger.exception("world_state.depois_da_aula")
+            return None
+        lugar, onde = (("shopping_gavea", "no Shopping da Gávea") if almoco and almoco.where == "gavea"
+                       else ("puc_rio", "no restaurante da PUC"))
+        if almoco and almoco.at <= now < almoco.end:
+            atividade = f"almoçando {onde} ({almoco.dish})"
+        elif almoco and now < almoco.at:
+            atividade = f"saindo da aula, indo almoçar {onde}"
+        else:
+            atividade = "saindo da PUC pra voltar pra casa"
+        return {"activity": atividade, "place_key": lugar if almoco and now >= almoco.at else "puc_rio",
+                "start_at": last.isoformat(), "end_at": volta.start.isoformat()}
 
     def _recent_commitment_end(self, now: datetime) -> Optional[datetime]:
         """Fim do compromisso confirmado mais recente que já terminou.
@@ -866,6 +914,9 @@ class WorldStateManager:
                 "end_at": commute_leg.end.isoformat(),
             }
             reason = "commute"
+        elif (na_puc := self._depois_da_aula(now)) is not None:
+            chosen = na_puc
+            reason = "pos_aula"
         elif pending_transition and pending_transition["phase"] == "active":
             # Transição anunciada e horário atingido: Marina agora ESTÁ na atividade
             # anunciada. Vira `explicit_plan` de fato.

@@ -106,4 +106,8 @@ def prompt_lines(db, now: Optional[datetime] = None) -> list[str]:
         lines.append(f"- AGORA você está: {agora}.")
     lines.append("O que você disse antes pode ter ficado velho (se estava num lugar, já saiu). Fale a partir "
                  "de agora; se ele perguntar do que passou, conte pelos fatos acima.")
+    # Soak, dia 1 (29/09, 17:58): às 16:13 ela disse "terminando o trabalho" e, com este bloco dizendo "fazendo as
+    # unhas na Ophicina", seguiu "termino esse trabalho e fico com você" até 18:13 — a história da conversa venceu.
+    lines.append("Isso vale também pro que você disse que estava fazendo ou ia terminar: se não está nos fatos "
+                 "acima nem no AGORA, não continue essa história — o que você está fazendo é o AGORA.")
     return lines

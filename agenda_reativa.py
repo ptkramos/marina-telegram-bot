@@ -605,6 +605,10 @@ class AgendaReativa:
                                                temperature=0, response_format={"type": "json_object"},
                                                **llm_kwargs(150, model))
             raw = (resp.choices[0].message.content or "").strip()
+            if "{" not in raw:
+                # Soak, dia 1 (29/09, 21:59): o modelo devolveu vazio — é "nenhuma", não traceback no relatório.
+                logger.warning("agenda_reativa.classifica_vazio")
+                return None
             data = json.loads(raw[raw.find("{"):raw.rfind("}") + 1])
         except Exception:
             logger.exception("agenda_reativa.classifica")

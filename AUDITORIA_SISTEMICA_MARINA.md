@@ -2053,3 +2053,50 @@ estudo não aconteceu (sobrou pouco da janela) — como numa noite de treino de 
   nunca apaga o dia consultado. `test_tmdb_d6` falhou uma vez na suíte e passou 4 de 4 sozinho (instável, anotado).
 - **Testes:** `tests/test_auditoria3_2809.py` (15, com os casos reais), `test_rituals_c3` (boa noite com banho tomado;
   banho pós-treino na chegada). Suíte: 1.432 testes verdes (3 pulados).
+
+## Soak, dia 1 (terça 29/09; lido e corrigido em 30/09)
+Relatório de 30/09 05:10 (`soak/dia-2026-09-29.md`): 128 mensagens, 6 iniciativas, 1 foto, LLM US$ 0,21, 62 Buzz,
+rotas 0, 1 erro de verdade — e **0 suspeitas**. Lendo a conversa com o mundo, o Patrick e eu achamos o contrário: "a
+maioria é inconsistência de onde ela está". O `soak/inicio.txt` não existia (o relatório saiu como "antes do soak");
+criado com 2026-09-29. Método: cópia do banco em `/tmp` na VPS, `COMMUTE_LIVE_TIMES=false`, chaves zeradas; código
+novo numa cópia do projeto (`/tmp/marina_sim`) refazendo o dia 29 de 5 em 5 min.
+
+| Hora | O que se viu | Causa | Camada |
+|---|---|---|---|
+| 15:01 | "Cheguei em casa" com aula até 15:00 | almoço na PUC (15:18) empurrou a volta pra 16:06; no meio, nenhum estado "na PUC" e o resolve caiu na rotina de casa (`post_event_recovery`) | mundo |
+| 16:06 | "indo da PUC pra Enseada a pé" | `volta_puc()` não contava o almoço: passeio do Milo marcado 16:25 (`_class_busy` = 15:45) e `_emendas` juntou a volta da PUC com a ida pro passeio | mundo |
+| 16:13–18:13 | "terminando o trabalho" passeando e na manicure | 16:13: o mundo acima; 17:57: `[DESDE A SUA ÚLTIMA MENSAGEM]` dizia as unhas e o histórico venceu | voz |
+| 19:01, 19:37 | "plantão de amanhã", "seu plantão" | open loop "Patrick terá um plantão amanhã" de 27/09, sem data | memória |
+| 05:36 | "Boa noite, te amo demais tb", no chuveiro | resposta adiada da madrugada: saiu no banho e sem saber que era manhã | voz |
+| 05:39 | Milo no meio do banho (05:23–05:47) | xixi da manhã não esperava transição (o da noite já esperava) | mundo |
+| 11:47→15:18 | "morrendo de fome", nada por 9 h | belisco só em casa; quatro aulas seguidas sem intervalo | mundo |
+| 15:37 | fofoca do porteiro com ela na PUC (achado na simulação) | `casa.py` gravava perrengue/roupa na hora sorteada, em qualquer lugar | mundo |
+
+**Correções** (só conserto, freio da seção 0):
+- `commute.volta_puc` sai depois de `Meals.almoco_pos_aula` (igual a `_legs_planejados`); `RoutineEngine._class_busy`
+  vai até a chegada de verdade (trava de reentrada `_BUSY_CALCULANDO` contra o ciclo trecho → energia → rotina);
+  `_emendas` nunca emenda passeio do Milo (ida nem volta).
+- `WorldStateManager._depois_da_aula`: entre o fim da última aula e a saída da volta, estado `pos_aula` na PUC
+  ("saindo da aula, indo almoçar…", "almoçando no restaurante da PUC (…)", "saindo da PUC pra voltar pra casa"). No
+  prompt é fato (`world_context`); `Meals._fora` e o perfil de disponibilidade (`OUT_SOLO` / `MEAL`) sabem dele.
+- `since_last`: uma linha a mais — o que ela disse que estava fazendo ou ia terminar também ficou velho.
+- `db.ancorar_datas`: amanhã/hoje/ontem/depois de amanhã viram "na segunda (28/09)" na criação do open loop e na
+  leitura (`get_open_loops_ativos`, `get_open_loops_para_checkin`) — cobre os antigos.
+- `bot.pending_response_routine` não tira nada da fila com banho em andamento; `_hint_resposta_atrasada` (lote com
+  mais de 60 min) diz no turno quando ele escreveu e que ela está vendo agora.
+- `milo.py`: xixi da manhã espera banho/refeição, não desce com ela já fora (`_saiu`), some depois de 1 h.
+- `meals._belisca_na_puc` (decisão do Patrick, "conserto agora"): com fome, na aula, até 10 min depois de uma aula
+  começar (não a primeira), longe da próxima refeição e 90 min do último belisco — "um pão de queijo na cantina da
+  PUC" etc. Sem transição (é na troca de aula).
+- `casa.py`: roupa, varal, bagunça e perrengue (menos a encomenda "enquanto ela tava fora") esperam ela em casa, até
+  4 h.
+- `agenda_reativa._classifica`: resposta vazia do modelo vira `warning` (era traceback no relatório).
+- `scripts/relatorio_soak.py`: seção **Mundo × mundo** (teleporte, trajeto saindo de onde ela não estava, refeição ×
+  lugar, coisa no meio do banho), "trabalho" dito na rua/caminho/salão (`RE_TRABALHO`) e saudação fora de hora. Dia
+  29: 10 suspeitas, todas reais; dias 27 e 28: 3, reais daqueles dias (a Pacheco de 27/09, o Milo e o sofá de 28/09).
+
+**Simulação do dia 29 com o código novo:** aula até 15:00 → "saindo da aula, indo almoçar" → almoço 15:18 → volta
+16:06–16:51 → casa (fofoca do porteiro 16:55) → Milo 17:07–17:46 → unhas → casa; beliscos na cantina 11:00 e 13:00.
+O banho da manhã é ritual do bot (não roda na simulação): coberto por teste.
+
+- **Testes:** `tests/test_soak_dia1.py` (os casos reais acima).

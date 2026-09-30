@@ -32,6 +32,27 @@ SHORT_LIVED_LOOP_TYPES = ("waiting", "promise")
 SHORT_LIVED_LOOP_HOURS = 12
 
 
+_DIAS_SEMANA = ("na segunda", "na terça", "na quarta", "na quinta", "na sexta", "no sábado", "no domingo")
+_RELATIVO = (("depois de amanhã", 2), ("amanhã", 1), ("amanha", 1), ("hoje", 0), ("ontem", -1))
+
+
+def ancorar_datas(texto: Optional[str], criado_em) -> str:
+    """Soak, dia 1 (29/09): o assunto em aberto "Patrick terá um plantão amanhã" (anotado em 27/09) seguia
+    "amanhã" dois dias depois e ela perguntou do "plantão de amanhã" que não existia. A data relativa vira o dia
+    de quando foi anotado ("na segunda (28/09)")."""
+    import re as _re
+    if not texto:
+        return texto or ""
+    try:
+        base = (criado_em if isinstance(criado_em, datetime) else datetime.fromisoformat(str(criado_em))).date()
+    except (TypeError, ValueError):
+        return texto
+    for palavra, dias in _RELATIVO:
+        dia = base + timedelta(days=dias)
+        texto = _re.sub(rf"(?i)\b{palavra}\b", f"{_DIAS_SEMANA[dia.weekday()]} ({dia:%d/%m})", texto)
+    return texto
+
+
 def _loop_words(text: Optional[str]) -> set:
     import re as _re
     return {w for w in _re.findall(r"\w+", (text or "").casefold()) if len(w) >= 4}
@@ -1404,6 +1425,7 @@ class DatabaseManager:
         """Cria um novo assunto/processo em aberto com o Patrick."""
         now_dt = datetime.now()
         now_iso = now_dt.isoformat()
+        content = ancorar_datas(content, now_dt)
         short_lived = loop_type in SHORT_LIVED_LOOP_TYPES and next_check_after is None and due_at is None
         if next_check_after is None and not short_lived:
             # P2.1: Prazo inicial padrão (24h) para evitar check-in imediato em loops sem prazo
@@ -1447,7 +1469,8 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, loop_type, content, status, importance, due_at, next_check_after, last_touched_at
+                SELECT id, loop_type, content, status, importance, due_at, next_check_after, last_touched_at,
+                       created_at
                 FROM open_loops
                 WHERE status = 'open' AND (is_archived = 0 OR is_archived IS NULL)
                   AND NOT (next_check_after IS NULL AND due_at IS NULL AND last_touched_at < ?)
@@ -1456,7 +1479,7 @@ class DatabaseManager:
                 """,
                 ((datetime.now() - timedelta(hours=SHORT_LIVED_LOOP_HOURS)).isoformat(), limit)
             )
-            return [dict(r) for r in cursor.fetchall()]
+            return [{**dict(r), "content": ancorar_datas(r["content"], r["created_at"])} for r in cursor.fetchall()]
 
     def get_open_loops_para_checkin(self, now_iso: Optional[Union[str, datetime]] = None, limit: int = 2, now: Optional[Union[str, datetime]] = None) -> list[dict]:
         """Retorna open loops que já atingiram a data para checagem/pergunta carinhosa (P2.1)."""
@@ -1471,7 +1494,8 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, loop_type, content, status, importance, due_at, next_check_after, last_touched_at
+                SELECT id, loop_type, content, status, importance, due_at, next_check_after, last_touched_at,
+                       created_at
                 FROM open_loops
                 WHERE status = 'open' AND (is_archived = 0 OR is_archived IS NULL) AND (
                     next_check_after IS NOT NULL AND next_check_after <= ?
@@ -1481,7 +1505,7 @@ class DatabaseManager:
                 """,
                 (check_time, limit)
             )
-            return [dict(r) for r in cursor.fetchall()]
+            return [{**dict(r), "content": ancorar_datas(r["content"], r["created_at"])} for r in cursor.fetchall()]
 
     def resolver_open_loop(self, loop_id: int, resolution_notes: Optional[str] = None) -> bool:
         """Marca o open loop como resolvido com notas contextuais."""

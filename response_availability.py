@@ -504,7 +504,8 @@ class ResponseAvailabilityPolicy:
         if 'consulta' in act or 'pronto-atendimento' in act:
             return 'CLASS'
         if ((place_key or '').startswith('loja_') or 'compras da semana' in act or act.startswith('passando n')
-                or 'praia shopping' in act or 'tomando um' in act):
+                or 'praia shopping' in act or 'tomando um' in act
+                or act.startswith('saindo da aula')):             # soak, dia 1: entre a aula e o almoço por lá
             return 'OUT_SOLO'
         # Patch 030: passeio com o Milo — sem isso o estado ia pra UNKNOWN.
         if any(x in act for x in ('passeando', 'passeio', 'caminhando')):

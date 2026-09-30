@@ -1333,3 +1333,12 @@ total por turno).
 **28/09, noite — mundo fechado pro soak:** lista de compras no prompt, sementes concretas (sem o "Contato de
 Henrique"), foto do sexting com a mesma peça (bug 17). Pro relatório do soak: `lista_compras.adicionou/tirou` no log
 mostra o que o modelo barato leu da conversa (conferir se não entra coisa que ela não topou).
+
+**30/09 — soak, dia 1 (29/09) lido e corrigido:** o que quebrou na fala veio quase todo do mundo errado (15:01
+"cheguei em casa" sem ter voltado da PUC; 16:13 "terminando o trabalho" com o mundo dizendo "indo da PUC pra Enseada").
+Na voz: o bloco `[DESDE A SUA ÚLTIMA MENSAGEM]` diz também que o que ela disse que estava fazendo ou ia terminar ficou
+velho (às 17:57 ela seguiu "termino esse trabalho" fazendo as unhas); assunto em aberto com "amanhã" vira o dia
+("plantão amanhã" de 27/09 → "na segunda (28/09)"); resposta adiada não sai no banho e sabe que ele escreveu
+horas antes ("Boa noite" às 05:36). Lote de texto feio (não zera o soak): os 4 /ruim de 29/09 — "Deu tudo tranquilo
+mesmo", "Se achou, aguenta", "seu convencido" repetido, "trabalho se achando importante". Detalhe na Auditoria
+("Soak, dia 1").

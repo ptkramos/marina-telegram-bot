@@ -143,10 +143,20 @@ FUTURO = re.compile(r"\b(?:vou|quando (?:eu )?chegar|chegando|daqui a pouco|mais
 FORA_DE_CASA = {"fora", "rua", "caminho", "aula", "academia"}
 
 
+# Soak, dia 1 (29/09): "tô terminando umas referências do trabalho" passeando com o Milo e "termino esse trabalho e
+# fico com você" fazendo as unhas na Ophicina. Trabalho da faculdade é em casa ou na PUC.
+RE_TRABALHO = re.compile(r"\b(?:(?:terminando|fazendo|finalizando|adiantando|montando)\b[^.!?\n]{0,40}\btrabalho"
+                         r"|termino (?:esse|o|meu) trabalho|tô na reta final|to na reta final)")
+SEM_ESTUDO = {"fora", "rua", "caminho", "academia"}
+
+
 def atividade_contradiz(texto: str, estados: list[dict]) -> str:
     """Trecho da fala quando o que ela diz que está fazendo não cabe em nenhum estado perto daquela hora."""
     t = (texto or "").lower()
     sits = {e["sit"] for e in estados}
+    m = RE_TRABALHO.search(t)
+    if m and sits and sits <= SEM_ESTUDO:
+        return m.group(0)
     for m in RE_GERUNDIO.finditer(t):
         verbo = _sem_acento(m.group(1))
         if verbo in FAZER_EM_CASA and sits <= FORA_DE_CASA:
@@ -213,6 +223,13 @@ QUEBRAS = [
     ("letra de outro alfabeto", re.compile(r"[\u0400-\u04FF\u0600-\u06FF\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF]")),
     ("palavra repetida colada", re.compile(r"\b([a-zà-ú]{3,})\s+\1\b", re.I)),
 ]
+# Soak, dia 1 (29/09, 05:36): a resposta adiada da madrugada saiu de manhã com "Boa noite".
+SAUDACAO_FORA_DE_HORA = (("boa noite", range(5, 12)), ("bom dia", range(14, 24)))
+
+
+def saudacao_fora_de_hora(texto: str, at: datetime) -> str:
+    t = (texto or "").lower()
+    return next((s for s, horas in SAUDACAO_FORA_DE_HORA if at.hour in horas and re.search(rf"\b{s}\b", t)), "")
 ROUPA_PALAVRAS = ("vestido", "saia", "calça", "calca", "short", "shorts", "top", "cropped", "camiseta", "blusa",
                   "moletom", "pijama", "lingerie", "biquíni", "biquini", "legging", "jaqueta", "camisola",
                   "sutiã", "sutia", "calcinha", "body", "regata", "jeans", "macacão", "macacao", "suéter", "sueter")
@@ -340,7 +357,7 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
         w["at"] = _dt(w["observed_at"])
         w["sit"] = situacao(w["activity"], w["location_region"])
     eventos = [dict(r) for r in conn.execute(
-        "SELECT event_at, event_type, title, summary FROM life_events WHERE event_at >= ? AND event_at < ? "
+        "SELECT event_at, end_at, event_type, title, summary FROM life_events WHERE event_at >= ? AND event_at < ? "
         "ORDER BY event_at", (s_ini, s_fim))]
     try:
         posts = [dict(r) for r in conn.execute(
@@ -388,6 +405,8 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
             s_fez.append(f"**{_hm(m['at'])}** ela: {achado}")
         for q in quebras(m["content"]):
             s_quebra.append(f"**{_hm(m['at'])}** {q}: «{_curto(m['content'], 120)}»")
+        if s := saudacao_fora_de_hora(m["content"], m["at"]):
+            s_quebra.append(f"**{_hm(m['at'])}** «{s}» fora de hora: «{_curto(m['content'], 120)}»")
 
     # card × mundo: nas falas dela e de hora em hora
     CARD_OK = {"la": {"fora", "aula", "academia", "rua"}, "caminho": {"caminho"}, "voltando": {"caminho"},
@@ -415,6 +434,55 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
         if ruim and chave not in vistos:
             vistos.add(chave)
             s_card.append(f"**{_hm(at)}** {txt} × mundo: {e['activity']} ({e['location_region']})")
+
+    # mundo × mundo (soak, dia 1: a fala seguia o mundo, e o mundo é que estava errado)
+    s_mundo = []
+    FORA = {"fora", "aula", "academia", "rua"}
+    anterior = None
+    for w in mundo:
+        if anterior is None or w["activity"] == anterior["activity"]:
+            anterior = anterior or w
+            continue
+        a, b = anterior["sit"], w["sit"]
+        if "rapidinho" in (anterior["activity"] or "") + (w["activity"] or ""):
+            a = b = "casa"                             # a descida do Milo é na calçada do prédio
+        if a in FORA and b in ("casa", "banho") and w["at"] >= ini:
+            s_mundo.append(f"**{_hm(w['at'])}** teleporte: de «{anterior['activity']}» ({anterior['location_region']}) "
+                           f"direto pra «{w['activity']}», sem trajeto")
+        if a in ("casa", "banho") and b in FORA - {"rua"} and w["at"] >= ini:
+            s_mundo.append(f"**{_hm(w['at'])}** teleporte: de «{anterior['activity']}» direto pra «{w['activity']}» "
+                           f"({w['location_region']}), sem trajeto")
+        origem = re.match(r"(?:indo|voltando) d[aoe]s? (.+?) (?:pra|pro|pa)\b", _sem_acento(w["activity"] or ""))
+        if origem and a in ("casa", "banho") and origem.group(1) != "casa" and w["at"] >= ini:
+            s_mundo.append(f"**{_hm(w['at'])}** trajeto «{w['activity']}» sai de «{origem.group(1)}», mas ela estava "
+                           f"em casa («{anterior['activity']}»)")
+        anterior = w
+    for ev in eventos:
+        if ev["event_type"] != "meal":
+            continue
+        e = estado_em(_dt(ev["event_at"]) + timedelta(minutes=2))
+        fora_lugar = re.search(r"no restaurante da PUC|no Shopping da Gávea", ev["summary"] or "")
+        if e and fora_lugar and e["sit"] in ("casa", "banho"):
+            s_mundo.append(f"**{_hm(_dt(ev['event_at']))}** {ev['title']} «{fora_lugar.group(0)}» com o mundo em "
+                           f"«{e['activity']}»")
+        if e and "em casa" in (ev["summary"] or "") and e["sit"] in FORA | {"caminho"}:
+            s_mundo.append(f"**{_hm(_dt(ev['event_at']))}** {ev['title']} «em casa» com o mundo em «{e['activity']}»")
+    banhos = []
+    for ev in eventos:
+        if ev["title"] != "banho":
+            continue
+        ini_b = _dt(ev["event_at"])
+        if ev["end_at"]:
+            banhos.append((ini_b, _dt(ev["end_at"])))
+        elif h := re.search(r"\d\d:\d\d[–-](\d\d):(\d\d)", ev["summary"] or ""):   # "(05:23–05:47)"
+            fim_b = ini_b.replace(hour=int(h.group(1)), minute=int(h.group(2)))
+            banhos.append((ini_b, fim_b if fim_b > ini_b else fim_b + timedelta(days=1)))
+    for ev in eventos:
+        if ev["title"] == "banho" or ev["event_type"] not in ("routine", "meal", "snack"):
+            continue
+        at = _dt(ev["event_at"])
+        if any(b0 < at < b1 for b0, b1 in banhos):
+            s_mundo.append(f"**{_hm(at)}** «{_curto(ev['summary'], 70)}» no meio do banho")
 
     # foto × roupa
     try:
@@ -548,7 +616,8 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
     dele = sum(1 for m in msgs if m["role"] == "user")
     inic = [m for m in marina if m["is_initiative"]]
     n_audio = sum(1 for m in marina if m["media_type"] in ("voice", "audio"))
-    suspeitas = len(s_lugar) + len(s_fez) + len(s_card) + len(s_quebra) + len(s_foto) + len(s_ordem) + len(junk)
+    suspeitas = (len(s_lugar) + len(s_fez) + len(s_card) + len(s_mundo) + len(s_quebra) + len(s_foto)
+                 + len(s_ordem) + len(junk))
 
     L = [f"# Soak, {n_dia}: {DIAS[dia.weekday()]} {dia.strftime('%d/%m')} (05:00 → 05:00)", "",
          f"_Gerado em {datetime.now().strftime('%d/%m %H:%M')} na VPS, código `{rev}`, numa cópia do banco._", "",
@@ -556,7 +625,7 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
          f"- Conversa: {dele} mensagens dele, {len(marina)} dela ({len(inic)} iniciativas, "
          f"{len(fotos_dela)} fotos, {n_audio} áudios)",
          f"- Suspeitas pra conferir: **{suspeitas}** (fala × mundo {len(s_lugar)}, fala × o que ela fez "
-         f"{len(s_fez)}, card × mundo {len(s_card)}, "
+         f"{len(s_fez)}, card × mundo {len(s_card)}, mundo × mundo {len(s_mundo)}, "
          f"fala quebrada {len(s_quebra) + len(junk)}, foto × roupa {len(s_foto)}, ordem/repetição {len(s_ordem)})",
          f"- Erros: **{len(reais)}** de verdade, {sum(ruido.values())} de rede/agendador; "
          f"{len(reinicios)} reinício(s)" + (f" ({', '.join(_hm(r) for r in reinicios)})" if reinicios else ""),
@@ -578,6 +647,8 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
     secao("Fala × mundo (onde ela disse que estava, o que disse que estava fazendo)", s_lugar)
     secao("Fala × o que ela fez no dia (comida, Milo, academia, banho)", s_fez)
     secao("Card da aba Agora × mundo", s_card)
+    secao("Mundo × mundo (teleporte, trajeto saindo do lugar errado, refeição × lugar, coisa no meio do banho)",
+          s_mundo)
     secao("Fala quebrada ou número sumido", s_quebra + [
         f"**{_hm(e['at'])}** o bot pegou e refez: {_curto(e['msg'], 170)}" for e in junk])
     secao("Foto × roupa", s_foto)

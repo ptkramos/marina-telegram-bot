@@ -314,8 +314,9 @@ class Commute:
         return mode, min(mins, CLASS_BACK_MAX_MIN)
 
     def volta_puc(self, day: date) -> Optional[Leg]:
-        """Só a volta da PUC, saindo no fim da última aula (sem o almoço por lá): o meals decide o almoço por ela
-        sem montar o dia inteiro de trechos (a pilha do resolve já é funda)."""
+        """Só a volta da PUC, sem montar o dia inteiro de trechos (a pilha do resolve já é funda). Soak, dia 1
+        (29/09): sai depois do almoço por lá, como em `_legs_planejados` — sem ele o passeio do Milo foi marcado
+        16:25 contando a chegada 15:45, e a volta real (16:06) emendou na ida pro passeio "da PUC pra Enseada"."""
         from academic_life import AcademicLife
         blocks = AcademicLife(self.db).blocks_on(day)
         if not blocks:
@@ -324,6 +325,14 @@ class Commute:
         puc = self._place("puc_rio") or {"name": "PUC-Rio", "region": "Gávea"}
         _key, driver = self._driver()
         mode, mins = self._volta_puc_modo(day, last, puc, CARONA_WEIGHT_PUC if driver else 0.0)
+        try:
+            from meals import Meals
+            almoco = Meals(self.db).almoco_pos_aula(day, mode)
+        except Exception:
+            logger.exception("commute.volta_puc.almoco")
+            almoco = None
+        if almoco:
+            last = almoco.end + timedelta(minutes=5)
         return Leg(f"commute:{day.isoformat()}:puc:volta", last, last + timedelta(minutes=mins), mode, "volta",
                    _de("PUC"), "Gávea", driver if mode == "carona" else "")
 
@@ -434,6 +443,8 @@ class Commute:
                         and l is not volta), None)
             if ida is None or volta not in out:
                 continue
+            if ":milo:" in ida.key or ":milo:" in volta.key:
+                continue       # soak, dia 1: o passeio do Milo sai de casa e volta pra casa (o Milo mora lá)
             if ida.decidido_em and ida.decidido_em > volta.start:      # (a vontade só nasce com ela livre em casa)
                 # 27/09, 19:23: voltou do Shopping da Gávea às 19:18 e, já em casa, deu vontade de ir à Pacheco.
                 # A ida saiu "do Shopping da Gávea, a pé" desde 19:00 e a volta de uber sumiu: decidiu em casa,
