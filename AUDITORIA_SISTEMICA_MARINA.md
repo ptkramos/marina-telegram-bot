@@ -2135,3 +2135,24 @@ também pra saúde). **Produção, a pedido do Patrick ("desfaz tudo"):** evento
 interrupção/uber/aviso da agenda reativa, voltou o cabelo (lavado 29/09 05:23, seco natural) e trocou as falas
 11:37 e 11:40; o que havia está em `soak/originais-2026-09-30-salao.json`.
 - **Testes:** `tests/test_soak_dia2.py` (+2).
+
+**30/09, tarde — trabalho dito × mundo, check-in do assunto dela, e o dia de amanhã visto antes.**
+- *Trabalho:* `College.session_on` só punha a sessão na janela da noite (20:21); a fala prometia agora. Decisão do
+  Patrick ("a fala vira mundo"): `College.observe_marina_line` (chamado depois de cada fala, em `bot.py`) — "vou
+  pegar firme", "tô fechando o trabalho agora", "vou abrir o arquivo" (sem "mais tarde/depois/à noite"), livre em
+  casa e antes da hora planejada → grava `facul:adiantou:<dia>` e `session_on` começa ali; a `materialize` segue igual.
+- *Check-in:* a instrução do `open_loop_checkin` (as duas cópias: `proactivity_service` e `_PROACTIVE_INSTRUCTIONS`)
+  tratava todo assunto como dele. Agora diz: coisa dele, pergunte; coisa sua, conte como está de verdade. O filtro
+  `_assunto_dela` (nome dela sem o dele) fica.
+- *"Cabelo novo" 13:06:* `current_shared_topic` ainda com o salão — o desfazer não limpou o assunto do planner.
+  Open loop 28 fechado. *"vai###":* `limpar_fala_marina` tira `#{2,}`.
+- *01/10 planejado* (cópia do banco, código novo em `/tmp/marina_sim3`): antes, almoço no Shopping da Gávea 15:18
+  com casting 15:30; volta da PUC 15:50 emendada no 2º casting; `_emendas` exigia `ida.end > volta.start` e não
+  sabia de mesmo lugar (ela "voltava pra casa" às 17:00 e estava "a caminho" do 2º desde 15:50); passeio do Milo
+  17:48 dentro do casting (`_placement` não via saídas); almoço "quando voltar" 17:40 dentro do 2º (`_antes_das_saidas`
+  via só a 1ª saída). Consertos: `SAIDA_DEPOIS_DA_AULA` (2 h) em `almoco_pos_aula`; `_emendas` com `>=` e mesmo
+  lugar remove volta e ida; `Agenda.etapas` põe "lá" + volta de compromisso sem ida emendado no mesmo lugar;
+  `_placement` bloqueia saídas (preparo `SAIDA_ANTES`, volta `SAIDA_VOLTA`); `Meals._saidas` junta saídas a ≤15 min;
+  `_record` de refeição pulada fora do café: "não deu tempo entre os compromissos". Depois: PUC → agência
+  15:00–15:30 → castings 15:30–18:30 → casa 18:55, almoço pulado, jantar 19:33, sem passeio do Milo (só o xixi).
+- **Testes:** `tests/test_soak_dia2.py` (+5).

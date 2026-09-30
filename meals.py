@@ -104,6 +104,7 @@ SAIDA_ANTES_NOITE = timedelta(minutes=110)  # rolê à noite: arrumação longa 
 SAIDA_VOLTA = timedelta(minutes=40)
 LANCHE_NOITE_ANTES_DE_DEITAR = timedelta(minutes=15)
 SAIDA_CURTA = timedelta(minutes=90)
+SAIDA_DEPOIS_DA_AULA = timedelta(hours=2)   # saída até 2 h depois da última aula: não almoça por lá antes
 REFEICAO_INTERVALO = timedelta(minutes=60)
 REFEICAO_PISO = {"almoco": time(11, 0), "jantar": time(18, 0)}   # mais cedo que isso não é almoço/jantar
 
@@ -381,6 +382,10 @@ class Meals:
         fim = blocks[-1][1]
         if not (noon_lo <= fim <= datetime.combine(day, time(15, 0))):
             return None
+        if any(fim <= ini < fim + SAIDA_DEPOIS_DA_AULA for ini, _ in self._saidas(day)):
+            # Soak, dia 2 (01/10 planejado): aula até 15:00, "comida japonesa no Shopping da Gávea" 15:18 e casting
+            # às 15:30 — a volta saía 15:50 e emendava no 2º casting. Com saída logo depois, vai direto (come por lá).
+            return None
         rng = _rng(day, "almoco_pos_aula")
         chance = 1.0 if fim.time() >= self.ALMOCO_TARDE else self.ALMOCO_POR_LA   # aula até 15:00: não espera chegar
         if rng.random() >= chance:
@@ -407,9 +412,18 @@ class Meals:
                     """SELECT event_at, end_at FROM eventos_pendentes WHERE confirmed=1 AND status != 'cancelled'
                        AND end_at IS NOT NULL AND (""" + " OR ".join("source_key LIKE ?" for _ in SAIDA_PREFIXOS)
                     + ")", [f"{p}:{iso}%" for p in SAIDA_PREFIXOS]).fetchall()
-            return sorted((datetime.fromisoformat(r["event_at"]), datetime.fromisoformat(r["end_at"])) for r in rows)
+            saidas = sorted((datetime.fromisoformat(r["event_at"]), datetime.fromisoformat(r["end_at"])) for r in rows)
         except Exception:
             return []
+        # Soak, dia 2 (01/10 planejado): castings 15:30–17:00 e 17:00–18:30 — o almoço "quando voltar" caía 17:40, no
+        # meio do segundo. Saídas emendadas contam como uma só.
+        juntas: list[tuple[datetime, datetime]] = []
+        for ini, fim in saidas:
+            if juntas and ini <= juntas[-1][1] + timedelta(minutes=15):
+                juntas[-1] = (juntas[-1][0], max(juntas[-1][1], fim))
+            else:
+                juntas.append((ini, fim))
+        return juntas
 
     def _antes_das_saidas(self, day: date, slots: list[MealSlot], wake: datetime, volta_puc=None) -> list[MealSlot]:
         """27/09 (auditoria): o almoço em casa das 13:50–14:29 atravessava a saída das 14:20 pro cinema das 15:00
@@ -485,8 +499,10 @@ class Meals:
             sac["prato"] = slot.dish
         if motivo:
             sac["motivo"] = motivo
-        if slot.skipped:
+        if slot.skipped and slot.kind == "cafe":
             summary = f"Pulou o {name}: acordou em cima da hora pra aula."
+        elif slot.skipped:                                # soak, dia 2: o almoço de 01/10 cai entre aula e castings
+            summary = f"Pulou o {name}: não deu tempo entre os compromissos."
         elif slot.kind == "lanche":
             summary = f"Beliscou {slot.dish}."
         else:

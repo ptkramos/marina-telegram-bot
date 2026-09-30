@@ -270,10 +270,26 @@ class Agenda:
             wake = None
         teve_make = False
         ultimo_fim = None
+        ultimo_lugar = None
         for c in self._compromissos(day):
             ida, volta = c["ida"], c["volta"]
             if not ida:
+                # Soak, dia 2 (01/10 planejado): o 2º casting na mesma agência, logo depois do 1º, não tem ida (ela
+                # fica lá) — o card sumia às 17:00. Mesmo lugar, emendado: só "lá" e a volta.
+                if (ultimo_fim is None or c["place"] != ultimo_lugar
+                        or abs(c["inicio"] - ultimo_fim) > timedelta(minutes=15)):
+                    continue
+                place = self._place(c["place"])
+                out.append(self._la(c, place, _com(c["friends"]), now, volta))
+                if volta:
+                    out.append(self._trajeto(volta, "voltando", "Voltando pra casa",
+                                             f"Chega em casa às {aprox(volta.end)}", place, c))
+                fim_anterior = ultimo_fim = volta.end if volta else c["fim"]
+                for e in out:
+                    if not e.compromisso and e.chave != "prep:dormir":
+                        e.compromisso = c["key"]
                 continue
+            ultimo_lugar = c["place"]
             place = self._place(c["place"])
             com = _com(c["friends"])
             # 1. Se arrumando

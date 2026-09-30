@@ -402,6 +402,13 @@ class RoutineEngine:
         # passeio podia cair às 07:05 — o sono vencia no pick() e o Milo não
         # saía. O slot agora nunca invade a janela de sono do próprio dia.
         blocked += self._sleep_windows(day, has_class if has_class is not None else busy is not None)
+        try:
+            # Soak, dia 2 (01/10 planejado): passeio do Milo 17:48–18:38 no meio do casting das 17:00–18:30. Saída
+            # marcada (rolê, freela, vontade, salão, mercado, médico) com o preparo antes e a volta depois.
+            from meals import Meals, SAIDA_ANTES, SAIDA_VOLTA
+            blocked += [(ini - SAIDA_ANTES, fim + SAIDA_VOLTA) for ini, fim in Meals(self.db)._saidas(day)]
+        except Exception:
+            logger.exception("routine.placement.saidas")
         if routine_type == "pet_walk":
             # Fase D5: Shih Tzu tem focinho curto — nada de passeio no sol do meio-dia.
             from milo import HEAT_BLOCK

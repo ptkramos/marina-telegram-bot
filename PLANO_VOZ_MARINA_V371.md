@@ -1349,3 +1349,7 @@ peso) não vira pergunta pra ele. Detalhe na Auditoria ("Soak, dia 2").
 
 **30/09, 11:37–11:40:** "saí mais cedo do salão" e "fui hoje sim, hoje era o cabelo" vinham do mundo (salão que não
 aconteceu; ver Auditoria, "a escova que não aconteceu"). Corrigidas no histórico a pedido do Patrick.
+
+**30/09, tarde:** assunto em aberto dela não vira pergunta a ele (check-in: coisa dele pergunta, coisa dela conta);
+"vou fazer o trabalho agora" vira sessão de trabalho de verdade (decisão do Patrick: a fala vira mundo); "###" sai da
+fala. Detalhe na Auditoria ("30/09, tarde").

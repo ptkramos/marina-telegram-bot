@@ -538,6 +538,7 @@ def limpar_fala_marina(texto: str) -> str:
     t = re.sub(r'\(Ps:[^)]*\)', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\(\s*(No áudio|No audio|Na voz|Com voz|voz manhosa)[^)]*\)', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\*[^*]+\*', '', t)
+    t = re.sub(r'#{2,}', '', t)                     # soak, dia 2 (30/09, 15:14): "Mas tô treinando com você, vai###"
     # Remove qualquer parêntese residual explicativo no final da mensagem
     t = re.sub(r'\s*\([^)]*\)\s*$', '', t)
     # Alguns modelos devolvem "\n" literal
@@ -3989,6 +3990,12 @@ async def process_incoming_batch(
         except Exception:
             logger.exception("meals.observe.error")
         try:
+            # Soak, dia 2 (30/09): "vou pegar firme no trabalho" — a sessão de trabalho da noite começa agora.
+            from college import College
+            College(memory_manager.db).observe_marina_line(fala_limpa, datetime.now())
+        except Exception:
+            logger.exception("college.observe.error")
+        try:
             # 24/09: "vou pedir pelo iFood" vira pedido com hora pra chegar.
             import delivery
             recentes = " ".join(m.get("content", "")   # mais recente primeiro: o que ela falou agora
@@ -4448,8 +4455,10 @@ _PROACTIVE_STYLE = (" Escreva como no WhatsApp com o namorado, não como relató
 _PROACTIVE_INSTRUCTIONS = {
     'pending_event_followup': ("Você lembrou que o Patrick tinha este compromisso: '{detail}'. "
                                "Mande uma mensagem curta perguntando como foi, com carinho, do seu jeito."),
-    'open_loop_checkin': ("Você lembrou de algo que o Patrick comentou: '{detail}'. "
-                          "Pergunte de leve se tem novidade, sem pressão."),
+    # Soak, dia 2 (30/09, 17:56): o trabalho DELA virou "e a entrega, saiu alguma coisa?" pra ele.
+    'open_loop_checkin': ("Você lembrou de um assunto em aberto entre vocês: '{detail}'. Se é coisa dele, "
+                          "pergunte de leve se tem novidade, sem pressão. Se é coisa sua (algo que você mesma tem "
+                          "que fazer ou contar), não pergunte a ele: conte como está de verdade, pelo seu dia."),
     'shared_topic_callback': ("Você ficou pensando no assunto '{detail}' que vocês já conversaram. "
                               "Retome com naturalidade, em uma ou duas frases."),
     'social_day_share': ("Aconteceu no seu dia: {detail} Se isso te der vontade de falar com o Patrick, "

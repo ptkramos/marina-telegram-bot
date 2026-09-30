@@ -702,6 +702,10 @@ volta pra dentro do banho. Detalhe na Auditoria ("Soak, dia 2").
 "Marcou o cabelo", "Saiu mais cedo na Ophicina". Desfeito a pedido do Patrick (saldo de volta a R$ 356). Causa e
 conserto na Auditoria ("a escova que não aconteceu").
 
+**30/09, tarde — o card do Agora com dois compromissos seguidos no mesmo lugar:** o 2º casting (17:00–18:30, mesma
+agência) sumia do card — agora aparece "Na agência" e a volta. Hoje de 01/10: almoço pulado aparece como "não deu
+tempo entre os compromissos". Detalhe na Auditoria ("30/09, tarde").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

@@ -130,5 +130,68 @@ class SalaoComColicaTest(Base):
             self.assertTrue(Vontade(self.db)._sem_condicao(at(13, 30)))      # comida a caminho
 
 
+class TrabalhoDitoViraMundoTest(Base):
+    """13:34 "vou pegar firme nele", 13:45 "tô fechando o trabalho agora" — a sessão só estava às 20:21."""
+
+    def setUp(self):
+        super().setUp()
+        sessao = {"assignment": {"course": "Práticas Experimentais VI"}, "start": at(20, 21), "end": at(21, 21),
+                  "vespera": True}
+        for alvo, kw in (("meals.Meals._at_home", {"return_value": True}),
+                         ("meals.Meals._transition_busy", {"return_value": False})):
+            p = patch(alvo, **kw)
+            p.start()
+            self.addCleanup(p.stop)
+        self.sessao = sessao
+
+    def test_disse_que_vai_fazer_agora_a_sessao_comeca(self):
+        c = College(self.db)
+        with patch.object(College, "assignments", return_value=[]):
+            self.assertFalse(c.observe_marina_line("Tô fechando o trabalho agora, amor kkk", at(13, 45)))  # sem trabalho
+        with patch.object(College, "session_on", side_effect=lambda d: self.sessao):
+            self.assertFalse(c.observe_marina_line("Hmmm, hoje eu iria de hambúrguer kkk", at(13, 40)))
+            self.assertFalse(c.observe_marina_line("vou fazer o trabalho mais tarde", at(13, 40)))
+            self.assertTrue(c.observe_marina_line("Tô aqui com o croqui aberto, vou parar de enrolar e pegar firme nele",
+                                                  at(13, 34)))
+        self.assertEqual(c._adiantou(DIA.date()), at(13, 34))
+
+    def test_frases_que_contam(self):
+        for t in ("Tô fechando o trabalho agora, amor kkk", "Vou salvar e abrir o arquivo agora, sem Stardew no meio",
+                  "agora vou fazer o trabalho de verdade"):
+            self.assertTrue(College.FAZ_AGORA.search(t), t)
+        for t in ("Vou terminar isso e dps te dou atenção", "o trabalho tá se achando importante demais"):
+            self.assertFalse(College.FAZ_AGORA.search(t), t)
+
+
+class DiaCheioDeAmanhaTest(Base):
+    """01/10 planejado: aula 07–15h, casting 15:30–17:00 e outro 17:00–18:30 na mesma agência."""
+
+    def test_dois_compromissos_no_mesmo_lugar_ela_fica_la(self):
+        from commute import Commute, Leg
+        ag = "Agência boutique da Lívia (fictícia)"
+        volta_puc = Leg("commute:2026-10-01:puc:volta", at(15, 0), at(15, 42), "onibus", "volta", "da PUC", "Gávea")
+        ida1 = Leg("commute:outing:2026-10-01:casting:a:ida", at(14, 58), at(15, 30), "onibus", "ida", f"pra {ag}", "Centro")
+        volta1 = Leg("commute:outing:2026-10-01:casting:a:volta", at(17, 0), at(17, 39), "onibus", "volta", f"da {ag}",
+                     "Centro")
+        ida2 = Leg("commute:outing:2026-10-01:casting:b:ida", at(16, 37), at(17, 0), "metro", "ida", f"pra {ag}", "Centro")
+        volta2 = Leg("commute:outing:2026-10-01:casting:b:volta", at(18, 30), at(18, 55), "metro", "volta", f"da {ag}",
+                     "Centro")
+        out = Commute._emendas([volta_puc, ida1, volta1, ida2, volta2])
+        self.assertEqual([(l.key.rsplit(":", 2)[-2] + ":" + l.direction, l.start, l.origem) for l in out],
+                         [("a:ida", at(15, 0), "da PUC"), ("b:volta", at(18, 30), "")])
+
+    def test_saidas_emendadas_contam_como_uma(self):
+        from meals import Meals
+        with self.db.get_connection() as conn:
+            for k, ini, fim in (("freela:2026-10-01:casting:a", at(15, 30), at(17, 0)),
+                                ("freela:2026-10-01:casting:b", at(17, 0), at(18, 30))):
+                conn.execute("INSERT INTO eventos_pendentes (event_type, description, event_at, end_at, source_key, "
+                             "confirmed, status, created_at) VALUES ('freela', 'casting', ?, ?, ?, 1, 'pending', ?)",
+                             (ini.isoformat(), fim.isoformat(), k, at(8, 0).isoformat()))
+            conn.commit()
+        from datetime import date
+        self.assertEqual(Meals(self.db)._saidas(date(2026, 10, 1)), [(at(15, 30), at(18, 30))])
+
+
 if __name__ == "__main__":
     unittest.main()

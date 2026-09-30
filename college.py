@@ -22,9 +22,13 @@ Determinístico por data; nada de chamada de modelo.
 from __future__ import annotations
 
 import json
+import logging
 import random
+import re
 from datetime import date, datetime, time, timedelta
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 ASSIGNMENT_EVERY_WEEKS = (4, 6)  # 9 disciplinas: ~1,5 entrega por semana, não uma por noite
 FIRST_ASSIGNMENT_WEEK = 3
@@ -122,9 +126,52 @@ class College:
                           max(SESSION_MINUTES[0], int(a["hours"] * 60 / nights)))
             lo = datetime.combine(day, SESSION_WINDOW[0])
             start = lo + timedelta(minutes=rng.randint(0, 60))
+            adiantou = self._adiantou(day)
+            if adiantou and adiantou < start:
+                start = adiantou                          # soak, dia 2: ela disse que ia fazer agora
             return {"assignment": a, "start": start, "end": start + timedelta(minutes=minutes),
                     "vespera": due - day == timedelta(days=1)}
         return None
+
+    # Soak, dia 2 (30/09): "vou pegar firme nele", "tô fechando o trabalho agora" (13:34–15:11) com a sessão só às
+    # 20:21 e ela lendo, vendo desfile e jogando Stardew. Decisão do Patrick: a fala vira mundo — livre em casa, a
+    # sessão da noite começa agora.
+    FAZ_AGORA = re.compile(
+        r"\b(?:vou|j[aá] vou|agora vou|bora|t[oô] indo|voltei|t[oô])\b[^.!?\n]{0,35}?"
+        r"\b(?:pegar firme|fazer|fechar|terminar|voltar pr[oa]|abrir|focar n[oa]|fechando|terminando|fazendo)\b"
+        r"[^.!?\n]{0,25}?\b(?:trabalho|arquivo|projeto)\b"
+        r"|\b(?:vou|agora vou|bora)\b[^.!?\n]{0,30}?\bpegar firme\b", re.IGNORECASE)
+    DEPOIS = re.compile(r"\b(?:mais tarde|depois|amanh[aã]|de noite|à noite|a noite|antes de dormir|daqui a pouco)\b",
+                        re.IGNORECASE)
+
+    def _adiantou(self, day: date) -> Optional[datetime]:
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT value FROM world_bootstrap WHERE key=?",
+                               (f"facul:adiantou:{day.isoformat()}",)).fetchone()
+        return datetime.fromisoformat(row["value"]) if row else None
+
+    def observe_marina_line(self, fala: str, now: datetime) -> bool:
+        """Ela disse que vai fazer (ou está fazendo) o trabalho agora: a sessão do dia começa agora, se ela está
+        livre em casa e ainda não sentou pra ele hoje. Devolve se adiantou."""
+        for frase in re.split(r"(?<=[.!?\n])", fala or ""):
+            if self.FAZ_AGORA.search(frase) and not self.DEPOIS.search(frase):
+                break
+        else:
+            return False
+        s = self.session_on(now.date())
+        if not s or now >= s["start"] or self._adiantou(now.date()):
+            return False
+        from meals import Meals
+        meals = Meals(self.db)
+        if not meals._at_home() or meals._transition_busy(now):
+            return False
+        with self.db.get_connection() as conn:
+            conn.execute("INSERT OR IGNORE INTO world_bootstrap (key, value, updated_at) VALUES (?, ?, ?)",
+                         (f"facul:adiantou:{now.date().isoformat()}", now.isoformat(timespec="seconds"),
+                          now.isoformat()))
+            conn.commit()
+        logger.info("college.adiantou sessao=%s agora=%s", s["assignment"]["course"], now.strftime("%H:%M"))
+        return True
 
     def onset(self, day: date) -> tuple[int, list[str]]:
         """Gancho do sono (D2): véspera de entrega mexe na hora de pegar no sono."""

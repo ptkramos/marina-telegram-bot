@@ -438,13 +438,19 @@ class Commute:
         from dataclasses import replace
         out = sorted(legs, key=lambda l: l.start)
         for volta in [l for l in out if l.direction == "volta"]:
-            ida = next((l for l in out if l.direction == "ida" and l.end > volta.start
+            ida = next((l for l in out if l.direction == "ida" and l.end >= volta.start
                         and l.start < volta.end + timedelta(minutes=15) and l.start >= volta.start - timedelta(hours=2)
                         and l is not volta), None)
             if ida is None or volta not in out:
                 continue
             if ":milo:" in ida.key or ":milo:" in volta.key:
                 continue       # soak, dia 1: o passeio do Milo sai de casa e volta pra casa (o Milo mora lá)
+            if volta.destination.split(" ", 1)[-1] == ida.destination.split(" ", 1)[-1]:
+                # Soak, dia 2 (01/10 planejado): casting 15:30–17:00 e outro 17:00–18:30 na mesma agência — ela
+                # "voltava pra casa" às 17:00 e já estava "a caminho" do segundo desde 15:50. Mesmo lugar: fica lá.
+                out.remove(volta)
+                out.remove(ida)
+                continue
             if ida.decidido_em and ida.decidido_em > volta.start:      # (a vontade só nasce com ela livre em casa)
                 # 27/09, 19:23: voltou do Shopping da Gávea às 19:18 e, já em casa, deu vontade de ir à Pacheco.
                 # A ida saiu "do Shopping da Gávea, a pé" desde 19:00 e a volta de uber sumiu: decidiu em casa,

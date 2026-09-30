@@ -385,6 +385,27 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       (desconforto ≥ 0,5), na hora da aula que faltou nem com comida a caminho (`Vontade._sem_condicao`). Camada: mundo.
       Decisão do Patrick: **desfazer tudo** — escova cancelada, R$ 82 de volta ao saldo, fora do Hoje, cabelo como
       estava, as duas falas do salão corrigidas no histórico (originais em `soak/originais-2026-09-30-salao.json`).
+    - **Tarde (12:16–18:11) — "tô fechando o trabalho" sem trabalho no mundo.** Entrega amanhã; a sessão do dia só
+      às 20:21; ela prometeu "vou pegar firme", disse "tô fechando agora" (13:45) e "ainda tô no trabalho" (15:11)
+      lendo mangá, vendo desfile e jogando Stardew. Decisão do Patrick: **a fala vira mundo** — livre em casa,
+      "vou fazer/tô fazendo o trabalho agora" adianta a sessão do dia pra agora (`College.observe_marina_line`).
+      Camada: mundo.
+    - **17:56 "e a entrega de Práticas Experimentais VI, saiu alguma coisa?"** — de novo o assunto dela perguntado a
+      ele (o lembrete não tinha nome nenhum). A instrução do check-in dizia "algo que o Patrick comentou, pergunte se
+      tem novidade"; agora: coisa dele, pergunta; coisa dela, conta como está. Camada: voz (`proactivity_service`,
+      `bot._PROACTIVE_INSTRUCTIONS`).
+    - **13:06 "já tem cabelo novo"** — o "assunto do momento" do planner ainda era "ida ao salão e cuidados com o
+      cabelo" (não foi limpo no desfazer do salão, falha minha). Lembrete falso "Contar como ficou o cabelo" fechado.
+    - **15:14 "vai###"** — resto de formatação do modelo; `limpar_fala_marina` tira `##`+. Camada: voz.
+    - **Amanhã (01/10), visto antes de acontecer** (Patrick: "acho que a Marina vai se complicar amanhã"): aula
+      07–15h, casting 15:30–17:00 e outro 17:00–18:30 na mesma agência. O planejado: almoço no Shopping da Gávea 15:18
+      (com casting 15:30), volta da PUC 15:50 emendando no 2º casting, "voltando pra casa" do 1º às 17:00 e "a caminho"
+      do 2º desde 15:50, passeio do Milo 17:48–18:38 no meio do 2º, almoço em casa 17:40 no meio do 2º. Consertos:
+      saída até 2 h depois da aula → não almoça por lá (`Meals.almoco_pos_aula`); dois compromissos seguidos no mesmo
+      lugar → ela fica (`Commute._emendas`, também com fim = início); o card mostra o 2º "Na agência" e a volta
+      (`Agenda.etapas`); passeio do Milo e academia não caem em saída marcada (`RoutineEngine._placement`); saídas
+      emendadas contam como uma pras refeições (`Meals._saidas`); refeição pulada por compromisso diz isso (não
+      "acordou em cima da hora"). Simulado: PUC → agência 15:00–15:30 → castings → casa 18:55 → jantar 19:33.
 
 **Abertos:** nenhum.
 

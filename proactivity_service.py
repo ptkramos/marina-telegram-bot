@@ -652,8 +652,12 @@ class ProactivityService:
                     "reason": "open_loop_checkin",
                     "loop_id": loop["id"],
                     "instruction": (
-                        f"Período do dia: {daypart}. Você lembrou de algo que o Patrick comentou: "
-                        f"'{loop['content']}'. Pergunte de leve se tem novidade — sem pressão, sem inventar cena."
+                        # Soak, dia 2 (30/09, 17:56): "Finalizar a entrega de Práticas Experimentais VI" (o trabalho
+                        # DELA) virou "e a entrega, saiu alguma coisa?" pra ele — o texto dizia que todo assunto era dele.
+                        f"Período do dia: {daypart}. Você lembrou de um assunto em aberto entre vocês: "
+                        f"'{loop['content']}'. Se é coisa dele, pergunte de leve se tem novidade. Se é coisa sua (algo "
+                        "que você mesma tem que fazer ou contar), não pergunte a ele: conte como está de verdade, pelo "
+                        "seu dia. Sem pressão, sem inventar cena."
                     )
                 }
 
