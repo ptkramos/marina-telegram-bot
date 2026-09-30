@@ -4,10 +4,11 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 30/09/2026 (soak, dia 1 lido e corrigido: item 19 da seção 5 — mundo errado depois da aula, plantão
-"de amanhã", resposta adiada no banho, Milo no banho, belisco na PUC, relatório com mundo × mundo. `soak/inicio.txt`
-criado com 2026-09-29. **Soak: dia 1 = terça 29/09 (05:00 → 05:00)**; próxima conversa: "bora no soak, dia 2" na
-quinta de manhã, relatório `soak/dia-2026-09-30.md`)._
+_Atualizado em 30/09/2026, 19:40 (soak: dia 1 lido e corrigido — item 19; dia 2 olhado ao vivo três vezes e
+corrigido — item 20: "alucinada" de manhã, a escova que não aconteceu, trabalho dito × mundo, e o dia 01/10
+(castings) arrumado antes de acontecer. Produção em `1e519c3` desde 19:36. **Soak: dia 1 = terça 29/09**; próxima
+conversa: "bora no soak, dia 2" na quinta de manhã, relatório `soak/dia-2026-09-30.md` — a manhã e o salão já foram
+corrigidos no histórico, o relatório mostra o resto; conferir também se a sessão de trabalho das 20:21 aconteceu)._
 
 ---
 
