@@ -102,6 +102,9 @@ revisados com ele** (sem "·", atraso amarelo no Hoje, academia e Milo novos, Po
 **Exceção liberada durante o soak (Patrick, 30/09): "bora na frente de apps: catálogo de textos"** — página com todos
 os textos visíveis por categoria (Hoje, card do Agora, Bastidores, iFood, Nubank, Instagram), cada um com exemplo
 real, onde/quando aparece e a marca **só tela / ela lê / os dois**; ele preenche no ritmo dele e eu aplico em lotes.
+**Prévia ao vivo (Patrick, 30/09):** cada texto dentro de uma cópia fiel do componente (CSS do `webapp/app.css`: linha do
+Hoje, card do Agora, extrato…), antes × depois lado a lado, largura de celular (ver quebra de linha), e texto com
+variável mostrando exemplos reais do banco, inclusive o mais longo; muda enquanto ele digita.
 Só tela entra no lote durante o soak (não zera); "ela lê" com cuidado (lote claro, ou depois do soak). Já na fila do
 catálogo: "Faltou a aula" gigante, belisco no Hoje, nome do bloco "Em casa".
 
