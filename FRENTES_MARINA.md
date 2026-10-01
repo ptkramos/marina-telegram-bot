@@ -102,7 +102,7 @@ revisados com ele** (sem "·", atraso amarelo no Hoje, academia e Milo novos, Po
 
 ## 2. Apps (Mini App) — skill `frente-apps`
 **Abertura:** congelada até o soak fechar (freio, seção 0); o Instagram no uso real é visto no soak. Exceção
-liberada: **"bora na frente de apps: aplicar o lote 1 do catálogo de textos"** (só tela no soak; ver abaixo).
+liberada: **"bora na frente de apps: catálogo de textos, leva 2 (Bastidores)"** — o lote 1 já está no ar (01/10).
 **Exceção liberada durante o soak (Patrick, 30/09): "bora na frente de apps: catálogo de textos"** — página com todos
 os textos visíveis por categoria (Hoje, card do Agora, Bastidores, iFood, Nubank, Instagram), cada um com exemplo
 real, onde/quando aparece e a marca **só tela / ela lê / os dois**; ele preenche no ritmo dele e eu aplico em lotes.
