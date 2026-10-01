@@ -139,12 +139,16 @@ class AlmocoAntesDaSaidaTest(Base):
         almoco = next(s for s in Meals(self.db).day_plan(self.DIA) if s.kind == "almoco")
         self.assertGreaterEqual(prep.inicio, almoco.end)
 
-    def test_hoje_preve_a_saida_pela_hora_que_chega_la(self):
+    def test_hoje_preve_a_saida_pela_hora_que_sai_de_casa(self):
+        """01/10 (catálogo): "Vai para o Shopping da Gávea", na hora em que ela sai de casa (antes: a que chega lá)."""
         import hoje
         now = datetime(2026, 9, 27, 11, 43)
-        prev = hoje._previstos(self.db, self.DIA, now, hoje._saidas(self.db, self.DIA, now))
-        cinema = next(p for p in prev if p["texto"].startswith("No Shopping da Gávea"))
-        self.assertEqual(cinema["at"], datetime(2026, 9, 27, 15, 0))
+        saidas = hoje._saidas(self.db, self.DIA, now)
+        prev = hoje._previstos(self.db, self.DIA, now, saidas)
+        cinema = next(p for p in prev if p["texto"].startswith("Vai para o Shopping da Gávea"))
+        sai = next(s for s in saidas if s["previsto"].startswith("Vai para o Shopping da Gávea"))["ini"]
+        self.assertEqual(cinema["at"], sai)
+        self.assertLess(sai, datetime(2026, 9, 27, 15, 0))
 
     def test_refeicao_no_meio_de_saida_longa_e_por_la(self):
         _saida(self.db, "outing:2026-09-27:c4", "quartinho_bar", datetime(2026, 9, 27, 20), datetime(2026, 9, 27, 23, 59),

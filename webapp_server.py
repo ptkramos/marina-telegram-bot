@@ -333,7 +333,8 @@ def status_view(snap: dict) -> dict:
     fase = snap.get("ciclo_fase") or ""
     # 28/09 (Patrick): "Dia 27 de 28 · TPM" — quanto falta pro ciclo virar
     de = f" de {snap['ciclo_len']}" if snap.get("ciclo_len") else ""
-    return {"atividade": cap(snap.get("atividade") or ""), "local": local, "celular": celular,
+    from agenda import celular_tela                 # 01/10 (catálogo): "Na mão", "No bolso"… (o bot usa os internos)
+    return {"atividade": cap(snap.get("atividade") or ""), "local": local, "celular": celular_tela(celular),
             "dormindo": disp.startswith("Dormindo"),
             "ciclo": f"Dia {snap['ciclo_dia']}{de} · {FASES.get(fase, cap(fase))}" if snap.get("ciclo_dia") else "",
             "ciclo_fase": FASES.get(fase, cap(fase)),

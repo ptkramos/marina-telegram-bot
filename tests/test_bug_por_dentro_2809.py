@@ -84,7 +84,7 @@ class CardDormindoTest(Base):
             card = Agenda(self.db).card_casa(at(28, 5, 57), "Olha quando acordar")
         self.assertEqual(card["linha2"], "Dormindo")
         self.assertEqual(card["barra"]["desde"], "00:29")
-        self.assertEqual(card["barra"]["duracao"], "5h 27min")
+        self.assertEqual(card["barra"]["duracao"], "5 horas e 27 minutos")
         self.assertEqual(card["linha"][-1]["hora"], "00:29")
 
 

@@ -156,7 +156,7 @@ class AgendaReativaTest(unittest.TestCase):
         self.assertEqual(la2.fim, agora + timedelta(minutes=5))
         self.assertEqual(volta.inicio, la2.fim)
         self.assertEqual(volta.como, "A pé")
-        self.assertEqual(la2.passos[-1].texto, "Saindo mais cedo · Tédio")
+        self.assertEqual(la2.passos[-1].texto, "Saindo mais cedo, tédio")
         self.assertTrue(la2.passos[-1].aviso)
         self.assertFalse(any(p.aviso for p in volta.passos), "a volta fica limpa (Patrick, layout C)")
         self.assertTrue(all(p.texto in antes for p in la2.passos[:-1]), "nada novo no que já tinha pedido")
@@ -172,11 +172,11 @@ class AgendaReativaTest(unittest.TestCase):
         self.assertIn(["alert-circle", "Motivo", "Tédio"], card["grade"])
         volta = next(e for e in ag.etapas(T.date(), agora) if e.tipo == "voltando")
         card = ag.card(volta.inicio + timedelta(minutes=1))
-        self.assertEqual(card["titulo"], "Voltando pra casa")
+        self.assertEqual(card["titulo"], "Voltando para casa")
         self.assertIn(["alert-circle", "Motivo", "Tédio"], card["grade"])
         item_la = next(i for i in card["linha"] if i["texto"] == la.titulo)
         self.assertEqual(item_la["passos"][0]["estado"], "aviso")
-        self.assertRegex(item_la["passos"][0]["texto"], r"^Saiu \d+min antes$")
+        self.assertRegex(item_la["passos"][0]["texto"], r"^Saiu \d+ minutos? antes$")
 
     def test_passando_mal_volta_de_uber_e_avisa_ele(self):
         la = self._cafe()
@@ -274,7 +274,7 @@ class AgendaReativaTest(unittest.TestCase):
         from tempo_livre import convite_sexting
         self.assertEqual(convite_sexting(self.db, agora + timedelta(minutes=1))["onde"], "no banheiro do shopping")
         passos = [q.texto for q in next(e for e in Agenda(self.db).etapas(T.date(), agora) if e.tipo == "la").passos]
-        self.assertIn("Se tocando no banheiro", passos)
+        self.assertIn("Se masturbando no banheiro", passos)
         depois = WorldStateManager(self.db).resolve(datetime.fromisoformat(p["fim"]) + timedelta(minutes=1), force=True)
         self.assertFalse(depois["activity"].startswith("trancada"), "volta pro que fazia")
 

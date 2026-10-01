@@ -86,7 +86,7 @@ class ListaComprasTest(unittest.TestCase):
         from hoje import curto
         linha = curto(ev)
         self.assertEqual((linha["texto"], linha["sub"], linha["valor"]),
-                         ("Comprou barrinhas de proteína", "Da lista, pedido do Patrick", None))
+                         ("Comprou barrinhas de proteína", "O Patrick sugeriu", None))
         # o pai paga: fora do extrato dela (financas lê só consumo:/transporte:/compra:)
         self.assertFalse(ev["event_key"].startswith(("consumo:", "transporte:", "compra:")))
         depois = "\n".join(self.l.prompt_lines(carrinho + timedelta(hours=2)))

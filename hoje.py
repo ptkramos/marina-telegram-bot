@@ -73,17 +73,56 @@ def _cap(txt: str) -> str:
 
 
 def _painel(txt: str) -> str:
-    from webapp_server import voz_painel
-    return voz_painel(_sem_ponto(txt))
+    """01/10 (catálogo, regra 6): o app é dela e fala dele na terceira pessoa — "o Patrick", nunca "você"."""
+    return _cap(_sem_ponto(txt).replace("pix", "Pix"))
+
+
+def _de(txt: str) -> str:
+    """'o bairro' → 'do bairro', 'festas' → 'de festas'."""
+    for art, contr in (("os ", "dos "), ("as ", "das "), ("o ", "do "), ("a ", "da ")):
+        if txt.startswith(art):
+            return contr + txt[len(art):]
+    return "de " + txt
+
+
+def _ele(quem: str) -> str:
+    return "ele" if quem.startswith("o ") else "ela"
+
+
+def _itens(txt: str) -> list[str]:
+    """'Cappuccino e 2x Pão de queijo 4 un' → um item por linha (regra 5)."""
+    partes = [p for p in re.split(r", | e (?=\d+x |[A-ZÁÉÍÓÚÂÊÔÃÕÇ])", txt) if p]
+    return [_cap(p.strip()) for p in partes]
+
+
+# 01/10 (catálogo): o ícone da desistência é o do motivo
+DESISTIU_IC = (("patrick", "heart-handshake"), ("chuv", "cloud-rain"), ("chov", "cloud-rain"), ("garoa", "cloud-rain"),
+               ("cansa", "battery-1"), ("energia", "battery-1"), ("bateria", "battery-1"), ("sono", "battery-1"),
+               ("dormiu mal", "battery-1"), ("exausta", "battery-1"),
+               ("desânim", "mood-sad"), ("sem vontade", "mood-sad"), ("preguiça", "mood-sad"), ("triste", "mood-sad"),
+               ("dor", "first-aid-kit"), ("cólica", "first-aid-kit"), ("doente", "first-aid-kit"),
+               ("febre", "first-aid-kit"), ("enjo", "first-aid-kit"),
+               ("dinheiro", "cash-off"), ("grana", "cash-off"), ("saldo", "cash-off"), (" caro", "cash-off"))
+
+
+def _ic_desistiu(motivo: str) -> str:
+    m = (motivo or "").lower()
+    return next((ic for chave, ic in DESISTIU_IC if chave in m), "x")
+
+
+# assuntos que vêm como frase (o pai, continuação de conversa): o texto deles é de depois do soak
+FRASE_ASSUNTO = re.compile(r'^(se |como |bom dia|mandou |saudade e |o tempo no |as contas|o trabalho dele|")')
 
 
 # ------------------------------------------------------------ texto curto --
-def curto(ev: dict) -> dict:
+def curto(ev: dict, db=None) -> dict:
     """Um acontecimento em linha de painel: ícone, texto curto e (às vezes) linha de baixo e valor.
     26/09 (Patrick): sempre a ação na linha e a descrição curta, menor e cinza, embaixo — o que ainda vem cru
-    do mundo se divide no parêntese do fim, no primeiro ':' ou no '—'."""
-    out = _curto(ev)
-    if not out["sub"] and out["texto"] == _painel(_sem_ponto(ev.get("summary") or ev.get("title") or "")):
+    do mundo se divide no parêntese do fim, no primeiro ':' ou no '—'.
+    01/10 (catálogo de textos, leva 1): os textos decididos ficha a ficha; o que tem detalhe aninhado (itens do
+    iFood, aulas perdidas, o que fez no banho) vem em `filhos`, um por linha. Só a tela muda: o mundo grava igual."""
+    out = _curto(ev, db)
+    if not out["sub"] and not out.get("filhos") and out["texto"] == _painel(ev.get("summary") or ev.get("title") or ""):
         out.update(_divide(out["texto"]))
     return out
 
@@ -99,13 +138,17 @@ def _divide(txt: str) -> dict:
     return {}
 
 
-def _curto(ev: dict) -> dict:
+def _fim(ev: dict) -> Optional[datetime]:
+    return datetime.fromisoformat(ev["end_at"]) if ev.get("end_at") else None
+
+
+def _curto(ev: dict, db=None) -> dict:
     tipo, title = ev["event_type"], (ev.get("title") or "")
     s = _sem_ponto(ev.get("summary") or title)
     out = {"ic": "point", "texto": _painel(s), "sub": "", "valor": None, "aviso": False, "fim": None}
 
     if tipo == "agenda":
-        out.update(_agenda(s))
+        out.update(_agenda(s, db))
         return out
     if tipo == "instagram":     # 27/09 (Patrick): o post dela no Hoje, a legenda embaixo
         acao, _, legenda = s.partition(": ")
@@ -115,9 +158,10 @@ def _curto(ev: dict) -> dict:
         return {**out, **_salao(s)}
     if tipo == "tempo_livre" and s.startswith("Ficou ouvindo a playlist dela"):
         # 28/09: "Ouviu Sabrina Carpenter" com Chappell Roan e Liniker tocando (e o story da Liniker às 14:09)
+        # 01/10 (catálogo, regra 5): enquanto ouve, um artista por linha; depois, juntos na linha de baixo
         artistas = list(dict.fromkeys(re.findall(r'"[^"]+" \(([^)]+)\)', s)))
         out.update(ic="music", texto="Ouviu a playlist dela", presente="Ouvindo a playlist dela",
-                   sub=_e(artistas) if artistas else "")
+                   sub=_e(artistas) if artistas else "", filhos_presente=[{"texto": a} for a in artistas])
         return out
     if tipo == "tempo_livre":
         out.update(ic=_ic_midia(title), texto=passado(_cap(title)) if title else _painel(s))
@@ -129,14 +173,24 @@ def _curto(ev: dict) -> dict:
         ic = ("user-plus" if base.startswith("Conheceu") else "message-dots" if base.startswith("Trocou mensagens")
               else "microphone" if base.startswith("Trocou áudios") else "phone" if base.startswith("Falou por telefone")
               else "users")
-        out.update(ic=ic, texto=_painel(base), sub=f"Assunto: {_painel(assunto)[:1].lower()}{_painel(assunto)[1:]}" if assunto else "")
+        for antes, depois in ((r"^Trocou mensagens com (.+)$", r"Conversou com \1 no Whats"),
+                              (r"^Trocou áudios com (.+)$", r"Trocou áudios com \1 no Whats"),
+                              (r"^Falou por telefone com (.+)$", r"Fez ligação com \1 no Whats"),
+                              (r"^Encontrou (.+)$", r"Bateu papo com \1")):
+            base = re.sub(antes, depois, base)
+        out.update(ic=ic, texto=_painel(base), sub=_assunto(assunto) if assunto else "")
         return out
     if tipo == "social_invite":
-        m = re.match(r"(.+?) te chamou: (.+?)(?: \(.*\))?$", s)
-        if m:
-            out.update(ic="calendar-plus", texto=f"{m.group(1)} chamou {_pra_onde(m.group(2))}")
+        m = re.match(r"(.+?) te chamou: (.+?)(?: \((.*)\))?$", s)
+        if m:                                       # "A Bia chamou para sair" / "Para o Quartinho Bar às 21:00"
+            quando = re.sub(r"^hoje ", "", m.group(3) or "")
+            out.update(ic="calendar-plus", texto=f"{m.group(1)} chamou para sair",
+                       sub=_para_onde(m.group(2)) + (f" {quando}" if quando else ""), quando=quando)
         elif s.startswith("Topou o convite"):
-            out.update(ic="calendar-check", texto="Topou ir " + _pra_onde(s.split(":", 1)[-1].strip()))
+            plano = s.split(":", 1)[-1].strip()
+            quem = re.search(r" com (.+?) n[oa]s? ", plano)
+            out.update(ic="calendar-check", texto="Topou sair" + (f" com {quem.group(1)}" if quem else ""),
+                       sub=_para_onde(plano))
         else:
             out.update(ic="calendar-plus")
         return out
@@ -145,8 +199,9 @@ def _curto(ev: dict) -> dict:
     if tipo == "consumo" and ev.get("event_key", "").startswith("lista:"):
         # 28/09: o que estava na lista, comprado na compra da semana (o pai paga: sem valor)
         m = re.match(r"(Comprou .+?) n[oa] .+? \(da lista, (.+)\)$", s)
-        if m:
-            out.update(ic="list-check", texto=m.group(1), sub=_cap(f"da lista, {m.group(2)}"))
+        if m:                                       # 01/10 (catálogo): sugestão, não pedido
+            out.update(ic="list-check", texto=m.group(1),
+                       sub="O Patrick sugeriu" if "Patrick" in m.group(2) else _cap(f"da lista, {m.group(2)}"))
             return out
     if tipo == "consumo":
         m = re.match(r"(Pediu|Dividiu|Comprou) (.+?)(?: com .+?)? n[oa] .+? \(R\$ (\d+)", s)
@@ -156,10 +211,11 @@ def _curto(ev: dict) -> dict:
         else:
             out.update(ic="receipt")
         return out
-    if tipo == "transporte":
+    if tipo == "transporte":                        # 01/10 (catálogo): "Pegou um Uber" / "Dividiu um Uber com a Bia"
         m = re.search(r"R\$ (\d+)", s)
-        out.update(ic="car", texto="Pegou um Uber" + (" dividido" if "dividido" in s else ""),
-                   valor=int(m.group(1)) if m else None)
+        com = re.search(r"dividido com (.+?)\)", s)
+        texto = ("Dividiu um Uber" + (f" com {com.group(1)}" if com else "")) if "dividido" in s else "Pegou um Uber"
+        out.update(ic="car", texto=texto, valor=int(m.group(1)) if m else None)
         return out
     if tipo == "commute":                                  # "No caminho (ida, ônibus): ônibus veio lotado"
         out.update(ic="alert-circle", aviso=True, texto=_cap(s.split("): ", 1)[-1]))
@@ -171,51 +227,67 @@ def _curto(ev: dict) -> dict:
         out.update(ic="shopping-bag-heart")
         m = re.match(r"Mandou (.+?) do (.+?) pr[oa] Patrick pelo app(?: de surpresa)? \(R\$ (\d+)\)", s)
         if m:
-            out.update(texto="Mandou um presente pra você", sub=f"{_cap(m.group(1))} do {m.group(2)}",
-                       valor=int(m.group(3)))
+            out.update(texto="Mandou um iFood para o Patrick", sub=f"Pediu no {m.group(2)}", valor=int(m.group(3)),
+                       filhos=[{"texto": i} for i in _itens(m.group(1))])
             return out
-        m = re.match(r"O Patrick mandou de surpresa .+? do (.+?) pelo app", s)
+        m = re.match(r"O Patrick mandou (de surpresa )?(.+?) do (.+?) pelo app", s)
         if m:
-            out["texto"] = f"Chegou o presente do {m.group(1)} que você mandou"
+            out.update(texto="O iFood surpresa do Patrick chegou" if m.group(1) else "O Patrick mandou um iFood",
+                       sub=f"De {m.group(3)}", filhos=[{"texto": i} for i in _itens(m.group(2))])
         return out
     if tipo in ("meal", "snack"):
         return {**out, **_refeicao(ev, s)}
     if tipo == "routine":
         m = re.match(r"Tomou banho( e lavou o cabelo)? \((\d\d:\d\d)–(\d\d:\d\d)\)", s)
-        if m:
+        if m:                                       # 01/10 (catálogo, regra 5): o que fez no banho, aninhado
             fim = datetime.fromisoformat(ev["event_at"]).replace(
                 hour=int(m.group(3)[:2]), minute=int(m.group(3)[3:]))
-            out.update(ic="chuveiro", texto="Tomou banho" + (" e lavou o cabelo" if m.group(1) else ""), fim=fim)
+            out.update(ic="chuveiro", texto="Tomou banho", fim=fim,
+                       filhos=[{"texto": "Lavou o cabelo", "presente": "Lavando o cabelo"}] if m.group(1) else [])
             return out
         m = re.match(r"Se pesou(?: na academia)?: (.+)", s)
         if m:
-            out.update(ic="scale", texto="Se pesou", sub=m.group(1))
+            out.update(ic="scale", texto=f"Se pesou e está com {m.group(1)}")
             return out
         if "masturbou" in s or "se tocou" in s:             # Patrick: hand-love-you de cabeça pra baixo
-            out.update(ic="masturbacao", **_masturbacao(s))
+            out.update(ic="masturbacao", fim=_fim(ev), **_masturbacao(s))
             return out
-        m = re.match(r"(Chegou \d+ min atrasada)(?: (?:na|no|pra|pro) .+?)?(?: — (.+))?$", s)
-        if title == "atraso" and m:                       # 28/09 (Patrick): atraso em amarelo, o porquê enxuto embaixo
+        m = re.match(r"(Chegou (\d+) min atrasada)(?: (?:na|no|pra|pro) .+?)?(?: — (.+))?$", s)
+        if title == "atraso" and m:                       # 28/09 (Patrick): atraso em amarelo
+            # 01/10 (catálogo): por extenso; a aula e cada motivo numa linha embaixo
             onde = re.search(r"na aula de (.+?)(?: — |$)", s)
-            porque = re.sub(r"\s+e\s+", ", ", m.group(2) or "")
-            sub = ", ".join(x for x in ((onde.group(1) if onde else ""), porque) if x)
-            out.update(ic="clock-exclamation", aviso=True, texto=m.group(1), sub=_cap(sub))
+            n = int(m.group(2))
+            motivos = [x for x in re.split(r", | e ", m.group(3) or "") if x]
+            filhos = ([{"texto": onde.group(1)}] if onde else []) + [{"texto": _cap(x)} for x in motivos]
+            out.update(ic="clock-exclamation", aviso=True, texto=f"Chegou {n} minuto{'s' if n != 1 else ''} atrasada",
+                       filhos=filhos)
             return out
         if s.startswith("Cuidou da bagunça dela: "):        # Patrick: "Arrumou a casa" e o que fez embaixo
             out.update(ic="home-check", texto="Arrumou a casa", sub=_cap(s.split(": ", 1)[1]))
             return out
         if s.startswith("Pagou o passeador"):
-            out.update(ic="dog", texto="Pagou o passeador do Milo",
+            out.update(ic="dog", texto="Deixou o Milo com um passeador",
                        sub=_cap(s.split("— ", 1)[1]) if "— " in s else "")
+            return out
+        if s.startswith("O Seu Jorge contou uma fofoca do prédio"):
+            out.update(ic="users", texto="Conversou com o Seu Jorge", sub="Contou uma fofoca do prédio")
+            return out
+        m = re.match(r"Marcou a manicure na (.+?) \((.+)\)$", s)
+        if m:                                       # 01/10 (catálogo): "Campanha de moda praia depois de amanhã"
+            out.update(ic="calendar-plus", texto=f"Marcou horário na {m.group(1)}", sub=_cap(m.group(2)))
+            j = re.match(r"job (hoje|amanhã|depois de amanhã)$", m.group(2))
+            if j and db is not None:
+                out["sub"] = _job(db, datetime.fromisoformat(ev["event_at"]), j.group(1)) or out["sub"]
             return out
         m = re.match(r"O Milo (.+)$", s)
         if m:
             from milo import CHAMEGO                      # 28/09 (Patrick): dormir encostado nela é chamego, não arte
             chamego = any(m.group(1).startswith(c) for c in CHAMEGO)
-            out.update(ic="dog", texto="Chamego com o Milo" if chamego else "Arte do Milo", sub=_cap(m.group(1)))
+            out.update(ic="dog", texto="O Milo foi carinhoso" if chamego else "O Milo foi travesso", sub=_cap(m.group(1)))
             return out
-        if "Milo" in s and "xixi" in s:                  # Patrick: "Foi pra calçada" e o xixi recuado
-            out.update(ic="dog", texto="Foi pra calçada", filhos=[{"texto": "Necessidades do Milo"}])
+        if "Milo" in s and "xixi" in s:                  # 01/10 (catálogo): "Desceu com o Milo" e o xixi recuado
+            out.update(ic="dog", texto="Desceu com o Milo", presente="Descendo com o Milo",
+                       filhos=[{"texto": "O Milo se aliviou"}])
             if ev.get("end_at"):                         # 28/09: sem a volta, parecia que o Milo foi com ela pra PUC
                 out["fim"] = datetime.fromisoformat(ev["end_at"])
         elif "Milo" in s or title == "Milo":
@@ -224,13 +296,18 @@ def _curto(ev: dict) -> dict:
             out.update(ic="home-check")
         elif title == "faculdade":
             out.update(ic="school")
-            m = re.match(r"(Trabalhou n[oa] .+?) \(entrega ([^)]+)\)(?:, (.+))?$", s)
+            m = re.match(r"Trabalhou n[oa] (.+?) \(entrega ([^)]+)\)(?:, (.+))?$", s)
+            if m:                                   # 01/10 (catálogo, regra 3): "Fazendo…" → "Fez…"
+                out.update(texto=f"Fez trabalho da facul para {m.group(2)}",
+                           presente=f"Fazendo trabalho da facul para {m.group(2)}", fim=_fim(ev),
+                           sub=_cap(m.group(1)) + (f", {m.group(3)}" if m.group(3) else ""))
+            m = re.match(r"Faltou a aula hoje \((.+)\): (.+)$", s)
             if m:
-                out.update(texto=m.group(1), sub=f"Entrega {m.group(2)}" + (f", {m.group(3)}" if m.group(3) else ""))
+                out.update(_faltou(m.group(1), m.group(2), db, dia_todo=True))
         elif title in ("vontade", "agenda reativa"):
-            out.update(ic="bolt", **_decisao(s))
+            out.update({"ic": "bolt", **_decisao(s)})
         elif title == "tv":
-            out.update(ic="device-tv")
+            out.update(ic="device-tv", **_serie(s, ev))
         elif title == "médico":
             out.update(ic="building-hospital")
         return out
@@ -238,100 +315,205 @@ def _curto(ev: dict) -> dict:
         out.update(ic="music" if "música" in s or "Ouviu" in s else "book")
         m = re.match(r'Ouviu "(.+?)" \((.+?)\), que o Patrick mandou: (.+)$', s)
         if m:
-            out.update(texto="Ouviu a música que você mandou",
-                       sub=f'"{m.group(1)}", {m.group(2)}, ' + ("curtiu" if m.group(3).startswith("curtiu") else "não curtiu muito"))
+            curtiu = "curtiu!" if m.group(3).startswith("curtiu") else "não curtiu muito!"
+            out.update(texto="Ouviu música compartilhada", sub=f'"{m.group(1)}" de {m.group(2)} e {curtiu}')
         m = re.match(r'Descobriu que saiu música nova de (.+?): "(.+?)"', s)
         if m:
-            out.update(texto=f"Saiu música nova de {m.group(1)}", sub=f'"{m.group(2)}"')
+            out.update(texto="Viu que saiu música nova", sub=f'"{m.group(2)}" de {m.group(1)}')
+        m = re.match(r"Terminou de ler (.+?),? vol\. (\d+)$", s)
+        if m:
+            out.update(texto=f"Terminou de ler {m.group(1)}", sub=f"Volume {m.group(2)}")
         return out
     if tipo == "work":
         out.update(ic="camera")
+        m = re.match(r"A Lívia da agência mandou um casting: (.+)$", s)
+        if m:                                       # 01/10 (catálogo)
+            out.update(texto="A Lívia enviou um Casting", sub=f"Participar {_do(m.group(1))}")
         return out
     if tipo in ("manicure", "unhas"):
         out.update(ic="brush")
     return out
 
 
+def _assunto(assunto: str) -> str:
+    """01/10 (catálogo): "Falaram de relacionamentos e do Theo". O assunto que vem como frase segue como estava
+    (texto dos assuntos: depois do soak)."""
+    assunto = _painel(assunto)
+    assunto = assunto[:1].lower() + assunto[1:]
+    if FRASE_ASSUNTO.match(assunto):
+        return f"Assunto: {assunto}"
+    topico, _, falaram = assunto.partition(", e falaram ")
+    topico = "do Milo" if topico == "Milo" else _de(topico)
+    return f"Falaram {topico}" + (f" e {falaram}" if falaram else "")
+
+
+def _do(oque: str) -> str:
+    """'vídeo pra uma marca de cosméticos' → 'do vídeo de uma marca de cosméticos'."""
+    oque = oque.replace(" pra uma ", " de uma ").replace(" pra um ", " de um ")
+    primeira = oque.split(" ", 1)[0].lower()
+    art = ("das" if primeira.endswith("s") and primeira.startswith("foto") else
+           "da" if primeira in ("campanha", "sessão", "foto", "propaganda") else "do")
+    return f"{art} {oque}"
+
+
+def _job(db, at: datetime, dia_txt: str) -> str:
+    """O tipo do trabalho marcado pra hoje/amanhã/depois de amanhã ('Sessão de fotos: campanha de moda praia')."""
+    dia = at.date() + timedelta(days={"hoje": 0, "amanhã": 1, "depois de amanhã": 2}[dia_txt])
+    try:
+        with db.get_connection() as conn:
+            row = conn.execute("""SELECT description FROM eventos_pendentes WHERE event_type='trabalho'
+                                  AND confirmed=1 AND status!='cancelled' AND substr(event_at,1,10)=?
+                                  ORDER BY event_at LIMIT 1""", (dia.isoformat(),)).fetchone()
+    except Exception:
+        logger.exception("hoje.job")
+        return ""
+    if not row or not row["description"]:
+        return ""
+    desc = row["description"]
+    tipo = (desc.split(": ", 1)[1] if desc.startswith("Sessão de fotos: ") else
+            "Casting" if desc.startswith("Casting") else "Prova de roupa" if desc.startswith("Prova") else desc)
+    return f"{_cap(tipo)} {dia_txt}"
+
+
+def _aulas(nomes: str, db=None) -> list[str]:
+    """As aulas perdidas, uma por item. O college junta com " e ", e o nome da matéria também tem " e " — corta
+    pelos nomes de verdade das matérias."""
+    if ", " in nomes:
+        return [n.strip() for n in nomes.split(", ")]
+    conhecidos = []
+    if db is not None:
+        try:
+            with db.get_connection() as conn:
+                conhecidos = [r[0] for r in conn.execute("SELECT DISTINCT display_name FROM academic_courses")]
+        except Exception:
+            logger.exception("hoje.aulas")
+    achados, resto = [], nomes
+    for nome in sorted(conhecidos, key=len, reverse=True):
+        i = resto.find(nome)
+        if i >= 0:
+            achados.append((nomes.find(nome), nome))
+            resto = resto[:i] + "\0" * len(nome) + resto[i + len(nome):]
+    if not achados:
+        return [nomes]
+    return [n for _, n in sorted(achados)]
+
+
+def _faltou(nomes: str, motivo: str, db=None, dia_todo: bool = False) -> dict:
+    """01/10 (catálogo): "Faltou a aula, dormiu mal" / a matéria embaixo; faltou o dia: "Faltou a facul hoje,
+    cólica forte" e as aulas perdidas aninhadas, uma por linha, em amarelo (como o atraso)."""
+    aulas = _aulas(nomes, db)
+    motivo = motivo[:1].lower() + motivo[1:]
+    if len(aulas) == 1 and not dia_todo:
+        return {"ic": "school-off", "texto": f"Faltou a aula, {motivo}", "sub": aulas[0]}
+    return {"ic": "school-off", "texto": f"Faltou a facul hoje, {motivo}", "sub": "",
+            "filhos": [{"texto": a, "aviso": True} for a in aulas]}
+
+
+def _serie(s: str, ev: dict) -> dict:
+    """01/10 (catálogo): "Viu que saiu episódio novo" / "De One Piece, temporada 23, episódio 1180";
+    "Assistiu Paradise Kiss" / "Episódios 1 e 2" (o comentário dela sai do app)."""
+    m = re.match(r"Saiu episódio novo de (.+?) hoje(?: \((.+)\))?$", s)
+    if m:
+        detalhe = re.sub(r"\bep\. ", "episódio ", m.group(2) or "")
+        return {"texto": "Viu que saiu episódio novo", "sub": f"De {m.group(1)}" + (f", {detalhe}" if detalhe else "")}
+    m = re.match(r"Viu (episódios?) (\d+)(?: a (\d+))? de (.+?)(?: \(.*\))?$", s)
+    if m:
+        a, b = int(m.group(2)), int(m.group(3) or m.group(2))
+        eps = (f"Episódio {a}" if a == b else f"Episódios {a} e {b}" if b == a + 1 else f"Episódios {a} a {b}")
+        return {"texto": f"Assistiu {m.group(4)}", "presente": f"Assistindo {m.group(4)}", "sub": eps, "fim": _fim(ev)}
+    return {}
+
+
 def _masturbacao(s: str) -> dict:
-    """26/09 (Patrick): "Se masturbou no quarto" / "Pensando em você"; fora de casa, "Tesão muito alto".
+    """26/09 (Patrick): "Se masturbou no quarto" e o porquê embaixo; fora de casa, o tesão.
+    01/10 (catálogo, regras 3 e 6): "Se masturbando" / "Fantasiando com o Patrick" enquanto acontece.
     O resto do texto do mundo (se conta pra ele ou guarda) é do sistema, não do painel."""
     m = re.search(r"se (?:masturbou|trancou) ((?:n[oa]s?|em) [^,.—]+?)(?= pensando| e | —|[,.]|$)", s)
     onde = f" {m.group(1)}" if m else (" antes de dormir" if s.startswith("Antes de dormir") else "")
     chamou = "chamou" in s
+    base = {"texto": f"Se masturbou{onde}", "presente": f"Se masturbando{onde}"}
     if s.startswith("Bateu um tesão"):
-        return {"texto": f"Se masturbou{onde}", "sub": "Tesão muito alto" + (", chamou você" if chamou else "")}
-    return {"texto": f"Se masturbou{onde}", "sub": "Chamou você pra entrar no clima" if chamou else "Pensando em você"}
+        return {**base, "sub": "Estava com muito tesão" + (", chamou o Patrick" if chamou else "")}
+    if chamou:
+        return {**base, "sub": "Chamou o Patrick para ajudar"}
+    return {**base, "sub": "Fantasiou com o Patrick", "sub_presente": "Fantasiando com o Patrick"}
 
 
 def _dinheiro(s: str) -> dict:
-    """26/09 (Patrick): a ação na linha, o valor na coluna, o detalhe curto embaixo."""
+    """26/09 (Patrick): a ação na linha, o valor na coluna, o detalhe curto embaixo. 01/10 (catálogo): "o Patrick"."""
     m = re.match(r"O Patrick (?:fez|mandou) (?:um|o) pix de R\$ (\d+)(.*)$", s)
     if m:
         resto = m.group(2)
         nota = re.search(r"\('(.+?)'\)", resto)
-        sub = ("O que tinha prometido" if "prometido" in resto else "Pro uber" if "uber" in resto
+        sub = ("O que tinha prometido" if "prometido" in resto else "Para o Uber" if "uber" in resto
                else "De presente" if "presente" in resto else "")
         if nota:
             sub = (sub + ", " if sub else "") + f'"{nota.group(1)}"'
-        return {"texto": "Você fez um Pix pra ela", "valor": int(m.group(1)), "sub": sub}
+        return {"texto": "Recebeu um Pix do Patrick", "valor": int(m.group(1)), "sub": sub}
     m = re.match(r"Usou o pix do Patrick: comprou (.+?) \(R\$ (\d+)\)", s)
     if m:
-        return {"texto": "Usou o seu Pix", "sub": _cap(m.group(1)), "valor": int(m.group(2))}
+        return {"texto": "Usou o Pix do Patrick", "sub": _cap(m.group(1)), "valor": int(m.group(2))}
     m = re.match(r"Caiu o cachê e ela fez o pix de volta pro Patrick: R\$ (\d+)", s)
     if m:
-        return {"texto": "Devolveu o seu Pix", "sub": "Caiu o cachê", "valor": int(m.group(1))}
+        return {"texto": "Enviou um Pix para o Patrick", "sub": "Recebeu o cachê de um trabalho", "valor": int(m.group(1))}
     m = re.match(r"Aperto: (.+?) \(R\$ (\d+)\)", s)
     if m:
-        return {"texto": "Ficou no aperto", "sub": _cap(m.group(1)) + ", vai pedir ajuda pra você",
-                "valor": int(m.group(2))}
+        return {"texto": "Precisou de empréstimo", "sub": _cap(m.group(1)), "valor": int(m.group(2))}
     if s.startswith("O dinheiro dela acabou"):
-        return {"texto": "Ficou no aperto", "sub": "O dinheiro acabou antes do cachê, vai pedir ajuda pra você"}
+        return {"texto": "Precisou de empréstimo", "sub": "O dinheiro acabou antes do cachê"}
     return {}
 
 
 def _salao(s: str) -> dict:
-    """Cabelo e unhas: "Fez o cabelo" / "Repicado e escova" e o valor na coluna."""
-    escolheu = ", você escolheu" if "Patrick escolheu" in s else ""
+    """Cabelo e unhas: "Fez o cabelo" / "Repicado e escova" e o valor na coluna.
+    01/10 (catálogo): "O Patrick escolheu repicado e escova"; sem escolha, só os serviços."""
+    escolheu = "Patrick escolheu" in s
     m = re.match(r"Cabelo na .+?: (.+) · R\$ (\d+)$", s)
     if m:
         feito = m.group(1).replace(" (o Patrick escolheu)", "")
-        return {"ic": "scissors", "texto": "Fez o cabelo", "sub": _cap(feito) + escolheu, "valor": int(m.group(2))}
+        sub = f"O Patrick escolheu {feito[:1].lower()}{feito[1:]}" if escolheu else _cap(feito)
+        return {"ic": "scissors", "texto": "Fez o cabelo", "sub": sub, "valor": int(m.group(2))}
     m = re.match(r"Fez as unhas em gel .+?: (.+?)(?: — .+)? \(R\$ (\d+)\)", s)
     if m:
-        return {"ic": "brush", "texto": "Fez as unhas", "sub": f"Gel, {m.group(1)}{escolheu}", "valor": int(m.group(2))}
+        sub = f"O Patrick escolheu {m.group(1)}" if escolheu else _cap(m.group(1))
+        return {"ic": "brush", "texto": "Colocou unhas de gel", "sub": sub, "valor": int(m.group(2))}
     m = re.match(r"Fez as unhas em casa, esmalte (.+?)(?: — .+)?$", s)
     if m:
-        return {"ic": "brush", "texto": "Fez as unhas", "sub": f"Esmalte {m.group(1)}{escolheu}"}
+        return {"ic": "brush", "texto": "Fez as unhas",
+                "sub": f"Com esmalte {m.group(1)}" + (", o Patrick escolheu" if escolheu else "")}
     return {}
 
 
-def _agenda(s: str) -> dict:
+def _agenda(s: str, db=None) -> dict:
     """27/09 (agenda viva): o que ela decidiu pelo que sentia — ação na linha, motivo embaixo."""
     m = re.match(r"Saindo de lá, resolveu passar .+? antes de voltar \((.+)\)$", s)
     if m:
-        return {"ic": "bolt", "motivo": f"Emendou na volta, {m.group(1)}"}
+        return {"ic": "bolt", "motivo": f"Foi direto, {m.group(1)}"}
     m = re.match(r"Desistiu de ir: (.+?) \((.+?)\)(?:\. Avisou (.+?)(?: e combinaram outro dia)?)?$", s)
-    if m:
-        sub = _cap(m.group(2)) + (f", avisou {m.group(3)}" if m.group(3) else "")
-        return {"ic": "calendar-x", "texto": f"Desistiu de ir {_pra_onde(m.group(1))}", "sub": sub}
+    if m:                                           # 01/10 (catálogo): "Desistiu de sair e avisou a Bia"
+        motivo = m.group(2)[:1].lower() + m.group(2)[1:]
+        return {"ic": "calendar-x", "texto": "Desistiu de sair" + (f" e avisou {m.group(3)}" if m.group(3) else ""),
+                "sub": f"{_lugar_do_plano(m.group(1))}, {motivo}"}
     m = re.match(r"Faltou a aula de hoje \((.+?)\): (.+?)\. Vai pegar", s)
     if m:
-        return {"ic": "school-off", "texto": "Faltou a aula", "sub": f"{m.group(1)}, {m.group(2)}"}
+        return _faltou(m.group(1), m.group(2), db)
     m = re.match(r"Pegou a matéria da aula que faltou \((.+?)\) com (.+?) e", s)
     if m:
         return {"ic": "notebook", "texto": f"Pegou a matéria com {m.group(2)}", "sub": _cap(m.group(1))}
     m = re.match(r"Chamou (.+?) pra sair (\S+)(?: às (\d\d:\d\d) \(.+\); .+ topou|, mas .+ não podia)$", s)
-    if m:
+    if m:                                           # 01/10 (catálogo): "Sexta às 20:00, ela topou"
         topou = "topou" in s
-        quando = _cap(m.group(2)) + (f" {m.group(3)}" if m.group(3) else "")
-        return {"ic": "calendar-plus", "texto": f"Chamou {m.group(1)} pra sair",
-                "sub": f"{quando}, " + ("topou" if topou else "não podia")}
+        quando = _cap(m.group(2)) + (f" às {m.group(3)}" if m.group(3) else "")
+        ele = _ele(m.group(1))
+        return {"ic": "calendar-plus", "texto": f"Chamou {m.group(1)} para sair",
+                "sub": f"{quando}, " + (f"{ele} topou" if topou else f"{ele} não pôde")}
     m = re.match(r"Remarcou pra (.+?) às (\d\d:\d\d): (.+?) \((.+)\)$", s)
     if m:
-        return {"ic": "calendar-time", "texto": "Remarcou", "sub": f"{_lugar_do_plano(m.group(3))}, pra {m.group(1)} {m.group(2)}"}
+        return {"ic": "calendar-time", "texto": f"Remarcou {_lugar_do_plano(m.group(3))}",
+                "sub": f"Para {m.group(1)} às {m.group(2)}"}
     m = re.match(r"Combinou com o Patrick: (.+?) (amanhã|segunda|terça|quarta|quinta|sexta|sábado|domingo) às (\d\d:\d\d)", s)
     if m:
-        return {"ic": "calendar", "texto": "Combinou com você", "sub": f"{_cap(m.group(1))}, {m.group(2)} {m.group(3)}"}
+        return {"ic": "calendar", "texto": "Combinou com o Patrick", "sub": f"{_cap(m.group(1))}, {m.group(2)} {m.group(3)}"}
     for padrao, texto in ((r"Desistiu de treinar hoje \((.+)\)$", "Desistiu de treinar"),
                           (r"Trocou a Bodytech pela academia do prédio \((.+)\)$", "Treinou no prédio"),
                           (r"Deixou o passeio do Milo pra depois \((.+)\)$", "Adiou o passeio do Milo"),
@@ -341,8 +523,10 @@ def _agenda(s: str) -> dict:
         m = re.match(padrao, s)
         if m:
             if texto is None:
-                return {"ic": "calendar-x", **_divide(s)}
-            return {"ic": "calendar-x" if "Desistiu" in texto else "calendar-time", "texto": texto,
+                return {"ic": _ic_desistiu(m.group(1)), **_divide(s)}
+            if texto == "Treinou no prédio":
+                return {"ic": "calendar-time", "texto": texto, "presente": "Treinando no prédio", "sub": _cap(m.group(1))}
+            return {"ic": _ic_desistiu(m.group(1)) if "Desistiu" in texto else "calendar-time", "texto": texto,
                     "sub": _cap(m.group(1))}
     return {"ic": "calendar"}
 
@@ -351,15 +535,15 @@ def _decisao(s: str) -> dict:
     """Por que saiu (vira a linha cinza da saída) ou desistência (linha própria)."""
     m = re.match(r"Deu vontade e foi: .+? \((.+)\)$", s)
     if m:
-        return {"motivo": f"Resolveu sair, {m.group(1)}"}
+        return {"motivo": _cap(m.group(1))}
     if s.startswith("O Patrick convenceu"):
-        return {"motivo": "Você convenceu"}
+        return {"motivo": "O Patrick convenceu"}
     m = re.match(r"Combinou com o Patrick[^:]*(?:: (.+))?$", s)
     if m:
-        return {"motivo": "Combinou com você" + (f", {m.group(1)}" if m.group(1) else "")}
+        return {"motivo": "Combinou com o Patrick" + (f", {m.group(1)}" if m.group(1) else "")}
     m = re.match(r"Desistiu de (.+?)(?: hoje)?(?:: (.+))?$", s)
     if m:
-        return {"texto": f"Desistiu de {m.group(1)}", "sub": _cap(m.group(2) or "")}
+        return {"texto": f"Desistiu de {m.group(1)}", "sub": _cap(m.group(2) or ""), "ic": _ic_desistiu(m.group(2))}
     return {}
 
 
@@ -369,12 +553,12 @@ def _lugar_do_plano(plano: str) -> str:
     return m.group(1) if m else _cap(plano)
 
 
-def _pra_onde(plano: str) -> str:
-    """'Saindo com a Bia no Quartinho Bar' → 'pro Quartinho Bar'."""
+def _para_onde(plano: str) -> str:
+    """'Saindo com a Bia no Quartinho Bar' → 'Para o Quartinho Bar' (01/10, catálogo)."""
     m = re.search(r" (no|na|nos|nas) (.+)$", plano)
     if not m:
-        return "pra sair"
-    return {"no": "pro", "na": "pra", "nos": "pros", "nas": "pras"}[m.group(1)] + " " + m.group(2)
+        return "Para sair"
+    return "Para " + {"no": "o", "na": "a", "nos": "os", "nas": "as"}[m.group(1)] + " " + m.group(2)
 
 
 def _min(txt: str) -> str:
@@ -382,32 +566,36 @@ def _min(txt: str) -> str:
 
 
 def _refeicao(ev: dict, s: str) -> dict:
-    """26/09 (Patrick): a refeição na linha 1 e o prato embaixo; presente seu: a loja em cima, os itens embaixo."""
+    """26/09 (Patrick): a refeição na linha 1 e o prato embaixo.
+    01/10 (catálogo): "Jantou e comeu demais" / "Tapioca de queijo com presunto"; o lugar depois do prato
+    ("Salada com frango, no restaurante da PUC"); o iFood que o Patrick mandou com um item por linha."""
     fim = datetime.fromisoformat(ev["end_at"]) if ev.get("end_at") else None
-    estufada = ", comeu além da conta" if "estufada" in s else ""
+    alem = " e comeu demais" if "estufada" in s else ""
     if s.startswith("Pulou"):                       # 28/09 (auditoria): "Pulou o café 07:52–08:05" — pulou não dura
         return {"ic": "tools-kitchen-2", "texto": _painel(s.split(":")[0]), "fim": None,
                 "sub": _cap(s.split(": ", 1)[1].rstrip(".")) if ": " in s else ""}
     if ev["event_type"] == "snack" or s.startswith("Beliscou"):
-        return {"ic": "cookie", "texto": _painel(s.split(";")[0]), "fim": None}
-    m = re.match(r"O Patrick mandou de surpresa (.+?) do (.+?) pelo app", s)
+        texto = _painel(s.split(";")[0])
+        return {"ic": "cookie", "texto": re.sub(r"^Beliscou ", "Comeu ", texto), "fim": None}
+    m = re.match(r"O Patrick mandou (?:de surpresa )?(.+?) do (.+?) pelo app", s)
     if m:
-        return {"ic": "shopping-bag-heart", "texto": f"Comeu o {m.group(2)} que você mandou", "fim": fim,
-                "sub": _cap(m.group(1)) + estufada}
+        return {"ic": "shopping-bag-heart", "texto": "Comeu o iFood recebido" + alem, "fim": fim,
+                "sub": f"O Patrick pediu no {m.group(2)}", "filhos": [{"texto": i} for i in _itens(m.group(1))]}
     m = re.match(r"O (.+?) do delivery chegou", s)
     if m:
-        return {"ic": "shopping-bag", "texto": "Comeu o delivery", "fim": fim, "sub": _cap(m.group(1))}
+        return {"ic": "shopping-bag", "texto": "Comeu o iFood pedido" + alem, "fim": fim, "sub": _cap(m.group(1))}
     m = re.match(r"(Café da manhã|Almoço|Jantar|Lanche) ([^:]+): ([^;]+)", s)
     if m:
         verbo = VERBO_REFEICAO[m.group(1).lower()]
-        onde = "" if m.group(2) == "em casa" else " " + m.group(2)
+        onde = "" if m.group(2) == "em casa" else m.group(2)
         prato = re.sub(r"^(um|uma|uns|umas) ", "", m.group(3).strip())
         prato = re.sub(r" pedido no iFood$", " do iFood", prato)
-        return {"ic": "coffee" if verbo == "Tomou café" else "tools-kitchen-2", "texto": verbo + onde,
-                "fim": fim, "sub": _cap(prato) + estufada}
+        prato = re.sub(r" n[oa] (restaurante|lanchonete|cantina|bandejão|refeitório)\b.*$", "", prato)
+        return {"ic": "coffee" if verbo == "Tomou café" else "tools-kitchen-2", "texto": verbo + alem,
+                "fim": fim, "sub": _cap(prato) + (f", {onde}" if onde else "")}
     m = re.match(r"Comeu (.+?) n[oa] (.+)", s)
     if m:
-        return {"ic": "tools-kitchen-2", "texto": "Comeu", "sub": _cap(m.group(1)), "fim": fim}
+        return {"ic": "tools-kitchen-2", "texto": "Parou para comer", "sub": _cap(m.group(1)), "fim": fim}
     return {"ic": "tools-kitchen-2", "texto": _painel(s.split(";")[0]), "fim": fim}
 
 
@@ -473,21 +661,36 @@ def _saidas(db, dia: date, now: datetime) -> list[dict]:
     for key, es in por.items():
         la = next((e for e in es if e.tipo == "la"), es[0])
         tipo = _tipo_saida(key, la, tipos.get(key, ""))
-        com = amigos.get(key) or la.com                      # "com a Bia" (o card usa sem artigo)
-        titulo = _foi(la.titulo) + (f" com {_e(com)}" if com else "")
+        com = amigos.get(key) or la.com_art or la.com         # "com a Bia"
+        junto = f" com {_e(com)}" if com else ""
+        volta = next((e for e in es if e.tipo == "voltando"), None)
+        # 01/10 (catálogo, regra 4): "Indo para o…" no trajeto, "Está no…" lá, "Foi para o…" depois
+        estado = ("Indo" if now < la.inicio else "Está" if now < (volta.inicio if volta else es[-1].fim) else "Foi")
+        titulo = _foi(la.titulo, estado) + junto
         out.append({"key": key, "ini": es[0].inicio, "fim": es[-1].fim, "titulo": titulo,
-                    "previsto": la.titulo + (f" com {_e(com)}" if com else ""),
+                    "previsto": "Vai para " + _para(la.titulo) + junto,
                     "ic": SAIDA_IC.get(tipo, "map-pin"), "la": la,
                     "volta": next((e for e in es if e.tipo == "voltando"), None)})
     return sorted(out, key=lambda s: s["ini"])
 
 
-def _foi(titulo: str) -> str:
-    """Título do 'Lá' no passado: 'No Quartinho' → 'Foi pro Quartinho', 'Na academia' → 'Foi pra academia'."""
+def _para(titulo: str) -> str:
+    """'No Quartinho' → 'o Quartinho', 'Na academia' → 'a academia'."""
     m = re.match(r"(No|Na|Nos|Nas) (.+)$", titulo)
     if not m:
         return titulo
-    return "Foi " + {"No": "pro", "Na": "pra", "Nos": "pros", "Nas": "pras"}[m.group(1)] + " " + m.group(2)
+    return {"No": "o", "Na": "a", "Nos": "os", "Nas": "as"}[m.group(1)] + " " + m.group(2)
+
+
+def _foi(titulo: str, estado: str = "Foi") -> str:
+    """Título do 'Lá' (01/10, catálogo): 'No Quartinho' → 'Foi para o Quartinho' depois, 'Indo para o Quartinho'
+    no caminho, 'Está no Quartinho' lá."""
+    m = re.match(r"(No|Na|Nos|Nas) (.+)$", titulo)
+    if not m:
+        return titulo
+    if estado == "Está":
+        return f"Está {titulo[:1].lower()}{titulo[1:]}"
+    return f"{estado} para {_para(titulo)}"
 
 
 def _e(nomes: list) -> str:
@@ -542,8 +745,8 @@ def _previstos(db, dia: date, now: datetime, saidas: list[dict]) -> list[dict]:
     except Exception:
         logger.exception("hoje.previsto.refeicoes")
     for s in saidas:
-        if s["ini"] > now:                      # 27/09 (Patrick): "~15:00 No Shopping da Gávea" — a hora em que chega lá
-            out.append({"at": s["la"].inicio, "ic": s["ic"], "texto": s["previsto"]})
+        if s["ini"] > now:                      # 01/10 (catálogo): "Vai para o Shopping da Gávea", na hora em que sai
+            out.append({"at": s["ini"], "ic": s["ic"], "texto": s["previsto"]})
     try:
         from watch import Watching
         plano = Watching(db).night_plan(dia)
@@ -590,7 +793,7 @@ def _hoje_view(db, now: datetime) -> dict:
         if ev["event_type"] in ("meal", "snack") and (ev["event_key"].endswith(":fora") or ":lanche:rua:" in ev["event_key"]):
             continue          # 28/09 (auditoria): "Pediu pão de queijo R$ 13" e "Comeu pão de queijo no Starbucks"
         at = datetime.fromisoformat(ev["event_at"])
-        it = {"at": at, "key": ev["event_key"], **curto(ev)}
+        it = {"at": at, "key": ev["event_key"], **curto(ev, db)}
         if ev["event_type"] == "tempo_livre" and ev["event_key"] in fins:
             it["fim"] = fins[ev["event_key"]]
             if ev.get("title") and not it.get("presente"):
@@ -611,6 +814,18 @@ def _hoje_view(db, now: datetime) -> dict:
         if it.get("fim") and it["fim"] > now:
             it["texto"] = it.get("presente") or _presente(it["texto"])
             it["fim"], it["agora"] = None, True
+            if it.get("sub_presente"):
+                it["sub"] = it["sub_presente"]
+            if it.get("filhos_presente"):          # 01/10 (catálogo): os artistas um por linha enquanto ouve
+                it["filhos"], it["sub"] = it["filhos_presente"], ""
+            it["filhos"] = [{**f, "texto": f.get("presente") or f["texto"]} for f in it.get("filhos") or []]
+    # 01/10 (catálogo): "Topou sair com a Bia" / "Para o Quartinho Bar às 21:00" — a hora vem do convite
+    convites = {it["key"].rsplit(":", 1)[0]: it.get("quando") for it in itens
+                if it.get("key", "").endswith(":convite") and it.get("quando")}
+    for it in itens:
+        q = convites.get(it.get("key", "").rsplit(":", 1)[0])
+        if it.get("key", "").endswith(":resposta") and q and it.get("sub", "").startswith("Para "):
+            it["sub"] += f" {q}"
 
     # blocos iguais em seguida viram um só ("Montando looks no closet" 13:59 e 14:38)
     juntos: list[dict] = []
@@ -644,6 +859,7 @@ def _hoje_view(db, now: datetime) -> dict:
                      and (it["at"] < r["fim"] if r["fim"] else it["at"] <= now)), None)
         if dono:
             dono["filhos"].append(it)
+            dono["filhos"] += [{"at": it["at"], "fim": None, "valor": None, **f} for f in it.get("filhos") or []]
         else:
             raiz.append({**it, "filhos": [{"at": it["at"], "fim": None, **f} for f in it.get("filhos") or []]})
     # 28/09 (Patrick): a volta pra casa não aparecia — "Foi pra PUC 08:19–13:35" engolia a carona com o Theo
@@ -652,7 +868,7 @@ def _hoje_view(db, now: datetime) -> dict:
         if v and dono and v.inicio <= now:
             chegou = v.fim <= now
             dono["filhos"].append({"at": v.inicio, "fim": v.fim if chegou else None, "ic": "home",
-                                   "texto": "Voltou pra casa" if chegou else "Voltando pra casa", "sub": v.como,
+                                   "texto": "Voltou para casa" if chegou else "Voltando para casa", "sub": v.como,
                                    "valor": None, "aviso": False})       # o uber já tem a linha dele, com valor
     for r in raiz:
         if r.get("filhos"):
@@ -673,13 +889,14 @@ def _hoje_view(db, now: datetime) -> dict:
 
 PRESENTE = (("Tomou banho e lavou o cabelo", "Tomando banho e lavando o cabelo"), ("Tomou banho", "Tomando banho"),
             ("Tomou café", "Tomando café"), ("Almoçou", "Almoçando"), ("Jantou", "Jantando"), ("Lanchou", "Lanchando"),
-            ("Comeu", "Comendo"))
+            ("Comeu", "Comendo"), ("Assistiu", "Assistindo"), ("Fez as unhas", "Fazendo as unhas"),
+            ("Parou para comer", "Comendo"))
 
 
 def _presente(texto: str) -> str:
     for antes, agora in PRESENTE:
         if texto.startswith(antes):
-            return agora + texto[len(antes):]
+            return (agora + texto[len(antes):]).replace(" e comeu demais", " e comendo demais")
     return texto
 
 

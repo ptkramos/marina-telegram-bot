@@ -95,7 +95,7 @@ class DoisBanhosTest(Base):
         prep = self._prep(at(14, 3))
         self.assertEqual(prep.inicio, at(13, 51))
         self.assertEqual((prep.passos[0].texto, prep.passos[0].inicio), ("Tomando banho", at(13, 51)))
-        self.assertEqual([p.texto for p in prep.passos[1:]], ["Fazendo maquiagem", "Escolhendo roupa", "Chamando uber"])
+        self.assertEqual([p.texto for p in prep.passos[1:]], ["Fazendo maquiagem", "Escolhendo roupa", "Chamando o Uber"])
         self.assertEqual(prep.passos[1].inicio, at(13, 59))
         for minuto in range(0, 38):                    # 14:00–14:37: banho nunca mais
             agora = Agenda(self.db).prep_activity(at(14, minuto))
@@ -121,9 +121,9 @@ class CinemaTest(Base):
     def test_card_mostra_a_sessao_e_depois_o_passeio(self):
         ag = Agenda(self.db)
         agora = lambda t: [p["texto"] for i in ag.card(t)["linha"] for p in i["passos"] if p["estado"] == "agora"]
-        self.assertEqual(agora(at(16, 0)), ["Vendo Idiotas"])
-        self.assertIn(["device-mobile", "Celular", "Olha depois do filme"], ag.card(at(16, 0))["grade"])
-        self.assertIn(agora(at(18, 16))[0], ("Olhando vitrines", "Provando roupa"))
+        self.assertEqual(agora(at(16, 0)), ["Assistindo: Idiotas"])
+        self.assertIn(["device-mobile", "Celular", "Na bolsa, silenciado"], ag.card(at(16, 0))["grade"])
+        self.assertIn(agora(at(18, 16))[0], ("Olhando as lojas", "No provador"))
         self.assertNotEqual(agora(at(17, 50)), ["Refri"])
 
     def test_sessao_cabe_no_role(self):

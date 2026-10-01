@@ -129,10 +129,10 @@ class DespertadorTest(Base):
         self.assertIn("(atrasada)", prep.linha2)
         self.assertTrue(any(p.aviso and p.texto == "Perdeu o despertador" for p in prep.passos))
         caminho = next(e for e in etapas if e.tipo == "caminho")
-        self.assertIn("10min atrasada", caminho.linha2)
+        self.assertIn("10 minutos atrasada", caminho.linha2)
         la = next(e for e in etapas if e.tipo == "la")
         self.assertEqual(la.inicio, self.plan.end + timedelta(minutes=10))
-        self.assertTrue(any(p.aviso and p.texto == "Chegou 10min atrasada" for p in la.passos))
+        self.assertTrue(any(p.aviso and p.texto == "Chegou 10 minutos atrasada" for p in la.passos))
 
     def test_aula_e_coisa_de_contar_pro_patrick(self):
         self.a.materialize(self.wake + timedelta(minutes=1))
@@ -226,7 +226,7 @@ class RoleTest(Base):
             self.assertNotIn("atrasada", antes.linha2)
             depois = next(e for e in Agenda(self.db).etapas(self.SAB, plan.incident_at + timedelta(minutes=1))
                           if e.tipo == "caminho")
-            self.assertIn("8min atrasada", depois.linha2)
+            self.assertIn("8 minutos atrasada", depois.linha2)
 
 
 if __name__ == "__main__":

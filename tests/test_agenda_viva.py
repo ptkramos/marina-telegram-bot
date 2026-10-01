@@ -305,12 +305,12 @@ class HojeTest(unittest.TestCase):
             return curto({"event_type": "agenda", "title": "agenda", "summary": s})
         self.assertEqual(c("Desistiu de ir: Saindo com a Bia no Quartinho Bar (dormiu mal e sem bateria social). "
                            "Avisou a Bia e combinaram outro dia."),
-                         {**c("x"), "ic": "calendar-x", "texto": "Desistiu de ir pro Quartinho Bar",
-                          "sub": "Dormiu mal e sem bateria social, avisou a Bia"})
+                         {**c("x"), "ic": "calendar-x", "texto": "Desistiu de sair e avisou a Bia",
+                          "sub": "Quartinho Bar, dormiu mal e sem bateria social"})
         self.assertEqual(c("Faltou a aula de hoje (Moda e Corpo): dormiu mal. Vai pegar a matéria com a Júlia depois.")
-                         ["sub"], "Moda e Corpo, dormiu mal")
+                         ["sub"], "Moda e Corpo")
         self.assertEqual(c("Chamou a Bia pra sair sábado às 21:00 (Saindo com a Bia no Quartinho Bar); Bia topou.")
-                         ["sub"], "Sábado 21:00, topou")
+                         ["sub"], "Sábado às 21:00, ela topou")
         self.assertEqual(c("Desistiu de treinar hoje (sem energia).")["texto"], "Desistiu de treinar")
 
 

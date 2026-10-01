@@ -292,7 +292,7 @@ const loaders = {
         const b = c.barra;
         // sem hora de fim: duração e "desde" à direita do título (decisão do Patrick)
         const topo = b.pct == null
-          ? `<div class="ag-topo"><div class="ag-t">${esc(c.titulo)}</div><div class="ag-dur"><b>${esc(b.duracao)}</b><span>desde ${esc(b.desde)}</span></div></div>`
+          ? `<div class="ag-topo"><div class="ag-t">${esc(c.titulo)}</div><div class="ag-dur"><b>${esc(b.duracao)}</b><span>desde as ${esc(b.desde)}</span></div></div>`
           : `<div class="ag-t">${esc(c.titulo)}</div>`;
         $("ag-card").innerHTML = `${topo}${c.linha2 ? `<div class="ag-s">${esc(c.linha2)}</div>` : ""}
           ${b.pct == null ? "" : `<div class="ag-bar"><i style="width:${b.pct}%"></i></div>
@@ -309,7 +309,7 @@ const loaders = {
             ...s.planos.map((x) => ["calendar", "Plano", x])].filter(Boolean))}`;
       }
       // 26/09 (Patrick): Hoje por período, saída com o que rolou dentro, previsto em cinza.
-      // Períodos que já passaram ficam fechados ("Manhã · 7") e abrem ao tocar; o de agora fica aberto.
+      // Períodos que já passaram ficam fechados ("Manhã, 7 acontecimentos") e abrem ao tocar; o de agora fica aberto.
       const hj = d.hoje.periodos || [];
       const hjHora = (x) => `<span class="lt-hora">${esc(x.hora)}</span>`;
       const hjVal = (x) => `<span class="lt-val">${x.valor ? brl0(x.valor) : ""}</span>`;   // coluna sempre existe: hora alinhada
@@ -320,12 +320,12 @@ const loaders = {
         const fechado = n < atual && !HOJE_ABERTOS.has(p.nome);
         const feitos = p.itens.filter((x) => !x.previsto).length;
         return `<button class="hj-per${n < atual ? " passado" : ""}" data-per="${esc(p.nome)}"${n < atual ? "" : " disabled"}>
-            <span>${esc(p.nome)}${fechado ? ` · ${feitos}` : ""}</span>${n < atual ? ic(fechado ? "chevron-down" : "chevron-up") : ""}</button>
+            <span>${esc(p.nome)}${fechado ? `, ${feitos} acontecimento${feitos === 1 ? "" : "s"}` : ""}</span>${n < atual ? ic(fechado ? "chevron-down" : "chevron-up") : ""}</button>
           ${fechado ? "" : `<ol class="linha-tempo">${p.itens.map((x) => `<li class="${x.previsto ? "previsto" : ""}${x.aviso ? " aviso" : ""}">
             <span class="lt-ic">${ic(x.ic)}</span>${hjTx(x)}${hjVal(x)}${hjHora(x)}</li>
             ${x.filhos.length ? `<li class="lt-filhos"><ol>${x.filhos.map((f) => `<li class="${f.aviso ? "aviso" : ""}">
               ${hjTx(f)}${hjVal(f)}${hjHora(f)}</li>`).join("")}</ol></li>` : ""}`).join("")}</ol>`}`;
-      }).join("") : vazio(s.dormindo ? "Ela ainda não acordou." : "Nada registrado hoje ainda.");
+      }).join("") : vazio(s.dormindo ? "Ainda não acordou" : "Nenhum acontecimento");
       $("ag-hoje").querySelectorAll(".hj-per.passado").forEach((b) => b.addEventListener("click", () => {
         const nome = b.dataset.per;
         HOJE_ABERTOS.has(nome) ? HOJE_ABERTOS.delete(nome) : HOJE_ABERTOS.add(nome);

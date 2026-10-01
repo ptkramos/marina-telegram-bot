@@ -52,7 +52,7 @@ class VontadeTest(unittest.TestCase):
         self.assertEqual([e.tipo for e in etapas], ["arrumando", "caminho", "la", "voltando"])
         prep, _, la, _ = etapas
         self.assertEqual(prep.inicio, T, "se arruma a partir da hora em que decidiu")
-        self.assertTrue(prep.linha2.startswith("Vai sair pr"))
+        self.assertTrue(prep.linha2.startswith("Vai sair para "))
         self.assertEqual([p.texto for p in prep.passos][:2], ["Trocando de roupa", "Pegando a bolsa"])
         self.assertTrue(la.passos and all(p.valor for p in la.passos), "consumo do cardápio real, com preço")
         with self.db.get_connection() as conn:
@@ -73,7 +73,7 @@ class VontadeTest(unittest.TestCase):
     def test_passeio_do_milo_e_o_mundo_acompanha(self):
         self._sai("milo")
         etapas = Agenda(self.db).etapas(T.date(), T)
-        self.assertEqual([e.titulo for e in etapas], ["Se arrumando", "A caminho", "Na Enseada", "Voltando pra casa"])
+        self.assertEqual([e.titulo for e in etapas], ["Se arrumando", "A caminho", "Na Enseada", "Voltando para casa"])
         self.assertEqual([p.texto for p in etapas[0].passos][:2], ["Colocando a coleira", "Pegando os saquinhos"])
         from world_state import WorldStateManager
         la = etapas[2]
@@ -125,7 +125,7 @@ class MedicoTest(unittest.TestCase):
                 patch("academia.PasseioMilo.plano", return_value=None), \
                 patch("meals.Meals.day_plan", return_value=[]):
             etapas = Agenda(db).etapas(T.date(), T)
-        self.assertEqual([e.titulo for e in etapas], ["Se arrumando", "A caminho", "Na Novamed", "Voltando pra casa"])
+        self.assertEqual([e.titulo for e in etapas], ["Se arrumando", "A caminho", "Na Novamed", "Voltando para casa"])
         self.assertEqual(etapas[1].como, "Uber")
         self.assertEqual([p.texto for p in etapas[2].passos], ["Na recepção", "Na consulta", "Pegando a receita"])
 

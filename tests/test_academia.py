@@ -31,21 +31,21 @@ class AcademiaTest(unittest.TestCase):
 
     def test_etapas_do_treino(self):
         etapas = Agenda(self.db).etapas(DIA.date(), DIA.replace(hour=17))
-        self.assertEqual([e.titulo for e in etapas], ["Se arrumando", "A caminho", "Na academia", "Voltando pra casa"])
+        self.assertEqual([e.titulo for e in etapas], ["Se arrumando", "A caminho", "Na academia", "Voltando para casa"])
         prep, ida, la, volta = etapas
         self.assertEqual([p.texto for p in prep.passos], ["Colocando roupa de treino", "Enchendo a garrafinha", "Saindo"])
         self.assertEqual(prep.fim, TREINO["inicio"] - timedelta(minutes=12))
         self.assertEqual(ida.como, "A pé")
         self.assertEqual((la.inicio, la.fim), (TREINO["inicio"], TREINO["fim"]))
-        self.assertEqual(la.passos[0].texto, "Cardio na esteira")
+        self.assertEqual(la.passos[0].texto, "Fazendo cardio na esteira")
         self.assertEqual(volta.fim, TREINO["fim"] + timedelta(minutes=12))
 
     def test_card_na_academia_tem_barra(self):
         c = Agenda(self.db).card(DIA.replace(hour=15, minute=40))
-        self.assertEqual((c["titulo"], c["linha2"]), ("Na academia", "Volta pra casa às ~16:25"))
-        self.assertEqual(c["barra"]["meio"].split(" · ")[0], "há 30min")
+        self.assertEqual((c["titulo"], c["linha2"]), ("Na academia", "Volta para casa por volta das 16:25"))
+        self.assertEqual(c["barra"]["meio"].split(", ")[0], "há 30 minutos")
         self.assertIsNotNone(c["barra"]["pct"])
-        self.assertIn(["device-mobile", "Celular", "Olha nos intervalos"], c["grade"])
+        self.assertIn(["device-mobile", "Celular", "Pega nos intervalos"], c["grade"])
         atual = next(e for e in c["linha"] if e["estado"] == "agora")
         self.assertTrue(atual["passos"])
 

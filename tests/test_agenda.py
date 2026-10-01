@@ -23,10 +23,10 @@ VOLTA = Leg("commute:outing:2026-09-25:0:volta", DIA.replace(hour=22, minute=30)
 
 class FormatoTest(unittest.TestCase):
     def test_horas_e_duracao(self):
-        self.assertEqual(agenda.aprox(DIA.replace(hour=20, minute=3)), "~20:05")
-        self.assertEqual(agenda.duracao(timedelta(minutes=70)), "1h 10min")
-        self.assertEqual(agenda.duracao(timedelta(minutes=47)), "47min")
-        self.assertEqual(agenda.duracao(timedelta(hours=2)), "2h")
+        self.assertEqual(agenda.aprox(DIA.replace(hour=20, minute=3)), "20:05")
+        self.assertEqual(agenda.duracao(timedelta(minutes=70)), "1 hora e 10 minutos")
+        self.assertEqual(agenda.duracao(timedelta(minutes=47)), "47 minutos")
+        self.assertEqual(agenda.duracao(timedelta(hours=2)), "2 horas")
         self.assertEqual(agenda.em_bairro("Gávea"), "na Gávea")
         self.assertEqual(agenda.em_bairro("Botafogo"), "em Botafogo")
 
@@ -57,32 +57,32 @@ class AgendaTest(unittest.TestCase):
         etapas = Agenda(self.db).etapas(DIA.date(), DIA.replace(hour=23))
         self.assertEqual([e.tipo for e in etapas], ["arrumando", "caminho", "la", "voltando", "arrumando"])
         self.assertEqual([e.titulo for e in etapas],
-                         ["Se arrumando", "A caminho", "No Quartinho", "Voltando pra casa", "Se arrumando"])
+                         ["Se arrumando", "A caminho", "No Quartinho", "Voltando para casa", "Indo dormir"])
         prep = etapas[0]
         self.assertEqual([p.texto for p in prep.passos],
                          ["Tomando banho", "Secando cabelo", "Fazendo maquiagem", "Escolhendo roupa", "Esperando carona"])
         self.assertEqual(prep.fim, IDA.start)
         self.assertTrue(60 <= (IDA.start - prep.inicio).total_seconds() / 60 <= 90)
         self.assertEqual([p.texto for p in etapas[1].passos], ["No carro com o Theo", "Chegando no Quartinho"])
-        self.assertEqual(etapas[-1].linha2, "Vai dormir às ~01:00")
+        self.assertEqual(etapas[-1].linha2, "Deita por volta das 01:00")
         self.assertEqual([p.texto for p in etapas[-1].passos], ["Tirando maquiagem", "Tomando banho", "Colocando pijama"])
 
     def test_card_se_arrumando(self):
         prep = Agenda(self.db).etapas(DIA.date(), DIA)[0]
         c = Agenda(self.db).card(prep.inicio + timedelta(minutes=30))
         self.assertEqual(c["titulo"], "Se arrumando")
-        self.assertEqual(c["linha2"], "Vai sair pro Quartinho Bar às ~19:10")
+        self.assertEqual(c["linha2"], "Vai sair para o Quartinho Bar por volta das 19:10")
         self.assertEqual([g[1] for g in c["grade"]], ["Com", "Celular"])
-        self.assertEqual(c["grade"][0][2], "Theo e Júlia")
-        self.assertEqual(c["grade"][1][2], "Olha de vez em quando")
-        self.assertEqual(c["barra"]["meio"].split(" · ")[0], "há 30min")
+        self.assertEqual(c["grade"][0][2], "O Theo e a Júlia")
+        self.assertEqual(c["grade"][1][2], "No bolso")
+        self.assertEqual(c["barra"]["meio"].split(", ")[0], "há 30 minutos")
         atual = next(e for e in c["linha"] if e["estado"] == "agora")
         self.assertTrue(atual["passos"])
 
     def test_card_no_bar_so_mostra_o_que_ja_pediu(self):
         now = DIA.replace(hour=20, minute=30)
         c = Agenda(self.db).card(now)
-        self.assertEqual((c["titulo"], c["linha2"]), ("No Quartinho", "Volta pra casa às ~22:30"))
+        self.assertEqual((c["titulo"], c["linha2"]), ("No Quartinho", "Volta para casa por volta das 22:30"))
         self.assertEqual(c["grade"][0], ["map-pin", "Onde", "Botafogo"])
         from consumo import plan
         with self.db.get_connection() as conn:
@@ -95,11 +95,11 @@ class AgendaTest(unittest.TestCase):
 
     def test_volta_de_uber_com_imprevisto_curto(self):
         c = Agenda(self.db).card(DIA.replace(hour=22, minute=45))
-        self.assertEqual(c["titulo"], "Voltando pra casa")
+        self.assertEqual(c["titulo"], "Voltando para casa")
         self.assertIn(["car", "Como", "Uber"], c["grade"])
         passos = next(e for e in c["linha"] if e["estado"] == "agora")["passos"]
-        self.assertIn(("Motorista errou o caminho", "aviso"), [(p["texto"], p["estado"]) for p in passos])
-        self.assertTrue(any(p["valor"] for p in passos if p["texto"] == "No uber"))
+        self.assertIn(("O motorista errou o caminho", "aviso"), [(p["texto"], p["estado"]) for p in passos])
+        self.assertTrue(any(p["valor"] for p in passos if p["texto"] == "No Uber"))
 
     def test_se_arrumando_vira_atividade_e_disponibilidade_propria(self):
         prep = Agenda(self.db).etapas(DIA.date(), DIA)[0]
@@ -159,7 +159,7 @@ class CardCasaTest(unittest.TestCase):
                                               "end_at": (now + timedelta(minutes=30)).isoformat()})
         c = Agenda(self.db).card_casa(now + timedelta(minutes=5), "Olha de vez em quando")
         self.assertEqual((c["titulo"], c["linha2"]), ("Se alimentando", "Jantando"))
-        self.assertEqual(c["barra"]["meio"], "há 5min · faltam ~25min")
+        self.assertEqual(c["barra"]["meio"], "há 5 minutos, faltam 25 minutos")
 
     def test_passeio_do_milo_e_saida(self):
         now = DIA.replace(hour=9, minute=0)
@@ -167,5 +167,5 @@ class CardCasaTest(unittest.TestCase):
                                                 "end_at": (now + timedelta(minutes=30)).isoformat()})
         c = Agenda(self.db).card_casa(now + timedelta(minutes=10), "Olha de vez em quando")
         self.assertEqual(c["titulo"], "Na Enseada")
-        self.assertEqual(c["linha2"], "Volta pra casa às ~09:30")
+        self.assertEqual(c["linha2"], "Volta para casa por volta das 09:30")
         self.assertIn(["dog", "Com", "Milo"], c["grade"])

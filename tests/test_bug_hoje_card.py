@@ -71,7 +71,7 @@ class CardUmSoTest(BaseCaso):
         self.assertEqual(prep.inicio, datetime(2026, 9, 27, 0, 31))
         self.assertGreaterEqual(prep.passos[1].inicio, datetime(2026, 9, 27, 1, 12))
         card = Agenda(self.db).card(datetime(2026, 9, 27, 1, 5))
-        self.assertEqual(card["titulo"], "Se arrumando")
+        self.assertEqual(card["titulo"], "Indo dormir")
         agora = [p["texto"] for item in card["linha"] for p in item["passos"] if p["estado"] == "agora"]
         self.assertEqual(agora, ["Tomando banho e lavando o cabelo"])
 
@@ -102,12 +102,12 @@ class HojeTest(BaseCaso):
             view = hoje.hoje_view(self.db, datetime(2026, 9, 27, 1, 5))
         noite = {i["texto"]: i["hora"] for p in view["periodos"] if p["nome"] == "Noite" for i in p["itens"]}
         self.assertEqual(noite["Olhou o Instagram"], "00:02–00:31")
-        self.assertEqual(noite["Tomando banho e lavando o cabelo"], "00:31–")
+        self.assertEqual(noite["Tomando banho"], "00:31–")
         with patch.object(hoje, "_blocos", return_value={}), patch.object(hoje, "_saidas", return_value=[]), \
                 patch.object(hoje, "_previstos", return_value=[]):
             depois = hoje.hoje_view(self.db, datetime(2026, 9, 27, 1, 20))
         textos = [i["texto"] for p in depois["periodos"] for i in p["itens"]]
-        self.assertIn("Tomou banho e lavou o cabelo", textos)
+        self.assertIn("Tomou banho", textos)
 
     def test_bloco_em_casa_nao_comeca_antes_de_chegar(self):
         self.assertEqual(TempoLivre(self.db)._chegou(datetime(2026, 9, 27, 0, 7)), VOLTA.end)

@@ -24,7 +24,7 @@ DURACAO_PADRAO = 110
 ESPERA_MIN = (10, 20)          # do ingresso até a sessão começar (pipoca e fila)
 GOSTO = {10749: 3, 35: 3, 53: 2, 9648: 2, 18: 1, 16: 1, 27: 1}   # romance, comédia, suspense, mistério...
 FORA = {10751, 99, 10770}      # família (infantil), documentário, filme de TV
-DEPOIS = (("Olhando vitrines", 60), ("Provando roupa", 40))
+DEPOIS = (("Olhando as lojas", 60), ("No provador", 40))
 FALHA_ESPERA = timedelta(minutes=30)    # TMDB fora: não tenta de novo a cada resolve (cada tentativa espera até 8 s)
 _falhou: dict = {}
 
@@ -96,7 +96,7 @@ def sessao(db, outing: dict) -> Optional[dict]:
 
 
 def passo_sessao(s: dict) -> str:
-    return f"Vendo {s['titulo']}" if s.get("titulo") else "Na sessão"
+    return f"Assistindo: {s['titulo']}" if s.get("titulo") else "Na sessão"     # 01/10 (catálogo)
 
 
 def _outing(db, event_id) -> Optional[dict]:

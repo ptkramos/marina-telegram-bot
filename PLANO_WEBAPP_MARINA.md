@@ -721,6 +721,21 @@ um por linha (aulas perdidas em amarelo, itens do iFood, artistas enquanto ouve)
 Regras e decisões em `data/feedback/catalogo_textos/` (não vai pro git). Aplicar: 106 só tela entram no soak; 12
 "os dois" (ela lê) em lote separado.
 
+**01/10, noite — lote 1 aplicado (Hoje + card do Agora, só tela) ✅:** os 118 "mudar" e as seis regras entraram em
+`hoje.py` (texto curto), `agenda.py` (card) e `webapp/app.js`. Os 12 "os dois" também, mas como regra de tela: o mundo
+grava o mesmo texto e o que ela lê não mudou (fora "chamando o Uber" no "se arrumando pra sair"). Hoje: "o Patrick"
+no lugar de "você" (o Hoje não passa mais pelo `voz_painel`); saída "Indo para o…" → "Está no…" → "Foi para o…";
+previsto "Vai para o Shopping da Gávea com a Bia" na hora em que ela sai de casa; gerúndio enquanto acontece (trabalho
+da facul, masturbação, série, descida do Milo, treino no prédio); aninhados um por linha (aulas perdidas em amarelo,
+itens do iFood, "Lavou o cabelo", artistas enquanto ouve, atraso com a aula e cada motivo); ícone da desistência
+pelo motivo; período fechado "Manhã, 7 acontecimentos"; vazio "Ainda não acordou" / "Nenhum acontecimento". Card:
+"por volta das" na frase e sem "~" nos números, durações por extenso ("há 1 hora e 20 minutos, faltam 58 minutos"),
+"Indo dormir" / "Deita por volta das…", passos novos do caminho e de lá, celular "Na mão / No bolso / Pega nos
+intervalos…" (`agenda.CELULAR_TELA`, só na tela: o bot ainda compara os textos internos "Olha …"), "Com" com artigo,
+"A pé" com o bonequinho andando, em casa o que vem no futuro ("Vai ver série") e "desde as". Conferido na VPS numa
+cópia do banco, código antigo × novo nos últimos 7 dias (Hoje 7 vezes por dia, card a cada 10 min): 0 erros.
+Detalhe e o que eu decidi sozinho na Auditoria ("Catálogo de textos, lote 1 aplicado").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

@@ -140,7 +140,7 @@ class HojeMiloEVoltaTest(Base):
     def test_calcada_tem_a_volta(self):
         c = hoje.curto({"event_type": "routine", "title": "Milo", "event_at": at(7, 58).isoformat(),
                         "end_at": at(8, 11).isoformat(), "summary": "Desceu rapidinho com o Milo pro xixi da manhã."})
-        self.assertEqual((c["texto"], c["fim"]), ("Foi pra calçada", at(8, 11)))
+        self.assertEqual((c["texto"], c["fim"]), ("Desceu com o Milo", at(8, 11)))
 
     def test_volta_pra_casa_e_o_que_vem_depois_fica_fora(self):
         la = Etapa("la", "Na PUC", at(9, 0), at(13, 0), lugar_key="puc_rio")
@@ -156,7 +156,7 @@ class HojeMiloEVoltaTest(Base):
         itens = [i for p in v["periodos"] for i in p["itens"]]
         puc = next(i for i in itens if i["texto"] == "Foi pra PUC")
         self.assertEqual([(f["texto"], f["sub"], f["hora"]) for f in puc["filhos"]],
-                         [("Voltou pra casa", "Carona com o Theo", "13:00–13:35")])
+                         [("Voltou para casa", "Carona com o Theo", "13:00–13:35")])
         self.assertIn("Olhou o Pinterest", [i["texto"] for i in itens])
 
 

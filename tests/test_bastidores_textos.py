@@ -20,7 +20,7 @@ class StatusTest(unittest.TestCase):
         s = w.status_view(SNAP)
         self.assertEqual(s["atividade"], "Dormindo")
         self.assertEqual(s["local"], "Em casa · Botafogo")
-        self.assertEqual(s["celular"], "Olha quando acordar")
+        self.assertEqual(s["celular"], "Pega quando acordar")
         self.assertTrue(s["dormindo"])
         self.assertEqual(s["ciclo"], "Dia 24 · TPM")
         self.assertEqual(s["saude"], ["Gripe · chá e dipirona"])

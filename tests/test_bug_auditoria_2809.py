@@ -84,10 +84,10 @@ class MiloChamegoTest(unittest.TestCase):
     def test_chamego_nao_e_arte(self):
         c = hoje.curto({"event_type": "routine", "title": "Milo", "event_key": "milo:2026-09-28:arte",
                         "summary": "O Milo dormiu encostado nela no sofá."})
-        self.assertEqual((c["texto"], c["sub"]), ("Chamego com o Milo", "Dormiu encostado nela no sofá"))
+        self.assertEqual((c["texto"], c["sub"]), ("O Milo foi carinhoso", "Dormiu encostado nela no sofá"))
         c = hoje.curto({"event_type": "routine", "title": "Milo", "event_key": "milo:2026-09-30:arte",
                         "summary": "O Milo roubou uma meia e saiu correndo pela casa."})
-        self.assertEqual(c["texto"], "Arte do Milo")
+        self.assertEqual(c["texto"], "O Milo foi travesso")
 
     def test_pedir_colo_derrete(self):
         from emotion import appraise_event
@@ -175,7 +175,7 @@ class EncontroNoCardTest(Base):
     def test_gabi_vira_passo_do_la_e_nao_e_o_passo_atual(self):
         ag = Agenda(self.db)
         enc = ag._encontros({"friends": ["bia_andrade"]}, at(16, 55), at(17, 39))
-        self.assertEqual([(p.texto, p.inicio, p.encontro) for p in enc], [("Encontrou a Gabi", at(17, 7), True)],
+        self.assertEqual([(p.texto, p.inicio, p.encontro) for p in enc], [("Bateu papo com a Gabi", at(17, 7), True)],
                          "quem foi junto com ela não vira encontro")
         la = Etapa("la", "Na Enseada", at(16, 55), at(17, 39),
                    passos=[Passo("Passeando", at(16, 55)), *enc, Passo("Xixi do Milo", at(17, 25))])

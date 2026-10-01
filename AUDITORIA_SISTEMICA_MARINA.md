@@ -2186,3 +2186,53 @@ resolveu o mundo durante o banho (o card resolve na hora; não é bug).
 **Lote de texto (não zera):** "seu bobo atrevido" depois de só um "ksksks", "convencido" de novo (já no dia 1),
 "derretida/arrepiada" demais, "abusado demais" fora de contexto.
 - **Testes:** `tests/test_soak_dia2.py` (+6).
+
+## Catálogo de textos, lote 1 aplicado (01/10, noite, frente de apps)
+
+As 205 fichas do Hoje e do card do Agora (118 mudar, 87 manter) e as seis regras gerais (`data/feedback/catalogo_textos/
+regras_gerais.md`) entraram na tela. **Só a tela muda:** o mundo grava o mesmo texto e o prompt dela não viu diferença
+(as fichas "os dois" viraram regra nova de tela no `hoje.py`). Única mudança que ela lê: o passo "Chamando o Uber"
+(antes "Chamando uber") aparece no "se arrumando pra sair pro X (chamando o Uber)".
+
+**Onde mexeu.** `hoje.py`: `curto(ev, db)` (o banco serve pra cortar as aulas perdidas pelos nomes das matérias e
+achar o tipo do job da manicure); `_painel` sem `voz_painel` (regra 6, "o Patrick"); `_saidas` com Indo/Está/Foi;
+previsto "Vai para o…" na hora em que sai de casa; `sub_presente`, `filhos_presente` e `presente` dos filhos no
+gerúndio; topou herda a hora do convite; filhos de um acontecimento dentro de uma saída vêm logo embaixo dele.
+`agenda.py`: `aprox` sem "~", `por_volta`, `duracao` por extenso, `futuro` ("Vai ver série"), `CELULAR_TELA` /
+`celular_tela` (o `bot._celular_na_mao` compara os textos internos, que ficam), `Etapa.com_art`, "Saiu mais cedo"
+depois que saiu, `prep_activity` lendo "por volta das" (o texto do mundo continua "pra sair pro X"). `cinema.py`:
+"Assistindo: {filme}", "Olhando as lojas", "No provador". `webapp_server.status_view`: celular da tela.
+`webapp/app.js`: "desde as", "Manhã, 7 acontecimentos", vazios.
+
+**Conflitos resolvidos com o Patrick (01/10):** "faltam 58 minutos" sem "aproximadamente" (regra 1 vence a ficha);
+descida do Milo "Descendo com o Milo" → "Desceu com o Milo" (a ficha, com o gerúndio da regra 3).
+
+**Decidi sozinho (pra ele revisar):**
+- "O Milo se aliviou" com artigo nos três lugares (a ficha do Hoje dizia "Milo se aliviou"; a do card, "O Milo…"; o
+  passo do passeio curto em casa estava "manter", mas é o mesmo texto).
+- iFood que ele mandou e ela comeu: "Comeu o iFood recebido" / "O Patrick pediu no {loja}" e um item por linha
+  (a ficha cru.3 olhou esse mesmo acontecimento cru e pediu "O Patrick mandou um iFood" — ficou só pro que ela
+  guardou sem comer). Presente com "de surpresa": "O iFood surpresa do Patrick chegou".
+- "Comeu o iFood pedido" (o delivery dela) segue com o prato embaixo: o pedido dela ainda não tem loja (iFood da Ma é
+  do depois do soak).
+- "Com" do card começa maiúsculo ("A Bia e o Theo"); "Como" segue "Uber com Bia" (não estava na ficha).
+- Assunto que vem como frase (o pai, continuação) segue "Assunto: …" até o texto dos assuntos (depois do soak); os
+  de uma palavra viram "Falaram de festas e do Caio".
+- Ícone da desistência: chuva `cloud-rain`, cansaço/sono/bateria `battery-1`, desânimo `mood-sad`, dor/cólica
+  `first-aid-kit`, dinheiro `cash-off`, combinou com o Patrick `heart-handshake`, outro `x`.
+- "Recebeu um Pix do Patrick" com "Para o Uber"; "Remarcou Quartinho Bar" / "Para domingo às 18:00"; convite
+  "Para o Quartinho Bar às 21:00" (sem o "hoje"); "Volta para casa por volta das…" no "Lá" e no passeio do Milo.
+- Ofertas de casting: "Participar da campanha…", "das fotos…", "do vídeo de uma marca…" ("pra uma" → "de uma").
+- O "Bateu papo com a Gabi" também aparece no card (o encontro no "Lá" usa o texto do Hoje).
+
+**Bug visto na varredura e corrigido junto:** a linha 2 do card mostrava "Chega na Agência boutique da Lívia
+(fictícia)" — a marca do banco vazava pra tela (`agenda._tela`). Efeito no mundo: o "se arrumando pra sair pra
+Agência boutique da Lívia" que ela lê também perdeu o "(fictícia)".
+**Vi e não mexi (não é deste lote):** "para o Ophicina do Cabelo" / "Chega no Ophicina" (gênero do
+`commute._FEMININE`, que o chat também usa); "Saindo de lá, resolveu passar…" cru no Hoje quando a emenda não acha a
+saída; "Saiu mais cedo na agência às 17:30" cru (agenda reativa); "Vendo série" no card enquanto acontece (só o
+futuro estava na ficha).
+**Conferência:** varredura na VPS (código antigo × novo, mesma cópia do banco, 7 dias): 0 erros. Testes: 69 módulos
+que tocam card/Hoje/Mini App (856 testes) — 46 asserções eram as frases antigas, atualizadas; uma era bug meu
+(desistência na hora com ícone duplicado, `TypeError`), corrigido antes do deploy. `tests/test_catalogo_lote1.py`
+(+18).
