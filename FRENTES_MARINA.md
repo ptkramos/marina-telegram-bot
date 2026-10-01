@@ -4,11 +4,11 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 30/09/2026, 19:40 (soak: dia 1 lido e corrigido — item 19; dia 2 olhado ao vivo três vezes e
-corrigido — item 20: "alucinada" de manhã, a escova que não aconteceu, trabalho dito × mundo, e o dia 01/10
-(castings) arrumado antes de acontecer. Produção em `1e519c3` desde 19:36. **Soak: dia 1 = terça 29/09**; próxima
-conversa: "bora no soak, dia 2" na quinta de manhã, relatório `soak/dia-2026-09-30.md` — a manhã e o salão já foram
-corrigidos no histórico, o relatório mostra o resto; conferir também se a sessão de trabalho das 20:21 aconteceu)._
+_Atualizado em 01/10/2026, manhã (soak: dia 1 — item 19; dia 2 olhado ao vivo — item 20 — e o relatório inteiro
+lido em 01/10 — item 21: varal no meio do banho, foto da conversa fora do histórico, pontuação no filtro da fala.
+**Soak: dia 1 = terça 29/09**; próxima conversa: "bora no soak, dia 3" na sexta de manhã, relatório
+`soak/dia-2026-10-01.md` — o dia dos dois castings (arrumado antes de acontecer, item 20): conferir PUC → agência →
+casa, almoço pulado e o card "Na agência")._
 
 ---
 
@@ -38,7 +38,9 @@ Durante o soak ele usa normal e marca o que estranhar com /bom e /ruim; abertura
 **Placar:** dia 1 (ter 29/09) — 5 graves (lugar dela errado depois da aula e a fala seguindo, plantão "de amanhã",
 "boa noite" de manhã no banho), 2 médios, 4 textos feios; corrigidos em 30/09 (seção 5, item 19). Dia 2 (qua 30/09), manhã, antes daquele
 deploy — "alucinada": [ELE ESTÁ DOENTE] com a pergunta dele, "dia livre" com ela faltando, check-in do peso dela,
-plantas 5x; corrigidos em 30/09 (item 20). Dias limpos: 0.
+plantas 5x; corrigidos em 30/09 (item 20). Dia 2, resto do dia (relatório lido em 01/10) — 1 grave (varal no meio
+do banho), 1 médio (foto da conversa fora do histórico), 7 textos feios (4 de pontuação, já no filtro); corrigidos
+em 01/10 (item 21). Dias limpos: 0.
 
 **Relatório diário (pronto, 28/09):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
 perguntou 00:00 × 05:00 e ficou 05:00: o rolê da noite e a conversa de madrugada ficam no mesmo dia), cobrindo
@@ -107,6 +109,15 @@ Hoje, card do Agora, extrato…), antes × depois lado a lado, largura de celula
 variável mostrando exemplos reais do banco, inclusive o mais longo; muda enquanto ele digita.
 Só tela entra no lote durante o soak (não zera); "ela lê" com cuidado (lote claro, ou depois do soak). Já na fila do
 catálogo: "Faltou a aula" gigante, belisco no Hoje, nome do bloco "Em casa".
+**Leva 1 no ar (30/09, noite):** Hoje + card do Agora, 205 textos, página no claude.ai com banco próprio (coleção
+`textos`: linha/embaixo/decisao/nota por ficha). Código em `scripts/catalogo_textos/` (`varre_textos.py` roda na VPS
+numa cópia do banco em /tmp/catalogo, com o código copiado pra /tmp/catalogo/code; `gera_catalogo.py` casa os textos;
+`monta.py` gera o HTML). Dados reais em `data/feedback/catalogo_textos/` (nunca commitar). **Troca de conta (01/10):** o
+Patrick segue o catálogo em outra conta do claude.ai (mesmo PC). A página antiga é privada da conta velha; as 59
+decisões dele foram salvas em `data/feedback/catalogo_textos/decisoes/textos/*.json`. Na conta nova: rodar `monta.py`,
+publicar `data/feedback/catalogo_textos/catalogo_textos.html` como artefato novo com `capabilities: {db: {}}`, semear a
+coleção `textos` com os JSON das decisões (ArtifactData batch, sem `version`) e mandar o link. Próximas levas:
+Bastidores, iFood, Nubank, Instagram.
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; **Instagram** no ar (27/09) com acervo refeito
@@ -433,6 +444,22 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       (`Agenda.etapas`); passeio do Milo e academia não caem em saída marcada (`RoutineEngine._placement`); saídas
       emendadas contam como uma pras refeições (`Meals._saidas`); refeição pulada por compromisso diz isso (não
       "acordou em cima da hora"). Simulado: PUC → agência 15:00–15:30 → castings → casa 18:55 → jantar 19:33.
+
+21. ✅ **Soak, dia 2 (quarta 30/09) — o relatório inteiro** (`soak/dia-2026-09-30.md`, lido em 01/10; o que já estava
+    no item 20 ficou de fora). Corrigido em 01/10 (`tests/test_soak_dia2.py`, +6).
+    - **21:57 "Tirou a roupa da máquina e estendeu no varal" no meio do banho (21:34–22:01).** Coisa de casa só
+      esperava ela estar em casa. Agora espera banho, refeição e Milo; se a hora caiu dentro disso, acontece quando
+      ela termina; o varal sai pelo menos 1 h depois da máquina. Camada: mundo (`casa.py`).
+    - **11:37 e 13:06: duas fotos mandadas na conversa, nenhuma no histórico** (relatório: "0 fotos"; ele perguntou
+      "aquela roupa da foto que mandou"). Só a foto prometida entrava. Agora a da conversa também. Camada: voz (`bot.py`).
+    - **Pontuação** (/ruim 039, 042, 043, 044): travessão, ponto e vírgula e dois pontos entre palavras viram vírgula
+      no filtro da fala. Decisão do Patrick: "agora, no filtro". Camada: voz (`limpar_fala_marina`).
+    - Ruído: 13:08 traceback da agenda reativa com JSON cortado vira aviso. Alarmes falsos do relatório: "acabou de
+      acordar, de pijama" é em casa (05:21, 06:16); "tô treinando com você" não é academia (15:14).
+    - Conferido e ok: a sessão de trabalho aconteceu (19:56–20:56); banho antes do boa noite; pai e Bia batem com o que
+      ela contou; as 2 respostas com letra estrangeira foram refeitas antes de sair; US$ 0,47 de LLM, 62 Buzz.
+    - Texto feio (lote da voz, não zera): "convencido" de novo, "derretida/arrepiada" demais, "seu bobo atrevido"
+      depois de só uma risada dele, "abusado demais" fora de contexto.
 
 **Abertos:** nenhum.
 

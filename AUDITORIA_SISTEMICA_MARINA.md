@@ -2159,3 +2159,30 @@ interrupção/uber/aviso da agenda reativa, voltou o cabelo (lavado 29/09 05:23,
 - *30/09, noite — "Beliscou pipoca vendo série"* (10:03 no closet, 18:41 no TikTok; o Patrick viu duas vezes): o
   prato do lanche vinha com a cena ("pipoca vendo série") em `MENU["lanche"]` e no lanchinho da noite; o Hoje dizia
   uma série que não houve. Prato agora é "pipoca". Teste em `test_soak_dia2` (+1).
+
+**01/10, manhã — o relatório do dia 2 inteiro (`soak/dia-2026-09-30.md`, 7 suspeitas, 4 erros, 3 /bom e 10 /ruim).**
+O que já estava no item 20 (manhã, salão, trabalho, check-in, pipoca, "###") ficou de fora. Novo:
+
+| Hora | O que se viu | Causa | Camada |
+|---|---|---|---|
+| 21:57 | Hoje: "Tirou a roupa da máquina e estendeu no varal" com o banho 21:34–22:01 | `Casa.materialize` só esperava ela estar em casa; o varal (máquina + 70–100 min) caiu no banho e foi gravado na hora planejada às 22:02 | mundo |
+| 11:37, 13:06 | relatório: "0 fotos"; ele perguntou "aquela roupa da foto que mandou" | a foto da conversa (`bot.py`, pedido/iniciativa no turno) ia pro Telegram e não entrava em `conversas`; só a foto prometida (`promessa_foto`) entrava | voz |
+| 13:08 | traceback `agenda_reativa.classifica` (JSONDecodeError) | resposta do modelo cortada no meio do JSON | voz |
+
+**Correções:** `Casa.materialize` — coisa de casa espera `Meals._transition_busy` (banho, refeição, Milo); se a hora
+planejada caiu dentro de banho/refeição/Milo já gravados (`Casa._ocupada_em`), acontece agora; varal e "esqueceu a
+roupa" só depois da máquina gravada + 60 min. `bot.py`: depois do `send_photo` confirmado, `adicionar_mensagem`
+(assistant, `media_type="photo"`, `[1 foto(s): <facts>] <legenda>`, o formato da foto prometida). `_classifica`:
+`JSONDecodeError` vira aviso `classifica_json_quebrado`. `limpar_fala_marina`: travessão e ponto e vírgula viram
+vírgula, dois pontos entre palavras viram vírgula (hora "15:30" e ":(" ficam) — decisão do Patrick (01/10: "agora, no
+filtro"), pelos /ruim 039, 042, 043 e 044.
+**Relatório (alarmes falsos):** "acabou de acordar, ainda de pijama" é em casa (05:21 card vazio e 06:16 teleporte);
+"tô treinando com você" não é academia (`FIGURADO`).
+**Ruído conferido, sem conserto:** consolidação de memória "Múltiplas decisões sobre o mesmo fato" (2x; o cursor não
+avança e a próxima passa), Vision com JSON cortado às 09:34 (a resposta saiu certa), 2 respostas com letra
+estrangeira pegas e refeitas, reflexão de sessão com JSON cortado. A sessão de trabalho aconteceu (19:56–20:56); o
+banho veio antes do boa noite (21:34–22:01, deitou 22:27). Sem linha "tomando banho" no mundo à noite porque nada
+resolveu o mundo durante o banho (o card resolve na hora; não é bug).
+**Lote de texto (não zera):** "seu bobo atrevido" depois de só um "ksksks", "convencido" de novo (já no dia 1),
+"derretida/arrepiada" demais, "abusado demais" fora de contexto.
+- **Testes:** `tests/test_soak_dia2.py` (+6).

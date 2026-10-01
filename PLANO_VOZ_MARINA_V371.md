@@ -1356,3 +1356,9 @@ fala. Detalhe na Auditoria ("30/09, tarde").
 
 **30/09, noite:** lanche sem cena pronta ("pipoca vendo série" saía com ela fazendo outra coisa; o prompt e o
 Hoje repetiam). Detalhe na Auditoria.
+
+**01/10 — relatório do dia 2:** a foto que ela manda na conversa agora entra no histórico (antes ela não sabia o que
+tinha mandado); travessão, ponto e vírgula e dois pontos entre palavras saem da fala (viram vírgula; decisão do
+Patrick pelos /ruim de 30/09). Lote de texto que segue anotado (não zera): "convencido" repetido, "derretida/
+arrepiada" demais, "seu bobo atrevido" depois de só uma risada dele, "abusado demais" fora de contexto. Detalhe na
+Auditoria ("01/10, manhã").

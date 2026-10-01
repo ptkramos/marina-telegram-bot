@@ -709,6 +709,10 @@ tempo entre os compromissos". Detalhe na Auditoria ("30/09, tarde").
 **30/09, noite:** o Hoje dizia "Beliscou pipoca vendo série" com ela no closet ou no TikTok — o lanche agora é
 só "Beliscou pipoca". Detalhe na Auditoria ("pipoca vendo série").
 
+**01/10, sem mudança de tela:** o Hoje mostrava "Tirou a roupa da máquina e estendeu no varal" às 21:57, no meio do
+banho (21:34–22:01). Máquina, varal e as coisas do apê agora esperam o banho, a refeição e o Milo, e o varal sai
+pelo menos 1 h depois da máquina. Detalhe na Auditoria ("01/10, manhã").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

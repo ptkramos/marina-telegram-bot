@@ -526,6 +526,20 @@ def _strip_trailing_gibberish(text: str) -> str:
     return cortado or text
 
 
+def _pontuacao_de_chat(t: str) -> str:
+    """Soak, dia 2 (30/09, /ruim 039, 042, 043, 044): "alerta de chuva — né?", "fechou: canja mesmo", "na varanda;
+    ele tá impossível". Ninguém escreve travessão, ponto e vírgula ou dois pontos no chat (decisão do Patrick, 01/10:
+    vira vírgula). Hora (15:30), ":(" e ";)" ficam."""
+    t = re.sub(r'^[ \t]*[—–][ \t]*', '', t, flags=re.MULTILINE)            # travessão abrindo a linha
+    t = re.sub(r'[ \t]*[—–][ \t]*$', '', t, flags=re.MULTILINE)            # ... ou fechando
+    t = re.sub(r'[ \t]*[—–][ \t]*', ', ', t)
+    t = re.sub(r'[ \t]*;(?![)\-pP])[ \t]*', ', ', t)
+    t = re.sub(r'(?<=[^\W\d_])[ \t]*:[ \t]+(?=[^\W\d_])', ', ', t)
+    t = re.sub(r',(?:[ \t]*,)+', ',', t)
+    t = re.sub(r',[ \t]*(?=[?!.\n]|$)', '', t)
+    return t
+
+
 def limpar_fala_marina(texto: str) -> str:
     """Remove tags de sistema, rubricas e meta-fala antes de enviar texto/áudio."""
     t = texto or ""
@@ -539,6 +553,7 @@ def limpar_fala_marina(texto: str) -> str:
     t = re.sub(r'\(\s*(No áudio|No audio|Na voz|Com voz|voz manhosa)[^)]*\)', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\*[^*]+\*', '', t)
     t = re.sub(r'#{2,}', '', t)                     # soak, dia 2 (30/09, 15:14): "Mas tô treinando com você, vai###"
+    t = _pontuacao_de_chat(t)
     # Remove qualquer parêntese residual explicativo no final da mensagem
     t = re.sub(r'\s*\([^)]*\)\s*$', '', t)
     # Alguns modelos devolvem "\n" literal
@@ -4193,6 +4208,11 @@ async def process_incoming_batch(
                 # Sessão e continuidade só depois do send_photo confirmado (message_id).
                 if getattr(sent_photo, 'message_id', None):
                     photo_director.confirm_sent(memory_manager.db, shot)
+                    # Soak, dia 2 (30/09, 11:37 e 13:06): a foto da conversa não entrava no histórico — ela não
+                    # sabia o que tinha mandado e o relatório contou 0 fotos. Mesmo formato da foto prometida.
+                    memory_manager.db.adicionar_mensagem(role="assistant", content=f"[1 foto(s): {shot.facts}] "
+                                                         f"{legenda_dinamica}", media_type="photo",
+                                                         model=legenda_model or getattr(settings, "LLM_MODEL", None))
                     _guardar_pro_insta(shot, foto_stream, now_foto)
                     import promessa_foto
                     promessa_foto.close(memory_manager.db, "cumprida")   # a foto de agora vale a promessa

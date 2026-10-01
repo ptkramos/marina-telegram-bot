@@ -614,6 +614,10 @@ class AgendaReativa:
                 logger.warning("agenda_reativa.classifica_vazio")
                 return None
             data = json.loads(raw[raw.find("{"):raw.rfind("}") + 1])
+        except json.JSONDecodeError:
+            # Soak, dia 2 (30/09, 13:08): JSON cortado no meio — também é "nenhuma", aviso e não traceback.
+            logger.warning("agenda_reativa.classifica_json_quebrado raw=%r", raw[:120])
+            return None
         except Exception:
             logger.exception("agenda_reativa.classifica")
             return None

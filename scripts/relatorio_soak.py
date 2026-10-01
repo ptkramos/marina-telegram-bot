@@ -90,7 +90,9 @@ def situacao(activity: str, region: str) -> str:
         return "academia"
     if "passeando com" in a:
         return "rua"
-    if "em casa" in a or "sofa" in a or "que o patrick mandou" in a or a.startswith(("acordando", "tempo livre")):
+    # soak, dia 2 (30/09, 05:21 e 06:16): "acabou de acordar, ainda de pijama" é em casa (não card vazio nem teleporte)
+    if "em casa" in a or "sofa" in a or "que o patrick mandou" in a or a.startswith(
+            ("acordando", "acabou de acordar", "tempo livre")):
         return "casa"
     return "fora"
 
@@ -139,6 +141,7 @@ FAZER_EM_CASA = {"organizando", "montando", "desenhando", "cozinhando", "lavando
                  "jogando", "costurando", "limpando", "dobrando", "arrumando", "deitando", "cochilando", "descansando"}
 FAZER_FORA = {"treinando", "malhando", "passeando", "caminhando", "correndo", "dirigindo", "pedalando", "nadando"}
 PISTA_CASA = re.compile(r"\b(?:no sof[aá]|na cama|no quarto|na sala|no closet|deitad[ao]|aqui em casa)\b")
+FIGURADO = re.compile(r"\s+com (?:voc[eê]|vc|tu)\b")   # ele está longe: "treinando com você" não é academia
 FUTURO = re.compile(r"\b(?:vou|quando (?:eu )?chegar|chegando|daqui a pouco|mais tarde|depois|antes de)\b[^.!?]{0,30}$")
 FORA_DE_CASA = {"fora", "rua", "caminho", "aula", "academia"}
 
@@ -161,6 +164,8 @@ def atividade_contradiz(texto: str, estados: list[dict]) -> str:
         verbo = _sem_acento(m.group(1))
         if verbo in FAZER_EM_CASA and sits <= FORA_DE_CASA:
             return m.group(0)
+        if verbo in FAZER_FORA and FIGURADO.match(t, m.end()):
+            continue                                   # soak, dia 2 (15:14): "tô treinando com você" (receber elogio)
         if verbo in FAZER_FORA and not (sits & FORA_DE_CASA) and not any(
                 verbo[:5] in _sem_acento(e["activity"] or "") for e in estados):
             return m.group(0)

@@ -25,7 +25,9 @@ from __future__ import annotations
 import json
 import logging
 import random
+import re
 from datetime import date, datetime, time, timedelta
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +153,33 @@ class Casa:
         except Exception:
             return "marina_apartment"
 
+    def _quando(self, key: str) -> Optional[datetime]:
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT event_at FROM life_events WHERE event_key=?", (key,)).fetchone()
+        return datetime.fromisoformat(row[0]).replace(tzinfo=None) if row else None
+
+    def _ocupada_em(self, t: datetime) -> bool:
+        """Às `t` ela estava no banho, comendo ou descendo com o Milo (o que já virou acontecimento)."""
+        with self.db.get_connection() as conn:
+            if conn.execute("""SELECT 1 FROM life_events WHERE (event_type='meal' OR event_key LIKE 'milo:%')
+                               AND end_at IS NOT NULL AND event_at<=? AND end_at>? LIMIT 1""",
+                            (t.isoformat(), t.isoformat())).fetchone():
+                return True
+            banhos = conn.execute("""SELECT event_at, summary FROM life_events WHERE event_key LIKE 'banho:%'
+                                     AND event_at<=? AND event_at>=?""",
+                                  (t.isoformat(), (t - timedelta(hours=2)).isoformat())).fetchall()
+        for b in banhos:
+            m = re.search(r"\((\d\d):(\d\d)–(\d\d):(\d\d)\)", b[1] or "")
+            if not m:
+                continue
+            ini = datetime.fromisoformat(b[0]).replace(tzinfo=None)
+            fim = ini.replace(hour=int(m.group(3)), minute=int(m.group(4)), second=0, microsecond=0)
+            if fim < ini:
+                fim += timedelta(days=1)
+            if ini <= t < fim:
+                return True
+        return False
+
     def materialize(self, now: datetime) -> int:
         from meals import Meals
         meals = Meals(self.db)
@@ -175,8 +204,19 @@ class Casa:
                     # com ela almoçando na PUC. Coisa de casa espera ela estar em casa (até 4 h depois).
                     if now - at > EM_CASA_ESPERA or not meals._at_home():
                         continue
-                    if meals._away_at(at):
+                    # Soak, dia 2 (30/09, 21:57): "estendeu no varal" no meio do banho (21:34–22:01). No banho,
+                    # comendo ou com o Milo, espera ela terminar; se a hora caiu dentro disso, acontece agora.
+                    if meals._transition_busy(now):
+                        continue
+                    if meals._away_at(at) or self._ocupada_em(at):
                         at = now
+                    if item["key"].endswith((":varal", ":roupa_esquecida")):
+                        maquina = self._quando(f"casa:{day.isoformat()}:roupa")
+                        if maquina is None:
+                            continue                    # a máquina ainda não foi posta
+                        at = max(at, maquina + timedelta(minutes=60))
+                        if at > now:
+                            continue
                 with self.db.get_connection() as conn:
                     cur = conn.execute(
                         """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,
