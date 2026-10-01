@@ -4,7 +4,8 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 01/10/2026, manhã (soak: dia 1 — item 19; dia 2 olhado ao vivo — item 20 — e o relatório inteiro
+_Atualizado em 01/10/2026, tarde (catálogo de textos: leva 1 decidida inteira, próxima conversa da frente de apps
+é aplicar o lote — seção 2; soak: dia 1 — item 19; dia 2 olhado ao vivo — item 20 — e o relatório inteiro
 lido em 01/10 — item 21: varal no meio do banho, foto da conversa fora do histórico, pontuação no filtro da fala.
 **Soak: dia 1 = terça 29/09**; próxima conversa: "bora no soak, dia 3" na sexta de manhã, relatório
 `soak/dia-2026-10-01.md` — o dia dos dois castings (arrumado antes de acontecer, item 20): conferir PUC → agência →
@@ -100,7 +101,8 @@ revisados com ele** (sem "·", atraso amarelo no Hoje, academia e Milo novos, Po
    em outras telas (barra do card, "Manhã · 7", motivo do Por dentro, "Precisa de") — anotado, sem pressa.
 
 ## 2. Apps (Mini App) — skill `frente-apps`
-**Abertura:** congelada até o soak fechar (freio, seção 0); o Instagram no uso real é visto no soak.
+**Abertura:** congelada até o soak fechar (freio, seção 0); o Instagram no uso real é visto no soak. Exceção
+liberada: **"bora na frente de apps: aplicar o lote 1 do catálogo de textos"** (só tela no soak; ver abaixo).
 **Exceção liberada durante o soak (Patrick, 30/09): "bora na frente de apps: catálogo de textos"** — página com todos
 os textos visíveis por categoria (Hoje, card do Agora, Bastidores, iFood, Nubank, Instagram), cada um com exemplo
 real, onde/quando aparece e a marca **só tela / ela lê / os dois**; ele preenche no ritmo dele e eu aplico em lotes.
@@ -116,7 +118,7 @@ numa cópia do banco em /tmp/catalogo, com o código copiado pra /tmp/catalogo/c
 Patrick segue o catálogo em outra conta do claude.ai (mesmo PC). A página antiga é privada da conta velha; as 59
 decisões dele foram salvas em `data/feedback/catalogo_textos/decisoes/textos/*.json`. Na conta nova: rodar `monta.py`,
 publicar `data/feedback/catalogo_textos/catalogo_textos.html` como artefato novo com `capabilities: {db: {}}`, semear a
-coleção `textos` com os JSON das decisões (ArtifactData batch, sem `version`) e mandar o link. Próximas levas:
+coleção `textos` com os JSON das decisões (ArtifactData batch, sem `version`) e mandar o link. **Feito (01/10):** conta nova em https://claude.ai/artifact/7B9uEC9tqYNai5zC8TPokU com as 59 decisões semeadas (26 mudar, 25 conversar, 8 manter). **Leva 1 decidida inteira (01/10):** 205 fichas, 118 mudar e 87 manter (as 45 "conversar" fechadas no chat, com 6 regras gerais em `data/feedback/catalogo_textos/regras_gerais.md`: "~" vira "por volta das", durações por extenso, gerúndio enquanto acontece, Indo/Está/Foi nas saídas, detalhe aninhado um por linha, "o Patrick" em tudo). Cópia das decisões em `decisoes/textos/`. **Próximo:** aplicar o lote (só tela entra no soak; o que vira texto do mundo, marca "ela lê", com cuidado), ficando pra depois do soak os assuntos que vêm como frase e a foto do provador (frente de voz). Próximas levas:
 Bastidores, iFood, Nubank, Instagram.
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba

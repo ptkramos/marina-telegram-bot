@@ -713,6 +713,14 @@ só "Beliscou pipoca". Detalhe na Auditoria ("pipoca vendo série").
 banho (21:34–22:01). Máquina, varal e as coisas do apê agora esperam o banho, a refeição e o Milo, e o varal sai
 pelo menos 1 h depois da máquina. Detalhe na Auditoria ("01/10, manhã").
 
+**01/10, catálogo de textos, leva 1 decidida (sem mudança de tela ainda):** as 205 fichas do Hoje e do card do Agora
+fechadas com o Patrick (118 mudar, 87 manter), com seis regras gerais pra tela inteira: "~" vira "por volta das" na
+frase e some dos números soltos; durações por extenso ("1 hora e 20 minutos"); gerúndio enquanto acontece e passado
+depois ("Fazendo as unhas" → "Fez as unhas"); saída "Indo para o…" → "Está no…" → "Foi para o…"; detalhe aninhado,
+um por linha (aulas perdidas em amarelo, itens do iFood, artistas enquanto ouve); "o Patrick" em tudo, nunca "você".
+Regras e decisões em `data/feedback/catalogo_textos/` (não vai pro git). Aplicar: 106 só tela entram no soak; 12
+"os dois" (ela lê) em lote separado.
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que
