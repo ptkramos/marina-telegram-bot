@@ -1397,3 +1397,6 @@ selfies novas fora de casa ficaram pra depois do soak. Detalhe na Auditoria ("l�
 **02/10, noite — comida fora mata a fome:** o que ela come na rua (açaí, croissant…) entra na fome do mundo com a
 mesma conta do delivery; bebida não conta como comida. Ela não fala mais de fome depois de comer uma tigela e um
 croissant. Detalhe na Auditoria ("comeu pra cacete e continuou com fome").
+Ajuste (02/10, noite): as caras novas valem só pro clima de flerte/tesão; e nenhuma pose tem mais cara fixa (regra do
+Patrick: a cara vem só do sentimento) — saíram a mordida da "inclinada pra câmera", sorrisos, língua pra fora e risada
+escritos nas poses.

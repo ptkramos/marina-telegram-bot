@@ -148,6 +148,24 @@ class DiretorDepoisDaConversaTest(unittest.TestCase):
         self.assertIn("glancing back over her shoulder at the camera with a flirty smile", s.prompt)
         self.assertNotIn("sultry", s.prompt)
 
+    def test_nenhuma_pose_tem_cara(self):
+        """Patrick (02/10): "nenhuma pose tem cara fixa, assim como nenhuma cara fixa tem pose — decidido única e
+        exclusivamente pelo feeling"."""
+        import re
+        import photo_director
+        cara = re.compile(r"smil|smirk|grin|laugh|wink|pout|bit(?:ing|es) her (?:lower )?lip|tongue out|eyebrow|"
+                          r"lustful|sultry|flushed", re.IGNORECASE)
+        for p in photo_director.POSES:
+            self.assertFalse(cara.search(p.action), (p.id, p.action))
+            self.assertFalse(re.search(r"\b(?:rindo|sorrindo|língua pra fora|mordendo)\b", p.pt), (p.id, p.pt))
+        self.assertFalse(hasattr(photo_director.Pose("x", "x", ("quarto",), (0, 1), "close", "selfie", "x"), "face"))
+
+    def test_sem_clima_a_cara_vem_do_humor(self):
+        from intimacy import IntimacyTurn
+        sem_clima = self._foto("manda uma foto sua", IntimacyTurn("off", 0))
+        self.assertNotIn("flirty", sem_clima.prompt)
+        self.assertNotIn("over her shoulder", sem_clima.prompt)
+
     def test_suavizar_tambem_troca_as_caras_novas(self):
         import photo_director
         for cara in (photo_director.EXPRESSAO_FLERTE, photo_director.EXPRESSAO_TESAO_VESTIDA):

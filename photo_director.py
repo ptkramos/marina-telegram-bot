@@ -59,7 +59,6 @@ class Pose:
     angle: str = "frontal"
     outfit: Optional[str] = None  # roupa fixa da pose (toalha, biquíni, academia)
     beats: tuple = ()             # (marca, ação) em ordem; a última é o gozo
-    face: str = ""                # cara que é o charme da pose (vale no lugar da cara do humor)
 
 
 DILDO_TEXT = "a realistic pink silicone dildo with a veined shaft"
@@ -162,7 +161,7 @@ POSES: tuple[Pose, ...] = (
     Pose("chao_abracando_joelhos", "sentada no chão encostada na cama, abraçando os joelhos (timer)", ("quarto",),
          (0, 3), "full", "timer", "sitting on the light wood floor with her back against the side of the bed, her "
          "knees pulled up together and her feet apart, hugging her legs with both arms, her body leaning slightly "
-         "toward the camera, glancing away and biting her lower lip"),
+         "toward the camera, glancing away"),
     Pose("cama_brucos_selfie", "de bruços na cama, queixo na mão e pés pro alto (selfie)", ("quarto",), (0, 3),
          "close", "selfie", "lying on her stomach on the bed, her chin resting on her left hand, her feet raised "
          "and crossed in the air behind her, her right arm stretched toward the camera taking the selfie from "
@@ -170,11 +169,7 @@ POSES: tuple[Pose, ...] = (
     Pose("inclinada_pra_camera", "de pé, inclinada pra frente em direção à câmera (timer)", ("quarto", "closet"),
          (1, 3), "three_quarter", "timer", "standing and leaning forward toward the camera, her arms straight down "
          "in front of her with her hands together between her knees, her body leaning in, her head turned to one "
-         "side and her eyes looking away from the camera toward the side",
-         # 28/09 (testes com o Patrick): o "meio sorriso" do humor fechava a boca; "mouth slightly open / teeth
-         # showing" abria a boca e a mordida sumia. A que mordeu de verdade (sentando no dildo) dizia só "biting her
-         # lower lip" com os lábios entreabertos em volta.
-         face="heavy-lidded lustful eyes and parted lips, biting her lower lip, her cheeks flushed"),
+         "side and her eyes looking away from the camera toward the side"),
     Pose("coracao_maos", "ajoelhada na beira da cama fazendo coração com as mãos (timer)", ("quarto",), (0, 3),
          "three_quarter", "timer", "kneeling at the edge of the bed leaning slightly toward the camera, her hands "
          "together in front of her chest making a heart shape, her thumbs and index fingers touching, looking at "
@@ -182,7 +177,7 @@ POSES: tuple[Pose, ...] = (
     Pose("beira_cama_de_baixo", "sentada na beira da cama, selfie de baixo, entre as coxas", ("quarto",), (1, 4),
          "three_quarter", "selfie", "sitting on the edge of the bed with her legs spread apart, her right arm "
          "stretched down between her thighs taking the selfie from an extreme low angle, looking down at the "
-         "camera over her body, a playful smirk with one eyebrow raised"),
+         "camera over her body"),
     Pose("chao_pernas_pro_alto", "deitada no chão, pernas pro alto e abertas (timer)", ("quarto",), (4, 4),
          "three_quarter", "timer", "lying on her back on the floor beside the bed, her legs raised high and spread "
          "wide toward the camera, her hands holding the backs of her thighs, looking at the camera between her "
@@ -215,7 +210,7 @@ POSES: tuple[Pose, ...] = (
          "leg, showing off her outfit"),
     Pose("closet_look_giro", "girando pra mostrar o look (tripé)", ("closet",), (0, 1), "full", "timer",
          "caught mid-turn in the middle of the closet, her hair and her outfit swinging with the movement, "
-         "smiling at the camera over her shoulder"),
+         "looking at the camera over her shoulder"),
     Pose("closet_look_andando", "andando em direção ao tripé, desfilando o look", ("closet",), (0, 1), "full",
          "timer", "walking toward the camera mid-step like on a runway, one hand tucking her hair behind her ear"),
     Pose("closet_look_poltrona", "sentada na poltrona de pernas cruzadas, de look (tripé)", ("closet",), (0, 1),
@@ -303,10 +298,9 @@ POSES: tuple[Pose, ...] = (
          "timer", "lying on a white lounger with one knee raised, her hands behind her head",
          outfit="a small soft triangle bikini in light blue"),
     # 27/09 (referência): na piscina do prédio é de biquíni — lugar de todo mundo.
-    Pose("piscina_empinada_selfie", "de bruços na espreguiçadeira, empinada, língua pra fora (selfie)", ("piscina",),
+    Pose("piscina_empinada_selfie", "de bruços na espreguiçadeira, empinada (selfie)", ("piscina",),
          (1, 1), "close", "selfie", "lying on her stomach on a white lounger with her hips raised and her back "
-         "arched, her right arm stretched toward the camera taking the selfie at a low angle, sticking her tongue "
-         "out playfully", outfit="a small soft triangle bikini in light blue"),
+         "arched, her right arm stretched toward the camera taking the selfie at a low angle", outfit="a small soft triangle bikini in light blue"),
     # Depois de gozar (Patrick, 24/09: "adoro ver como você fica depois que goza").
     Pose("pos_gozo", "jogada na cama logo depois de gozar, selfie de cima", ("quarto",), (3, 4), "close",
          "selfie", "lying on her back on the messy white sheets right after she came, her hair tangled over the "
@@ -349,7 +343,7 @@ POSES: tuple[Pose, ...] = (
     # 26/09 (Patrick): cabelo feito — no salão alguém de lá tira; em casa, espelho ou tripé (cabelo.py)
     Pose("salao_cabelo", "na cadeira do salão com o cabelo pronto, alguém do salão tirando", ("fora",), (0, 1),
          "three_quarter", "friend", "sitting in the salon chair right after her hair appointment, facing the camera, "
-         "her freshly done hair falling over her shoulders, smiling",
+         "her freshly done hair falling over her shoulders",
          outfit="a black hairdresser cape fastened at her neck and draped over her shoulders and body, a white "
                 "ribbed tank top underneath"),
     Pose("cabelo_espelho", "no espelho mostrando o cabelo pronto", ("closet", "quarto"), (0, 1), "three_quarter",
@@ -365,18 +359,18 @@ POSES: tuple[Pose, ...] = (
     Pose("fora_amiga_andando", "andando em direção à câmera, uma amiga tirando", ("fora",), (0, 1),
          "three_quarter", "friend", "walking toward the camera mid-step, one hand tucking her hair behind her ear"),
     # 27/09 (Patrick, Instagram): fora de casa ela quase sempre está com gente — não precisa ser sempre selfie
-    Pose("fora_amiga_rindo", "rindo olhando pro lado, uma amiga tirando sem ela posar", ("fora",), (0, 1),
-         "three_quarter", "friend", "caught mid-laugh looking off to the side at someone out of frame, candid and "
+    Pose("fora_amiga_rindo", "olhando pro lado, uma amiga tirando sem ela posar", ("fora",), (0, 1),
+         "three_quarter", "friend", "caught looking off to the side at someone out of frame, candid and "
          "unposed, one hand near her collarbone"),
     Pose("fora_amiga_sentada", "sentada à mesa, uma amiga tirando do outro lado", ("fora",), (0, 1),
          # 27/09 (foto 9, duas vezes selfie): olho na lente + uma mão livre = selfie; as duas mãos ficam ocupadas
          "three_quarter", "friend", "seen from across the table, sitting at a small table with the table edge and "
          "the back of her chair in the frame, her chin resting on her left hand and her right hand wrapped around "
-         "her drink on the table, smiling at her friend who is taking the photo"),
+         "her drink on the table, looking at her friend who is taking the photo"),
     Pose("fora_amiga_encostada", "encostada na parede, uma amiga tirando", ("fora",), (0, 1), "full", "friend",
          "leaning back against a wall with one foot resting flat against it, arms relaxed, looking at the camera"),
     Pose("fora_amiga_costas", "indo embora e olhando por cima do ombro, uma amiga tirando", ("fora",), (0, 1),
-         "three_quarter", "friend", "walking away from the camera and glancing back over her shoulder with a smile",
+         "three_quarter", "friend", "walking away from the camera and glancing back over her shoulder",
          angle="side"),
     # 28/09: foto de grupo — a amiga do rolê entra do lado direito e o rosto dela vem da foto-RG
     # (civitai_images.swap_friend_face). Só quando quem está com ela tem RG (FRIEND_RG). Cabeças um pouco
@@ -386,10 +380,10 @@ POSES: tuple[Pose, ...] = (
          "standing side by side, shoulder to shoulder, with a little space between their heads"),
     Pose("fora_selfie_amiga_abraco", "selfie com a amiga, abraçadas", ("fora",), (0, 1), "close", "selfie",
          "taking a selfie together with her friend, her right arm stretched toward the camera, her friend's arm "
-         "around her shoulders, both smiling at the camera, their heads a little apart"),
+         "around her shoulders, both looking at the camera, their heads a little apart"),
     Pose("fora_amigas_alguem_tirando", "com a amiga, alguém tirando a foto das duas", ("fora",), (0, 1),
          "full", "friend", "standing side by side with her friend, arms around each other's waists, both "
-         "smiling at the person taking the photo a few steps away, nobody in the photo holding a phone, with a "
+         "looking at the person taking the photo a few steps away, nobody in the photo holding a phone, with a "
          "little space between their heads"),
 )
 GROUP_POSES = ("fora_selfie_amiga", "fora_selfie_amiga_abraco", "fora_amigas_alguem_tirando")
@@ -930,9 +924,15 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
             action = f"{action}, creamy wetness around her fingers, creamythings, creamy vagina"
     # Pose com roupa fixa no nível 3+ é roupa puxada/levantada (27/09): vale o corpo canônico junto.
     nude = level >= 3 and (outfit is None or outfit == pose.outfit)
-    cara = expression_override or pose.face or expression(feeling, turn)
-    if not nude and cara in EXPRESSOES_QUENTES:   # vestida: as caras que passam no moderador (soak, dia 4)
-        cara = EXPRESSAO_TESAO_VESTIDA if getattr(turn, "state", "") == "active" else EXPRESSAO_FLERTE
+    # Patrick, 02/10: "nenhuma pose tem cara fixa, assim como nenhuma cara fixa tem pose — decidido única e
+    # exclusivamente pelo feeling". A cara vem do sentimento e do clima (ou da situação: Instagram, depois do gozo).
+    cara = expression_override
+    if not cara:
+        cara = expression(feeling, turn)
+        # Soak, dia 4 (02/10): vestida, a cara quente do clima vira as que passam no moderador e que o Patrick
+        # escolheu (sorriso largo no flerte, por cima do ombro no tesão).
+        if not nude and cara in EXPRESSOES_QUENTES:
+            cara = EXPRESSAO_TESAO_VESTIDA if getattr(turn, "state", "") == "active" else EXPRESSAO_FLERTE
     if pose.id in UNHA_EM_DESTAQUE and not _UNHA_RE.search(f"{request} {her_line}"):
         # Patrick, 02/10: "a unha faz parte do corpo dela, mas não precisa ser o foco, a não ser que o assunto
         # seja mostrar as unhas" — às 15:41 a selfie "mostrando as unhas recém-feitas" (feitas 3 dias antes).

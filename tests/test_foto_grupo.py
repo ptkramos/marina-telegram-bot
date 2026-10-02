@@ -90,17 +90,16 @@ class FotoGrupoTest(unittest.TestCase):
         s = self.shot("manda uma foto sua com a Bia", street(["bia_andrade"]))
         self.assertNotIn("pressed close", s.prompt)
 
-    def test_pose_com_cara_propria_vence_o_meio_sorriso(self):
-        """28/09: a inclinada pra câmera tem a boca entreaberta mordendo o lábio; o "smirk" do humor fechava a boca."""
+    def test_cara_vem_do_sentimento_nao_da_pose(self):
+        """28/09 a inclinada pra câmera tinha a mordida fixa. 02/10 (Patrick): "nenhuma pose tem cara fixa, assim
+        como nenhuma cara fixa tem pose — decidido única e exclusivamente pelo feeling"."""
         home = SimpleNamespace(place_key="marina_apartment", presence_assertable=True, activity="",
                                sublocation="quarto", weather=None, present_people=())
+        turn = IntimacyTurn(state="active", arousal=0.6)
         s = pd.direct(self.db, datetime(2026, 9, 27, 22, 30), request="manda uma foto pelada", camera_ctx=home,
-                      turn=IntimacyTurn(state="active", arousal=0.6), rng=random.Random(11),
-                      force_pose="inclinada_pra_camera")
-        self.assertIn("biting her lower lip", s.prompt)
-        self.assertNotIn("mouth slightly open", s.prompt, "boca aberta vence a mordida")
-        self.assertIn("eyes looking away from the camera", s.prompt)
-        self.assertNotIn("smirk", s.prompt)
+                      turn=turn, rng=random.Random(11), force_pose="inclinada_pra_camera")
+        self.assertIn(pd.expression(None, turn), s.prompt)
+        self.assertIn("eyes looking away from the camera", s.prompt, "pra onde ela olha é da pose")
 
     def test_geracao_troca_o_rosto_da_amiga(self):
         import sd_client

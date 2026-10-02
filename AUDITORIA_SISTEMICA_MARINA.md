@@ -2361,3 +2361,15 @@ lanche; original em `soak/originais-2026-10-02-fome.json`.
 **Leitura do soak:** três coisas do dia que ele achou e eu não (fotos com desculpa fixa, fome, fundo de rua) — o
 relatório ganha conferências novas e uma seção "o Patrick estranhou" na conversa do dia 4 (FRENTES, seção 0).
 - **Testes:** `tests/test_soak_dia4_fome.py` (+3).
+
+**02/10, noite — "eram só expressões novas pro flerte" (Patrick).** Conferido: a troca só pegava as três caras quentes
+do clima (`EXPRESSOES_QUENTES`); sem clima a cara segue pelo humor, e a foto nua não mudou. Mas a cara própria da pose
+`inclinada_pra_camera` (mordendo o lábio, decidida com ele em 28/09) é uma das três e também seria trocada quando
+vestida. **Regra do Patrick:** "nenhuma pose tem cara fixa, assim como nenhuma cara fixa tem pose — decidido única e
+exclusivamente pelo feeling". Saiu o campo `Pose.face` (só a `inclinada_pra_camera` usava) e as caras escritas nas
+ações: mordendo o lábio (chão abraçando os joelhos), "playful smirk with one eyebrow raised" (beira da cama de
+baixo), "smiling" (giro do look, salão, amiga à mesa, indo embora, selfie abraçadas, alguém tirando das duas — viram
+"looking at…"), "sticking her tongue out" (espreguiçadeira) e "mid-laugh" (amiga tirando; as duas últimas ele decidiu
+na hora que são cara). Olhar, gesto e ação física ficam ("looking over her shoulder", mão perto da boca). A cara vem
+de `expression(feeling, turn)` ou da situação (`expression_override`: Instagram, depois do gozo especial).
+`test_soak_dia4_fotos` (+2: nenhuma pose com cara; sem clima a cara é do humor).

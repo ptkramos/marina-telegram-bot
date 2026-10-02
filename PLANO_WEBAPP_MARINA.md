@@ -751,6 +751,7 @@ Instagram vem dessas fotos (Auditoria, "lógica da foto").
 **02/10, noite — a barra de fome acompanha a comida fora em tempo real:** antes, depois do açaí e do Rei do Mate a
 barra seguia subindo (só o mate contava, como beliscão); agora cai enquanto ela come cada coisa e sobe no ritmo
 normal. O Hoje continua com o "Pediu…" de cada item (o "Comeu…" não repete). Detalhe na Auditoria.
+Sem mudança de tela: as caras novas das fotos valem só pro clima, e nenhuma pose tem cara fixa (vem do sentimento).
 
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
