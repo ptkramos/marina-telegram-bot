@@ -2273,3 +2273,35 @@ cosméticos" (ofertas de 28 e 29/09 sortearam o mesmo tipo).
 **Lote de texto (não zera):** /ruim 048 "O Uber tá andando e eu te mando…", 049 "vou papá-la toda", 050 "guloso
 afetuoso", 051 "tô aceitando, amor, finalmente" (forçado).
 - **Testes:** `tests/test_soak_dia3.py` (+13).
+
+## Soak, dia 4 — sexta 02/10, olhado à tarde (até 15:41, antes do Quartinho; pedido do Patrick)
+
+Relatório parcial gerado na VPS (`relatorio_soak.py --dia 2026-10-02 --out /tmp/…`, sem custos): 96 mensagens dele, 99
+dela, 1 suspeita, 4 erros, 7 /ruim e 1 /bom.
+
+| Hora | O que se viu | Causa | Camada |
+|---|---|---|---|
+| 13:53, 14:22 | "distração g-relacionada", "capricha no desfile, hein GATE_CHANNEL" (/ruim 052, 055) | o modelo colou rótulos do prompt ("[CLEAN START GATE]", "[CANAL DE DADOS]"); o guard de artefato (`_DEBUG_ARTIFACT_RE`) não pegava CAIXA_ALTA com "_" | voz |
+| 14:23 | a confirmação do /ruim 055 não chegou (`BadRequest: Can't parse entities`) | o "_" da fala citada quebrou o Markdown de `_wizard_send` | voz |
+| 13:48–15:15 | "aqui tá sequinho", "dia quente", "nem tá chovendo" e depois "tô de guarda-chuva" | Open-Meteo marcava chuvisco (códigos 51–55) desde as 10h; o provedor só gravava `heavy_rain` (≥ 3 mm) e a temperatura, o prompt só falava de chuva forte, e a coordenada (-43.2105) era o Corcovado, 558 m, 17,8 °C contra 21 °C em Botafogo. `vontade`, `tempo_livre` e `agenda_viva` liam `w.get("rain")`, que ninguém gravava | mundo/prompt |
+| 15:01 | a foto dele ("Se explique aí então sua safada") sem leitura | a 2ª tentativa de ontem também foi cortada: a visão escreve demais (cortes em 300 e 500 tokens, 58 linhas) | voz |
+| — | toda foto em casa saía com chuva na janela quando o tempo era conhecido | `photo_director`: `"rain" in json.dumps(weather)` achava o nome "heavy_rain" | imagens |
+
+**Correções:** `_DEBUG_ARTIFACT_RE` com `(?-i:\b[A-Z]{2,}(?:_[A-Z0-9]+)+\b)` (refaz como os outros artefatos; "TPM",
+"PIX" e "UFRJ" passam). `_wizard_send` manda sem formatação se o Markdown quebrar. `real_context_provider`: longitude
+-43.1868 (Botafogo, 14 m), `weather_code` no pedido e `condition` (`_condicao`: clear, cloudy, drizzle, rain, storm;
+`calendar_world` aceita "drizzle"). `world_context.tempo_agora`: "[TEMPO AGORA EM BOTAFOGO] 21 °C, chuvisco. Se o
+tempo entrar na conversa, é esse; não invente sol, calor ou chuva diferente." `vontade/tempo_livre/agenda_viva._chuva`
+leem `condition in (rain, storm)` (chuvisco não segura saída). `photo_director`: chuva só com `heavy_rain` ou
+condição drizzle/rain/storm. `vision_service`: 800 tokens (1500 na 2ª) e "no máximo 5 itens por lista".
+**Pro Patrick decidir, ficou "vida" (minha opinião; ele estava indeciso):** 14:40 vestiu o baby-doll "pra provocar" e
+no mesmo minuto a vontade a levou pro açaí, com o vestido xadrez por cima; a história seguiu coerente e ele entrou
+nela. Se repetir (sair no meio de toda conversa quente), vira bug.
+**Alarme falso:** 09:37 teleporte do passeio do Milo (o Hoje tem a volta 09:33–09:37; o mundo só não foi gravado).
+**Leve:** Quartinho duas noites seguidas (hoje com a Júlia, marcado em 29/09; amanhã a Bia chamou pro mesmo bar).
+**Ok:** dayoff, Enseada com o Milo, farmácia (Buscofem e ibuprofeno), banho, almoço que ela fez, açaí e Rei do Mate
+pagos, Pix de R$ 1000 no saldo, foto com o vestido do mundo; 2 fotos recusadas pelo Civitai não viraram foto falsa.
+**Lote de texto (não zera):** /ruim 053 reações a elogio "porcas e repetitivas" ("tá abusado hj, hein menino"), 054
+"gosto quando você gosta", 056 "plano de elogio bem convincente" (formal), 057 "eu sabia que era boa", 058 a ideia
+boa dita de um jeito ruim; "convencido" de novo (15:35). /bom 144 "comprar roupa bonita é miojo, Patrick?".
+- **Testes:** `tests/test_soak_dia4.py` (+9).

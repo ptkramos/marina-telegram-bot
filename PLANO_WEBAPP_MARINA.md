@@ -742,6 +742,10 @@ resposta" às 18:30 do 2º casting, que ela largou no meio passando mal às 17:3
 agência apareciam como duas saídas ("Foi para a agência" 14:58–17:00 e 17:00–17:53); agora é uma só, 14:58–17:53,
 com os dois dentro. Hoje de 01/10 corrigido na produção (OK do Patrick). Detalhe na Auditoria ("Soak, dia 3").
 
+**02/10, tarde — soak, dia 4, sem mudança de tela:** o tempo do mundo agora é o de Botafogo (o ponto era o Corcovado,
+3 °C mais frio) e sabe de chuvisco; o que a tela e as fotos mostram de chuva passa a ser o tempo real. Detalhe na
+Auditoria ("Soak, dia 4").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

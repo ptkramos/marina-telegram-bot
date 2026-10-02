@@ -57,7 +57,8 @@ class RealContextCache:
             if 'temperature_c' in value and (not isinstance(value['temperature_c'], (int, float))
                                              or not -30 <= value['temperature_c'] <= 60):
                 raise ValueError('Invalid temperature')
-            if 'condition' in value and value['condition'] not in ('clear', 'cloudy', 'rain', 'storm', 'unknown'):
+            if 'condition' in value and value['condition'] not in ('clear', 'cloudy', 'drizzle', 'rain', 'storm',
+                                                                      'unknown'):
                 raise ValueError('Unknown weather condition')
         elif kind == 'holiday':
             if set(value) - {'date', 'name', 'scope', 'holidays'} or not value.get('date'):

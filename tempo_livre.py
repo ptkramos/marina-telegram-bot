@@ -165,7 +165,7 @@ class TempoLivre:
             with self.db.get_connection() as conn:
                 row = conn.execute("SELECT weather_context_json FROM world_state ORDER BY id DESC LIMIT 1").fetchone()
             w = json.loads(row["weather_context_json"] or "null") if row else None
-            return bool(w and (w.get("heavy_rain") or w.get("rain")))
+            return bool(w and (w.get("heavy_rain") or w.get("condition") in ("rain", "storm")))
         except Exception:
             return False
 

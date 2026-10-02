@@ -4,7 +4,8 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 02/10/2026 (soak, dia 3 lido e corrigido — item 22: "dia livre" tendo faltado, canja de ontem,
+_Atualizado em 02/10/2026, tarde (soak, dia 4 olhado até 15:41 — item 23: rótulo de prompt na fala, chuvisco
+que o mundo não via, foto sem leitura; dia 3 lido e corrigido — item 22: "dia livre" tendo faltado, canja de ontem,
 casting largado no meio que o Hoje dava como feito, foto sem leitura, agência duas vezes, bom dia antes da resposta
 da madrugada; catálogo de textos: lote 1 no ar — seção 2; próximas levas: Bastidores, iFood, Nubank, Instagram.
 **Soak: dia 1 = terça 29/09**; próxima conversa: "bora no soak, dia 4" no sábado de manhã, relatório
@@ -43,7 +44,9 @@ plantas 5x; corrigidos em 30/09 (item 20). Dia 2, resto do dia (relatório lido 
 do banho), 1 médio (foto da conversa fora do histórico), 7 textos feios (4 de pontuação, já no filtro); corrigidos
 em 01/10 (item 21). Dia 3 (qui 01/10, os castings) — 3 graves ("hoje é dia livre" tendo faltado, "a canja chegou"
 no dia seguinte, Hoje com o 2º casting feito que ela largou no meio), 3 médios (foto dele sem leitura, agência duas
-vezes no Hoje, bom dia antes da resposta da madrugada), 4 textos feios; corrigidos em 02/10 (item 22). Dias limpos: 0.
+vezes no Hoje, bom dia antes da resposta da madrugada), 4 textos feios; corrigidos em 02/10 (item 22). Dia 4 (sex
+02/10), olhado até 15:41 — 2 graves ("GATE_CHANNEL" na fala, "aqui tá sequinho" com chuvisco), 2 médios (foto dele
+sem leitura de novo, confirmação do /ruim que não chegou); corrigidos na hora (item 23). Dias limpos: 0.
 
 **Relatório diário (pronto, 28/09):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
 perguntou 00:00 × 05:00 e ficou 05:00: o rolê da noite e a conversa de madrugada ficam no mesmo dia), cobrindo
@@ -488,6 +491,20 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
     - Leve: "a Dona Neide tá terminando a faxina" às 09:30 (foi até 13:41).
     - Texto feio (lote da voz, não zera): "O Uber tá andando", "vou papá-la toda", "guloso afetuoso", "tô aceitando,
       amor, finalmente" forçado.
+
+23. ✅ **Soak, dia 4 (sexta 02/10) — olhado à tarde, até 15:41** (pedido do Patrick, antes do Quartinho; o relatório
+    inteiro sai sábado 05:10 e a conversa "bora no soak, dia 4" lê o resto do dia). `tests/test_soak_dia4.py` (+9).
+    - **13:53 "g-relacionada", 14:22 "hein GATE_CHANNEL"** — rótulo de prompt colado pelo modelo. Barrado e refeito
+      como os outros artefatos. Camada: voz (`bot._DEBUG_ARTIFACT_RE`).
+    - **14:23 /ruim 055 sem confirmação** — o "_" quebrou o Markdown. Manda sem formatação. Camada: voz.
+    - **"Aqui tá sequinho" (13:48), "dia quente" (15:03), "tô de guarda-chuva" (15:15)** — chuvisco desde as 10h e o
+      mundo só sabia de chuva forte; o ponto do tempo era o Corcovado (558 m); três módulos liam um "rain" que
+      ninguém gravava; toda foto em casa tinha chuva. Agora: Botafogo, condição do tempo gravada e dita no prompt.
+      Camada: mundo/prompt (`real_context_provider`, `world_context.tempo_agora`, `photo_director`).
+    - **15:01 foto dele sem leitura de novo** — a visão foi cortada em 300 e 500 tokens. Mais espaço, listas curtas.
+    - Ficou como vida (opinião minha; Patrick indeciso): 14:40 saiu pro açaí no meio da provocação.
+    - Texto feio (lote, não zera): reações a elogio repetitivas, "gosto quando você gosta", "plano de elogio bem
+      convincente", "convencido" de novo.
 
 **Abertos:** nenhum.
 

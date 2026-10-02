@@ -37,6 +37,7 @@ JSON OBRIGATÓRIO (todos os textos em português brasileiro):
 REGRAS:
 - Seja factual. Não invente nada além do que está na imagem.
 - Escreva os textos em português brasileiro.
+- Seja curto: no máximo 5 itens por lista, cada item com poucas palavras.
 - Devolva APENAS JSON válido, sem markdown.
 """
 
@@ -117,7 +118,8 @@ class VisionService:
                     self.llm.chat.completions.create,
                     model=self.vision_model,
                     messages=messages,
-                    max_tokens=300 if tentativa == 0 else 500,
+                    # Soak, dia 4 (02/10, 15:01): cortado em 300 e em 500 (a resposta tinha 58 linhas).
+                    max_tokens=800 if tentativa == 0 else 1500,
                     temperature=0.2,
                     response_format={"type": "json_object"}
                 )

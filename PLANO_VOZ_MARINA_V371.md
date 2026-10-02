@@ -1375,3 +1375,10 @@ sem ver (JSON da visão lido com tolerância e uma 2ª tentativa); com mensagem 
 vai junto da resposta, numa mensagem só (antes: bom dia 05:22 e "acordei agora e vi isso" 05:24). O "tomei um
 Buscopan" era do mundo (cólica moderada). Lote de texto que segue anotado (não zera): "O Uber tá andando", "vou
 papá-la toda", "guloso afetuoso", "tô aceitando, amor, finalmente" forçado. Detalhe na Auditoria ("Soak, dia 3").
+
+**02/10, tarde — soak, dia 4 (olhado antes do Quartinho):** rótulo de prompt na fala ("hein GATE_CHANNEL") é
+barrado e refeito; a confirmação do /ruim chega mesmo com "_" na fala citada; o prompt diz o tempo de agora em
+Botafogo ("21 °C, chuvisco"), porque ela disse "aqui tá sequinho" e "dia quente" com chuvisco e 18 °C (e o ponto do
+tempo era o Corcovado); a visão tem espaço pra responder (a foto das 15:01 foi cortada duas vezes). A saída pro açaí
+no meio da provocação ficou como vida. Lote de texto: reações a elogio repetitivas ("tá abusado hj, hein menino"),
+"gosto quando você gosta", "plano de elogio bem convincente", "convencido" de novo. Detalhe na Auditoria ("Soak, dia 4").

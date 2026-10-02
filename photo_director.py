@@ -863,7 +863,9 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     if re.search(r"transparente|de vidro|\bclear\b", f"{request} {her_line}", re.IGNORECASE):
         action = action.replace(DILDO_TEXT, DILDO_CLEAR_TEXT)    # os dois dildos dela: rosa e transparente
     weather = getattr(camera_ctx, "weather", None) if camera_ctx else None
-    rain = "chuva" if weather and (weather.get("heavy_rain") or "rain" in json.dumps(weather).lower()) else None
+    # Soak, dia 4 (02/10): "rain" in json.dumps(weather) achava o próprio nome "heavy_rain" — chovia em toda foto.
+    rain = "chuva" if weather and (weather.get("heavy_rain")
+                                   or weather.get("condition") in ("drizzle", "rain", "storm")) else None
     luz = ""
     if room == "fora":
         from camera_world import PLACE_VISUAL

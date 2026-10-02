@@ -23,6 +23,26 @@ def _no(de: str) -> str:
     return f"{ {'do': 'no', 'da': 'na', 'dos': 'nos', 'das': 'nas'}.get(primeira, primeira)} {resto}".strip()
 
 
+CONDICAO_TEMPO = {"clear": "céu aberto", "cloudy": "nublado", "drizzle": "chuvisco", "rain": "chovendo",
+                  "storm": "temporal"}
+
+
+def tempo_agora(weather: dict) -> str:
+    """Soak, dia 4 (02/10): com chuvisco desde as 10h e 18 °C ela disse "aqui tá sequinho" e "dia quente" — o prompt
+    só falava de chuva forte. O tempo real de agora em Botafogo."""
+    partes = []
+    temp = weather.get("temperature_c")
+    if isinstance(temp, (int, float)):
+        partes.append(f"{round(temp)} °C")
+    cond = CONDICAO_TEMPO.get(weather.get("condition") or "")
+    if cond:
+        partes.append(cond)
+    if not partes:
+        return ""
+    return (f"[TEMPO AGORA EM BOTAFOGO] {', '.join(partes)}. Se o tempo entrar na conversa, é esse; não invente sol, "
+            "calor ou chuva diferente.")
+
+
 class WorldContextBuilder:
     def __init__(self, db: DatabaseManager, *, cycle_mgr=None, retriever=None, stale_minutes: int = 60):
         self.db = db
@@ -191,6 +211,9 @@ class WorldContextBuilder:
             weather = json.loads(state["weather_context_json"])
             if weather.get("heavy_rain"):
                 blocks.append("Condição contextual: chuva forte; deslocamentos externos menos prováveis.")
+            tempo = tempo_agora(weather)
+            if tempo:
+                blocks.append(tempo)
 
         if True:
             from calendar_world import CalendarWorld

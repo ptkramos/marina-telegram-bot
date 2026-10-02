@@ -19,6 +19,24 @@ from db import DatabaseManager
 logger = logging.getLogger(__name__)
 
 
+def _condicao(code, rain_mm: float) -> str:
+    """Código WMO do Open-Meteo → condição do mundo. Soak, dia 4 (02/10): chuvisco desde as 10h (códigos 51–55) e o
+    mundo só sabia de chuva forte; ela disse "aqui tá sequinho" e "dia quente"."""
+    try:
+        code = int(code)
+    except (TypeError, ValueError):
+        return 'rain' if rain_mm > 0 else 'unknown'
+    if code >= 95:
+        return 'storm'
+    if 61 <= code <= 67 or 80 <= code <= 82 or rain_mm >= 3.0:
+        return 'rain'
+    if 51 <= code <= 57 or rain_mm > 0:
+        return 'drizzle'
+    if code <= 1:
+        return 'clear'
+    return 'cloudy'
+
+
 def _read_json(url: str, *, headers: dict | None = None):
     request = Request(url, headers=headers or {})
     with urlopen(request, timeout=4) as response:
@@ -58,9 +76,10 @@ class RealContextProvider:
 
     def refresh_weather(self, now: datetime) -> bool:
         now = local_time(now)
+        # Soak, dia 4 (02/10): -43.2105 caía no Corcovado (558 m, 3 °C mais frio que Botafogo); agora é a Voluntários.
         query = urlencode({
-            'latitude': -22.9519, 'longitude': -43.2105,
-            'current': 'temperature_2m,rain,showers',
+            'latitude': -22.9519, 'longitude': -43.1868,
+            'current': 'temperature_2m,rain,showers,weather_code',
             'timezone': 'America/Sao_Paulo',
         })
         data = _read_json(f'https://api.open-meteo.com/v1/forecast?{query}')
@@ -73,7 +92,8 @@ class RealContextProvider:
         if not -20 <= temperature <= 55 or rain < 0:
             return False
         self.cache.put('weather:rio', 'weather',
-                       {'heavy_rain': rain >= 3.0, 'temperature_c': temperature},
+                       {'heavy_rain': rain >= 3.0, 'temperature_c': temperature,
+                        'condition': _condicao(current.get('weather_code'), rain)},
                        source_name='Open-Meteo current model', observed_at=now,
                        expires_at=now + timedelta(minutes=30))
         return True

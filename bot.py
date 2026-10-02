@@ -28,6 +28,7 @@ from telegram import (
 )
 from telegram.request import HTTPXRequest
 from telegram.constants import ChatAction
+from telegram.error import BadRequest
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -809,6 +810,8 @@ _DEBUG_ARTIFACT_RE = re.compile(
     r"|\b[a-z_]{3,}::[a-z_]{3,}\b"            # ns::func
     r"|\[/?(?:INST|SYS|s)\]"                  # [INST] [/INST] [SYS]
     r"|<\|[a-z_]+\|>"                         # <|im_start|>
+    # Soak, dia 4 (02/10, 14:22): "capricha no desfile, hein GATE_CHANNEL" — rótulo de prompt em CAIXA_ALTA
+    r"|(?-i:\b[A-Z]{2,}(?:_[A-Z0-9]+)+\b)"
     r")",
     re.IGNORECASE,
 )
@@ -1899,7 +1902,14 @@ _WIZARD_CATEGORY_EXAMPLES = [
 
 async def _wizard_send(context, chat_id: int, text: str) -> None:
     """Manda mensagem do wizard e agenda auto-limpeza para não poluir chat."""
-    msg = await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
+    try:
+        msg = await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
+    except BadRequest as exc:
+        # Soak, dia 4 (02/10, 14:23): o /ruim de «…hein GATE_CHANNEL» — o "_" da fala citada quebrou o Markdown e a
+        # confirmação não chegou. Sem formatação, chega.
+        if "parse entities" not in str(exc).lower():
+            raise
+        msg = await context.bot.send_message(chat_id=chat_id, text=text)
     asyncio.create_task(delete_after_delay(context.bot, chat_id, msg.message_id, delay=180.0))
 
 
