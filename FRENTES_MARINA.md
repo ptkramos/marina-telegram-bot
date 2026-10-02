@@ -60,7 +60,13 @@ listo os bugs.
 saídas — 1º da frente de apps); salão pelo humor/remarcado pela conversa; virose com banheiro, pai ligando mais, job
 fora do Rio; roupa nova comprada no shopping; iFood da Ma, banco dela, `pedido_dela` no catálogo novo, pedidos dela de
 farmácia/mercado; fotos provisórias de marca e o X dela; técnicas antigas da voz (PLANO_VOZ 13); imagens (flash no
-quarto, foto de grupo em casa/duas amigas, poses novas, ângulo de trás, fatores do gozo especial, rostos novos).
+quarto, foto de grupo em casa/duas amigas, poses novas, ângulo de trás, fatores do gozo especial, rostos novos);
+**selfie sozinha fora de casa** (Patrick, 02/10: só existem duas, "selfie na rua" e a da mão na boca — fotos fora
+vão repetir); **ir ao banheiro do lugar pra mandar foto mais ousada** (Patrick, 02/10: lingerie na rua não, a não ser
+que ela vá ao banheiro do local); roupa de provocar + saída (02/10: ela disse "baby-doll por baixo", pro mundo ele
+saiu quando ela se vestiu pro açaí); **brinquedo Lovense pelo Mini App** (Patrick, 02/10, noite: um controle no
+app pra brincar à distância quando ela quiser — decidir com ele quem controla o quê, o brinquedo de verdade é dele ou
+é o dela na história, e como a fala e as fotos dela acompanham).
 O que era "ver no uso real" (agenda viva, atraso, roupa, Instagram, coerência entre turnos) **é o próprio soak**.
 
 ---
@@ -507,6 +513,13 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       Buzz: sem ela passa) e ela mandou o texto fixo "a câmera do apê travou" estando na rua, fora do histórico.
       Agora refaz uma vez com um sorriso; se falhar, ela explica do jeito dela, no histórico, e fica devendo outra.
       Camada: imagens/voz (`sd_client`, `photo_director.suavizar`, `bot._foto_nao_saiu`). `test_soak_dia4_fotos` (+7).
+    - **Conversa sobre a lógica da foto (Patrick):** "no Rei do Mate ela está dentro, não na rua" — lugar fora da
+      lista de fundos caía em "a street in Botafogo"; agora é "the inside of a small café in Botafogo"
+      (`photo_director.visual_do_lugar`, pelo tipo do lugar no mundo). Cara sensual vestida: testadas 3 (62 Buzz) —
+      "sultry… teasing smirk" recusada mesmo sem "young"; A ("flirty, confident look… playful half-smile") e C
+      passaram, ele não viu diferença (mesma pose, mão no rosto) e não gostou de eu ter decidido sozinho; 2ª rodada numa selfie sem mão no rosto (62 Buzz): mordendo o lábio recusada; **no flerte o sorriso largo, no tesão vestida o olhar por cima do ombro** (escolha dele, `EXPRESSAO_FLERTE` / `EXPRESSAO_TESAO_VESTIDA`).
+      Unha: "faz parte do corpo dela, mas não precisa ser o foco" — "mostrando as unhas" só se o assunto é unha (às
+      15:41 a pose foi escolhida com a unha de 3 dias). `test_soak_dia4_fotos` (+3).
     - Ficou como vida (opinião minha; Patrick indeciso): 14:40 saiu pro açaí no meio da provocação.
     - Texto feio (lote, não zera): reações a elogio repetitivas, "gosto quando você gosta", "plano de elogio bem
       convincente", "convencido" de novo.

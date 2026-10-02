@@ -745,7 +745,8 @@ com os dois dentro. Hoje de 01/10 corrigido na produção (OK do Patrick). Detal
 **02/10, tarde — soak, dia 4, sem mudança de tela:** o tempo do mundo agora é o de Botafogo (o ponto era o Corcovado,
 3 °C mais frio) e sabe de chuvisco; o que a tela e as fotos mostram de chuva passa a ser o tempo real. Detalhe na
 Auditoria ("Soak, dia 4"). Foto que falha (recusa do Civitai) não muda nada no app; no chat, ela mesma explica e fica
-devendo outra (Auditoria, "as duas fotos que não vieram").
+devendo outra (Auditoria, "as duas fotos que não vieram"). Foto em loja ou café mostra o lugar por dentro, e a do
+Instagram vem dessas fotos (Auditoria, "lógica da foto").
 
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):

@@ -581,17 +581,48 @@ def asked_level(text: str) -> Optional[int]:
     return None
 
 
+TIPO_DE_LUGAR_EN = {"cafés": "small café", "café": "small café", "açaí": "açaí shop", "farmácia": "pharmacy",
+                    "mercado": "supermarket", "padaria": "bakery", "bar": "bar", "restaurante": "restaurant",
+                    "lanchonete": "snack bar", "sorveteria": "ice cream shop", "loja": "shop"}
+
+
+def visual_do_lugar(db, place: Optional[str]) -> Optional[str]:
+    """Soak, dia 4 (02/10, 15:41): no Rei do Mate a foto ia com "Behind her, a street in Botafogo" — lugar fora da
+    lista do `PLACE_VISUAL` caía na rua. Lugar do mundo sem descrição própria: dentro dele, pelo tipo."""
+    if not db or not place:
+        return None
+    try:
+        with db.get_connection() as conn:
+            row = conn.execute("SELECT name, region, place_type FROM world_places WHERE canonical_key=?",
+                               (place,)).fetchone()
+    except Exception:
+        return None
+    if not row:
+        return None
+    tipo = TIPO_DE_LUGAR_EN.get((row["place_type"] or "").strip().lower(), "shop")
+    # sem o nome da loja: o Krea 2 não conhece a fachada e escreve letreiro inventado
+    return f"the inside of a {tipo} in {row['region'] or 'Botafogo'}, Rio de Janeiro"
+
+
 EXPRESSAO_NEUTRA = "a soft playful smile"
 EXPRESSOES_QUENTES = ("heavy-lidded lustful eyes and parted lips, biting her lower lip, her cheeks flushed",
                       "a sultry half-lidded look and a slow teasing smirk", "a playful teasing smirk")
+# Soak, dia 4 (02/10): testado no pedido das 15:41 — "sultry… teasing smirk" recusada pelo moderador (com ou sem
+# "young"), "biting her lower lip lightly" também. Passaram e o Patrick escolheu, vendo as fotos (selfie no café):
+# no flerte o sorriso largo, no tesão ela ainda vestida o olhar por cima do ombro.
+EXPRESSAO_FLERTE = "a big flirty grin and a playful wink"
+EXPRESSAO_TESAO_VESTIDA = "glancing back over her shoulder at the camera with a flirty smile"
+UNHA_EM_DESTAQUE = {"unhas_selfie": ", showing off her freshly done nails in the foreground",
+                    "unhas_selfie_rua": ", showing off her freshly done nails in the foreground"}
+_UNHA_RE = re.compile(r"\bunh|esmalte|manicure", re.IGNORECASE)
 
 
 def suavizar(prompt: str) -> Optional[str]:
     """Soak, dia 4 (02/10, 14:55 e 15:41): selfie normal na rua com "a sultry half-lidded look and a slow teasing
     smirk" foi recusada como adulta pelo moderador do Civitai (testado: sem a expressão, passou). A foto normal
-    recusada vai de novo com um sorriso. None se não tinha expressão quente pra trocar."""
+    recusada vai de novo com um sorriso. None se não tinha expressão de clima pra trocar."""
     novo = prompt
-    for quente in EXPRESSOES_QUENTES:
+    for quente in (*EXPRESSOES_QUENTES, EXPRESSAO_FLERTE, EXPRESSAO_TESAO_VESTIDA):
         novo = novo.replace(quente, EXPRESSAO_NEUTRA)
     return novo if novo != prompt else None
 
@@ -884,7 +915,7 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     luz = ""
     if room == "fora":
         from camera_world import PLACE_VISUAL
-        visual = PLACE_VISUAL.get(place or "", "a street in Botafogo, Rio de Janeiro")
+        visual = PLACE_VISUAL.get(place or "") or visual_do_lugar(db, place) or "a street in Botafogo, Rio de Janeiro"
         visual = re.sub(r",?\s*candid (indoor )?smartphone photo", "", visual)
         luz = _luz_fora((scene_at or now).hour)
         setting, backdrop = f"{visual}{luz}", f"{visual.split(',')[0]} in soft focus{luz}"
@@ -899,10 +930,16 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
             action = f"{action}, creamy wetness around her fingers, creamythings, creamy vagina"
     # Pose com roupa fixa no nível 3+ é roupa puxada/levantada (27/09): vale o corpo canônico junto.
     nude = level >= 3 and (outfit is None or outfit == pose.outfit)
+    cara = expression_override or pose.face or expression(feeling, turn)
+    if not nude and cara in EXPRESSOES_QUENTES:   # vestida: as caras que passam no moderador (soak, dia 4)
+        cara = EXPRESSAO_TESAO_VESTIDA if getattr(turn, "state", "") == "active" else EXPRESSAO_FLERTE
+    if pose.id in UNHA_EM_DESTAQUE and not _UNHA_RE.search(f"{request} {her_line}"):
+        # Patrick, 02/10: "a unha faz parte do corpo dela, mas não precisa ser o foco, a não ser que o assunto
+        # seja mostrar as unhas" — às 15:41 a selfie "mostrando as unhas recém-feitas" (feitas 3 dias antes).
+        action = action.replace(UNHA_EM_DESTAQUE[pose.id], "")
     prompt = krea2_zoom_prompt(action, zoom=pose.zoom, setting=setting, backdrop=backdrop,
                                is_nsfw=nude, focus_angle=pose.angle, framing=pose.framing,
-                               outfit=outfit,
-                               expression=expression_override or pose.face or expression(feeling, turn))
+                               outfit=outfit, expression=cara)
     if in_photo:
         friend_line = _friend_sentence(in_photo, friend_outfit)
         prompt = (prompt.replace("Behind her, ", f"{friend_line} Behind them, ", 1) if "Behind her, " in prompt

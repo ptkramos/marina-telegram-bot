@@ -2324,3 +2324,25 @@ e vira promessa de selfie (`promessa_foto.observe_marina_line`); `foto.nao_saiu`
 **De passagem (fala × mundo, não mexi):** ela disse "baby-doll de tule por baixo"; pro mundo o baby-doll das 14:40 saiu
 quando ela se vestiu pro açaí (só o vestido). Fica pra a frente do mundo olhar (roupa de provocar + saída).
 - **Testes:** `tests/test_soak_dia4_fotos.py` (+7).
+
+**02/10, fim da tarde — conversa com o Patrick sobre a lógica da foto.** Três perguntas dele:
+1. *"Se ela tá no Rei do Mate, ela está dentro, não na rua."* Bug: `room="fora"` quer dizer fora de casa, e o fundo
+   vem de `camera_world.PLACE_VISUAL` (16 lugares); Rei do Mate, Estação do Açaí e a Drogaria Cristal não estão lá e
+   caíam em "a street in Botafogo". `photo_director.visual_do_lugar`: lugar do mundo sem descrição usa o tipo de
+   `world_places.place_type` ("the inside of a small café in Botafogo, Rio de Janeiro"), sem o nome da loja (o Krea 2
+   inventa letreiro).
+2. *"É impossível uma selfie vestida com cara sensual?"* Não. Teste no pedido das 15:41 com o fundo novo (62 Buzz):
+   A "a flirty, confident look straight into the camera and a playful half-smile" passou; B (a cara de antes, trocando
+   "young" por "in her early twenties") recusada — o gatilho é "sultry… teasing smirk", não "young"; C "smoldering
+   eyes and a knowing little smile" passou. O Patrick não viu diferença entre A e C (mesma semente e a mão no rosto escondia a cara) — e eu decidi
+   sozinho pela A, o que ele cobrou ("tu tomou a decisão por quê?"). 2ª rodada numa selfie sem mão no rosto (62
+   Buzz): "biting her lower lip lightly" recusada; "glancing back over her shoulder at the camera with a flirty
+   smile" e "a big flirty grin and a playful wink" passaram (a piscadinha não sai). **Escolha dele:** flerte → sorriso
+   largo (`EXPRESSAO_FLERTE`), tesão ativo ainda vestida → por cima do ombro (`EXPRESSAO_TESAO_VESTIDA`); nua segue
+   igual (modo adulto). O refazer com "a soft playful smile" continua de rede, trocando as duas também.
+3. *"De onde saiu a mão mostrando as unhas?"* Fora de casa sozinha, nível 1, só existem duas selfies ("selfie na
+   rua" e "unhas_selfie_rua"); o modelo escolheu a da mão na boca. A pose era de unha recém-feita (26/09) e o código
+   não conferia — a unha era de 29/09. Decisão do Patrick: a unha faz parte do corpo e sempre aparece, mas "mostrando
+   as unhas" só quando o assunto é unha (`UNHA_EM_DESTAQUE`, `_UNHA_RE` no pedido dele ou na fala dela); o gesto da
+   mão na boca fica. Banheiro do local e mais selfies sozinha fora de casa → "Depois do soak".
+Fotos de teste em `logs/fotos_teste/` (não vão pro git). Testes em `tests/test_soak_dia4_fotos.py` (+3).

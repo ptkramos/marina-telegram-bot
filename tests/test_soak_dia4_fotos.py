@@ -104,5 +104,55 @@ class FotoNaoSaiuTest(unittest.TestCase):
         self.assertEqual(texto, bot.FOTO_NAO_SAIU_FALLBACK)
 
 
+class DiretorDepoisDaConversaTest(unittest.TestCase):
+    """Conversa com o Patrick (02/10, tarde): no Rei do Mate a foto ia com "Behind her, a street in Botafogo"; a cara
+    sensual vestida é a A ("flirty, confident…", testada); unha só é foco se o assunto é unha."""
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.db = DatabaseManager(Path(temp.name) / "d.db")
+
+    def _foto(self, pedido, turn):
+        import photo_director
+        from datetime import datetime
+        return photo_director.direct(self.db, datetime(2026, 10, 2, 15, 41), request=pedido, her_line="vem ver",
+                                     camera_ctx=None, feeling=None, her_initiative=False, turn=turn,
+                                     chooser=lambda op, p, f: "unhas_selfie", fertile=False)
+
+    def test_lugar_sem_descricao_e_dentro_dele(self):
+        import photo_director
+        with self.db.get_connection() as conn:
+            conn.execute("INSERT INTO world_places (canonical_key, name, region, place_type, truth_type, familiarity,"
+                         " distance_class, canon_locked, active, created_at, updated_at) VALUES ('loja_rei_do_mate',"
+                         " 'Rei do Mate', 'Botafogo', 'Cafés', 'real_world', 'known', 'near_home', 0, 1, 'x', 'x')")
+            conn.commit()
+        self.assertEqual(photo_director.visual_do_lugar(self.db, "loja_rei_do_mate"),
+                         "the inside of a small café in Botafogo, Rio de Janeiro")
+        self.assertIsNone(photo_director.visual_do_lugar(self.db, "nao_existe"))
+
+    def test_cara_de_flerte_vestida_e_unha_so_com_assunto(self):
+        from intimacy import IntimacyTurn
+        s = self._foto("manda uma foto sua gostosa", IntimacyTurn("warming", 0.3))
+        self.assertEqual((s.pose_id, s.level), ("unhas_selfie", 1))
+        self.assertIn("a big flirty grin and a playful wink", s.prompt)
+        self.assertNotIn("teasing smirk", s.prompt)
+        self.assertNotIn("showing off her freshly done nails", s.prompt)
+        self.assertIn("her free hand raised to her lips", s.prompt)
+        self.assertIn("showing off her freshly done nails", self._foto("mostra as unhas", IntimacyTurn("off", 0)).prompt)
+
+    def test_tesao_vestida_e_a_por_cima_do_ombro(self):
+        from intimacy import IntimacyTurn
+        s = self._foto("manda uma foto sua gostosa", IntimacyTurn("active", 0.55))
+        self.assertLessEqual(s.level, 2)
+        self.assertIn("glancing back over her shoulder at the camera with a flirty smile", s.prompt)
+        self.assertNotIn("sultry", s.prompt)
+
+    def test_suavizar_tambem_troca_as_caras_novas(self):
+        import photo_director
+        for cara in (photo_director.EXPRESSAO_FLERTE, photo_director.EXPRESSAO_TESAO_VESTIDA):
+            self.assertIn(photo_director.EXPRESSAO_NEUTRA, photo_director.suavizar(cara))
+
+
 if __name__ == "__main__":
     unittest.main()

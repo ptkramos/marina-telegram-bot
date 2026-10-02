@@ -1387,3 +1387,9 @@ no meio da provocação ficou como vida. Lote de texto: reações a elogio repet
 entrava no histórico), ela diz do jeito dela que a foto não ficou boa, sabendo onde está; a frase entra no histórico
 e vira promessa de mandar outra. Antes disso, a selfie normal recusada pelo moderador do Civitai (expressão sensual)
 é refeita uma vez com um sorriso. Detalhe na Auditoria ("as duas fotos que não vieram").
+
+**02/10, fim da tarde — lógica da foto, com o Patrick:** foto dentro de loja/café mostra o lugar por dentro (não a
+rua); foto vestida no clima usa as caras que passam no moderador e que o Patrick escolheu vendo as fotos (sorriso largo
+no flerte, olhar por cima do ombro no tesão) (a anterior, "sultry… teasing smirk",
+era recusada); a unha aparece sempre, mas só é o foco quando o assunto é unha. Banheiro do local pra foto ousada e
+selfies novas fora de casa ficaram pra depois do soak. Detalhe na Auditoria ("lógica da foto").
