@@ -45,7 +45,7 @@ do banho), 1 médio (foto da conversa fora do histórico), 7 textos feios (4 de 
 em 01/10 (item 21). Dia 3 (qui 01/10, os castings) — 3 graves ("hoje é dia livre" tendo faltado, "a canja chegou"
 no dia seguinte, Hoje com o 2º casting feito que ela largou no meio), 3 médios (foto dele sem leitura, agência duas
 vezes no Hoje, bom dia antes da resposta da madrugada), 4 textos feios; corrigidos em 02/10 (item 22). Dia 4 (sex
-02/10), olhado até 15:41 — 2 graves ("GATE_CHANNEL" na fala, "aqui tá sequinho" com chuvisco), 2 médios (foto dele
+02/10), olhado até 15:41 — 3 graves ("GATE_CHANNEL" na fala, "aqui tá sequinho" com chuvisco, "a câmera do apê travou" no lugar de duas fotos), 2 médios (foto dele
 sem leitura de novo, confirmação do /ruim que não chegou); corrigidos na hora (item 23). Dias limpos: 0.
 
 **Relatório diário (pronto, 28/09):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
@@ -502,6 +502,11 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       ninguém gravava; toda foto em casa tinha chuva. Agora: Botafogo, condição do tempo gravada e dita no prompt.
       Camada: mundo/prompt (`real_context_provider`, `world_context.tempo_agora`, `photo_director`).
     - **15:01 foto dele sem leitura de novo** — a visão foi cortada em 300 e 500 tokens. Mais espaço, listas curtas.
+    - **14:55 e 15:41 as duas fotos dela que não vieram** (o Patrick viu; eu tinha deixado passar no relatório) — o
+      moderador do Civitai recusou a selfie normal pela expressão sensual ("sultry… teasing smirk"; testado, 31
+      Buzz: sem ela passa) e ela mandou o texto fixo "a câmera do apê travou" estando na rua, fora do histórico.
+      Agora refaz uma vez com um sorriso; se falhar, ela explica do jeito dela, no histórico, e fica devendo outra.
+      Camada: imagens/voz (`sd_client`, `photo_director.suavizar`, `bot._foto_nao_saiu`). `test_soak_dia4_fotos` (+7).
     - Ficou como vida (opinião minha; Patrick indeciso): 14:40 saiu pro açaí no meio da provocação.
     - Texto feio (lote, não zera): reações a elogio repetitivas, "gosto quando você gosta", "plano de elogio bem
       convincente", "convencido" de novo.

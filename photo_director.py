@@ -581,6 +581,21 @@ def asked_level(text: str) -> Optional[int]:
     return None
 
 
+EXPRESSAO_NEUTRA = "a soft playful smile"
+EXPRESSOES_QUENTES = ("heavy-lidded lustful eyes and parted lips, biting her lower lip, her cheeks flushed",
+                      "a sultry half-lidded look and a slow teasing smirk", "a playful teasing smirk")
+
+
+def suavizar(prompt: str) -> Optional[str]:
+    """Soak, dia 4 (02/10, 14:55 e 15:41): selfie normal na rua com "a sultry half-lidded look and a slow teasing
+    smirk" foi recusada como adulta pelo moderador do Civitai (testado: sem a expressão, passou). A foto normal
+    recusada vai de novo com um sorriso. None se não tinha expressão quente pra trocar."""
+    novo = prompt
+    for quente in EXPRESSOES_QUENTES:
+        novo = novo.replace(quente, EXPRESSAO_NEUTRA)
+    return novo if novo != prompt else None
+
+
 def expression(feeling, turn) -> str:
     """A cara do momento: tesão primeiro, depois o que ela sente, depois o corpo."""
     state = getattr(turn, "state", "off")

@@ -1382,3 +1382,8 @@ Botafogo ("21 °C, chuvisco"), porque ela disse "aqui tá sequinho" e "dia quent
 tempo era o Corcovado); a visão tem espaço pra responder (a foto das 15:01 foi cortada duas vezes). A saída pro açaí
 no meio da provocação ficou como vida. Lote de texto: reações a elogio repetitivas ("tá abusado hj, hein menino"),
 "gosto quando você gosta", "plano de elogio bem convincente", "convencido" de novo. Detalhe na Auditoria ("Soak, dia 4").
+
+**02/10, tarde — foto que não sai:** em vez do texto fixo "a câmera do apê travou" (que saía até na rua e não
+entrava no histórico), ela diz do jeito dela que a foto não ficou boa, sabendo onde está; a frase entra no histórico
+e vira promessa de mandar outra. Antes disso, a selfie normal recusada pelo moderador do Civitai (expressão sensual)
+é refeita uma vez com um sorriso. Detalhe na Auditoria ("as duas fotos que não vieram").

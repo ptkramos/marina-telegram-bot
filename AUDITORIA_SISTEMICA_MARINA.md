@@ -2305,3 +2305,22 @@ pagos, Pix de R$ 1000 no saldo, foto com o vestido do mundo; 2 fotos recusadas p
 "gosto quando você gosta", 056 "plano de elogio bem convincente" (formal), 057 "eu sabia que era boa", 058 a ideia
 boa dita de um jeito ruim; "convencido" de novo (15:35). /bom 144 "comprar roupa bonita é miojo, Patrick?".
 - **Testes:** `tests/test_soak_dia4.py` (+9).
+
+**02/10, tarde — as duas fotos que não vieram (o Patrick perguntou por que eu não falei).** 14:55 e 15:41 ele pediu
+foto; as duas falharam e ele recebeu o texto fixo de `bot.py` "Amor, tentei te mandar a fotinho agora mas a câmera do
+apê travou 🥺 Me pede de novo…" — com ela no açaí e no Rei do Mate —, e a frase não entrava em `conversas` (ela não
+sabia que tinha dito; o relatório não mostrava). **Falha minha na leitura:** vi os 2 `civitai.sfw_flagged_by_moderator`
+e escrevi "não viraram foto falsa" sem conferir o que ele recebeu; era mensagem quebrada (grave).
+**Causa:** pedido reconstruído numa cópia do banco — selfie normal na rua (`unhas_selfie_rua`, nível 1, vestido
+xadrez); o moderador do Civitai recusa "young Brazilian woman" com "a sultry half-lidded look and a slow teasing
+smirk" (expressão de `photo_director.expression` no clima ativo). **Teste (OK do Patrick, 31 Buzz):** o mesmo
+pedido recusado de novo (recusa não cobra); trocando só a expressão por "a soft playful smile", passou e saiu
+coerente (vestido xadrez, unha rosa, rua de Botafogo).
+**Correções:** `civitai_images.ultima_recusa_sfw`; `sd_client.generate_directed` refaz uma vez com
+`photo_director.suavizar` (as três expressões quentes → "a soft playful smile") quando o moderador recusa foto normal.
+Se falhar mesmo assim, `bot._foto_nao_saiu`: a fala é dela (`generate_dynamic_speech`, sabendo onde está, "não culpe
+câmera, celular ou internet"; reserva "Amor, a foto saiu toda tremida kkk já já te mando outra"), entra no histórico
+e vira promessa de selfie (`promessa_foto.observe_marina_line`); `foto.nao_saiu` é aviso (aparece no relatório).
+**De passagem (fala × mundo, não mexi):** ela disse "baby-doll de tule por baixo"; pro mundo o baby-doll das 14:40 saiu
+quando ela se vestiu pro açaí (só o vestido). Fica pra a frente do mundo olhar (roupa de provocar + saída).
+- **Testes:** `tests/test_soak_dia4_fotos.py` (+7).

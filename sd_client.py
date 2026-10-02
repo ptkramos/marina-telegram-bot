@@ -103,9 +103,20 @@ class ImageGeneratorClient:
             return PhotoGenerationResult(image=None)
         async with self._lock:
             import civitai_images
-            img = await civitai_images.generate(shot.prompt, is_nsfw=shot.is_nsfw, focus_angle=shot.focus_angle,
+            prompt = shot.prompt
+            img = await civitai_images.generate(prompt, is_nsfw=shot.is_nsfw, focus_angle=shot.focus_angle,
                                                 seed=shot.seed, lora_weights=shot.lora_weights,
                                                 pov=getattr(shot, "pov", False))
+            if img is None and not shot.is_nsfw and civitai_images.ultima_recusa_sfw:
+                # Soak, dia 4 (02/10): o moderador recusou a selfie normal pela expressão sensual; vai com um sorriso.
+                import photo_director
+                suave = photo_director.suavizar(prompt)
+                if suave:
+                    logger.info("civitai.refaz_sem_expressao pose=%s", shot.pose_id)
+                    prompt = suave
+                    img = await civitai_images.generate(prompt, is_nsfw=False, focus_angle=shot.focus_angle,
+                                                        seed=shot.seed, lora_weights=shot.lora_weights,
+                                                        pov=getattr(shot, "pov", False))
             friend = getattr(shot, "friend", "")
             if img is not None and friend:
                 # 28/09: foto de grupo — o rosto da amiga vira o da foto-RG dela (Krea 2 Edit, só o lado dela).
@@ -117,7 +128,7 @@ class ImageGeneratorClient:
                     img = io.BytesIO(swapped)
                 else:
                     logger.warning("foto de grupo sem a troca de rosto (%s)", friend)
-        return PhotoGenerationResult(image=img, full_prompt=shot.prompt, scene_tags=shot.pose_id,
+        return PhotoGenerationResult(image=img, full_prompt=prompt, scene_tags=shot.pose_id,
                                      is_nsfw=shot.is_nsfw, focus_angle=shot.focus_angle,
                                      place_key=shot.place_key, world_snapshot_id=world_snapshot_id)
 

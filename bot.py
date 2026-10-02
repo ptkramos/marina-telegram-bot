@@ -4243,8 +4243,7 @@ async def process_incoming_batch(
                         # Patrick, 25/09: depois do gozo especial, a selfie dela toda molinha na cama.
                         await _selfie_depois_do_gozo(context, chat_id, camera_ctx, feeling, fala_limpa)
             else:
-                aviso_foto = "Amor, tentei te mandar a fotinho agora mas a câmera do apê travou 🥺 Me pede de novo daqui a pouco que eu tiro outra pra você!"
-                await send_human_messages(chat_id, context.bot, aviso_foto, reply_to_message_id=reply_to_id)
+                await _foto_nao_saiu(chat_id, context, camera_ctx, fala_limpa, reply_to_id)
         except Exception as e:
             logger.error(f"Erro ao processar envio de foto: {e}", exc_info=True)
 
@@ -4904,6 +4903,36 @@ class _PendingDeliveryBot:
 
     async def send_photo(self, **kwargs):
         return await self._send(self._bot.send_photo, **kwargs)
+
+
+FOTO_NAO_SAIU_FALLBACK = "Amor, a foto saiu toda tremida kkk já já te mando outra"
+
+
+def _instrucao_foto_nao_saiu(onde: str, fala: str) -> str:
+    return (f"Você ia mandar agora uma foto sua pro Patrick, mas ela não ficou boa e você não mandou. "
+            + (f"Onde você está agora: {onde}. " if onde else "")
+            + f"Você tinha acabado de dizer: '{fala[:200]}'. Diga do seu jeito, numa frase curta, que a foto não "
+            "ficou boa e que já já manda outra. Não culpe câmera, celular ou internet, e não invente lugar.")
+
+
+async def _foto_nao_saiu(chat_id, context, camera_ctx, fala: str, reply_to_id=None) -> None:
+    """Soak, dia 4 (02/10, 14:55 e 15:41): a foto falhou e ela mandou o texto fixo "a câmera do apê travou" — no
+    açaí e no Rei do Mate — e a frase nem entrava no histórico. Agora é da voz dela, sabendo onde está; entra no
+    histórico e o "já já te mando outra" vira promessa de foto."""
+    onde = (getattr(camera_ctx, "activity", None) or "") if camera_ctx else ""
+    texto = await asyncio.to_thread(generate_dynamic_speech, _instrucao_foto_nao_saiu(onde, fala), 60)
+    if not texto or _needs_retry_for_junk(texto)[0] or _is_policy_refusal(texto):
+        texto = FOTO_NAO_SAIU_FALLBACK
+    texto = limpar_fala_marina(texto)
+    await send_human_messages(chat_id, context.bot, texto, reply_to_message_id=reply_to_id)
+    memory_manager.db.adicionar_mensagem(role="assistant", content=texto, media_type="text",
+                                         model=getattr(settings, "LLM_MODEL", None))
+    try:
+        import promessa_foto
+        promessa_foto.observe_marina_line(memory_manager.db, texto, "", datetime.now())   # outra selfie
+    except Exception:
+        logger.exception("foto_nao_saiu.promessa")
+    logger.warning("foto.nao_saiu onde=%s", onde or "-")      # aparece nos avisos do relatório do soak
 
 
 BOM_DIA_NA_RESPOSTA = 'bom_dia_na_resposta_json'

@@ -314,11 +314,17 @@ def _images(workflow: dict) -> list[dict]:
     return out
 
 
+# A última chamada de `generate` foi recusada pelo moderador como adulta sendo foto normal (soak, dia 4).
+ultima_recusa_sfw = False
+
+
 async def generate(prompt: str, *, is_nsfw: bool, focus_angle: str = "frontal",
                    is_mirror_selfie: bool = False, session: Optional[aiohttp.ClientSession] = None,
                    seed: Optional[int] = None, lora_weights: Optional[dict] = None,
                    pov: bool = False) -> Optional[io.BytesIO]:
     """Gera uma foto e devolve os bytes, ou None (sem token, erro, bloqueio, timeout)."""
+    global ultima_recusa_sfw
+    ultima_recusa_sfw = False
     if not available():
         return None
     headers = {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json",
@@ -362,6 +368,8 @@ async def _run_workflow(session: aiohttp.ClientSession, headers: dict, body: dic
             # moderador reclamava liberou nudez numa selfie de pijama. Se o
             # moderador marca uma foto normal, ela falha (e o log diz por quê).
             if not is_nsfw and "mature content" in err.lower():
+                global ultima_recusa_sfw
+                ultima_recusa_sfw = True
                 logger.error("civitai.sfw_flagged_by_moderator — prompt normal com termo adulto")
             else:
                 logger.error("civitai.submit_failed status=%s body=%s", resp.status, err)
