@@ -1393,3 +1393,7 @@ rua); foto vestida no clima usa as caras que passam no moderador e que o Patrick
 no flerte, olhar por cima do ombro no tesão) (a anterior, "sultry… teasing smirk",
 era recusada); a unha aparece sempre, mas só é o foco quando o assunto é unha. Banheiro do local pra foto ousada e
 selfies novas fora de casa ficaram pra depois do soak. Detalhe na Auditoria ("lógica da foto").
+
+**02/10, noite — comida fora mata a fome:** o que ela come na rua (açaí, croissant…) entra na fome do mundo com a
+mesma conta do delivery; bebida não conta como comida. Ela não fala mais de fome depois de comer uma tigela e um
+croissant. Detalhe na Auditoria ("comeu pra cacete e continuou com fome").

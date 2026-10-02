@@ -2346,3 +2346,18 @@ quando ela se vestiu pro açaí (só o vestido). Fica pra a frente do mundo olha
    as unhas" só quando o assunto é unha (`UNHA_EM_DESTAQUE`, `_UNHA_RE` no pedido dele ou na fala dela); o gesto da
    mão na boca fica. Banheiro do local e mais selfies sozinha fora de casa → "Depois do soak".
 Fotos de teste em `logs/fotos_teste/` (não vão pro git). Testes em `tests/test_soak_dia4_fotos.py` (+3).
+
+**02/10, noite — "comeu pra cacete e continuou com fome" (o Patrick viu; eu tinha deixado passar).** Estação do Açaí
+14:56 (suco + Tigela Nutella) e Rei do Mate 15:18 (mate gelado + croissant). `consumo._meal` só registrava a
+primeira comida de cada "refeição do horário" e sem saciedade: a Tigela caiu às 14:57, ainda "almoço" (11–15h) já
+almoçado, e não contou; no Rei do Mate o 1º item era o mate (todo item de café era "comida", até bebida) e o
+croissant ficou de fora; o lanche sem `fome_antes/comeu` volta como beliscão (base 0,30). Fome às 17:30: 0,66.
+**Correções:** item de seção de bebida não é comida (`_BEBIDA_RE` na seção do catálogo); toda comida fora conta —
+a primeira do horário é a refeição, as outras `lanche:{dia}:fora:{saída}:{n}` (snack) —, com a saciedade do delivery
+(`delivery._saciedade`: a fome cai enquanto ela come, a barra do app acompanha em tempo real); `hoje.py` não repete
+"Comeu…" sob o "Pediu…". Simulado na VPS (cópia do banco): 15:05 0,33 → 0,09; 17:30 0,66 → 0,14; 19:30 0,93 → 0,41.
+**Produção (OK do Patrick):** a Tigela e o croissant registrados como comida com saciedade, o mate deixou de ser o
+lanche; original em `soak/originais-2026-10-02-fome.json`.
+**Leitura do soak:** três coisas do dia que ele achou e eu não (fotos com desculpa fixa, fome, fundo de rua) — o
+relatório ganha conferências novas e uma seção "o Patrick estranhou" na conversa do dia 4 (FRENTES, seção 0).
+- **Testes:** `tests/test_soak_dia4_fome.py` (+3).

@@ -805,7 +805,8 @@ def _hoje_view(db, now: datetime) -> dict:
         logger.exception("hoje.acordou")
 
     for ev in _eventos(db, ini, now):
-        if ev["event_type"] in ("meal", "snack") and (ev["event_key"].endswith(":fora") or ":lanche:rua:" in ev["event_key"]):
+        if ev["event_type"] in ("meal", "snack") and (ev["event_key"].endswith(":fora") or ":lanche:rua:" in ev["event_key"]
+                                                       or ":fora:" in ev["event_key"]):   # 02/10: lanche fora, 2º item
             continue          # 28/09 (auditoria): "Pediu pão de queijo R$ 13" e "Comeu pão de queijo no Starbucks"
         at = datetime.fromisoformat(ev["event_at"])
         it = {"at": at, "key": ev["event_key"], **curto(ev, db)}

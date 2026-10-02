@@ -8,7 +8,8 @@ _Atualizado em 02/10/2026, tarde (soak, dia 4 olhado até 15:41 — item 23: ró
 que o mundo não via, foto sem leitura; dia 3 lido e corrigido — item 22: "dia livre" tendo faltado, canja de ontem,
 casting largado no meio que o Hoje dava como feito, foto sem leitura, agência duas vezes, bom dia antes da resposta
 da madrugada; catálogo de textos: lote 1 no ar — seção 2; próximas levas: Bastidores, iFood, Nubank, Instagram.
-**Soak: dia 1 = terça 29/09**; próxima conversa: "bora no soak, dia 4" no sábado de manhã, relatório
+**Soak: dia 1 = terça 29/09**; próxima conversa: "bora no soak, dia 4" no sábado de manhã — **primeiro
+melhorar a leitura do soak (seção 0, "Leitura do soak, melhorada"), depois** o relatório
 `soak/dia-2026-10-02.md` — sexta, o dayoff dela, com farmácia de manhã e o Quartinho com a Júlia às 20h: conferir a
 saída da noite e se o bom dia veio junto da resposta da madrugada)._
 
@@ -37,6 +38,14 @@ bug grave; apareceu um, os 3 dias limpos recomeçam. **Bug grave:** ela contradi
 roupa, dinheiro), o app mostra algo que não aconteceu, erro/traceback, mensagem quebrada ou fora de ordem, custo fora
 do normal. Texto feio ou gosto → anotado e corrigido em lote, não zera a contagem.
 Durante o soak ele usa normal e marca o que estranhar com /bom e /ruim; abertura do dia: "bora no soak, dia N".
+**Meta (Patrick, 02/10, noite):** "pegar todos os problemas e destruir eles, em todas as frentes" — depois do soak
+a Marina fica lisa e pronta pras funcionalidades novas. **Leitura do soak, melhorada antes do dia 4** (no 02/10 ele
+achou três coisas que eu deixei passar: as fotos com desculpa fixa, a comida que não matou a fome, o fundo de rua no
+Rei do Mate): (1) relatório com conferências novas — comida × fome (comeu e a fome não caiu; compra de comida sem
+refeição), foto pedida/prometida × foto que chegou e o que foi no lugar, mensagem enviada fora do histórico, fundo
+da foto × lugar; (2) seção "o Patrick estranhou" (fala dele com "?!", "como assim", "n entendi", correção) com o
+mundo daquela hora; (3) meu roteiro de leitura: além das suspeitas, a conversa inteira com o mundo do lado, e todo
+erro do log seguido até o que ele recebeu. É conserto da ferramenta do soak (infra), não funcionalidade nova.
 **Placar:** dia 1 (ter 29/09) — 5 graves (lugar dela errado depois da aula e a fala seguindo, plantão "de amanhã",
 "boa noite" de manhã no banho), 2 médios, 4 textos feios; corrigidos em 30/09 (seção 5, item 19). Dia 2 (qua 30/09), manhã, antes daquele
 deploy — "alucinada": [ELE ESTÁ DOENTE] com a pergunta dele, "dia livre" com ela faltando, check-in do peso dela,
@@ -520,6 +529,9 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       passaram, ele não viu diferença (mesma pose, mão no rosto) e não gostou de eu ter decidido sozinho; 2ª rodada numa selfie sem mão no rosto (62 Buzz): mordendo o lábio recusada; **no flerte o sorriso largo, no tesão vestida o olhar por cima do ombro** (escolha dele, `EXPRESSAO_FLERTE` / `EXPRESSAO_TESAO_VESTIDA`).
       Unha: "faz parte do corpo dela, mas não precisa ser o foco" — "mostrando as unhas" só se o assunto é unha (às
       15:41 a pose foi escolhida com a unha de 3 dias). `test_soak_dia4_fotos` (+3).
+    - **"Comeu pra cacete e continuou com fome"** (o Patrick viu) — Tigela Nutella e croissant não contaram (só o
+      mate, como beliscão). Toda comida fora conta, com saciedade; bebida não é comida. Produção de hoje corrigida
+      (OK dele). Camada: mundo (`consumo._meal`). `test_soak_dia4_fome` (+3).
     - Ficou como vida (opinião minha; Patrick indeciso): 14:40 saiu pro açaí no meio da provocação.
     - Texto feio (lote, não zera): reações a elogio repetitivas, "gosto quando você gosta", "plano de elogio bem
       convincente", "convencido" de novo.

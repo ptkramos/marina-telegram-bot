@@ -748,6 +748,10 @@ Auditoria ("Soak, dia 4"). Foto que falha (recusa do Civitai) não muda nada no 
 devendo outra (Auditoria, "as duas fotos que não vieram"). Foto em loja ou café mostra o lugar por dentro, e a do
 Instagram vem dessas fotos (Auditoria, "lógica da foto").
 
+**02/10, noite — a barra de fome acompanha a comida fora em tempo real:** antes, depois do açaí e do Rei do Mate a
+barra seguia subindo (só o mate contava, como beliscão); agora cai enquanto ela come cada coisa e sobe no ritmo
+normal. O Hoje continua com o "Pediu…" de cada item (o "Comeu…" não repete). Detalhe na Auditoria.
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

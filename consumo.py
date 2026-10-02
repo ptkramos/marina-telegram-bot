@@ -17,6 +17,7 @@ import json
 import logging
 import math
 import random
+import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -99,6 +100,9 @@ def _no(lugar: str) -> str:
 COMPRA = ("farmacia", "mercado")      # 28/09 (auditoria): loja que não é de comida — "Comprou", não "Pediu"
 
 
+_BEBIDA_RE = re.compile(r"bebida|suco|drink|caf[eé]s?\b", re.IGNORECASE)
+
+
 def _parte(preco: float, pessoas: int, dividido: bool) -> int:
     return int(math.ceil(preco / pessoas)) if dividido else int(round(preco))
 
@@ -150,12 +154,14 @@ def plan(outing: dict) -> list[Item]:
             return []
         secoes = _secoes(meta.get("loja", ""))
         itens = [i for s in secoes for i in s["itens"]]
+        bebidas = {i["nome"] for s in secoes if _BEBIDA_RE.search(s.get("nome") or "") for i in s["itens"]}
         if itens:
             at = start + timedelta(minutes=rng.randint(2, 6))
             escolhidos = rng.sample(itens, k=1 if rng.random() < 0.6 or len(itens) < 2 else 2)
             for n, i in enumerate(escolhidos):
+                # Soak, dia 4 (02/10): o mate gelado contou como o lanche e o croissant não — bebida não é comida
                 add(at + timedelta(minutes=n), (i["nome"], _frase(i["nome"]), i["preco"]),
-                    comida=meta.get("tipo") in ("cafe", "acai"))
+                    comida=meta.get("tipo") in ("cafe", "acai") and i["nome"] not in bebidas)
     elif place == "starbucks_shopping_gavea":
         menu = _starbucks()
         at = start + timedelta(minutes=rng.randint(3, 8))
@@ -238,26 +244,34 @@ class Consumo:
                    VALUES (?,?,'consumo',?,?,'simulated',1,0.1,?,0.2,?)""",
                 (f"consumo:{outing['source_key']}:{n}", item.at.isoformat(), title, summary,
                  json.dumps(["marina", *friends]), now.isoformat()))
-            if cur.rowcount and item.comida:
-                self._meal(conn, item, lugar, friends, now)
             conn.commit()
+        if cur.rowcount and item.comida:
+            self._meal(item, lugar, friends, now, f"{outing['source_key']}:{n}")
         return cur.rowcount or 0
 
-    def _meal(self, conn, item: Item, lugar: str, friends: list, now: datetime) -> None:
-        """Comida fora é a refeição do horário: o jantar no bar é o jantar (Meals não repete)."""
+    def _meal(self, item: Item, lugar: str, friends: list, now: datetime, ref: str) -> None:
+        """Comida fora é a refeição do horário: o jantar no bar é o jantar (Meals não repete).
+        Soak, dia 4 (02/10): Tigela Nutella às 14:56 (ainda "horário do almoço", já almoçado) não contou e o
+        croissant depois do mate também não; e sem a saciedade a fome voltava como depois de um beliscão. Agora toda
+        comida conta: a primeira do horário é a refeição, as outras são lanche fora; e a fome cai como no delivery."""
+        from delivery import _saciedade
         from meals import meal_kind
         kind = meal_kind(item.at)
         day = item.at.date().isoformat()
-        if conn.execute("SELECT 1 FROM life_events WHERE event_type IN ('meal','snack') AND event_key LIKE ? LIMIT 1",
-                        (f"meal:{day}:{kind}%",)).fetchone():
-            return
-        conn.execute(
-            """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
-               autonomy_level,importance,participants_json,share_worthy,created_at)
-               VALUES (?,?,?,?,?,'simulated',1,0.1,?,0.2,?)""",
-            (f"meal:{day}:{kind}:fora", item.at.isoformat(), "snack" if kind == "lanche" else "meal",
-             f"comeu fora ({lugar})", f"Comeu {item.frase} {_no(lugar)}.", json.dumps(["marina", *friends]),
-             now.isoformat()))
+        with self.db.get_connection() as conn:
+            feita = conn.execute("SELECT 1 FROM life_events WHERE event_type IN ('meal','snack') AND event_key LIKE ? "
+                                 "LIMIT 1", (f"meal:{day}:{kind}%",)).fetchone()
+        key = f"lanche:{day}:fora:{ref}" if feita else f"meal:{day}:{kind}:fora"
+        meta, fim = _saciedade(self.db, key, item.at, item.at + timedelta(minutes=15), item.nome)
+        with self.db.get_connection() as conn:
+            conn.execute(
+                """INSERT OR IGNORE INTO life_events(event_key,event_at,end_at,event_type,title,summary,source_type,
+                   autonomy_level,importance,participants_json,share_worthy,metadata_json,created_at)
+                   VALUES (?,?,?,?,?,?,'simulated',1,0.1,?,0.2,?,?)""",
+                (key, item.at.isoformat(), fim.isoformat(), "snack" if feita or kind == "lanche" else "meal",
+                 f"comeu fora ({lugar})", f"Comeu {item.frase} {_no(lugar)}.", json.dumps(["marina", *friends]),
+                 json.dumps(meta, ensure_ascii=False) if meta else None, now.isoformat()))
+            conn.commit()
 
     def _transport(self, day, floor: datetime, now: datetime) -> int:
         """Uber sai do saldo dela; ônibus e metrô são do Riocard do pai (fora do saldo)."""
