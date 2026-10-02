@@ -164,6 +164,18 @@ class Freela:
         except Exception:
             pass
 
+    def _saiu_no_meio(self, agenda_key: str) -> Optional[tuple[datetime, str]]:
+        """(hora, motivo) se a agenda reativa encerrou esse compromisso mais cedo."""
+        try:
+            from agenda_reativa import AgendaReativa
+            info = AgendaReativa(self.db).interrupcao(agenda_key)
+        except Exception:
+            return None
+        if not info:
+            return None
+        motivo = (info.get("texto") or "decidiu ir embora").strip().rstrip(".")
+        return datetime.fromisoformat(info["at"]), motivo[:1].lower() + motivo[1:]
+
     def _health_blocks(self, day: date) -> Optional[str]:
         try:
             from health import Health
@@ -240,6 +252,14 @@ class Freela:
             if blocked:
                 self._cancel(st.get("casting_id"))
                 self._log(f"{key}:casting_perdido", start, f"Perdeu o casting ({what}): {blocked}.")
+                st["step"] = "fim"
+                return
+            # Soak, dia 3 (01/10): saiu passando mal às 17:30 no meio do 2º casting (17:00–18:30) e às 18:30 o Hoje
+            # dizia "Fez o casting na agência… agora é esperar a resposta". Saiu no meio, não fez.
+            saiu = self._saiu_no_meio(f"freela:{start.date().isoformat()}:casting:{key.split(':')[1]}")
+            if saiu:
+                self._log(f"{key}:casting_perdido", saiu[0],
+                          f"Não terminou o casting ({what}): saiu no meio, {saiu[1]}.")
                 st["step"] = "fim"
                 return
             if now < end:

@@ -310,10 +310,11 @@ class College:
 
     def falta(self, day: date) -> Optional[str]:
         """O "Faltou a aula hoje (…): motivo." do dia, se ela faltou. Soak, dia 2 (30/09): faltar cancela as aulas e
-        o prompt passava a dizer "Hoje NÃO tem aula (dia livre)" — ela disse "ainda bem que hoje não tem aula"."""
+        o prompt passava a dizer "Hoje NÃO tem aula (dia livre)" — ela disse "ainda bem que hoje não tem aula".
+        Soak, dia 3 (01/10, 05:32): a falta da agenda viva (`agenda:faltou:`) não era vista — "hoje é dia livre"."""
         with self.db.get_connection() as conn:
-            row = conn.execute("SELECT summary FROM life_events WHERE event_key=?",
-                               (f"falta:{day.isoformat()}",)).fetchone()
+            row = conn.execute("SELECT summary FROM life_events WHERE event_key IN (?,?) ORDER BY event_key DESC",
+                               (f"falta:{day.isoformat()}", f"agenda:faltou:{day.isoformat()}")).fetchone()
         return row["summary"] if row else None
 
     # ------------------------------------------------------------- prompt --

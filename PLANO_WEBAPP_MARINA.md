@@ -736,6 +736,12 @@ intervalos…" (`agenda.CELULAR_TELA`, só na tela: o bot ainda compara os texto
 cópia do banco, código antigo × novo nos últimos 7 dias (Hoje 7 vezes por dia, card a cada 10 min): 0 erros.
 Detalhe e o que eu decidi sozinho na Auditoria ("Catálogo de textos, lote 1 aplicado").
 
+**02/10 — soak, dia 3 (01/10, o dia dos dois castings):** o Hoje dizia "Fez o casting na agência… agora é esperar a
+resposta" às 18:30 do 2º casting, que ela largou no meio passando mal às 17:30 — agora é "Não terminou o casting
+(…): saiu no meio, não tava se sentindo bem." e não tem resposta da Lívia. E os dois castings emendados na mesma
+agência apareciam como duas saídas ("Foi para a agência" 14:58–17:00 e 17:00–17:53); agora é uma só, 14:58–17:53,
+com os dois dentro. Hoje de 01/10 corrigido na produção (OK do Patrick). Detalhe na Auditoria ("Soak, dia 3").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

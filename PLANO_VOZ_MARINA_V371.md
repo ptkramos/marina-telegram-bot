@@ -1367,3 +1367,11 @@ tinha mandado); travessão, ponto e vírgula e dois pontos entre palavras saem d
 Patrick pelos /ruim de 30/09). Lote de texto que segue anotado (não zera): "convencido" repetido, "derretida/
 arrepiada" demais, "seu bobo atrevido" depois de só uma risada dele, "abusado demais" fora de contexto. Detalhe na
 Auditoria ("01/10, manhã").
+
+**02/10 — relatório do dia 3 (01/10):** "hoje é dia livre da facul" com ela tendo faltado (a falta da agenda viva
+não chegava ao aviso "você faltou"); "a canja chegou mais cedo" no dia seguinte (a promessa "avisar quando a canja
+chegar" ficava aberta; pedido que chega fecha a promessa); a foto dele das 08:04 ficou sem leitura e ela respondeu
+sem ver (JSON da visão lido com tolerância e uma 2ª tentativa); com mensagem dele esperando da madrugada, o bom dia
+vai junto da resposta, numa mensagem só (antes: bom dia 05:22 e "acordei agora e vi isso" 05:24). O "tomei um
+Buscopan" era do mundo (cólica moderada). Lote de texto que segue anotado (não zera): "O Uber tá andando", "vou
+papá-la toda", "guloso afetuoso", "tô aceitando, amor, finalmente" forçado. Detalhe na Auditoria ("Soak, dia 3").

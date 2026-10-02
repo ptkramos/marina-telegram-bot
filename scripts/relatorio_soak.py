@@ -187,6 +187,23 @@ PASSADO = [
 RE_COMI = re.compile(r"\b(?:comi|comendo|tomei|pedi)\s+(?:um|uma|uns|umas|o|a)\s+([a-zà-ú]{4,})")
 
 
+def feito_extra(db, eventos: list[dict], at: datetime) -> list[str]:
+    """Soak, dia 3 (01/10): dois alarmes falsos. «Tomei um Buscopan» (05:31) — o remédio da cólica vem da saúde, não
+    de um acontecimento; «jantei» (22:39) — a tigela que o Patrick mandou às 19:08 foi o jantar, mas o acontecimento
+    se chama "presente do Patrick"."""
+    extra = []
+    for ev in eventos:
+        quando = _dt(ev["event_at"])
+        if ev.get("event_type") == "meal" and quando <= at and quando.hour >= 17:
+            extra.append("jantar")
+    try:
+        from health import Health
+        extra += [c.remedy for c in Health(db).conditions(at)]
+    except Exception:
+        pass
+    return extra
+
+
 def fez_contradiz(texto: str, feito: str) -> list[str]:
     """`feito`: acontecimentos e estados do mundo do dia até a hora da fala, sem acento."""
     t = (texto or "").lower()
@@ -405,7 +422,8 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
                            f"({e['location_region']}, desde {_hm(e['at'])})")
         feito = _sem_acento(" ".join(
             [f"{ev['title']} {ev['summary']}" for ev in eventos if _dt(ev["event_at"]) <= m["at"]]
-            + [w["activity"] or "" for w in mundo if w["at"] <= m["at"]]))
+            + [w["activity"] or "" for w in mundo if w["at"] <= m["at"]]
+            + feito_extra(db, eventos, m["at"])))
         for achado in fez_contradiz(m["content"], feito):
             s_fez.append(f"**{_hm(m['at'])}** ela: {achado}")
         for q in quebras(m["content"]):

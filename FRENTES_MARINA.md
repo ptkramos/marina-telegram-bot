@@ -4,12 +4,12 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 01/10/2026, noite (catálogo de textos: lote 1 aplicado e no ar — seção 2; próximas levas:
-Bastidores, iFood, Nubank, Instagram; soak: dia 1 — item 19; dia 2 olhado ao vivo — item 20 — e o relatório inteiro
-lido em 01/10 — item 21: varal no meio do banho, foto da conversa fora do histórico, pontuação no filtro da fala.
-**Soak: dia 1 = terça 29/09**; próxima conversa: "bora no soak, dia 3" na sexta de manhã, relatório
-`soak/dia-2026-10-01.md` — o dia dos dois castings (arrumado antes de acontecer, item 20): conferir PUC → agência →
-casa, almoço pulado e o card "Na agência")._
+_Atualizado em 02/10/2026 (soak, dia 3 lido e corrigido — item 22: "dia livre" tendo faltado, canja de ontem,
+casting largado no meio que o Hoje dava como feito, foto sem leitura, agência duas vezes, bom dia antes da resposta
+da madrugada; catálogo de textos: lote 1 no ar — seção 2; próximas levas: Bastidores, iFood, Nubank, Instagram.
+**Soak: dia 1 = terça 29/09**; próxima conversa: "bora no soak, dia 4" no sábado de manhã, relatório
+`soak/dia-2026-10-02.md` — sexta, o dayoff dela, com farmácia de manhã e o Quartinho com a Júlia às 20h: conferir a
+saída da noite e se o bom dia veio junto da resposta da madrugada)._
 
 ---
 
@@ -41,7 +41,9 @@ Durante o soak ele usa normal e marca o que estranhar com /bom e /ruim; abertura
 deploy — "alucinada": [ELE ESTÁ DOENTE] com a pergunta dele, "dia livre" com ela faltando, check-in do peso dela,
 plantas 5x; corrigidos em 30/09 (item 20). Dia 2, resto do dia (relatório lido em 01/10) — 1 grave (varal no meio
 do banho), 1 médio (foto da conversa fora do histórico), 7 textos feios (4 de pontuação, já no filtro); corrigidos
-em 01/10 (item 21). Dias limpos: 0.
+em 01/10 (item 21). Dia 3 (qui 01/10, os castings) — 3 graves ("hoje é dia livre" tendo faltado, "a canja chegou"
+no dia seguinte, Hoje com o 2º casting feito que ela largou no meio), 3 médios (foto dele sem leitura, agência duas
+vezes no Hoje, bom dia antes da resposta da madrugada), 4 textos feios; corrigidos em 02/10 (item 22). Dias limpos: 0.
 
 **Relatório diário (pronto, 28/09):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
 perguntou 00:00 × 05:00 e ficou 05:00: o rolê da noite e a conversa de madrugada ficam no mesmo dia), cobrindo
@@ -464,6 +466,28 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       ela contou; as 2 respostas com letra estrangeira foram refeitas antes de sair; US$ 0,47 de LLM, 62 Buzz.
     - Texto feio (lote da voz, não zera): "convencido" de novo, "derretida/arrepiada" demais, "seu bobo atrevido"
       depois de só uma risada dele, "abusado demais" fora de contexto.
+
+22. ✅ **Soak, dia 3 (quinta 01/10) — o dia dos dois castings** (`soak/dia-2026-10-01.md`, lido em 02/10). O dia
+    planejado no item 20 aconteceu: falta pela cólica, ônibus 15:00, castings 15:30 e 17:00, saiu mal 17:30 de uber.
+    Corrigido em 02/10 (`tests/test_soak_dia3.py`, +13).
+    - **05:32 "Hoje é dia livre da facul, não tenho aula pra faltar"** (e "tô fechando o trabalho"; ele: "tô
+      entendendo mais nada"). A falta veio da agenda viva (`agenda:faltou:`) e o aviso do prompt só lia `falta:`.
+      Camada: prompt (`College.falta`).
+    - **11:29 "só sei que a canja chegou mais cedo"** — a canja era de 30/09; a promessa "avisar quando a canja
+      chegar" seguia aberta. Pedido que chega fecha a promessa. Camada: memória (`delivery.fecha_promessas_do_pedido`).
+    - **Hoje 18:30 "Fez o casting na agência"** — ela largou o 2º casting às 17:30, passando mal. Saiu no meio vira
+      "Não terminou o casting", sem resposta da Lívia. Camada: mundo (`Freela._saiu_no_meio`). Produção corrigida
+      (OK do Patrick; originais em `soak/originais-2026-10-01.json`), junto com a promessa da canja.
+    - **08:04 a foto dele sem leitura** ("que lindo, começou o dia com estilo"): JSON da visão mal formado. Leitura
+      tolerante e 2ª tentativa. Camada: voz (`vision_service`).
+    - **Hoje: "Foi para a agência" duas vezes** (castings emendados na mesma agência). Uma saída só. Camada: app
+      (`hoje._saidas`).
+    - **05:22 bom dia e 05:24 "Acordei agora e vi isso"** — com mensagem dele esperando da madrugada, o bom dia vai
+      junto da resposta. Camada: voz (`bot._bom_dia_na_resposta`).
+    - Alarmes falsos do relatório: «tomei um Buscopan» é do mundo (cólica moderada); «jantei» foi a tigela das 19:08.
+    - Leve: "a Dona Neide tá terminando a faxina" às 09:30 (foi até 13:41).
+    - Texto feio (lote da voz, não zera): "O Uber tá andando", "vou papá-la toda", "guloso afetuoso", "tô aceitando,
+      amor, finalmente" forçado.
 
 **Abertos:** nenhum.
 

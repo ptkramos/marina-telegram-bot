@@ -4,6 +4,7 @@ Permite que a Marina veja, interprete e reaja com carinho e naturalidade de namo
 às fotos enviadas pelo Patrick no Telegram (selfies, refeições, pets, lugares, objetos).
 """
 import io
+import re
 import json
 import base64
 import logging
@@ -38,6 +39,22 @@ REGRAS:
 - Escreva os textos em português brasileiro.
 - Devolva APENAS JSON válido, sem markdown.
 """
+
+
+def _json_tolerante(raw: str) -> dict:
+    """JSON da visão com os defeitos comuns do modelo: cerca de markdown, texto em volta, vírgula sobrando.
+    ValueError se não der pra ler (json.JSONDecodeError é ValueError)."""
+    texto = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
+    ini, fim = texto.find("{"), texto.rfind("}")
+    if ini >= 0 and fim > ini:
+        texto = texto[ini:fim + 1]
+    try:
+        data = json.loads(texto)
+    except ValueError:
+        data = json.loads(re.sub(r",\s*([}\]])", r"\1", texto))
+    if not isinstance(data, dict):
+        raise ValueError("a visão não devolveu um objeto")
+    return data
 
 
 class VisionService:
@@ -92,17 +109,26 @@ class VisionService:
                 }
             ]
 
-            response = await asyncio.to_thread(
-                self.llm.chat.completions.create,
-                model=self.vision_model,
-                messages=messages,
-                max_tokens=300,
-                temperature=0.2,
-                response_format={"type": "json_object"}
-            )
-
-            raw_text = response.choices[0].message.content.strip()
-            data = json.loads(raw_text)
+            # Soak, dia 3 (01/10, 08:04): o modelo devolveu JSON mal formado, a foto ficou sem leitura e ela
+            # respondeu sem ver ("que lindo, começou o dia com estilo"). Lê com tolerância e tenta de novo uma vez.
+            data = None
+            for tentativa in range(2):
+                response = await asyncio.to_thread(
+                    self.llm.chat.completions.create,
+                    model=self.vision_model,
+                    messages=messages,
+                    max_tokens=300 if tentativa == 0 else 500,
+                    temperature=0.2,
+                    response_format={"type": "json_object"}
+                )
+                raw_text = (response.choices[0].message.content or "").strip()
+                try:
+                    data = _json_tolerante(raw_text)
+                    break
+                except ValueError as e:
+                    if tentativa:
+                        raise
+                    logger.warning("vision.json_mal_formado tentando de novo: %s", e)
             logger.info(f"Visão computacional processada com sucesso: {data.get('scene')}")
             return {
                 "scene": data.get("scene", "foto enviada pelo Patrick"),

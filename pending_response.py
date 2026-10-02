@@ -264,6 +264,17 @@ class PendingResponseRepository:
                 (batch_id,),
             ).fetchall()]
 
+    def antecipar(self, batch_id: int, now: datetime) -> bool:
+        """Faz o lote sair agora (soak, dia 3: o bom dia vai junto da resposta da madrugada)."""
+        now_s = local_naive(now).isoformat()
+        with self.db.get_connection() as conn:
+            cur = conn.execute(
+                """UPDATE response_pending_batches SET selected_target_at=?, updated_at=?
+                   WHERE id=? AND status IN ('PENDING','READY') AND selected_target_at>?""",
+                (now_s, now_s, batch_id, now_s))
+            conn.commit()
+            return cur.rowcount > 0
+
     def mark_ready_due(self, now: datetime) -> int:
         now_s = local_naive(now).isoformat()
         with self.db.get_connection() as conn:

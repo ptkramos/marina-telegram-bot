@@ -2236,3 +2236,40 @@ futuro estava na ficha).
 que tocam card/Hoje/Mini App (856 testes) — 46 asserções eram as frases antigas, atualizadas; uma era bug meu
 (desistência na hora com ícone duplicado, `TypeError`), corrigido antes do deploy. `tests/test_catalogo_lote1.py`
 (+18).
+
+## Soak, dia 3 — quinta 01/10, o dia dos dois castings (relatório de 02/10 05:10, lido em 02/10)
+
+`soak/dia-2026-10-01.md`: 57 mensagens dele e 62 dela, 3 suspeitas, 1 erro de verdade, 4 /ruim, US$ 0,24 de LLM,
+20 Buzz. O dia planejado em 30/09 (item 20) aconteceu como o simulado: faltou a aula pela cólica (05:02, agenda
+viva), ônibus 15:00, 1º casting 15:30–17:00, 2º emendado na mesma agência; às 17:30 saiu passando mal, de uber
+(R$ 29); tigela que ele pediu às 19:08.
+
+| Hora | O que se viu | Causa | Camada |
+|---|---|---|---|
+| 05:32 | "Hoje é dia livre da facul, não tenho aula pra faltar" (e 05:35 "tô fechando o trabalho agora"; ele: "tô entendendo mais nada") | a falta veio da agenda viva (`agenda:faltou:2026-10-01`); `College.falta` só procurava `falta:` e o prompt dizia "Hoje NÃO tem aula (dia livre)" | prompt |
+| 11:29 | "só sei que a canja chegou mais cedo" | a canja foi 30/09 11:36; o open loop 26 "Avisar o Patrick quando a canja chegar para ele pedir o suco" seguia aberto e entrava em [ASSUNTOS AINDA EM ABERTO] | memória |
+| 18:30 | Hoje: "Fez o casting na agência… agora é esperar a resposta" (o 2º) | ela saiu às 17:30 (agenda reativa, `interrupcao:freela:2026-10-01:casting:2026-09-29`); `Freela._advance` registrava o casting no fim do horário sem olhar a interrupção, e marcava resposta pra 03/10 | mundo |
+| 08:04 | foto dele: "que lindo, começou o dia com estilo" | `VisionService`: JSON mal formado ("Expecting property name…"), foto sem leitura, ela respondeu às cegas | voz |
+| Hoje | "Foi para a agência" 14:58–17:00 e "Foi para a agência" 17:00–17:53 | `hoje._saidas` agrupa por compromisso; os dois castings emendados no mesmo lugar viravam duas saídas | app |
+| 05:22/05:24 | bom dia ("acabei faltando à aula hoje…") e, dois minutos depois, "Acordei agora e vi isso, te amo demais tb" | o ritual do bom dia sai sem olhar a fila: as mensagens dele de 22:52 (ela dormindo) saíram depois | voz |
+
+**Correções:** `College.falta` lê `falta:` e `agenda:faltou:` (prompt e bom dia). `delivery.fecha_promessas_do_pedido`:
+pedido que chega (dela ou presente dele) resolve o open loop aberto que fala em "chegar" e cita o prato. `Freela`:
+compromisso encerrado mais cedo pela agenda reativa (`_saiu_no_meio`) vira `casting_perdido` ("Não terminou o
+casting (…): saiu no meio, {motivo}."), sem resposta. `vision_service._json_tolerante` (cerca de markdown, texto em
+volta, vírgula sobrando) e uma 2ª chamada com mais tokens. `hoje._saidas`: compromisso que começa quando o anterior
+termina, no mesmo lugar e sem volta no meio, entra na mesma saída. `bot._bom_dia_na_resposta`: com lote pendente dele,
+o bom dia não sai sozinho — o lote é antecipado (`PendingResponseRepository.antecipar`) e a resposta leva
+`[PRIMEIRA MENSAGEM DO DIA]` com o que o bom dia contaria.
+**Produção (OK do Patrick, 02/10):** o "Fez o casting" das 18:30 virou `freela:2026-09-29:casting_perdido` às 17:30;
+o estado do freela desse casting foi pra "fim" (a Lívia não responde em 03/10); open loop 26 resolvido. Originais em
+`soak/originais-2026-10-01.json`.
+**Relatório (alarmes falsos):** «tomei um Buscopan» — é do mundo (`health.conditions`, cólica moderada: "tomou um
+Buscopan de manhã"); «jantei» — a tigela das 19:08 ("presente do Patrick") foi o jantar. `feito_extra` conta refeição
+depois das 17h como jantar e o remédio das condições de saúde.
+**Leve, sem conserto:** 09:30 "a Dona Neide tá terminando a faxina" (foi até 13:41); 23:21 "vou largar o celular e
+dormir" e seguiu respondendo até 23:28 (ele seguia falando). Os dois castings com o mesmo "vídeo pra uma marca de
+cosméticos" (ofertas de 28 e 29/09 sortearam o mesmo tipo).
+**Lote de texto (não zera):** /ruim 048 "O Uber tá andando e eu te mando…", 049 "vou papá-la toda", 050 "guloso
+afetuoso", 051 "tô aceitando, amor, finalmente" (forçado).
+- **Testes:** `tests/test_soak_dia3.py` (+13).

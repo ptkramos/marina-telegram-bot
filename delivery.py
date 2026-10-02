@@ -121,6 +121,7 @@ def materialize(db, now: datetime) -> bool:
              now.isoformat()))
         conn.commit()
     _contato_portaria(db, f"delivery:{cur['ordered_at']}", eta)
+    fecha_promessas_do_pedido(db, what)
     if end > now:
         raw = db.get_estado_relacional().get("pending_transition_json")
         busy = False
@@ -269,6 +270,7 @@ def gift_tick(db, now: datetime, *, can_receive: bool, why_not: str = "", ate_re
              now.isoformat()))
         conn.commit()
     _contato_portaria(db, f"presente:{cur['ordered_at']}", at)
+    fecha_promessas_do_pedido(db, what)
     if eats_now and end > now and not transition_busy:
         db.set_estado_relacional("pending_transition_json", json.dumps({
             "routine_type": "meal", "activity": f"comendo o {what} que o Patrick mandou", "place_key": "marina_apartment",
@@ -276,6 +278,28 @@ def gift_tick(db, now: datetime, *, can_receive: bool, why_not: str = "", ate_re
             "dish": what}, ensure_ascii=False))
     logger.info("delivery.gift.recebido what=%s waited=%s ate_recently=%s", what, cur.get("waited"), ate_recently)
     return "recebido"
+
+
+_CHEGAR_RE = re.compile(r"\bcheg", re.I)
+_PALAVRA_PRATO_RE = re.compile(r"[a-zà-ú]{4,}", re.I)
+
+
+def fecha_promessas_do_pedido(db, what: str) -> int:
+    """Soak, dia 3 (01/10, 11:29): "só sei que a canja chegou mais cedo" — a canja era de 30/09. A promessa "Avisar o
+    Patrick quando a canja chegar para ele pedir o suco" ficou aberta e entrava no prompt no dia seguinte. O pedido
+    chegou: a promessa de "quando o pedido chegar" fecha junto."""
+    palavras = {p.lower() for p in _PALAVRA_PRATO_RE.findall(what or "")}
+    if not palavras:
+        return 0
+    with db.get_connection() as conn:
+        rows = conn.execute("SELECT id, content FROM open_loops WHERE status='open' "
+                            "AND (is_archived = 0 OR is_archived IS NULL)").fetchall()
+    n = 0
+    for r in rows:
+        texto = (r["content"] or "").lower()
+        if _CHEGAR_RE.search(texto) and any(re.search(rf"\b{re.escape(p)}\b", texto) for p in palavras):
+            n += db.resolver_open_loop(r["id"], f"o pedido chegou ({what})")
+    return n
 
 
 def gift_to_announce(db) -> Optional[dict]:

@@ -657,6 +657,17 @@ def _saidas(db, dia: date, now: datetime) -> list[dict]:
     for e in etapas:
         if e.compromisso and e.tipo != "arrumando":
             por.setdefault(e.compromisso, []).append(e)
+    # Soak, dia 3 (01/10): dois castings seguidos na mesma agência (ela fica entre um e outro) viravam "Foi para a
+    # agência 14:58–17:00" e "Foi para a agência 17:00–17:53". Emendado no mesmo lugar é uma saída só.
+    anterior = None
+    for key in sorted(por, key=lambda k: por[k][0].inicio):
+        es = por[key]
+        if anterior and not any(e.tipo == "voltando" for e in por[anterior]) \
+                and es[0].inicio <= por[anterior][-1].fim \
+                and _lugar(es) and _lugar(es) == _lugar(por[anterior]):
+            por[anterior].extend(por.pop(key))
+            continue
+        anterior = key
     out = []
     for key, es in por.items():
         la = next((e for e in es if e.tipo == "la"), es[0])
@@ -672,6 +683,10 @@ def _saidas(db, dia: date, now: datetime) -> list[dict]:
                     "ic": SAIDA_IC.get(tipo, "map-pin"), "la": la,
                     "volta": next((e for e in es if e.tipo == "voltando"), None)})
     return sorted(out, key=lambda s: s["ini"])
+
+
+def _lugar(es: list) -> str:
+    return next((e.lugar_key for e in es if e.tipo == "la"), "")
 
 
 def _para(titulo: str) -> str:

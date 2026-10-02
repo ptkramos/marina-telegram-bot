@@ -4854,6 +4854,9 @@ async def _ritual_routine(application: Application):
         ritual = await asyncio.to_thread(engine.tick, now)
         if not ritual:
             return
+        if ritual.reason == 'ritual_bom_dia' and _bom_dia_na_resposta(ritual.detail, now):
+            engine.mark(ritual, now, 'sent')
+            return
         text = await asyncio.to_thread(_proactive_text, ritual.reason, ritual.detail, ritual.fallback)
         sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
         if not isinstance(getattr(sent, 'message_id', None), int) or sent.message_id <= 0:
@@ -4893,9 +4896,47 @@ class _PendingDeliveryBot:
         return await self._send(self._bot.send_photo, **kwargs)
 
 
+BOM_DIA_NA_RESPOSTA = 'bom_dia_na_resposta_json'
+
+
+def _bom_dia_na_resposta(detail: str, now: datetime) -> bool:
+    """Soak, dia 3 (01/10): 05:22 o bom dia ("acabei faltando à aula hoje…") e 05:24 "Acordei agora e vi isso, te
+    amo demais tb" — a resposta às mensagens dele da madrugada saiu depois do bom dia. Com mensagem dele esperando,
+    o bom dia vai junto da resposta: ela sai agora, é a primeira do dia e leva o que o bom dia contaria."""
+    try:
+        batch = availability_service.repo.get_active_batch()
+        if not batch or not availability_service.repo.list_items(batch['id']):
+            return False
+        availability_service.repo.antecipar(batch['id'], now)
+        memory_manager.db.set_estado_relacional(BOM_DIA_NA_RESPOSTA, json.dumps(
+            {"batch_id": batch['id'], "detail": detail or ""}, ensure_ascii=False))
+        logger.info('ritual.bom_dia_na_resposta batch=%s', batch['id'])
+        return True
+    except Exception:
+        logger.exception('ritual.bom_dia_na_resposta')
+        return False
+
+
+def _hint_bom_dia(batch_id: int) -> Optional[str]:
+    try:
+        info = json.loads(memory_manager.db.get_estado_relacional(BOM_DIA_NA_RESPOSTA) or 'null')
+    except (TypeError, ValueError):
+        return None
+    if not info or info.get("batch_id") != batch_id:
+        return None
+    return ("[PRIMEIRA MENSAGEM DO DIA] Você acabou de acordar e esta é a sua primeira mensagem de hoje: responda o "
+            "que ele mandou e dê o bom dia na mesma resposta. " + (info.get("detail") or "")).strip()
+
+
 def _hint_resposta_atrasada(batch_id: int, now: datetime) -> Optional[str]:
     """Soak, dia 1 (29/09): ele mandou "cheguei bem, boa noite" às 22:59; ela dormia e respondeu às 05:36 "Boa
     noite, te amo demais tb". A resposta adiada sabe quando ele escreveu e que ela só está vendo agora."""
+    bom_dia = _hint_bom_dia(batch_id)
+    atrasada = _hint_atrasada(batch_id, now)
+    return "\n".join(h for h in (atrasada, bom_dia) if h) or None
+
+
+def _hint_atrasada(batch_id: int, now: datetime) -> Optional[str]:
     try:
         from calendar_world import local_time
         items = availability_service.repo.list_items(batch_id)
