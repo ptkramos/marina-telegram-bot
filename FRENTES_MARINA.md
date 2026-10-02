@@ -4,14 +4,14 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 02/10/2026, tarde (soak, dia 4 olhado até 15:41 — item 23: rótulo de prompt na fala, chuvisco
-que o mundo não via, foto sem leitura; dia 3 lido e corrigido — item 22: "dia livre" tendo faltado, canja de ontem,
-casting largado no meio que o Hoje dava como feito, foto sem leitura, agência duas vezes, bom dia antes da resposta
-da madrugada; catálogo de textos: lote 1 no ar — seção 2; próximas levas: Bastidores, iFood, Nubank, Instagram.
+_Atualizado em 02/10/2026, noite (soak, dia 4 olhado até 15:41 — item 23: rótulo de prompt na fala, chuvisco
+que o mundo não via, foto sem leitura, as duas fotos com a desculpa fixa "câmera do apê", lógica da foto com o
+Patrick — fundo de loja, caras vestidas escolhidas por ele, unha só como foco quando é o assunto —, comida fora
+que não matava a fome; dia 3 lido e corrigido — item 22; catálogo de textos: lote 1 no ar — seção 2.
 **Soak: dia 1 = terça 29/09**; próxima conversa: "bora no soak, dia 4" no sábado de manhã — **primeiro
 melhorar a leitura do soak (seção 0, "Leitura do soak, melhorada"), depois** o relatório
-`soak/dia-2026-10-02.md` — sexta, o dayoff dela, com farmácia de manhã e o Quartinho com a Júlia às 20h: conferir a
-saída da noite e se o bom dia veio junto da resposta da madrugada)._
+`soak/dia-2026-10-02.md` da tarde em diante (15:41 →): o Quartinho com a Júlia, o tempo novo (chuvisco e °C de
+Botafogo), as caras novas e o fundo das fotos, a fome depois da comida fora)._
 
 ---
 
