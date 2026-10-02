@@ -30,7 +30,8 @@ aviso ele disso na hora. Só entra o que está em "Antes do soak" e correção d
    05:10, `scripts/relatorio_soak.py`)
 5. ✅ Auditoria de funcionamento, rodada 3 (tudo junto, na cópia do banco dentro da VPS) — feita em 28/09, 23:40
    (seção 7; bug 18 na seção 5)
-- Do Patrick (não segura o soak, mas não esquecer): trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot.
+- Do Patrick (não segura o soak, mas não esquecer): firewall/porta 8000/certbot. (Chave do Civitai: ele decidiu não trocar
+  em 02/10 — não houve vazamento real.)
 
 **Soak (decidido):** **7 dias reais + 3 limpos.** Bug achado é corrigido no dia seguinte, só conserto (sem
 funcionalidade nova, deploy respeitando a regra dos 5 min). Libera coisa nova quando os 3 últimos dias passarem sem
@@ -65,7 +66,9 @@ com hora; o mundo (`world_state`) × card × Hoje × acontecimentos; **contradi�
 journal; custos (Buzz, rotas, LLM) e fotos geradas; iniciativas. Eu leio na conversa "bora no soak, dia N", explico e
 listo os bugs.
 
-**Depois do soak (congelado):** **Hoje com bloco "Em casa"** (Patrick, 30/09: o que ela faz em casa, aninhado, como as
+**Depois do soak (congelado):** o Patrick rabisca as ideias pelo celular em https://claude.ai/artifact/64rLbsTa3m5CmdhdtnJgEQ
+("Ideias pós-soak", respostas no banco da página, coleção `ideias`: ler com ArtifactData quando o soak fechar).
+ **Hoje com bloco "Em casa"** (Patrick, 30/09: o que ela faz em casa, aninhado, como as
 saídas — 1º da frente de apps); salão pelo humor/remarcado pela conversa; virose com banheiro, pai ligando mais, job
 fora do Rio; roupa nova comprada no shopping; iFood da Ma, banco dela, `pedido_dela` no catálogo novo, pedidos dela de
 farmácia/mercado; fotos provisórias de marca e o X dela; técnicas antigas da voz (PLANO_VOZ 13); imagens (flash no
@@ -196,7 +199,7 @@ começar (`echo AAAA-MM-DD > /root/bots/marina/soak/inicio.txt`). Ler um dia sem
 **Próximo:**
 1. Soak: ler o relatório de cada dia na conversa "bora no soak, dia N" e ajustar as regras de suspeita se acusarem
    à toa (falso positivo) ou deixarem passar um bug que o Patrick viu.
-2. Do Patrick (ele faz): trocar a chave do Civitai (vazou em 24/09); firewall/porta 8000/certbot da VPS.
+2. Do Patrick (ele faz): firewall/porta 8000/certbot da VPS. (Chave do Civitai: não troca, decisão dele em 02/10.)
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
@@ -552,7 +555,7 @@ O *quando* ela manda foto continua na frente da voz.
 2. Poses que o Patrick mandar (PLANO_VOZ 1). **Aplicar os artigos de pose do Krea 2 (memória `krea2-poses-e-camera`):** a pose de grupo "alguém tirando" ainda sai selfie — testar o objeto borrado na borda (ombro de quem tira); revisar as frases de ausência dos prompts ("not a selfie", "no white circles"…) quando algo proibido aparecer. Lição: roupa *sendo tirada* + nudez = recusa do Krea 2 (ruído de letras); escrever a roupa parada.
 3. Ângulo de trás sem espelho (PLANO_VOZ 1d); fatores do gozo especial (1e); acompanhar o slider de peso (9).
 4. **Rostos de gente nova** (se o Patrick quiser, ex.: Gabi, Bruno): mesmo caminho — referência → 4 rostos por texto (~80 Buzz) → RG → `FRIENDS_VISUAL` + `FRIEND_RG` → foto de perfil (41) em `webapp/avatars`. Lições: LoRA de rosto da amiga mistura com o da Marina; só texto sai com as feições da Marina; contraste de estrutura com a Marina; o Krea 2 põe sardas sozinho (pele "clear smooth even-toned" e cor concreta tiram quase tudo); a seed de uma candidata puxa o rosto dela numa nova geração com o texto ajustado; **edição por partes** (Júlia): o Krea 2 Edit muda um traço de cada vez (olho, cor da íris, nariz) e só aquela região volta colada na original, com a cor igualada pela pele do rosto — assim a pele, as sardas e a textura não "crocam"; nariz pede frase forte ("noticeably smaller and flatter… low, flat bridge"), a frase fraca não mexe.
-5. Do Patrick: trocar a chave do Civitai (vazou em 24/09).
+5. ~~Trocar a chave do Civitai~~ — o Patrick decidiu não trocar (02/10: não houve vazamento real).
 
 ## 7. Auditoria de funcionamento — skill `frente-auditoria`
 **Abertura:** "bora na auditoria de funcionamento" (rodada 3 feita em 28/09, 23:40; a próxima é no próprio soak, pelo relatório diário)
