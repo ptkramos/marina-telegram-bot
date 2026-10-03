@@ -1417,6 +1417,7 @@ vira texto com o que ela mostra); o Pix logo depois de ele combinar ("Quer que e
 combinado, não como presente (/ruim 061); risada no começo no máximo 1 a cada 5 respostas (a fala fica; risada
 sozinha e no fim ficam); mensagem dele que chega no meio dos balões dela leva o aviso de que se cruzaram (até onde ele
 leu, o que chegou depois) e ela não repete o que já mandou. Ainda abertos: a voz do áudio variando (ouvir junto) e o
-lote dos /ruim. Detalhe na Auditoria ("/feedback do soak de 02/10").
+lote dos /ruim. Detalhe na Auditoria ("/feedback do soak de 02/10"). /feedback antigo a conferir (frente de bugs):
+26/09, fundo do cômodo mudando entre fotos e looks mandados em álbum.
 O relatório do soak passou a mostrar o que ela sentia de hora em hora e o que pesou em cada decisão — pra conferir se a
 fala bate com o sentimento (ex.: 02/10, 00:30, "carinhosa 0,88" só por ele perguntar do banho).

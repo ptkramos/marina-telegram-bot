@@ -621,6 +621,9 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       056–059, o contexto da 063; 053 e 058 são crítica geral), mais os 9 balões pra quem pediu "devagar" e "De manhã
       eu acordei de manhã" (23:34).
     - **Ideia → depois do soak:** 30/09 mais bebidas nos pedidos, vinho no mercado, Marina bêbada.
+    - No banco: os 9 corrigidos marcados `resolvido` (03/10, OK do Patrick). **Pendentes antigos a conferir (frente de
+      bugs, OK do Patrick):** 26/09 03:59 fundo do cômodo mudando entre fotos e looks mandados em álbum (trocar de roupa
+      leva minutos); 27/09 01:58 card do "colocando pijama" com layout errado. Ver se já foram resolvidos; se sim, marcar.
 
 **Abertos:** a voz do áudio e o lote dos /ruim (item 25, frente da voz); o preparo pra dormir que volta de passo
 (item 24, frente do mundo).

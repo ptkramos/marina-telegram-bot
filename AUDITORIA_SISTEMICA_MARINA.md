@@ -2491,5 +2491,8 @@ Cada /feedback lido com conversa, mundo e log da hora (cópias no scratchpad da 
   "Na mão".
 - **Aberto:** 19:52 a voz dos áudios variando (perfil `conversational` × `intimate` do MiniMax trocam por turno) — ouvir
   com o Patrick antes de mexer (frente da voz); os /ruim de 02/10 (053, 054, 056–059, a parte de contexto da 063) no
-  lote da voz; ideia de 30/09 (bebidas, vinho, Marina bêbada) em "Depois do soak".
+  lote da voz; ideia de 30/09 (bebidas, vinho, Marina bêbada) em "Depois do soak". Na tabela `feedbacks` os 9
+  corrigidos foram marcados `resolvido` depois de conferir na VPS (cópia do banco) que o código no ar acerta os casos
+  reais; dois pendentes antigos (26/09 fundo do cômodo e looks em álbum; 27/09 card do pijama) ficam pra frente de
+  bugs conferir.
 

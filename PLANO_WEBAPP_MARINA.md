@@ -766,6 +766,7 @@ conferir as barras do app contra o que ela sentia. Sem mudança de tela.
 Indo dormir) o Celular é "Pega após o banho", não "No bolso"; do banho até o passo da roupa o Por fora mostra
 "Enrolada na toalha" (sem a linha "Para"); quando o atraso é "Trocou de look", a roupa do Por fora troca de verdade
 naquela hora; "olhando o X" é celular "Na mão". Detalhe na Auditoria ("/feedback do soak de 02/10").
+/feedback antigo a conferir (frente de bugs): 27/09 01:58, card do "colocando pijama" com layout errado.
 
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
