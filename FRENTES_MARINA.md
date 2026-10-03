@@ -4,12 +4,12 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 03/10/2026, tarde (frente de bugs: os dois /feedback antigos do item 25 conferidos, já estavam
-corrigidos — no banco seguem `pendente` até o OK do Patrick pra escrever na produção). **Próxima conversa: frente de
-bugs com o que o Patrick está vendo no teste de hoje (sábado 03/10, dia 5)**; depois "bora no soak, dia 5" no domingo
-de manhã. **Soak: dia 1 = terça 29/09**
-(relatório `soak/dia-2026-10-03.md`, com `chat.enviado` e `photo_director.cena` a partir do deploy; sábado tem Quartinho de
-novo com a Júlia e o convite da Bia). Aberto pra frente do mundo: o preparo pra dormir que volta de passo._
+_Atualizado em 03/10/2026, fim da tarde (frente de bugs, teste ao vivo do dia 5: áudio no histórico, eco dentro da
+resposta, tempo do Rio fora do turno + sol só com céu limpo + garoa densa é chuva — tudo no ar às 15:50; arena do
+Grok 4.3: fica o Gemini). **Próxima conversa: frente de bugs, a recusa no meio do sexting (15:40, item 26)**; depois
+"bora no soak, dia 5" no domingo de manhã. **Soak: dia 1 = terça 29/09**
+(relatório `soak/dia-2026-10-03.md`). Aberto pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente
+da voz: o modo íntimo desliga durante o banho no meio do sexting._
 
 ---
 
@@ -238,7 +238,7 @@ começar (`echo AAAA-MM-DD > /root/bots/marina/soak/inicio.txt`). Ler um dia sem
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
-**Abertura:** "bora na frente de bugs" (nenhum aberto)
+**Abertura:** "bora na frente de bugs: a recusa no meio do sexting de 03/10 (15:40)"
 
 Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
 
@@ -670,8 +670,16 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       - **Decisão do Patrick:** garoa densa (55, 57; ~1,2 mm/h) é chuva — tira a caminhada e pesa contra sair.
         Garoa fraca e moderada (51, 53) seguem chuvisco.
       `tests/test_soak_tempo_0310.py` (+7); `test_soak_dia4` atualizado (55 era chuvisco).
+    - **ABERTO — 15:40, recusa no meio do sexting (próxima conversa).** Ele: "Foi tudo amor… dá pra sentir até a
+      entrada do teu útero" (conversas 1197). Ela, **por áudio** (sorteio dos 35%, tesão 0,62, `gemini-3.8-flash`):
+      "Preciso dar uma pausa por aqui. Prefiro não continuar com mensagens desse tipo" (1198) — recusa do modelo; o
+      log não tem `llm.junk_reply`, então `_is_policy_refusal` não pegou a frase. 15:41 (1200) ela sustentou "Amor,
+      falei sério ali… tô toda doloridinha… por causa da menstruação" (dia 4 do ciclo) e a cena morreu. Capturado:
+      conversas 1171–1210, log 18:39–18:41 UTC. Pra ver: por que o filtro não pegou, recusa nunca virar áudio, e se
+      a menstruação no prompt empurra a recusa (camadas fala e prompt).
 
-**Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo). Pra leitura do dia 5: (/ruim 065,
+**Abertos:** a recusa no meio do sexting de 03/10 15:40 (item 26, próxima conversa); o preparo pra dormir que
+volta de passo (item 24, frente do mundo). Pra leitura do dia 5: (/ruim 065,
 "o tempo sem personalidade", já explicado no item 26) e "tenho um compromisso de manhã" repetido às 09:29–09:30 de 03/10.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
