@@ -811,6 +811,23 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
     except Exception:
         pass
 
+    # --- /feedback ----------------------------------------------------------------
+    # Soak, dia 4 (03/10): o relatório não lia a tabela `feedbacks` e 11 /feedback do Patrick (29/09–02/10) ficaram
+    # sem ninguém ler. Cada um é bug a investigar, com o mundo daquela hora e o que ela tinha dito.
+    feedbacks = []
+    try:
+        for r in conn.execute("SELECT id, timestamp, feedback FROM feedbacks WHERE timestamp >= ? AND timestamp < ? "
+                              "ORDER BY timestamp", (s_ini, s_fim)):
+            at = _dt(r["timestamp"])
+            st = estado_em(at)
+            antes = [m for m in marina if m["at"] <= at][-1:]
+            feedbacks.append(
+                f"**{_hm(at)}** /feedback: «{_curto(r['feedback'], 400)}»"
+                + (f"\n  - mundo: {st['activity']} ({st['location_region']}, desde {_hm(st['at'])})" if st else "")
+                + (f"\n  - antes, ela ({_hm(antes[0]['at'])}): «{_curto(antes[0]['content'], 160)}»" if antes else ""))
+    except sqlite3.Error:
+        pass
+
     # --- /bom e /ruim ------------------------------------------------------------
     marcas = []
     for arq, cab, rotulo in (("BIBLIOTECA_COMPORTAMENTAL_MARINA.md", r"Registro (\d+)", "/bom"),
@@ -872,7 +889,8 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
          "## Roteiro de leitura (pra quem lê, antes das suspeitas)", "",
          "1. Ler **a conversa inteira** com o mundo do lado, não só as suspeitas — o script só acha o que já "
          "alguém ensinou.",
-         "2. Cada linha de **«O Patrick estranhou»** é pista: achar o que ela ou o mundo fez de errado ali.",
+         "2. Cada **/feedback** dele é bug a investigar (não é anotação): conferir um por um. Cada linha de "
+         "**«O Patrick estranhou»** é pista: achar o que ela ou o mundo fez de errado ali.",
          "3. Cada **erro de verdade**: seguir até o que ele recebeu no lugar (a linha já mostra o que veio depois).",
          "4. Conferir **fome** de hora em hora com o que ela comeu, **fotos pedidas** com as que chegaram e o "
          "**cenário** de cada foto com o lugar.",
@@ -896,7 +914,8 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
          + f", {llm_chamadas} chamadas; Civitai {buzz} Buzz em {len(civitai)} foto(s) ({nsfw} adulta); "
            f"rotas {rotas} chamada(s)" + (f" + {rotas_falha} falha(s)" if rotas_falha else "")
          + f"; voz {len(audios)} áudio(s), {sum(audios):.0f} s",
-         f"- /bom e /ruim: {sum(1 for _, t in marcas if '/bom' in t)} e {sum(1 for _, t in marcas if '/ruim' in t)}",
+         f"- /feedback dele: **{len(feedbacks)}**; /bom e /ruim: {sum(1 for _, t in marcas if '/bom' in t)} e "
+         f"{sum(1 for _, t in marcas if '/ruim' in t)}",
          ""]
 
     def secao(titulo: str, itens: list[str], vazio: str = "nada") -> None:
@@ -919,6 +938,7 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
     secao("Fundo da foto × lugar do mundo", s_fundo,
           "nada" if cenas else "o log ainda não tem «photo_director.cena» (código antes de 03/10)")
 
+    secao("/feedback do Patrick (cada um é bug a investigar)", feedbacks)
     secao("O Patrick estranhou (fala dele com cara de «hein?»: o que ela disse, o mundo, o que ela respondeu)",
           estranhos)
 

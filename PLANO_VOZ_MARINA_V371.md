@@ -1408,3 +1408,5 @@ são mais sorteados, e ela avisa que chegou quando é de bom tom (volta do rolê
 dia); "quero sim, melhor ir de Uber" vale como combinado; no prompt o atraso vai redondo ("uns 20 min") e os graus só
 se ele perguntar; a desculpa fixa do microfone virou fala dela. /ruim 059–064 anotados. Detalhe na Auditoria
 ("Leitura do soak melhorada + Soak, dia 4 da tarde em diante").
+Pendentes de voz vindos do /feedback (FRENTES, item 25): Pix sem olhar o contexto da conversa, a mania de começar
+com "Kkkkk", a voz do áudio variando e perdendo naturalidade; e o lote dos /ruim de 02/10 (053, 054, 056–059, 061).

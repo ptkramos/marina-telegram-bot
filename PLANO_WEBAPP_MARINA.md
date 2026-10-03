@@ -757,6 +757,8 @@ Sem mudança de tela: as caras novas das fotos valem só pro clima, e nenhuma po
 contam da chegada de verdade (a caipirinha das 20:06 aparecia com ela ainda em casa, 22 min atrasada); One Piece e a
 série da noite são dois itens, cada um na sua hora; num rolê com comida não aparece mais "Pulou o jantar: não deu
 tempo" (a comida de lá é o jantar). Sem tela nova. Detalhe na Auditoria ("Soak, dia 4 da tarde em diante").
+Pendentes do app vindos do /feedback (FRENTES, item 25): no Bastidores, "olhar redes sociais" com "celular no bolso";
+secando o cabelo com a roupa da academia (ali é toalha); atraso "por trocar de look" e o Por fora com a mesma roupa.
 
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):

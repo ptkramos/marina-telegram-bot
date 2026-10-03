@@ -2432,4 +2432,9 @@ com o mundo em casa, "banho tomado" sem banho desde a volta, e o passeio do Milo
   "se arrumando pra dormir" são proporcionais à etapa, e o deitar empurrado estica a etapa. Frente do mundo.
 - **Suíte inteira em 03/10:** os 20 erros da 1ª rodada eram "database or disk is full" (disco do PC 98% cheio);
   re-rodados, passam.
+- **/feedback sem leitura (03/10, o Patrick perguntou).** O relatório não lia a tabela `feedbacks` (o /feedback é o
+  caderno de correções, fora do prompt dela) e 11 anotações de 30/09 a 02/10 ficaram pendentes — eu também não li.
+  O relatório traz agora a seção "/feedback do Patrick", com o mundo daquela hora e a fala dela antes, e o roteiro diz
+  que cada um é bug a investigar. Lista e situação no FRENTES, seção 5, item 25 (1 resolvido no item 24, 5 graves,
+  3 de voz, 1 de texto do app, 1 ideia pra depois do soak).
 

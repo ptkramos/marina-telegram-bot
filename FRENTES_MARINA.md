@@ -6,7 +6,8 @@ O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_M
 
 _Atualizado em 03/10/2026, manhã (leitura do soak melhorada — seção 0; dia 4 lido até o fim e corrigido — item 24:
 Uber combinado, bar antes de ela chegar, "se divertindo ainda" em casa, banho, avisos sem sorteio e de bom tom,
-chuva sem "a pé"). **Soak: dia 1 = terça 29/09**; próxima conversa: "bora no soak, dia 5" no domingo de manhã
+chuva sem "a pé"). **Próxima conversa (hoje): os /feedback pendentes — seção 5, item 25** (graves primeiro, depois o
+lote da voz com os /ruim). **Soak: dia 1 = terça 29/09**; depois: "bora no soak, dia 5" no domingo de manhã
 (relatório `soak/dia-2026-10-03.md`, com `chat.enviado` e `photo_director.cena` a partir do deploy; sábado tem Quartinho de
 novo com a Júlia e o convite da Bia). Aberto pra frente do mundo: o preparo pra dormir que volta de passo._
 
@@ -89,7 +90,8 @@ vão repetir); **ir ao banheiro do lugar pra mandar foto mais ousada** (Patrick,
 que ela vá ao banheiro do local); roupa de provocar + saída (02/10: ela disse "baby-doll por baixo", pro mundo ele
 saiu quando ela se vestiu pro açaí); **brinquedo Lovense pelo Mini App** (Patrick, 02/10, noite: um controle no
 app pra brincar à distância quando ela quiser — decidir com ele quem controla o quê, o brinquedo de verdade é dele ou
-é o dela na história, e como a fala e as fotos dela acompanham); **esquecer o aviso pelo sentimento** (03/10: o
+é o dela na história, e como a fala e as fotos dela acompanham); **bebidas nos pedidos e vinho no mercado, Marina
+bêbada** (/feedback de 30/09); **esquecer o aviso pelo sentimento** (03/10: o
 sorteio de 5% saiu e ela sempre cumpre; esquecer de verdade — empolgada com a amiga, bateria lá embaixo — é
 comportamento novo).
 O que era "ver no uso real" (agenda viva, atraso, roupa, Instagram, coerência entre turnos) **é o próprio soak**.
@@ -588,7 +590,25 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       o preparo pra dormir esticou e os passos se redistribuíram. E 19:44 "ainda não sei como vou" com o jeito de
       ir já decidido (fala; anotado).
 
-**Abertos:** o preparo pra dormir que volta de passo (item 24).
+25. **/feedback do Patrick sem leitura (achado em 03/10, ele perguntou)** — o relatório não lia a tabela
+    `feedbacks` e 11 /feedback de 30/09 a 02/10 ficaram pendentes. O relatório passou a trazê-los em destaque, com o
+    mundo daquela hora (roteiro: cada /feedback é bug a investigar). Situação de cada um:
+    - ✅ 02/10 20:09 Bastidores dizia que ia sair pro Quartinho e já mostrava ela lá com a Júlia e a caipirinha —
+      corrigido no item 24 (o rolê conta da chegada de verdade).
+    - **Graves a investigar:** 02/10 11:36 "me respondeu durante o banho" e 18:50 "durante o se arrumando o banho
+      coloca o telefone dela como no bolso" (pode responder no banho); 19:06 secando o cabelo e o Bastidores com a
+      roupa da academia (ali seria toalha, ou nua no banho); 19:54 "se atrasou por ter mudado de look" e o Por fora
+      com a mesma roupa; 23:36 "ela já tinha respondido e depois respondeu de novo minha pergunta".
+    - **Voz:** 19:48 "não olha o contexto da conversa quando recebe um pix" (= /ruim 061: o Pix era pro Uber);
+      14:34 a mania de começar com "Kkkkk"; 19:52 "dar uma segunda olhada no sistema de áudios, a voz está variando
+      muito e perdendo a naturalidade".
+    - **App (texto):** 01/10 23:14 olhar redes sociais aparece no Bastidores com "celular no bolso" ("a culpa foi
+      minha na troca do texto").
+    - **Ideia → depois do soak:** 30/09 mais bebidas nos pedidos, vinho no mercado, Marina bêbada.
+    - E os /ruim de 02/10 que só entraram na antibiblioteca (053, 054, 056, 057, 058, 059, 061, o erro de contexto
+      da 063): lote da voz — 053 e 058 são crítica geral (reação a elogio repetitiva; fala pouco natural e comprida).
+
+**Abertos:** os /feedback do item 25 e o preparo pra dormir que volta de passo (item 24).
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** congelada até o soak fechar (freio, seção 0); foto errada no uso real é bug do soak
