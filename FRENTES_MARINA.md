@@ -4,9 +4,10 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 03/10/2026, fim da manhã (frente da voz, item 25 fechado: uma voz só nos áudios, escolhida de
-ouvido; resposta à reação lê o balão; banho não vira assunto; "conta devagar" por partes). **Próxima conversa:
-"bora no soak, dia 5"** no domingo de manhã. **Soak: dia 1 = terça 29/09**
+_Atualizado em 03/10/2026, tarde (frente de bugs: os dois /feedback antigos do item 25 conferidos, já estavam
+corrigidos — no banco seguem `pendente` até o OK do Patrick pra escrever na produção). **Próxima conversa: frente de
+bugs com o que o Patrick está vendo no teste de hoje (sábado 03/10, dia 5)**; depois "bora no soak, dia 5" no domingo
+de manhã. **Soak: dia 1 = terça 29/09**
 (relatório `soak/dia-2026-10-03.md`, com `chat.enviado` e `photo_director.cena` a partir do deploy; sábado tem Quartinho de
 novo com a Júlia e o convite da Bia). Aberto pra frente do mundo: o preparo pra dormir que volta de passo._
 
