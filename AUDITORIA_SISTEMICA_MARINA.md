@@ -2610,5 +2610,5 @@ Cada /feedback lido com conversa, mundo e log da hora (cópias no scratchpad da 
   despedida ou o gozo dela (`observe_marina_line`) fecham o bloco (o gozo marca `gozou`); voltando ao clima em 15 min
   sem nada no meio, emenda. `agora()` devolve o sexting antes de sortear. Acontecimento `tempo_livre`
   (`livre:<dia>:sN`, participantes Marina e Patrick, `share_worthy` 0 — foi com ele, não tem o que contar). Hoje:
-  "Transou com o Patrick por mensagem", "No quarto por mensagem, gozou", ícone `message-heart`; Agora sem barra.
+  "Transou com o Patrick", "No quarto por mensagem, gozou", ícone `message-heart`; Agora sem barra.
   Textos do Patrick. Fora de casa (saída, refeição, banho) não vira bloco. `tests/test_soak_sexting_0310.py` (+11).

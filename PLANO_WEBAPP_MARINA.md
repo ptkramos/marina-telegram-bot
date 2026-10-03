@@ -783,7 +783,7 @@ como chuva (some a ida a pé). Sem tela nova.
 Agora nem no Hoje (o mundo seguia sorteando "olhando o Pinterest no closet" no meio da cena, e ela usou isso na fala).
 Agora, com ela em casa no tempo livre, o modo íntimo é o bloco do momento. **Agora:** "Em casa", linha 2 "Transando
 com o Patrick por mensagem", Cômodo Quarto, sem barra (mostra "desde" e há quanto tempo). **Hoje:** "Transou com o
-Patrick por mensagem" (enquanto acontece, "Transando…" com a hora aberta), linha cinza "No quarto por mensagem" e,
+Patrick" (enquanto acontece, "Transando com o Patrick" com a hora aberta; o "por mensagem" fica só embaixo), linha cinza "No quarto por mensagem" e,
 se ela gozou, ", gozou"; ícone balão com coração (`message-heart`). O que ela fazia antes acaba quando o clima começa.
 Textos escolhidos pelo Patrick (03/10). Fora de casa não vira bloco.
 

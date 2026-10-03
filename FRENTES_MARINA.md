@@ -690,7 +690,7 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       íntimo com ela em casa no tempo livre vira bloco (`tempo_livre.sexting`, chamado do `intimacy.py`): corta o que
       ela fazia, vai até 5 min depois da última fala no clima, acaba no corte/despedida ou no gozo dela (emenda se
       voltar ao clima em 15 min). Textos do Patrick: Agora "Em casa", "Transando com o Patrick por mensagem", Quarto,
-      sem barra ("desde"); Hoje "Transou com o Patrick por mensagem", embaixo "No quarto por mensagem, gozou",
+      sem barra ("desde"); Hoje "Transou com o Patrick" (enquanto acontece, "Transando com o Patrick"), embaixo "No quarto por mensagem, gozou",
       ícone balão com coração (`message-heart`). Fora de casa não vira bloco. `tests/test_soak_sexting_0310.py` (+11).
 
 **Abertos:** o preparo pra dormir que

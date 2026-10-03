@@ -122,13 +122,13 @@ class SextingNoMundoTest(unittest.TestCase):
         itens = [i for p in hoje_view(self.db, t(15, 32))["periodos"] for i in p["itens"]]
         linha = next(i for i in itens if i["ic"] == "message-heart")
         self.assertEqual((linha["texto"], linha["sub"], linha["hora"]),
-                         ("Transando com o Patrick por mensagem", "No quarto por mensagem", "15:04–"))
+                         ("Transando com o Patrick", "No quarto por mensagem", "15:04–"))
 
         self.assertTrue(observe_marina_line(self.db, "tô gozando, amor", t(15, 44)))
         itens = [i for p in hoje_view(self.db, t(16, 10))["periodos"] for i in p["itens"]]
         linha = next(i for i in itens if i["ic"] == "message-heart")
         self.assertEqual((linha["texto"], linha["sub"], linha["hora"]),
-                         ("Transou com o Patrick por mensagem", "No quarto por mensagem, gozou", "15:04–15:44"))
+                         ("Transou com o Patrick", "No quarto por mensagem, gozou", "15:04–15:44"))
         with self.db.get_connection() as conn:
             ev = conn.execute("SELECT summary, share_worthy FROM life_events WHERE event_key LIKE 'livre:%:s1'").fetchone()
         self.assertEqual(ev["summary"], "Transou com o Patrick por mensagem no quarto e gozou.")

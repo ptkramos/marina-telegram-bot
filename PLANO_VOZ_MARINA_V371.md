@@ -1450,3 +1450,4 @@ continuar") e refaz o turno noutro modelo antes de virar áudio. No modo íntimo
 motivo pra largar a cena, e parar é pelo que ela sente (decisão do Patrick). E o sexting virou o que ela está fazendo
 em casa: o mundo para de dizer "olhando o Pinterest no closet" no meio da cena (às 15:41 ela usou isso na fala).
 Detalhe na Auditoria ("A recusa no meio do sexting").
+No Hoje a linha é "Transou com o Patrick" (o "por mensagem" fica embaixo, pedido dele); a fala dela não muda.
