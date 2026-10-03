@@ -330,7 +330,7 @@ class ResponseAvailabilityPolicy:
             return mapped, 'CONFIRMED_COMMITMENT', None, 'fresh', True
 
         snapshot = self.states.latest()
-        if not self._fresh(snapshot, now_naive):
+        if not self._fresh(snapshot, now_naive) or self._transition_after(snapshot, now_naive):
             # Auditoria #4: a disponibilidade roda ANTES da montagem do prompt,
             # que é quem resolvia o estado. Resultado: a primeira mensagem depois
             # de um silêncio > 60 min sempre caía em UNKNOWN (ela nunca estava
@@ -392,6 +392,23 @@ class ResponseAvailabilityPolicy:
             return True
         return (observed.date() == now_naive.date()
                 and timedelta(0) <= now_naive - observed < timedelta(minutes=self.stale_minutes))
+
+    def _transition_after(self, snapshot: Optional[dict], now: datetime) -> bool:
+        """Soak, dia 4 (02/10, 11:34): o banho começou às 11:24 e o último retrato era o "olhando o Instagram" das
+        10:57, ainda fresco — ela respondeu "na hora" de dentro do chuveiro. Transição em andamento (banho, refeição)
+        que começou depois do retrato vale mais que ele: resolve de novo."""
+        try:
+            raw = self.db.get_estado_relacional("pending_transition_json")
+            data = json.loads(raw) if raw else None
+            if not isinstance(data, dict):
+                return False
+            start = datetime.fromisoformat(data["transition_at"])
+            end = datetime.fromisoformat(data["end_at"]) if data.get("end_at") else None
+        except (KeyError, TypeError, ValueError):
+            return False
+        if not (start <= now and (end is None or now < end)):
+            return False
+        return not snapshot or datetime.fromisoformat(snapshot["observed_at"]) < start
 
     def _shower_until(self, now: datetime) -> Optional[datetime]:
         """Fim do banho em andamento (pending_transition_json), se houver."""
@@ -481,9 +498,13 @@ class ResponseAvailabilityPolicy:
                 return 'HOME_RELAXING'           # masturbando e chamando o Patrick: celular na mão
             if 'se masturbando' in act or 'se tocando' in act:
                 return 'SOLO'
-            if any(x in act for x in ('pelo celular', 'lendo', 'jogando', 'desenhando', 'montando looks', ' x ',
+            if any(x in act for x in ('pelo celular', 'lendo', 'jogando', 'desenhando', 'montando looks',
                                       'fazendo as unhas',
                                       'organizando o closet', 'arrumando o quarto')):
+                return 'HOME_BUSY'
+            # jogo na TV ("Botafogo x Vasco"); o ' x ' solto pegava "olhando o X (sala)" — rede social é celular na
+            # mão, e o Bastidores dizia "No bolso" (/feedback de 01/10, 23:14)
+            if re.search(r'\w x \w', act):
                 return 'HOME_BUSY'
             return 'HOME_RELAXING'
         if any(x in act for x in ('dorm', 'sleep', 'sono')):

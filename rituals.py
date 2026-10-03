@@ -226,6 +226,10 @@ class Rituals:
             # 24/09: o bom dia saiu às 05:19 com ela DENTRO do box (banho 05:10–05:29).
             # Antes ou depois do banho pode (e ela decide se junta: "bom dia… vou pro banho");
             # de dentro do chuveiro não. O ritual espera — a janela do bom dia é de 3 h.
+            try:                    # soak, dia 4 (02/10, 11:24–11:34): sem isso o mundo seguia no Instagram das 10:57
+                self._state(now)
+            except Exception:
+                logger.exception("ritual.banho.mundo")
             return None
         kind, activity = self._state(now)
         previous = self._get("ritual_last_kind")

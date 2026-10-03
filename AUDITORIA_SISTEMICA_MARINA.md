@@ -2445,3 +2445,51 @@ com o mundo em casa, "banho tomado" sem banho desde a volta, e o passeio do Milo
   na VPS. Limite: a bateria social é só o valor atual (`estado_emocional`), sem histórico; o `appraise_world` refeito
   depois pode diferir do que ela sentiu ao vivo.
 
+## /feedback do soak de 02/10 — os graves e o lote da voz (03/10, frente de bugs; FRENTES item 25)
+Cada /feedback lido com conversa, mundo e log da hora (cópias no scratchpad da sessão). `tests/test_soak_feedbacks_0210.py`
+(+15), `test_roupa` (ajustado: do banho até a roupa é toalha).
+- **11:36 "me respondeu durante o banho" — camada: mundo/disponibilidade.** `ritual.banho start=11:24 end=12:04` (banho
+  da chegada da rua); às 11:34:55 `AVAILABILITY_DECISION REPLY_NOW activity=HOME_RELAXING source=ROUTINE_PROBABILITY`.
+  Duas falhas: (1) `ResponseAvailabilityPolicy._resolve_activity` só resolve o mundo se o último retrato está velho — o
+  "olhando o Instagram" das 10:57 (slot até 12:00) valia, e o banho que começou depois dele não entrava;
+  (2) `Rituals.tick` sai cedo no banho (pra não mandar ritual de dentro do box) sem resolver o mundo, então nada gravava
+  "tomando banho" de 11:24 até a fala dela às 11:34:59. Agora: transição em andamento que começou depois do retrato
+  manda resolver de novo (`_transition_after`), e o tick no banho resolve o mundo antes de sair. E a foto dele das
+  11:35:28 foi respondida na hora porque **a foto não passava pela disponibilidade**: passa agora — adiada, entra no
+  lote como texto com o que a foto mostra (`vision_service.foto_adiada_texto`) e o "digitando" só aparece se ela for
+  responder. O Pix (comando e Mini App) também deixou de pular a disponibilidade (no banho ou dormindo, vê depois);
+  o turno do Mini App vai com `telegram_message_id=None` (o 0 colidiria na fila).
+- **18:50 "durante o se arrumando o banho coloca o telefone dela como no bolso" — camada: app.** Ela não respondeu no
+  banho (`DEFER activity=SHOWER` às 18:49:48); o card do Se arrumando usava o mesmo celular ("Olha de vez em quando" =
+  "No bolso") pra todos os passos. No passo "Tomando banho…" é "Pega após o banho" (`Agenda.card`).
+- **19:06 secando o cabelo e o Por fora com a roupa da academia — camada: mundo (roupa).** `roupa_json`: treino
+  (top vinho + legging) de 16:29 a 19:28, banho 18:31–19:00 no meio. Agora o passo do banho do Se arrumando veste a
+  "toalha" (peça nova: "enrolada na toalha" / "a white bath towel wrapped around her body") até o passo da roupa; o Por
+  fora mostra "Enrolada na toalha" sem a linha "Para"; o prompt diz "Vestindo: enrolada na toalha (saiu do banho…)"; a
+  foto de agora sai de toalha. De lingerie pra provocar (indo dormir), fica com ela.
+- **19:54 "se atrasou por ter mudado de look" e o Por fora com a mesma roupa — camada: mundo (roupa × atraso).** O
+  atraso decidiu "Trocou de look" (`atraso._enrolou`, alegria) e só houve um `roupa.vestiu` (19:29). O aviso
+  "Trocou de look"/"Trocou de roupa três vezes" no card agora troca a roupa de verdade, na hora do aviso, por outro
+  look do mesmo tipo (`Roupa._arrumando`).
+- **23:36 "ela já tinha respondido e depois respondeu de novo" — camada: chat.** "Então fala… como foi o dia, mas
+  devagar" (23:33:59) → resumo em 9 balões (23:34:07–23:34:34); "Começa pela manhã" chegou às 23:34:10, no meio
+  (`debounce.serialized aguardando turno anterior`). No histórico a pergunta dele aparecia *depois* do resumo inteiro,
+  e ela contou a manhã de novo. Agora cada envio guarda a hora de cada balão (`bot.ULTIMO_ENVIO`) e o turno de uma
+  mensagem que chegou no meio leva `[MENSAGENS CRUZADAS]`: até onde ele tinha lido e os balões que chegaram depois — se
+  já respondem, ela não repete (`chat_naturalness.mensagem_cruzada_hint`, janela de 3 min; lote adiado não conta).
+  Fica pro lote da voz: os 9 balões pra quem pediu "devagar" e "De manhã eu acordei de manhã".
+- **19:48 "não olha o contexto atual da conversa quando recebe um pix" (= /ruim 061) — camada: dados do Pix.**
+  "Quer que eu pague um Uber?" (19:44), "Vou mandar aqui pera" (19:45), pix às 19:46 → "de presente, sem você pedir"
+  (a pendência do pix prometido nasce da consolidação de memória, depois). Agora o Pix lê as falas dele dos últimos 20
+  min sobre pagar/mandar/pix e entra como "é o que ele acabou de combinar com você na conversa (ele: "…")"
+  (`financas.combinado_na_conversa`). O dinheiro segue indo pro rolê do dia.
+- **14:34 a mania de começar com "Kkkkk" — camada: fala.** 61 de 129 respostas (30/09) e 69 de 143 (02/10) abriam
+  com risada. Trava depois da geração: se ela abriu rindo em alguma das últimas 4 respostas, a risada do começo sai e
+  a fala fica (`thin_opening_laugh`, log `chat.opening_laugh cut`); risada sozinha (ou com emoji) e risada no fim ficam.
+- **01/10 23:14 "olhar redes sociais… celular no bolso" — camada: app.** O `' x '` posto pra jogo na TV ("Botafogo x
+  Vasco") pegava "em casa, olhando o X (sala)" → HOME_BUSY → "No bolso". Agora só "palavra x palavra"; rede social é
+  "Na mão".
+- **Aberto:** 19:52 a voz dos áudios variando (perfil `conversational` × `intimate` do MiniMax trocam por turno) — ouvir
+  com o Patrick antes de mexer (frente da voz); os /ruim de 02/10 (053, 054, 056–059, a parte de contexto da 063) no
+  lote da voz; ideia de 30/09 (bebidas, vinho, Marina bêbada) em "Depois do soak".
+

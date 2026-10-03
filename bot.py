@@ -54,7 +54,7 @@ from voice_engine import voice_engine
 from context_builder import context_builder
 from memory_consolidator import memory_consolidator
 from proactivity_service import proactivity_service
-from vision_service import vision_service
+from vision_service import vision_service, foto_adiada_texto
 from planner import planner
 from memory_retriever import memory_retriever
 from reminder_service import reminder_service
@@ -497,6 +497,8 @@ def split_into_human_bubbles(text: str) -> list[str]:
     return [text]
 
 ULTIMAS_MENSAGENS_MARINA: dict[int, list[dict]] = {}
+# Soak, dia 4 (02/10, 23:34): a hora de cada balão do último envio dela — a mensagem dele que chega no meio cruzou.
+ULTIMO_ENVIO: dict[int, list[tuple[datetime, str]]] = {}
 
 # Soak 22/09 (GPT-5.6 Luna): ele às vezes cola uma palavra solta sem sentido no
 # fim da fala já terminada — "tenta descansar um pouco, tá? extrair?" e "Como vai
@@ -688,7 +690,9 @@ async def _send_human_messages(chat_id: int, bot, full_text: str, reply_to_messa
     # entre elas (23/09 13:59: "…depois da facul." como balão próprio).
     from chat_naturalness import strip_closing_periods
     bubbles = [strip_closing_periods(b) for b in bubbles]
-    
+    envio: list[tuple[datetime, str]] = []
+    ULTIMO_ENVIO[chat_id] = envio
+
     if len(bubbles) > 1:
         for idx, bubble in enumerate(bubbles):
             rep_id = reply_to_message_id if idx == 0 else None
@@ -699,6 +703,7 @@ async def _send_human_messages(chat_id: int, bot, full_text: str, reply_to_messa
             
             sent_msg = await bot.send_message(chat_id=chat_id, text=bubble, reply_to_message_id=rep_id)
             _log_enviado("texto", bubble)
+            envio.append((datetime.now(), bubble))
             ULTIMAS_MENSAGENS_MARINA[chat_id].append({"message_id": sent_msg.message_id, "text": bubble})
             
             if idx < len(bubbles) - 1:
@@ -710,6 +715,7 @@ async def _send_human_messages(chat_id: int, bot, full_text: str, reply_to_messa
         await asyncio.sleep(tempo_digitacao)
         sent_msg = await bot.send_message(chat_id=chat_id, text=bubbles[0], reply_to_message_id=reply_to_message_id)
         _log_enviado("texto", bubbles[0])
+        envio.append((datetime.now(), bubbles[0]))
         ULTIMAS_MENSAGENS_MARINA[chat_id].append({"message_id": sent_msg.message_id, "text": full_text})
 
     if len(ULTIMAS_MENSAGENS_MARINA[chat_id]) > 8:
@@ -2639,7 +2645,8 @@ async def pix_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     logger.info("pix.recebido valor=%s kind=%s", valor, res["kind"])
     # Ela reage pelo fluxo normal: vê a conversa, o saldo e se era o aperto ou o pix prometido.
-    await process_incoming_batch(update, context, financas.pix_turn_text(valor, nota, res), availability_bypass=True)
+    # 03/10 (soak, /feedback de 02/10 11:36): no banho ou dormindo, vê o Pix quando pegar o celular, como as mensagens.
+    await process_incoming_batch(update, context, financas.pix_turn_text(valor, nota, res))
 
 
 async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -3129,7 +3136,7 @@ async def process_incoming_batch(
         try:
             action, avail_decision, _batch = availability_service.evaluate_and_maybe_defer(
                 texto_usuario,
-                telegram_message_id=msg_id,
+                telegram_message_id=msg_id or None,      # 0 = turno do Mini App (Pix): sem mensagem real
                 batch_size=max(1, texto_usuario.count('\n') + 1),
             )
             if action == 'deferred':
@@ -3542,6 +3549,18 @@ async def process_incoming_batch(
         atrasada = _hint_resposta_atrasada(pending_batch_id, datetime.now())
         if atrasada:
             messages.append({"role": "system", "content": atrasada})
+    else:
+        try:
+            # Soak, dia 4 (/feedback de 02/10, 23:36): ele escreveu no meio dos balões dela e ela respondeu de novo
+            from chat_naturalness import mensagem_cruzada_hint
+            data_msg = getattr(update.message, "date", None)
+            chegou = data_msg.astimezone().replace(tzinfo=None) if isinstance(data_msg, datetime) else None
+            cruzou = mensagem_cruzada_hint(ULTIMO_ENVIO.get(chat_id) or [], chegou)
+            if cruzou:
+                messages.append({"role": "system", "content": cruzou})
+                logger.info("chat.mensagem_cruzada")
+        except Exception:
+            logger.exception("chat.mensagem_cruzada.error")
     if not intimacy_turn.expanded:
         try:
             from health import patrick_sick_hint
@@ -3780,6 +3799,11 @@ async def process_incoming_batch(
             if sem_parafrase != resposta_marin:
                 logger.info("chat.paraphrased_idea cut")
                 resposta_marin = sem_parafrase
+        from chat_naturalness import thin_opening_laugh
+        sem_riso = thin_opening_laugh(resposta_marin, anteriores)
+        if sem_riso != resposta_marin:
+            logger.info("chat.opening_laugh cut")
+            resposta_marin = sem_riso
         if turno_curtinho:
             from chat_naturalness import keep_short
             curta = keep_short(resposta_marin)
@@ -4300,7 +4324,6 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
     caption = update.message.caption or ""
 
     logger.info(f"📸 Foto recebida do Patrick! Legenda: '{caption}'")
-    await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
     try:
         # Baixa a foto na maior resolução disponível
@@ -4314,6 +4337,19 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
         # Monta payload com visão
         user_message_repr = f"[Foto enviada pelo Patrick: {caption}]" if caption else "[Foto enviada pelo Patrick]"
+
+        # Soak, dia 4 (02/10, 11:35): a foto dele chegou com ela no chuveiro e ela respondeu na hora — a foto não
+        # passava pela disponibilidade. Agora passa pela mesma porta das mensagens: adiada, entra no lote com o que
+        # a foto mostra e ela responde quando pegar o celular.
+        try:
+            action, _decisao, _lote = availability_service.evaluate_and_maybe_defer(
+                foto_adiada_texto(user_message_repr, vision_data), telegram_message_id=msg_id)
+            if action == 'deferred':
+                logger.info('AVAILABILITY_DEFER foto batch=%s', _lote['id'] if _lote else None)
+                return
+        except Exception as exc:
+            logger.error('AVAILABILITY_POLICY_ERROR foto fail-open: %s', exc, exc_info=True)
+        await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         messages = build_messages_payload(
             quoted_context="",
             web_search_context="",
@@ -5226,8 +5262,8 @@ async def _webapp_pix(application: Application, valor: int, nota: str) -> dict:
     logger.info("pix.recebido valor=%s kind=%s via=webapp", valor, res["kind"])
     texto = financas.pix_turn_text(valor, nota, res)
     fake_update, fake_context = _fake_turn(application)
-    # A reação sai pelo fluxo normal, em segundo plano (o app responde na hora).
-    asyncio.create_task(process_incoming_batch(fake_update, fake_context, texto, availability_bypass=True))
+    # A reação sai pelo fluxo normal, em segundo plano (o app responde na hora); no banho ou dormindo, espera.
+    asyncio.create_task(process_incoming_batch(fake_update, fake_context, texto))
     return {"kind": res["kind"], "saldo": res["saldo"]}
 
 

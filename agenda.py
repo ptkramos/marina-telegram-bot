@@ -797,6 +797,9 @@ class Agenda:
         passo = self.passo_atual(atual, now)
         if atual.tipo == "la" and passo and (passo.texto.startswith("Assistindo: ") or passo.texto == "Na sessão"):
             celular = "Olha depois do filme"
+        # Soak, dia 4 (/feedback de 02/10, 18:50): no passo do banho o card dizia "No bolso"
+        if atual.tipo == "arrumando" and passo and passo.texto.startswith("Tomando banho"):
+            celular = CELULAR["banho"]
         grade.append(["device-mobile", "Celular", celular_tela(celular)])
         # linha do tempo: a cadeia do compromisso atual + a próxima etapa
         i = etapas.index(atual)

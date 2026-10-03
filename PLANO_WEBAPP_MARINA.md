@@ -762,6 +762,11 @@ secando o cabelo com a roupa da academia (ali é toalha); atraso "por trocar de 
 O relatório do soak mostra o por dentro de hora em hora (o mesmo que a aba Por dentro deveria mostrar) — serve pra
 conferir as barras do app contra o que ela sentia. Sem mudança de tela.
 
+**03/10 — /feedback de 02/10, o que muda no Bastidores (sem tela nova):** no passo do banho do Se arrumando (e do
+Indo dormir) o Celular é "Pega após o banho", não "No bolso"; do banho até o passo da roupa o Por fora mostra
+"Enrolada na toalha" (sem a linha "Para"); quando o atraso é "Trocou de look", a roupa do Por fora troca de verdade
+naquela hora; "olhando o X" é celular "Na mão". Detalhe na Auditoria ("/feedback do soak de 02/10").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

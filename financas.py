@@ -211,6 +211,27 @@ def promised_pix_loop(db) -> Optional[dict]:
     return None
 
 
+# Soak, dia 4 (/feedback de 02/10, 19:48): "Quer que eu pague um Uber?" (19:44), "Vou mandar aqui pera" (19:45) e o pix
+# das 19:46 chegou como "de presente, sem você pedir" — ela agradeceu "eu já tava toda pronta". A pendência do pix
+# prometido sai da consolidação de memória, minutos depois; o que ele acabou de falar vale na hora.
+_COMBINOU_RE = re.compile(r"\bpix\b|\bpag(?:o|a|ar|ue|uei)\b|\bdinheiro\b|\bgrana\b|\btransfir|\bvou (?:te )?mandar\b|"
+                          r"\bte mando\b|\bmand(?:o|ei) (?:a[ií] )?(?:pra|p) (?:vc|voc[eê]|ti)\b", re.IGNORECASE)
+COMBINOU_JANELA = timedelta(minutes=20)
+
+
+def combinado_na_conversa(db, now: datetime) -> str:
+    """O que o Patrick falou de mandar/pagar nos últimos 20 min (as falas dele, juntas)."""
+    try:
+        with db.get_connection() as conn:
+            rows = conn.execute("SELECT content FROM conversas WHERE role='user' AND timestamp>=? AND timestamp<=? "
+                                "ORDER BY id", ((now - COMBINOU_JANELA).isoformat(), now.isoformat())).fetchall()
+    except Exception:
+        return ""
+    falas = [" ".join((r["content"] or "").split()) for r in rows]
+    falas = [f for f in falas if _COMBINOU_RE.search(f) and not f.startswith("[Pix")]
+    return " / ".join(falas[-2:])[:240]
+
+
 def pix_turn_text(valor: int, nota: str, res: dict) -> str:
     """Como o pix entra na conversa dela (o /pix e o Mini App usam o mesmo texto)."""
     if res["kind"] == "uber":
@@ -219,6 +240,8 @@ def pix_turn_text(valor: int, nota: str, res: dict) -> str:
         motivo = f"— é o pix que ele tinha prometido ({res['promessa'].rstrip('.')})"
     elif res["kind"] == "emprestimo":
         motivo = "pra cobrir o aperto que você contou"
+    elif res.get("combinado"):
+        motivo = f"— é o que ele acabou de combinar com você na conversa (ele: \"{res['combinado']}\")"
     else:
         motivo = "de presente, sem você pedir"
     return (f"[Pix de R$ {valor} do Patrick" + (f" {motivo}" if motivo else "")
@@ -282,7 +305,8 @@ def receive_pix(db, valor: int, nota: str, now: datetime) -> dict:
            (" pra cobrir o aperto." if kind == "emprestimo" else " de presente."), now, 0.7)
     _save(db, st)
     logger.info("financas.pix valor=%s kind=%s saldo=%s", valor, kind, st["saldo"])
-    return {"kind": kind, "saldo": st["saldo"]}
+    return {"kind": kind, "saldo": st["saldo"],
+            "combinado": combinado_na_conversa(db, now) if kind == "presente" else ""}
 
 
 def _saida_de_hoje(db, now: datetime) -> Optional[dict]:

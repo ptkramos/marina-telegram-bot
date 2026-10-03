@@ -301,6 +301,46 @@ def recent_ideas_hint(previous: list[str], limit: int = 2) -> str:
               "diga algo novo ou só reaja ao que ele disse agora.")
 
 
+# Soak (/feedback de 02/10, 14:34): "virou praticamente roteiro dela enviar 'Kkkkk' antes de falar algo" — 69 de 143
+# respostas de 02/10 abriam com risada. Risada no começo vale de vez em quando; virou tique, sai (a fala fica; a
+# risada no fim do balão e a risada sozinha continuam).
+_RISO_INICIO_RE = re.compile(r"^\s*(?:k{3,}|(?:ks){2,}k?|ha(?:ha)+|rs(?:rs)+)(?![a-zà-ú])[\s,.!…]*", re.IGNORECASE)
+RISO_INICIO_JANELA = 4     # abriu rindo em alguma das últimas 4 respostas: esta não abre (no máximo 1 em 5)
+
+
+def thin_opening_laugh(reply: str, previous: list[str]) -> str:
+    """Tira o "Kkkkk" do começo quando ela já abriu rindo nas últimas 4 respostas. Só risada fica (é reação)."""
+    m = _RISO_INICIO_RE.match(reply or "")
+    if not m:
+        return reply
+    resto = reply[m.end():].lstrip()
+    if not any(c.isalpha() for c in resto) or not any(_RISO_INICIO_RE.match(p or "")
+                                                       for p in previous[-RISO_INICIO_JANELA:]):
+        return reply
+    return resto[0].upper() + resto[1:]
+
+
+CRUZOU_JANELA_S = 180      # balão dela que saiu até 3 min depois da mensagem dele: estavam se cruzando
+
+
+def mensagem_cruzada_hint(baloes: list, chegou_em) -> str:
+    """Soak, dia 4 (02/10, 23:34): ela mandava o resumo do dia em 9 balões; no 3º ele escreveu "começa pela manhã"
+    e, quando chegou a vez dele, ela contou a manhã de novo. `baloes` = [(hora, texto)] do último envio dela;
+    `chegou_em` = quando a mensagem dele chegou. Se ele escreveu no meio, ela sabe o que ele ainda não tinha lido."""
+    if not baloes or chegou_em is None:
+        return ""
+    antes = [t for at, t in baloes if at <= chegou_em]
+    depois = [(at, t) for at, t in baloes if at > chegou_em]
+    if not depois or (depois[0][0] - chegou_em).total_seconds() > CRUZOU_JANELA_S:
+        return ""
+    lido = (f"tinha lido até «{antes[-1].strip()[:120]}»" if antes
+            else "ainda não tinha visto nenhum balão da sua resposta")
+    resto = " / ".join(t.strip() for _, t in depois)[:400]
+    return ("[MENSAGENS CRUZADAS] Ele mandou a mensagem abaixo enquanto você ainda mandava a anterior: quando ele "
+            f"escreveu, {lido}; estes balões chegaram depois: «{resto}». Se eles já respondem o que ele mandou, não "
+            "repita nem conte de novo: reaja curto ou siga do ponto em que parou.")
+
+
 def drop_repeated_ideas(reply: str, previous: Iterable[str]) -> str:
     """Tira da resposta o pedaço (frase ou trecho entre vírgulas) que repete uma ideia.
     Se não sobra fala, devolve a resposta como estava."""

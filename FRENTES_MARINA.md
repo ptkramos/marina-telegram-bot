@@ -4,10 +4,10 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 03/10/2026, manhã (leitura do soak melhorada — seção 0; dia 4 lido até o fim e corrigido — item 24:
-Uber combinado, bar antes de ela chegar, "se divertindo ainda" em casa, banho, avisos sem sorteio e de bom tom,
-chuva sem "a pé"). **Próxima conversa (hoje): os /feedback pendentes — seção 5, item 25** (graves primeiro, depois o
-lote da voz com os /ruim). **Soak: dia 1 = terça 29/09**; depois: "bora no soak, dia 5" no domingo de manhã
+_Atualizado em 03/10/2026, manhã (/feedback de 02/10 lidos e corrigidos — seção 5, item 25: não responde mais no
+banho, foto e Pix esperam como mensagem, toalha depois do banho, troca de look de verdade, mensagem cruzada, Pix com o
+combinado, "Kkkkk" no começo). **Próxima conversa: frente da voz — a voz do áudio variando (ouvir junto) e o lote dos
+/ruim de 02/10** (item 25, "Aberto"). **Soak: dia 1 = terça 29/09**; depois: "bora no soak, dia 5" no domingo de manhã
 (relatório `soak/dia-2026-10-03.md`, com `chat.enviado` e `photo_director.cena` a partir do deploy; sábado tem Quartinho de
 novo com a Júlia e o convite da Bia). Aberto pra frente do mundo: o preparo pra dormir que volta de passo._
 
@@ -602,20 +602,28 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
     mundo daquela hora (roteiro: cada /feedback é bug a investigar). Situação de cada um:
     - ✅ 02/10 20:09 Bastidores dizia que ia sair pro Quartinho e já mostrava ela lá com a Júlia e a caipirinha —
       corrigido no item 24 (o rolê conta da chegada de verdade).
-    - **Graves a investigar:** 02/10 11:36 "me respondeu durante o banho" e 18:50 "durante o se arrumando o banho
-      coloca o telefone dela como no bolso" (pode responder no banho); 19:06 secando o cabelo e o Bastidores com a
-      roupa da academia (ali seria toalha, ou nua no banho); 19:54 "se atrasou por ter mudado de look" e o Por fora
-      com a mesma roupa; 23:36 "ela já tinha respondido e depois respondeu de novo minha pergunta".
-    - **Voz:** 19:48 "não olha o contexto da conversa quando recebe um pix" (= /ruim 061: o Pix era pro Uber);
-      14:34 a mania de começar com "Kkkkk"; 19:52 "dar uma segunda olhada no sistema de áudios, a voz está variando
-      muito e perdendo a naturalidade".
-    - **App (texto):** 01/10 23:14 olhar redes sociais aparece no Bastidores com "celular no bolso" ("a culpa foi
-      minha na troca do texto").
+    - ✅ **Graves (03/10, frente de bugs)** — `tests/test_soak_feedbacks_0210.py` (+15). Detalhe na Auditoria
+      ("/feedback do soak de 02/10").
+      - 11:36 "me respondeu durante o banho": o banho começou 11:24 e a disponibilidade confiava no retrato do
+        Instagram das 10:57; o tick dos rituais não atualizava o mundo no banho; e a foto dele não passava pela
+        disponibilidade. Os três corrigidos; o Pix também espera agora. Camada: mundo/disponibilidade.
+      - 18:50 "telefone no bolso no banho": ela não respondeu (adiou certo); era o card — no passo do banho, "Pega
+        após o banho". Camada: app.
+      - 19:06 secando o cabelo com a roupa da academia: do banho até o passo da roupa, "Enrolada na toalha".
+      - 19:54 atrasou "por trocar de look" com a mesma roupa: a troca acontece de verdade, na hora do aviso.
+      - 23:36 "respondeu de novo": ele escreveu no meio dos 9 balões do resumo do dia; agora o turno sabe que as
+        mensagens se cruzaram e o que ele ainda não tinha lido. Camada: chat.
+    - ✅ **Voz:** 19:48 Pix sem contexto (= /ruim 061) — o Pix lê o que ele acabou de combinar; 14:34 "Kkkkk" no começo
+      — no máximo 1 a cada 5 respostas.
+    - ✅ **App (texto):** 01/10 23:14 "olhando o X" com "No bolso" — o `' x '` do jogo na TV pegava o X; agora "Na mão".
+    - **Aberto (voz):** 19:52 "a voz está variando muito e perdendo a naturalidade" — ouvir junto antes de mexer (os
+      perfis `conversational` e `intimate` do MiniMax se alternam por turno). E o lote dos /ruim de 02/10 (053, 054,
+      056–059, o contexto da 063; 053 e 058 são crítica geral), mais os 9 balões pra quem pediu "devagar" e "De manhã
+      eu acordei de manhã" (23:34).
     - **Ideia → depois do soak:** 30/09 mais bebidas nos pedidos, vinho no mercado, Marina bêbada.
-    - E os /ruim de 02/10 que só entraram na antibiblioteca (053, 054, 056, 057, 058, 059, 061, o erro de contexto
-      da 063): lote da voz — 053 e 058 são crítica geral (reação a elogio repetitiva; fala pouco natural e comprida).
 
-**Abertos:** os /feedback do item 25 e o preparo pra dormir que volta de passo (item 24).
+**Abertos:** a voz do áudio e o lote dos /ruim (item 25, frente da voz); o preparo pra dormir que volta de passo
+(item 24, frente do mundo).
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** congelada até o soak fechar (freio, seção 0); foto errada no uso real é bug do soak

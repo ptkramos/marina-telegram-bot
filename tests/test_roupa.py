@@ -76,7 +76,8 @@ class RoupaTest(unittest.TestCase):
         self.r.tick(datetime(2026, 9, 26, 19, 50))
         st = self.st()
         self.assertIn(st["make"]["nivel"], ("completa", "festa"))
-        self.assertIn(tuple(st["atual"]["look"]), LOOKS["casa_dia"], "ainda não chegou no Escolhendo roupa")
+        # 03/10 (/feedback de 02/10 19:06): do banho até o Escolhendo roupa, de toalha
+        self.assertEqual(st["atual"]["look"], ["toalha"], "ainda não chegou no Escolhendo roupa")
         self.r.tick(datetime(2026, 9, 26, 20, 15))
         st = self.st()
         self.assertEqual(st["atual"]["ocasiao"], "sair")

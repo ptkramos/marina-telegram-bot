@@ -95,6 +95,8 @@ PECAS = {
     "biquini_terracota": ("biquíni terracota", "a terracotta triangle bikini"),
     "biquini_preto": ("biquíni preto", "a black string bikini"),
     "biquini_lilas": ("biquíni lilás", "a lilac scrunch bikini"),
+    # 03/10 (soak, /feedback de 02/10 19:06): saiu do banho do Se arrumando e ainda não se vestiu
+    "toalha": ("enrolada na toalha", "a white bath towel wrapped around her body"),
 }
 
 # look = peças combinadas (a primeira é a de cima)
@@ -188,6 +190,7 @@ RUA_OK = ("rua", "sair", "jogo", "praia", "treino", "casa")      # dá pra pôr 
 LEVE_IMPLICITA = ("faculdade", "cafe", "acai", "medico", "manicure", "cabelo")   # rímel e gloss junto com a roupa
 _ROUPA_PASSO = re.compile(r"roupa|biqu[ií]ni|camisa do|pijama|t[eê]nis", re.IGNORECASE)
 _TIRA_MAKE = re.compile(r"tirando maquiagem", re.IGNORECASE)
+_TROCOU_LOOK = re.compile(r"^Trocou de (?:look|roupa)")     # o que segurou a saída (atraso.py), aviso no card
 _EVENTO_RE = re.compile(r"anivers|festa|casamento|formatura|balada", re.IGNORECASE)
 _CONTOU_RE = re.compile(r"lingerie|calcinha|renda|por baixo|suti[aã]|conjuntinho|cinta|meia (?:7/8|arrast)|body",
                         re.IGNORECASE)
@@ -437,6 +440,11 @@ class Roupa:
             t = p.texto
             if _TIRA_MAKE.search(t) or t.startswith("Tomando banho"):
                 self._make(st, "sem", p.inicio)           # no banho lava o rosto
+            if t.startswith("Tomando banho") and tem_roupa and not (
+                    tipo == "dormir" and st["atual"]["ocasiao"] == "provocar"):
+                # Soak, dia 4 (/feedback de 02/10, 19:06): secando o cabelo e o Por fora com a roupa da academia.
+                # Do banho até o passo da roupa ela fica de toalha (de lingerie pra provocar, fica com ela).
+                self._vestir(st, ["toalha"], "toalha", p.inicio, "Saiu do banho", chave)
             elif t == "Fazendo maquiagem leve":
                 self._make(st, "leve", p.inicio)
             elif t.startswith("Fazendo maquiagem"):
@@ -445,6 +453,16 @@ class Roupa:
                 self._make(st, "festa" if festa else "completa", p.inicio)
             if _ROUPA_PASSO.search(t):
                 self._veste_pra(st, tipo, chave, p.inicio, now)
+        for p in etapa.passos:
+            # Soak, dia 4 (/feedback de 02/10, 19:54): "se atrasou porque trocou de look" e o Por fora com a mesma
+            # roupa. O que segurou a saída acontece de verdade: ela sai com outro look do mesmo tipo.
+            if not (p.aviso and _TROCOU_LOOK.search(p.texto)) or p.inicio > now:
+                continue
+            atual = st["atual"]
+            if self._feito(st, f"{chave}:{p.texto}") or atual.get("chave") != chave or atual["ocasiao"] not in LOOKS:
+                continue
+            look = self._escolhe(st, atual["ocasiao"], p.inicio, f"{chave}:trocou")
+            self._vestir(st, look, atual["ocasiao"], p.inicio, atual.get("pra") or PRA.get(tipo, "Sair"), chave)
 
     def _veste_pra(self, st: dict, tipo: str, chave: str, at: datetime, now: datetime) -> None:
         if tipo == "dormir":
@@ -842,7 +860,7 @@ class Roupa:
         mk = st.get("make") or {"nivel": "sem"}
         banho = self._no_banho(now)
         out = {"look": "No banho" if banho else nome_look(atual["look"]), "linhas": [], "make": None}
-        if not banho:
+        if not banho and atual["ocasiao"] != "toalha":   # de toalha não tem "pra quê"
             out["linhas"].append(["hanger", "Para", f"{atual.get('pra') or PRA_OCASIAO.get(atual['ocasiao'], '')}, "
                                                       f"desde {_hhmm(datetime.fromisoformat(atual['desde']))}"])
             pb = st.get("por_baixo")

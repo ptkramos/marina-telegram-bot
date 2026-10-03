@@ -187,4 +187,14 @@ class VisionService:
         return format_vision_evidence(lines)
 
 
+def foto_adiada_texto(user_message_repr: str, vision_data: Optional[Dict[str, Any]]) -> str:
+    """A foto dele que espera (ela no banho, dormindo): vira texto no lote adiado com o que a foto mostra, pra ela
+    responder depois sabendo o que viu (soak, dia 4 — 02/10, 11:35)."""
+    data = vision_data or {}
+    scene = (data.get("scene") or "").strip()
+    if not scene or data.get("error"):
+        return user_message_repr
+    return f"{user_message_repr} (o que aparece na foto: {scene[:240]})"
+
+
 vision_service = VisionService()
