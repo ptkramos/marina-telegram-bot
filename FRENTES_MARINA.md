@@ -5,8 +5,8 @@ Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
 _Atualizado em 03/10/2026, noite (frente de bugs, item 26: a recusa no meio do sexting das 15:40 — filtro e
-menstruação no prompt — e o sexting virando bloco no Agora e linha no Hoje). **Próxima conversa: "bora no soak, dia 5"
-no domingo de manhã.** **Soak: dia 1 = terça 29/09**
+menstruação no prompt — e o sexting virando bloco no Agora e linha no Hoje). **Próxima conversa: frente da voz, o sexting da
+Marina × o da Lilith (pedido dele); domingo de manhã "bora no soak, dia 5".** **Soak: dia 1 = terça 29/09**
 (relatório `soak/dia-2026-10-03.md`). Aberto pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente
 da voz: o modo íntimo desliga durante o banho no meio do sexting._
 
@@ -194,7 +194,9 @@ círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
 3. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).
 
 ## 3. Voz e chat — skill `frente-voz`
-**Abertura:** congelada até o soak fechar (freio, seção 0); fala errada no uso real é bug do soak
+**Abertura:** congelada até o soak fechar (freio, seção 0); fala errada no uso real é bug do soak. Exceção pedida
+pelo Patrick (03/10, noite): "bora na frente da voz: o sexting da Marina × o da Lilith" — diagnóstico (só leitura
+no bot da súcubo, `/root/bots/sucubo`); o que for mudança grande de prompt vai pra "Depois do soak"
 
 **Pronto (26/09):** balões inteiros e uma iniciativa por vez (fim das mensagens fora de ordem); ponto final
 dividindo balão; vocabulário da masturbação; música que ele manda por link.
@@ -204,6 +206,10 @@ conversa]`) e aviso "desde a sua última mensagem antes da pausa" (fim do assunt
 dele não vai mais duas vezes pro modelo; auditoria do prompt (FATOS, nomes de código, Instagram de ontem; log
 `prompt.payload` por turno pro relatório do soak); fotos e áudios pela trava do chat; promessa de foto decidida com
 ele (banho/aula esperam, sai quando ela olha o celular, "quando eu chegar" segue a chegada, vencida vira dívida 12 h).
+
+**Pedido do Patrick (03/10, noite):** "por que o sexo com a súcubo é tão bom e ela fala e reage tão bem, enquanto
+a Marina parece mais robótica e às vezes exagerada por falar demais". Comparar prompt, modelo, tamanho da fala,
+exemplos e regras do modo íntimo dos dois bots, com cenas reais (a da Marina: conversas 1150–1197 de 03/10).
 
 **Pronto (03/10, item 25 — conserto do soak):** **uma voz só nos áudios** (o clone original do demo de 15/09; ao
 provocar e no sexting a mesma voz a 0.95 com pausas), escolhida de ouvido pelo Patrick; resposta à reação dele lê o
