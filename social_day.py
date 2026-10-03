@@ -397,6 +397,13 @@ class SocialDay:
         for outing in outings:
             meta = json.loads(outing["metadata_json"] or "{}")
             start = datetime.fromisoformat(outing["event_at"])
+            try:
+                # Soak, dia 4 (02/10): "encontrou a Júlia (Quartinho Bar)" 20:05, ela chegou 20:22 (atrasada)
+                from commute import Commute
+                chegou = Commute(self.db).chegada(outing["source_key"], day)
+                start = max(start, chegou) if chegou else start
+            except Exception:
+                logger.exception("social_day.chegada")
             for i, friend in enumerate(meta.get("friends", [])):
                 add(friend, start + timedelta(minutes=5 + i), "presencial", outing["location_key"],
                     salt="saida", valence=0.5)

@@ -2373,3 +2373,63 @@ baixo), "smiling" (giro do look, salão, amiga à mesa, indo embora, selfie abra
 na hora que são cara). Olhar, gesto e ação física ficam ("looking over her shoulder", mão perto da boca). A cara vem
 de `expression(feeling, turn)` ou da situação (`expression_override`: Instagram, depois do gozo especial).
 `test_soak_dia4_fotos` (+2: nenhuma pose com cara; sem clima a cara é do humor).
+
+## Leitura do soak melhorada + Soak, dia 4 da tarde em diante (03/10, manhã; frente de infra)
+
+**Ferramenta (`scripts/relatorio_soak.py`).** No 02/10 o Patrick achou três problemas que o relatório deixou passar.
+O relatório ganhou: roteiro de leitura no topo; comida × fome (comeu e a fome não caiu ≥ 0,15; fome ≥ 0,55 duas horas
+depois da refeição; comida comprada fora que não virou refeição — refaz o `consumo.plan`) e a fome de hora em hora;
+foto pedida (frase dele), prometida (`promessa_foto.made`) ou começada (`CAMERA_WORLD_CONTEXT`) × foto que chegou, com
+o que ela mandou no lugar e as falhas do log (pedido que vira promessa é conferido pela promessa); enviado pro
+Telegram × histórico (o bot passou a logar `chat.enviado tipo= texto=` em todo envio de fala dela: balões, privacidade,
+fotos, áudio); fundo da foto × lugar (`photo_director.cena lugar= comodo= pose= cena=`); "O Patrick estranhou" ("?!",
+"como assim", "n entendi", "cadê", "você disse", "aqui onde", "esqueceu de avisar"… — "ué" ficou de fora, é muleta
+dele) com a fala dela antes, o mundo e a resposta; cada erro de verdade com o que veio depois. "No error handlers are
+registered" saiu do ruído — é a frase do python-telegram-bot pra qualquer exceção de handler (o BadRequest do /ruim
+055 caía em "rede"). Da leitura à mão de 03/10: compra num lugar com ela em casa (`mundo × mundo`), "se divertindo"
+com o mundo em casa, "banho tomado" sem banho desde a volta, e o passeio do Milo não é mais teleporte. Rodado no
+02/10 (cópia na VPS): pega as duas fotos que falharam, a caipirinha das 20:06, "se divertindo" e "banho tomado".
+`tests/test_soak_leitura.py` (+15).
+
+**Achados do dia 4, 15:41 → 05:00, e correções** (`tests/test_soak_dia4_noite.py`, +16):
+- **Uber combinado × a pé (19:44, grave).** "Quer que eu pague um Uber?" → "Quero sim, melhor ir de Uber com essa
+  chuva"; Pix de R$ 200 às 19:46 "pra ida, volta e gastar lá". `agenda_reativa.combinar_uber` só aceitava "pode
+  deixar / tá bom / vou de uber…". `TOPOU_RE` ganha "quero (sim)", "aceito", "melhor ir/voltar de uber", "vou usar";
+  `RECUSA_RE` ganha "prefiro/quero ir a pé". **Chuva (Patrick, 03/10):** `Commute._chuva` — chuva ou temporal tira o
+  "a pé" (antes só `heavy_rain`); chuvisco não. Decisão gravada uma vez por trecho, como antes.
+- **Bar antes da chegada (20:05/20:06, grave).** Chegou 20:22 (atraso de 22 min decidido na saída) e "encontrou a
+  Júlia (Quartinho Bar)" + caipirinha R$ 28 saíram 20:05/20:06, com o mundo em "se arrumando (saindo)". `consumo.plan`
+  e `social_day.plan` contavam do horário marcado. `Commute.chegada(compromisso, dia)` dá o fim da ida de verdade
+  (com `atraso.aplica`); `Consumo._outings` e o encontro presencial do rolê contam dali.
+- **"Se divertindo ainda" (23:26) e "cheguei e apaguei no sofá" (23:43), graves.** Conversa parada no Quartinho às
+  21:18; em casa desde 23:06. O `[CHEGADA — FATO]` estava no system (21 mil caracteres) e o histórico venceu. Nova
+  dica no fim do prompt (`world_context.desde_que_voltou`): só quando a última fala dela é de antes da chegada e a
+  volta foi há até 3 h (não vale pro passeio do Milo); diz a hora da chegada e as atividades do mundo desde então.
+- **"Já sim, banho tomado" (23:45, grave).** O `[BANHO — FATO]` dizia "a resposta é sim" pelo banho de 18:31–19:00.
+  Agora, com uma volta pra casa depois do fim do banho, diz que ela ainda não tomou banho desde que voltou.
+- **"vele" (20:30 no áudio, 23:39), grave (fala quebrada).** Palavra inventada pelo modelo; `limpar_fala_marina`
+  tira (vale pro texto e pro áudio).
+- **Avisos (médio; decisão do Patrick, 03/10).** A chegada no Quartinho foi "esquecida" pelo sorteio de 5%
+  (`arrival_promise_forgot_at` = 20:29); "Assim que eu sair te mando mensagem" não virava promessa (só "quando sair"
+  pra casa); cabia uma promessa por vez; a hora do aviso era a do trajeto planejado na hora da promessa (o atraso
+  não empurrava). `arrival_promise` reescrito: lista de promessas (lê o formato antigo), saída de casa
+  (`_SAIR_RE`), hora pelo trajeto de agora (`depois_min` sobre o fim/começo do trecho), sem sorteio, e
+  `implicitas()` — "cheguei" de bom tom na volta de rolê a partir das 21h, ou em qualquer trecho de rolê depois de
+  ele cobrar o aviso no dia ("esqueceu de avisar"). Textos novos da proatividade: `aviso_saindo`,
+  `aviso_chegada_bom_tom`. Esquecer pelo sentimento ficou pra depois do soak.
+- **Médios do mundo.** Boa noite 00:19 com o mundo em "(tomando banho)": `Rituals.tick` não dá boa noite no passo do
+  banho. One Piece + Paradise Kiss num item só do Hoje e o mundo só com Paradise Kiss: dois acontecimentos
+  (`tv:{dia}:one_piece` e `tv:{dia}`), atividade "vendo One Piece e depois X". "Pulou o jantar: não deu tempo entre os
+  compromissos" no bar: refeição que cai num rolê com comida fica `por_la` (não registra; a primeira comida de lá é o
+  jantar — `Meals._comida_no_role` usa `consumo.plan` sem trajeto, pra não entrar em ciclo com o Commute); rolê sem
+  comida (casting) segue "pulou". Chamou a Júlia pra sábado 21:00 no Quartinho com o convite da Bia (13:42, mesmo bar
+  e hora) pendente: `AgendaViva.planeja` não chama ninguém com convite de amiga esperando nos próximos 3 dias.
+- **Textos.** Atraso no prompt arredondado (`atraso.aprox`: "uns 20 min"; também no resumo da novidade em
+  `share_constraint`; o acontecimento guarda o número exato, que o Hoje e o `emotion` leem). Graus só se ele
+  perguntar (/ruim 060). Desculpa fixa do áudio ("o microfone do celular deu uma travadinha") virou fala dela, como a
+  da câmera (reserva: "Amor, o áudio saiu todo picotado kkk já já te mando outro").
+- **Aberto (médio):** depois do banho de 00:26–00:35 o mundo voltou pra "tirando maquiagem" (00:39) — os passos do
+  "se arrumando pra dormir" são proporcionais à etapa, e o deitar empurrado estica a etapa. Frente do mundo.
+- **Suíte inteira em 03/10:** os 20 erros da 1ª rodada eram "database or disk is full" (disco do PC 98% cheio);
+  re-rodados, passam.
+

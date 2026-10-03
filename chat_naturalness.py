@@ -395,10 +395,13 @@ def mark_nudged(db, now: datetime, event_key: str) -> None:
 
 
 def share_constraint(news: dict) -> str:
+    from atraso import aprox
+    # soak, dia 4 (02/10, 20:30): "Chegou 22 min atrasada" virou "atrasada 22 min" na boca dela
+    resumo = re.sub(r"\b(\d+) min atrasada", lambda m: f"{aprox(int(m.group(1)))} atrasada", news["summary"] or "")
     return ("[TURN CONSTRAINT — SUA VIDA TAMBÉM ENTRA NA CONVERSA]\n"
             "Namorada de verdade não espera ser perguntada pra contar do dia. Depois de "
             "reagir ao que o Patrick disse, puxe naturalmente esta coisa SUA, com suas "
-            f"palavras e seu jeito (sem soar relatório, sem data/hora): {news['summary']}\n"
+            f"palavras e seu jeito (sem soar relatório, sem data/hora): {resumo}\n"
             "Se o que ele disse pede toda a sua atenção, guarde isso pra depois e não conte.")
 
 

@@ -181,23 +181,20 @@ class FarmaciaTest(Base):
 
 class AvisoIndoPraCasaTest(Base):
     def test_promessa_de_saida_amarra_no_comeco_da_volta(self):
-        with patch.object(arrival_promise, "FORGET_CHANCE", 0.0):
-            p = arrival_promise.observe(
-                self.db, "Aaaah, amor, você não existe kkk / Vou pedir o Uber daqui a pouco e te aviso quando estiver "
-                "indo pra casa, tá?", "Quando for pra casa avisa, vou pedir comida p vc", at(18, 42))
+        p = arrival_promise.observe(
+            self.db, "Aaaah, amor, você não existe kkk / Vou pedir o Uber daqui a pouco e te aviso quando estiver "
+            "indo pra casa, tá?", "Quando for pra casa avisa, vou pedir comida p vc", at(18, 42))
         self.assertEqual((p["kind"], p["leg"]), ("saida", VOLTA.key))
         self.assertIsNone(arrival_promise.due(self.db, at(18, 59)), "ainda no shopping")
         self.assertIsNotNone(arrival_promise.due(self.db, at(19, 3)), "entrou no uber: avisa")
 
     def test_ja_disse_que_saiu_nao_repete(self):
-        with patch.object(arrival_promise, "FORGET_CHANCE", 0.0):
-            arrival_promise.observe(self.db, "te aviso quando estiver indo pra casa", "", at(18, 42))
+        arrival_promise.observe(self.db, "te aviso quando estiver indo pra casa", "", at(18, 42))
         _fala(self.db, at(18, 58), "assistant", "Tô indo pra casa agora, amor")
         self.assertIsNone(arrival_promise.due(self.db, at(19, 3)))
 
     def test_chegada_continua_igual(self):
-        with patch.object(arrival_promise, "FORGET_CHANCE", 0.0):
-            p = arrival_promise.observe(self.db, "Fechou, te aviso quando chegar em casa", "", at(18, 42))
+        p = arrival_promise.observe(self.db, "Fechou, te aviso quando chegar em casa", "", at(18, 42))
         self.assertNotEqual(p.get("kind"), "saida")
 
 

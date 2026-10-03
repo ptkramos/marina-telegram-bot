@@ -303,16 +303,23 @@ class Watching:
         if not events:
             return 0
         end = start + timedelta(minutes=minutes_total)
+        # Soak, dia 4 (02/10, 23:26): One Piece e Paradise Kiss saíam num item só do Hoje ("Viu o episódio 96 de One
+        # Piece… (Viu episódio 4 de Paradise Kiss)") e o mundo só dizia Paradise Kiss. Cada um na sua hora.
+        op = events[0] if events[0].startswith("Viu o episódio") and "One Piece" in events[0] else None
+        resto = events[1:] if op else events
+        blocos = ([(f"tv:{day.isoformat()}:one_piece", start, [op])] if op else []) + (
+            [(f"tv:{day.isoformat()}", start + timedelta(minutes=ONE_PIECE[3] if op else 0), resto)] if resto else [])
         with self.db.get_connection() as conn:
-            conn.execute(
-                """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,
-                   source_type,autonomy_level,importance,participants_json,share_worthy,created_at)
-                   VALUES (?,?,?,?,?,'simulated',1,0.1,?,0.4,?)""",
-                (f"tv:{day.isoformat()}", start.isoformat(), "routine", "tv",
-                 "; ".join(events) + ".", json.dumps(["marina"]), now.isoformat()))
+            for key, at, itens in blocos:
+                conn.execute(
+                    """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,
+                       source_type,autonomy_level,importance,participants_json,share_worthy,created_at)
+                       VALUES (?,?,?,?,?,'simulated',1,0.1,?,0.4,?)""",
+                    (key, at.isoformat(), "routine", "tv", "; ".join(itens) + ".", json.dumps(["marina"]),
+                     now.isoformat()))
             conn.commit()
         if now < end:
-            title = cur_title if n > 0 else "One Piece"
+            title = (f"One Piece e depois {cur_title}" if op and n > 0 else cur_title if n > 0 else "One Piece")
             payload = {"routine_type": "watching", "activity": f"vendo {title} no sofá",
                        "place_key": "marina_apartment", "announced_at": now.isoformat(),
                        "transition_at": start.isoformat(), "end_at": end.isoformat()}

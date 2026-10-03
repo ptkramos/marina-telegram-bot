@@ -753,6 +753,11 @@ barra seguia subindo (só o mate contava, como beliscão); agora cai enquanto el
 normal. O Hoje continua com o "Pediu…" de cada item (o "Comeu…" não repete). Detalhe na Auditoria.
 Sem mudança de tela: as caras novas das fotos valem só pro clima, e nenhuma pose tem cara fixa (vem do sentimento).
 
+**03/10, manhã — soak, dia 4, o Hoje mostra só o que aconteceu:** o que ela pede no rolê e o encontro com a amiga
+contam da chegada de verdade (a caipirinha das 20:06 aparecia com ela ainda em casa, 22 min atrasada); One Piece e a
+série da noite são dois itens, cada um na sua hora; num rolê com comida não aparece mais "Pulou o jantar: não deu
+tempo" (a comida de lá é o jantar). Sem tela nova. Detalhe na Auditoria ("Soak, dia 4 da tarde em diante").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

@@ -159,13 +159,22 @@ class Commute:
                                (key,)).fetchone()
         return dict(row) if row else None
 
-    def _heavy_rain(self, moment: datetime) -> bool:
+    def _tempo(self, moment: datetime) -> dict:
         try:
             from calendar_world import CalendarWorld
             obs = CalendarWorld(self.db).context.get("weather:rio", now=moment)
-            return bool(obs and obs["payload"].get("heavy_rain"))
+            return (obs or {}).get("payload") or {}
         except Exception:
-            return False
+            return {}
+
+    def _heavy_rain(self, moment: datetime) -> bool:
+        return bool(self._tempo(moment).get("heavy_rain"))
+
+    def _chuva(self, moment: datetime) -> bool:
+        """Soak, dia 4 (02/10, 20:10): foi a pé pro Quartinho na chuva. Patrick (03/10): chuva de verdade (não
+        chuvisco) tira a caminhada, como o temporal."""
+        w = self._tempo(moment)
+        return bool(w.get("heavy_rain") or w.get("condition") in ("rain", "storm"))
 
     def _energy(self) -> float:
         try:
@@ -212,7 +221,7 @@ class Commute:
         options = dict(ROUTES.get(region) or ROUTES["Copacabana"])
         if carona_weight > 0:
             options["carona"] = options.get("uber") or 10
-        rain = self._heavy_rain(moment)
+        rain = self._chuva(moment)
         night = moment.time() >= time(22, 0) or moment.time() < time(6, 0)
         if rain or night:
             options.pop("a_pe", None)
@@ -517,6 +526,13 @@ class Commute:
                 if leg.start <= now < leg.end:
                     return leg
         return None
+
+    def chegada(self, compromisso: str, day: date) -> Optional[datetime]:
+        """Quando ela chega de verdade no compromisso (o atraso empurra a ida). Soak, dia 4 (02/10): chegou no
+        Quartinho 20:22 e a caipirinha e o "encontrou a Júlia" saíram 20:05, com ela ainda em casa."""
+        ida = next((leg for leg in self.legs_on(day) if leg.direction == "ida" and leg.compromisso == compromisso),
+                   None)
+        return ida.end if ida else None
 
     def ultima_volta(self, now: datetime, janela: timedelta = timedelta(minutes=60)) -> Optional[Leg]:
         """A volta pra casa que terminou há pouco (27/09: ela chegou do bar e o chat não sabia)."""

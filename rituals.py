@@ -231,7 +231,10 @@ class Rituals:
         previous = self._get("ritual_last_kind")
         self._set("ritual_last_kind", kind, now)
 
-        ritual = self._bom_dia(now, kind, activity) or self._boa_noite(now, kind)
+        # Soak, dia 4 (03/10, 00:19): o boa noite saiu com o mundo em "se arrumando pra dormir (tomando banho)" —
+        # o banho de verdade do passo ainda nem tinha começado. No passo do banho, o banho vem antes.
+        no_passo_do_banho = "(tomando banho)" in activity
+        ritual = self._bom_dia(now, kind, activity) or (None if no_passo_do_banho else self._boa_noite(now, kind))
         if ritual:
             return ritual
         if "se arrumando" in activity:

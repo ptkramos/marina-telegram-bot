@@ -354,6 +354,7 @@ async def send_registered_privacy_replies(chat_id: int, bot, replies, *, reply_t
         message_id = getattr(sent, 'message_id', None)
         if not isinstance(message_id, int) or message_id <= 0:
             raise RuntimeError('Telegram did not confirm a message ID')
+        _log_enviado("texto", reply.text)
         sent_ids.append(message_id)
         if reply.disclosed_level:
             privacy.record_confirmed_share(
@@ -554,6 +555,8 @@ def limpar_fala_marina(texto: str) -> str:
     t = re.sub(r'\(\s*(No áudio|No audio|Na voz|Com voz|voz manhosa)[^)]*\)', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\*[^*]+\*', '', t)
     t = re.sub(r'#{2,}', '', t)                     # soak, dia 2 (30/09, 15:14): "Mas tô treinando com você, vai###"
+    # soak, dia 4 (02/10, 20:30 e 23:39): "vacilei feio vele", "tô presa nesse vestidinho mesmo vele"
+    t = re.sub(r'[ \t]*\bvele\b', '', t, flags=re.IGNORECASE)
     t = _pontuacao_de_chat(t)
     # Remove qualquer parêntese residual explicativo no final da mensagem
     t = re.sub(r'\s*\([^)]*\)\s*$', '', t)
@@ -657,6 +660,12 @@ async def _typing(bot, chat_id: int) -> None:
         logger.warning("typing.failed %s", type(exc).__name__)
 
 
+def _log_enviado(tipo: str, texto: str) -> None:
+    """Soak, dia 4 (02/10): a desculpa fixa da foto chegou pro Patrick e não estava no histórico — o relatório do soak
+    só via o banco. Cada fala dela que vai pro Telegram fica no log, e o relatório confere com o histórico."""
+    logger.info("chat.enviado tipo=%s texto=%s", tipo, re.sub(r"\s+", " ", texto or "").strip()[:120])
+
+
 async def send_human_messages(chat_id: int, bot, full_text: str, reply_to_message_id: int = None, response_policy=None):
     """Envia a mensagem em balões curtos sucessivos com animação realista de digitação e rastreia IDs.
     Uma sequência de balões por vez no chat (26/09: nada de intercalar duas mensagens)."""
@@ -689,6 +698,7 @@ async def _send_human_messages(chat_id: int, bot, full_text: str, reply_to_messa
             await asyncio.sleep(delay)
             
             sent_msg = await bot.send_message(chat_id=chat_id, text=bubble, reply_to_message_id=rep_id)
+            _log_enviado("texto", bubble)
             ULTIMAS_MENSAGENS_MARINA[chat_id].append({"message_id": sent_msg.message_id, "text": bubble})
             
             if idx < len(bubbles) - 1:
@@ -699,6 +709,7 @@ async def _send_human_messages(chat_id: int, bot, full_text: str, reply_to_messa
         await _typing(bot, chat_id)
         await asyncio.sleep(tempo_digitacao)
         sent_msg = await bot.send_message(chat_id=chat_id, text=bubbles[0], reply_to_message_id=reply_to_message_id)
+        _log_enviado("texto", bubbles[0])
         ULTIMAS_MENSAGENS_MARINA[chat_id].append({"message_id": sent_msg.message_id, "text": full_text})
 
     if len(ULTIMAS_MENSAGENS_MARINA[chat_id]) > 8:
@@ -1576,6 +1587,7 @@ async def iniciar_escolha_avatar(bot, chat_id: int):
             photo=raw,
             caption=legenda_limpa
         )
+        _log_enviado("foto", legenda_limpa)
         if getattr(sent_photo, "message_id", None):
             memory_manager.registrar_interacao("[Enviou nova foto de perfil atualizada]", legenda_limpa)
     else:
@@ -2599,6 +2611,7 @@ async def _selfie_depois_do_gozo(context, chat_id: int, camera_ctx, feeling, fal
             legenda = "não consigo nem levantar 🫠"
         async with _outbound_lock(chat_id):      # sai 20–45 s depois: não pode cair no meio de outra resposta
             sent = await context.bot.send_photo(chat_id=chat_id, photo=gen.image, caption=legenda)
+        _log_enviado("foto", legenda)
         if getattr(sent, "message_id", None):
             photo_director.confirm_sent(memory_manager.db, shot)
     except Exception:
@@ -3515,6 +3528,16 @@ async def process_incoming_batch(
     transition_hint = _maybe_announce_transition()
     if transition_hint:
         messages.append({"role": "system", "content": transition_hint})
+    try:
+        # Soak, dia 4 (02/10, 23:26): "Se divertindo ainda" em casa desde 23:06 — o fato da chegada vai no fim.
+        from world_context import desde_que_voltou
+        with memory_manager.db.get_connection() as conn:
+            ult = conn.execute("SELECT MAX(timestamp) FROM conversas WHERE role='assistant'").fetchone()[0]
+        voltou = desde_que_voltou(memory_manager.db, datetime.now(), datetime.fromisoformat(ult[:26]) if ult else None)
+        if voltou:
+            messages.append({"role": "system", "content": voltou})
+    except Exception:
+        logger.exception("prompt.desde_que_voltou")
     if pending_batch_id:
         atrasada = _hint_resposta_atrasada(pending_batch_id, datetime.now())
         if atrasada:
@@ -3938,6 +3961,7 @@ async def process_incoming_batch(
                             voice=vf,
                             reply_to_message_id=reply_to_id
                         )
+                    _log_enviado("audio", fala_limpa)
                     # Auditoria #9: se o áudio é a 1ª fala desde o boot, a chave
                     # ainda não existe (só send_human_messages a criava) — KeyError
                     # depois do envio, e o turno não era gravado.
@@ -3946,7 +3970,15 @@ async def process_incoming_batch(
                     )
                 audio_enviado = True
             elif pediu_audio:
-                aviso_falha = "Amor, tentei gravar aqui mas o microfone do celular deu uma travadinha! Já já te mando um áudio bem gostoso 🥺💕"
+                # Soak, dia 4 (02/10): a desculpa fixa "a câmera do apê travou" virou fala dela; o áudio tinha a mesma.
+                aviso_falha = await asyncio.to_thread(
+                    generate_dynamic_speech,
+                    "Você ia mandar um áudio pro Patrick agora, mas a gravação não ficou boa e você não mandou. Você "
+                    f"tinha pensado em dizer: '{fala_limpa[:200]}'. Diga do seu jeito, numa frase curta, que o áudio "
+                    "não saiu e que já já manda outro. Não culpe microfone, celular ou internet.", 60)
+                if not aviso_falha or _needs_retry_for_junk(aviso_falha)[0] or _is_policy_refusal(aviso_falha):
+                    aviso_falha = "Amor, o áudio saiu todo picotado kkk já já te mando outro"
+                aviso_falha = limpar_fala_marina(aviso_falha)
                 notice_text = aviso_falha
                 sent_notice_msg = await send_human_messages(chat_id, context.bot, aviso_falha, reply_to_message_id=reply_to_id)
                 aviso_audio_ja_enviado = True
@@ -4215,6 +4247,7 @@ async def process_incoming_batch(
                         photo=foto_stream,
                         caption=legenda_dinamica
                     )
+                _log_enviado("foto", legenda_dinamica)
                 # Sessão e continuidade só depois do send_photo confirmado (message_id).
                 if getattr(sent_photo, 'message_id', None):
                     photo_director.confirm_sent(memory_manager.db, shot)
@@ -4527,6 +4560,12 @@ _PROACTIVE_INSTRUCTIONS = {
     'aviso_chegada': ("{detail} e tinha prometido avisar o Patrick. Mande o aviso curtinho, do seu jeito "
                       "('cheguei, amor', 'chegueeei'); se aconteceu algo no caminho, pode comentar. Não "
                       "invente acontecimento novo."),
+    # Soak, dia 4 (02/10): "Assim que eu sair te mando mensagem" (indo pro Quartinho) e a volta do bar sem aviso.
+    'aviso_saindo': ("{detail}, e tinha prometido avisar o Patrick quando saísse. Mande o aviso curtinho, do seu "
+                     "jeito. Não invente acontecimento novo."),
+    'aviso_chegada_bom_tom': ("{detail}, voltando de um rolê. Ninguém pediu, mas você avisa o Patrick que chegou "
+                              "bem, curtinho, do seu jeito; se aconteceu algo no rolê ou no caminho, pode comentar. "
+                              "Não invente acontecimento novo."),
     # Fase D14 — tesão (proactivity_service.tesao_initiative).
     'tesao': ("{detail} Você está com tesão e com vontade dele. Mande uma provocação curta pra puxar ele "
               "pro flerte — malícia, dengo, uma indireta, um 'tô pensando em você de um jeito…'. Sem ser "
@@ -4843,17 +4882,25 @@ async def _ritual_routine(application: Application):
         except Exception as exc:
             logger.warning("emotion.solo_release_error: %s", exc)
         import arrival_promise
+        arrival_promise.implicitas(memory_manager.db, now)    # 03/10: volta do rolê à noite, ou ele já cobrou
         promise = arrival_promise.due(memory_manager.db, now)
         if promise:
             # Ela prometeu avisar quando chegasse: chegou, avisa.
-            if promise.get("kind") == "saida":       # 27/09: "te aviso quando estiver indo pra casa"
+            if promise.get("kind") == "saida" and promise.get("direction") == "ida":
+                # Soak, dia 4 (02/10, 19:51): "Assim que eu sair te mando mensagem" (saindo pro Quartinho)
+                text = await asyncio.to_thread(
+                    _proactive_text, 'aviso_saindo',
+                    f"Você acabou de sair de casa e está indo {promise['where']} {promise.get('how', '')}".rstrip(),
+                    "Tô saindo, amor")
+            elif promise.get("kind") == "saida":       # 27/09: "te aviso quando estiver indo pra casa"
                 text = await asyncio.to_thread(
                     _proactive_text, 'aviso_indo_pra_casa',
                     f"Você acabou de sair e está voltando {promise['where']} pra casa {promise.get('how', '')}".rstrip(),
                     "Tô indo pra casa, amor")
             else:
                 text = await asyncio.to_thread(
-                    _proactive_text, 'aviso_chegada', f"Você acabou de chegar {promise['where']}", "Cheguei, amor 🖤")
+                    _proactive_text, 'aviso_chegada_bom_tom' if promise.get("de_bom_tom") else 'aviso_chegada',
+                    f"Você acabou de chegar {promise['where']}", "Cheguei, amor 🖤")
             sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
             if sent:
                 memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
@@ -5368,6 +5415,7 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
             sent = await bot.send_photo(chat_id=settings.TARGET_CHAT_ID, photo=images[0], caption=legenda)
             ok = bool(getattr(sent, "message_id", None))
     if ok:
+        _log_enviado("foto", legenda)
         for shot in shots:
             photo_director.confirm_sent(db, shot)
         for shot, img in feitos:

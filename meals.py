@@ -118,6 +118,7 @@ class MealSlot:
     where: str            # casa | puc | gavea
     dish: str
     skipped: bool = False
+    por_la: bool = False  # come no rolê: a primeira comida de lá é a refeição (consumo.py), não "pulou"
 
     @property
     def end(self) -> datetime:
@@ -425,6 +426,20 @@ class Meals:
                 juntas.append((ini, fim))
         return juntas
 
+    def _comida_no_role(self, day: date, ini: datetime, fim: datetime) -> bool:
+        """O rolê desse horário tem comida (consumo.plan, sem trajeto: aqui não pode chamar o Commute)?"""
+        try:
+            from consumo import plan
+            with self.db.get_connection() as conn:
+                rows = [dict(r) for r in conn.execute(
+                    """SELECT source_key, event_at, end_at, location_key, metadata_json FROM eventos_pendentes
+                       WHERE (source_key LIKE ? OR source_key LIKE ?) AND confirmed=1 AND status != 'cancelled'
+                       AND end_at IS NOT NULL""", (f"outing:{day.isoformat()}:%", f"vontade:{day.isoformat()}:%"))]
+            return any(i.comida for r in rows if datetime.fromisoformat(r["event_at"]) < fim
+                       and datetime.fromisoformat(r["end_at"]) > ini for i in plan(r))
+        except Exception:
+            return False
+
     def _antes_das_saidas(self, day: date, slots: list[MealSlot], wake: datetime, volta_puc=None) -> list[MealSlot]:
         """27/09 (auditoria): o almoço em casa das 13:50–14:29 atravessava a saída das 14:20 pro cinema das 15:00
         e o Se arrumando sumia do card. Refeição em casa sai antes do preparo; se não cabe, ela come quando
@@ -452,7 +467,7 @@ class Meals:
                 elif fim - ini <= SAIDA_CURTA:
                     s = replace(s, at=volta)                                     # saída curta: come quando voltar
                 else:
-                    s = replace(s, skipped=True)                                 # come por lá
+                    s = replace(s, skipped=True, por_la=self._comida_no_role(day, ini, fim))  # come por lá
                 break
             out.append(s)
         return sorted(out, key=lambda s: s.at)
@@ -591,6 +606,10 @@ class Meals:
             base_kind = slot.key.split(":")[2]
             if base_kind != "lanche" and self._logged(now.date(), base_kind):
                 continue      # já comeu (promessa antecipou)
+            if slot.por_la:
+                # Soak, dia 4 (02/10, 20:35): "Pulou o jantar: não deu tempo entre os compromissos" no Quartinho, e
+                # as fritas das 20:46 viraram lanche. Quem registra a refeição do rolê é o consumo.
+                continue
             if slot.where == "casa" and not slot.skipped and not self._at_home():
                 # fora de casa: espera ela voltar. 27/09: passada a janela, a pipoca "vendo série" das 21:07
                 # era registrada com ela no Quartinho Bar.

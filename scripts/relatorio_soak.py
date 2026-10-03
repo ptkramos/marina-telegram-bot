@@ -88,6 +88,8 @@ def situacao(activity: str, region: str) -> str:
         return "aula"
     if "academia" in a or "treinando" in a:
         return "academia"
+    if "rapidinho" in a:
+        return "casa"          # soak, dia 4 (02/10, 23:14): "passeio rapidinho com o Milo" é na calçada do prédio
     if "passeando com" in a:
         return "rua"
     # soak, dia 2 (30/09, 05:21 e 06:16): "acabou de acordar, ainda de pijama" é em casa (não card vazio nem teleporte)
@@ -153,10 +155,19 @@ RE_TRABALHO = re.compile(r"\b(?:(?:terminando|fazendo|finalizando|adiantando|mon
 SEM_ESTUDO = {"fora", "rua", "caminho", "academia"}
 
 
+# Soak, dia 4 (02/10, 23:26): "Tô aqui, amor. Se divertindo ainda" em casa desde 23:06.
+RE_AINDA_NO_ROLE = re.compile(r"\b(?:se divertindo|curtindo o rol[eê]|ainda no rol[eê]|ainda (?:no|na) (?:bar|festa|"
+                              r"show|balada))\b")
+EM_CASA = {"casa", "banho", "dormindo", "arrumando"}
+
+
 def atividade_contradiz(texto: str, estados: list[dict]) -> str:
     """Trecho da fala quando o que ela diz que está fazendo não cabe em nenhum estado perto daquela hora."""
     t = (texto or "").lower()
     sits = {e["sit"] for e in estados}
+    m = RE_AINDA_NO_ROLE.search(t)
+    if m and sits and sits <= EM_CASA:
+        return m.group(0)
     m = RE_TRABALHO.search(t)
     if m and sits and sits <= SEM_ESTUDO:
         return m.group(0)
@@ -184,6 +195,7 @@ PASSADO = [
     ("almoço", re.compile(r"\balmocei\b"), ("almoco", "almocou", "almocando")),
     ("jantar", re.compile(r"\bjantei\b"), ("jantar", "jantou", "jantando")),
 ]
+RE_BANHO_FEITO = re.compile(r"\b(?:banho tomado|j[aá] tomei banho|tomei banho|j[aá] sim[^.!?\n]{0,20}banho)\b")
 RE_COMI = re.compile(r"\b(?:comi|comendo|tomei|pedi)\s+(?:um|uma|uns|umas|o|a)\s+([a-zà-ú]{4,})")
 
 
@@ -266,11 +278,76 @@ def quebras(texto: str) -> list[str]:
     return achou
 
 
+# --------------------------------------------- o Patrick estranhou --
+# Soak, dia 4 (02/10): três problemas do dia só apareceram porque ele estranhou. Fala dele com cara de "hein?" é
+# pista: o relatório mostra o que ela tinha dito e o mundo daquela hora (texto sem acento, minúsculo). "Ué" ficou
+# de fora: é muleta dele ("eu gosto ué", "então fica ué" — 4 alarmes falsos em 02/10).
+RE_ESTRANHOU = re.compile(
+    r"\?!|!\?|\?{2,}|\bcomo assim\b|\bn(?:ao)?\s+entendi\b|\boxe\b|\bha\?|\bpera(?:i| ai)\b|"
+    r"\b(?:voce|vc) (?:nao )?(?:disse|falou|tinha dito)\b|\b(?:voce|vc) nao (?:tava|estava|ia)\b|"
+    r"\beu (?:nao )?(?:disse|falei)\b|\bnao era\b|\bcade\b|\bkd\b|\bnao chegou\b|\bde novo\?|"
+    r"\b(?:que )?estranh[oa]\b|\bbug(?:ou|ad[oa])\b|\bconfus[oa]\b|\bnada a ver\b|\bnao faz sentido\b|"
+    r"\baqui onde\b|\besquec\w* de (?:me )?avisar\b")     # 02/10, 23:27 e 23:28
+
+
+def estranhou(texto: str) -> str:
+    m = RE_ESTRANHOU.search(_sem_acento(texto or ""))
+    return m.group(0) if m else ""
+
+
+# ----------------------------------------------------------- fotos --
+RE_PEDE_FOTO = re.compile(
+    r"\b(?:manda|me manda|mande|tira|quero ver|deixa eu ver|me mostra|mostra)\b[^.!?\n]{0,40}"
+    r"\b(?:foto|fotinho|fotinha|selfie|nude|nudes|look|unha|unhas|cabelo|mais uma|outra)\b"
+    r"|\b(?:cade|kd) (?:a|minha) (?:foto|fotinho)"
+    r"|\b(?:quero|deixa eu|me deixa|curios[oa] (?:p|pra|para)) ver\b")    # 02/10, 14:54: "curioso p ver uq tá usando"
+
+
+def pede_foto(texto: str) -> bool:
+    return bool(RE_PEDE_FOTO.search(_sem_acento(texto or "")))
+
+
+CASA_FOTO = {"casa", "banho", "dormindo", "arrumando"}
+RUA_FOTO = {"fora", "aula", "academia", "rua", "caminho"}
+
+
+def fundo_contradiz(comodo: str, cena: str, estado: dict | None) -> str:
+    """Soak, dia 4 (02/10, 15:41): foto dentro do Rei do Mate com «a street in Botafogo» de fundo."""
+    if not estado:
+        return ""
+    sit, act = estado["sit"], _sem_acento(estado["activity"] or "")
+    if comodo == "fora" and sit in CASA_FOTO:
+        return f"foto na rua («{_curto(cena, 60)}») com o mundo em casa"
+    if comodo not in ("fora", "-", "") and sit in RUA_FOTO:
+        return f"foto em casa ({comodo}) com o mundo fora"
+    if comodo == "fora" and "a street in" in cena.lower() and sit == "fora" and "rua" not in act:
+        return f"fundo de rua genérico («{_curto(cena, 60)}») com ela dentro de um lugar"
+    return ""
+
+
+# ------------------------------------------- enviado × histórico --
+def _palavras(s: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", _sem_acento(s or ""))
+
+
+def no_historico(texto: str, falas: list[str]) -> bool:
+    """O balão enviado está em alguma fala gravada? (as primeiras palavras dele, com folga de 25%)"""
+    chave = [p for p in _palavras(texto) if len(p) > 1][:8]
+    if not chave:
+        return True
+    for f in falas:
+        tem = set(_palavras(f))
+        if sum(p in tem for p in chave) >= max(1, round(len(chave) * 0.75)):
+            return True
+    return False
+
+
 # --------------------------------------------------------------- log --
 RE_LINHA = re.compile(r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d),\d+ - ([^ ]+) - ([A-Z]+) - (.*)$")
 RUIDO = ("telegram.error.NetworkError", "telegram.error.TimedOut", "Bad Gateway", "was missed by",
-         "maximum number of running instances", "lastfm.fetch_falhou", "Network Retry Loop",
-         "No error handlers are registered")
+         "maximum number of running instances", "lastfm.fetch_falhou", "Network Retry Loop")
+# "No error handlers are registered" saiu daqui (soak, dia 4): é a frase do python-telegram-bot pra QUALQUER exceção
+# de handler — o BadRequest da confirmação do /ruim (02/10) caiu em "rede" por causa dela.
 
 
 def ler_log(ini: datetime, fim: datetime) -> list[dict]:
@@ -469,6 +546,8 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
         a, b = anterior["sit"], w["sit"]
         if "rapidinho" in (anterior["activity"] or "") + (w["activity"] or ""):
             a = b = "casa"                             # a descida do Milo é na calçada do prédio
+        if "passeando com milo" in _sem_acento(anterior["activity"] or "") and b in ("casa", "banho"):
+            a = "casa"                                 # soak, dia 4 (02/10, 09:37): o passeio do Milo volta pra casa
         if a in FORA and b in ("casa", "banho") and w["at"] >= ini:
             s_mundo.append(f"**{_hm(w['at'])}** teleporte: de «{anterior['activity']}» ({anterior['location_region']}) "
                            f"direto pra «{w['activity']}», sem trajeto")
@@ -543,13 +622,14 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
 
     # --- log ------------------------------------------------------------------
     log = ler_log(ini, fim)
-    reais, ruido, avisos = [], Counter(), Counter()
+    reais, reais_at, ruido, avisos = [], [], Counter(), Counter()
     for e in log:
         texto = e["msg"] + " " + " ".join(e["extra"][-3:])
         if e["nivel"] in ("ERROR", "CRITICAL") or any("Traceback" in x for x in e["extra"]):
             if any(r in texto for r in RUIDO):
                 ruido[_excecao(e) or e["msg"][:80]] += 1
             else:
+                reais_at.append(e["at"])
                 reais.append(f"**{_hm(e['at'])}** {e['mod']}: {_curto(e['msg'], 160)}"
                              + (f" → `{_curto(_excecao(e), 140)}`" if _excecao(e) else ""))
         elif e["nivel"] == "WARNING":
@@ -571,6 +651,151 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
     audios = [float(m.group(1)) for e in log if (m := re.search(r"voice\.duration_actual seconds=([\d.]+)", e["msg"]))]
     proativo = Counter(re.sub(r"\d+(?:\.\d+)?", "N", e["msg"].split(" base=")[0])[:80] for e in log
                        if e["mod"] == "ProactivityService")
+
+    # --- conferências da leitura melhorada (soak, dia 4) -------------------------------
+    def falas_perto(at: datetime, antes: timedelta, depois: timedelta) -> list[dict]:
+        return [m for m in marina if at - antes <= m["at"] <= at + depois]
+
+    # comida × fome: comeu e a fome não caiu; fome alta logo depois da refeição; comida comprada sem refeição
+    s_fome, fome_linha = [], []
+    try:
+        from meals import Meals
+        meals = Meals(db)
+        for h in range(24):
+            at = ini + timedelta(hours=h, minutes=30)
+            if at <= datetime.now():
+                fome_linha.append(f"{_hm(at)} {meals.hunger(at):.2f}")
+        for ev in eventos:
+            if ev["event_type"] not in ("meal", "snack"):
+                continue
+            ini_c = _dt(ev["event_at"])
+            fim_c = _dt(ev["end_at"]) if ev["end_at"] else ini_c + timedelta(minutes=15)
+            antes, depois = meals.hunger(ini_c - timedelta(minutes=1)), meals.hunger(fim_c + timedelta(minutes=5))
+            if antes >= 0.35 and antes - depois < 0.15:
+                s_fome.append(f"**{_hm(ini_c)}** {ev['title']} ({_curto(ev['summary'], 70)}): a fome foi de "
+                              f"{antes:.2f} pra {depois:.2f} — não caiu")
+            if ev["event_type"] == "meal" and (fim_c + timedelta(hours=2)) <= datetime.now():
+                volta = meals.hunger(fim_c + timedelta(hours=2))
+                if volta >= 0.55:
+                    s_fome.append(f"**{_hm(ini_c)}** {ev['title']}: duas horas depois a fome já estava em {volta:.2f}")
+    except Exception as exc:
+        s_fome.append(f"(fome deu erro: {type(exc).__name__}: {_curto(str(exc), 100)})")
+    try:
+        from consumo import Consumo, plan
+        refeicoes = [_dt(ev["event_at"]) for ev in eventos if ev["event_type"] in ("meal", "snack")]
+        for outing in Consumo(db)._outings(dia):
+            for item in plan(outing):
+                if item.comida and ini <= item.at < fim and item.at <= datetime.now() and not any(
+                        abs((r - item.at).total_seconds()) <= 180 for r in refeicoes):
+                    s_fome.append(f"**{_hm(item.at)}** comprou {item.frase} (R$ {item.valor}) e não virou refeição "
+                                  f"nem lanche — a fome não sabe")
+    except Exception as exc:
+        s_fome.append(f"(compras de comida deram erro: {type(exc).__name__}: {_curto(str(exc), 100)})")
+
+    # compra num lugar com ela em casa (02/10, 20:06: caipirinha no Quartinho, chegou 20:22)
+    for ev in eventos:
+        if ev["event_type"] != "consumo" or " · " not in (ev["title"] or ""):
+            continue
+        st = estado_em(_dt(ev["event_at"]))
+        if st and st["sit"] in EM_CASA:
+            s_mundo.append(f"**{_hm(_dt(ev['event_at']))}** {ev['title']} com o mundo em «{st['activity']}»")
+    # "banho tomado" sem banho desde que voltou pra casa (02/10, 23:45)
+    fins_banho = [b1 for _, b1 in banhos]
+    for m in marina:
+        if not RE_BANHO_FEITO.search((m["content"] or "").lower()):
+            continue
+        ult_banho = max((b for b in fins_banho if b <= m["at"]), default=None)
+        voltas = [w["at"] for w in mundo if w["at"] <= m["at"] and _sem_acento(w["activity"] or "").startswith("voltando")]
+        if voltas and (ult_banho is None or max(voltas) > ult_banho):
+            s_fez.append(f"**{_hm(m['at'])}** ela: «{_curto(RE_BANHO_FEITO.search(m['content'].lower()).group(0), 40)}»"
+                         f" (o último banho foi {'às ' + _hm(ult_banho) if ult_banho else 'antes do dia'}, antes de sair;"
+                         f" voltou às {_hm(max(voltas))})")
+
+    # foto pedida/prometida × foto que chegou (e o que foi no lugar)
+    s_pedida = []
+    fotos_at = [m["at"] for m in fotos_dela]
+    pedidos = []
+    # O intent=photo_request do log não serve: em 02/10 (11:35) era a foto que ELE mandou.
+    for m in msgs:
+        if m["role"] != "user":
+            continue
+        if pede_foto(m["content"]) and not (pedidos and m["at"] - pedidos[-1][0] <= timedelta(minutes=3) and pedidos[-1][1] == "pediu"):
+            pedidos.append((m["at"], "pediu", f"«{_curto(m['content'], 80)}»", m["at"] + timedelta(minutes=15)))
+    for e in log:
+        if e["msg"].startswith("promessa_foto.made"):
+            due = re.search(r"due=(\S+)", e["msg"])
+            limite = max(_dt(due.group(1)) if due else e["at"], e["at"]) + timedelta(minutes=20)
+            kind = re.search(r"kind=(\S+)", e["msg"])
+            pedidos.append((e["at"], "prometeu", kind.group(1) if kind else "foto", limite))
+        elif e["msg"].startswith("CAMERA_WORLD_CONTEXT"):
+            # toda foto que o bot começou a fazer (pedida, prometida ou por vontade dela): 02/10, 15:41 no Rei do Mate
+            lugar = re.search(r"place=(\S+)", e["msg"])
+            pedidos.append((e["at"], "tentou", f"uma foto ({lugar.group(1) if lugar else '?'})",
+                            e["at"] + timedelta(minutes=5)))
+    promessas_at = [at for at, quem, _, _ in pedidos if quem == "prometeu"]
+    for at, quem, o_que, limite in sorted(pedidos):
+        if any(at <= f <= limite for f in fotos_at):
+            continue
+        if quem == "pediu" and any(at <= p <= at + timedelta(minutes=30) for p in promessas_at):
+            continue          # 02/10, 19:03: virou promessa (19:29) e a promessa é conferida por ela mesma
+        no_lugar = [f"«{_curto(m['content'], 90)}» ({_hm(m['at'])})" for m in falas_perto(at, timedelta(0), limite - at)][:2]
+        falhas = [f"{e['msg'].split(' —')[0].split()[0]} ({_hm(e['at'])})" for e in log
+                  if at <= e["at"] <= limite and (e["msg"].startswith(("civitai.", "foto.nao_saiu", "llm.photo"))
+                                                 and e["nivel"] in ("ERROR", "WARNING"))]
+        quem = {"pediu": "ele pediu", "prometeu": "ela prometeu", "tentou": "o bot começou"}[quem]
+        s_pedida.append(f"**{_hm(at)}** {quem} {o_que} e não chegou foto "
+                        f"até {_hm(limite)}" + (f"; no lugar ela mandou {', '.join(no_lugar)}" if no_lugar else
+                                                "; ela não mandou nada no lugar")
+                        + (f"; log: {', '.join(falhas)}" if falhas else ""))
+
+    # enviado pro Telegram × histórico (a desculpa fixa da câmera não entrava no histórico)
+    s_fora_hist = []
+    enviados = [(e["at"], m.group(1), m.group(2)) for e in log
+                if (m := re.match(r"chat\.enviado tipo=(\S+) texto=(.*)", e["msg"]))]
+    for at, tipo, texto in enviados:
+        perto = [m["content"] for m in falas_perto(at, timedelta(minutes=10), timedelta(minutes=10))]
+        if not no_historico(texto, perto):
+            s_fora_hist.append(f"**{_hm(at)}** {tipo} enviado e fora do histórico: «{_curto(texto, 120)}»")
+
+    # fundo da foto × lugar do mundo
+    s_fundo, cenas = [], []
+    for e in log:
+        if m := re.match(r"photo_director\.cena lugar=(\S+) comodo=(\S+) pose=(\S+) cena=(.*)", e["msg"]):
+            cenas.append((e["at"], m.group(1), m.group(2), m.group(4)))
+            if achado := fundo_contradiz(m.group(2), m.group(4), estado_em(e["at"])):
+                st = estado_em(e["at"])
+                s_fundo.append(f"**{_hm(e['at'])}** {achado} → mundo: {st['activity']} ({st['location_region']})")
+
+    # o Patrick estranhou: a fala dele, o que ela tinha dito, o mundo e o que ela respondeu
+    estranhos = []
+    for i, m in enumerate(msgs):
+        if m["role"] != "user" or not (pista := estranhou(m["content"])):
+            continue
+        antes = next((x for x in reversed(msgs[:i]) if x["role"] == "assistant"), None)
+        depois = next((x for x in msgs[i + 1:] if x["role"] == "assistant"), None)
+        st = estado_em(m["at"])
+        estranhos.append(
+            f"**{_hm(m['at'])}** Patrick: «{_curto(m['content'], 160)}» (pista: «{pista}»)"
+            + (f"\n  - antes, ela ({_hm(antes['at'])}): «{_curto(antes['content'], 160)}»" if antes else "")
+            + (f"\n  - mundo: {st['activity']} ({st['location_region']}, desde {_hm(st['at'])})" if st else "")
+            + (f"\n  - depois, ela ({_hm(depois['at'])}): «{_curto(depois['content'], 160)}»" if depois else ""))
+
+    # erro do log seguido até o que ele recebeu
+    def depois_do_erro(at: datetime) -> str:
+        dela = falas_perto(at, timedelta(0), timedelta(minutes=5))
+        fora = [t for a, _, t in enviados if at <= a <= at + timedelta(minutes=5) and not no_historico(
+            t, [m["content"] for m in falas_perto(a, timedelta(minutes=10), timedelta(minutes=10))])]
+        partes = [f"ela «{_curto(m['content'], 80)}» ({_hm(m['at'])})" for m in dela[:2]]
+        partes += [f"fora do histórico «{_curto(t, 80)}»" for t in fora[:2]]
+        return " → depois: " + ("; ".join(partes) if partes else "nada dela em 5 min")
+
+    reais = [r + depois_do_erro(a) for r, a in zip(reais, reais_at)]
+
+    def cena_da_foto(at: datetime) -> str:
+        c = [x for x in cenas if at - timedelta(minutes=6) <= x[0] <= at]
+        return f"; cenário: {c[-1][2]}, «{_curto(c[-1][3], 90)}»" if c else ""
+
+    linhas_foto = [linha + cena_da_foto(m["at"]) for linha, m in zip(linhas_foto, fotos_dela)]
 
     journal = []
     try:
@@ -640,16 +865,27 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
     inic = [m for m in marina if m["is_initiative"]]
     n_audio = sum(1 for m in marina if m["media_type"] in ("voice", "audio"))
     suspeitas = (len(s_lugar) + len(s_fez) + len(s_card) + len(s_mundo) + len(s_quebra) + len(s_foto)
-                 + len(s_ordem) + len(junk))
+                 + len(s_ordem) + len(junk) + len(s_fome) + len(s_pedida) + len(s_fora_hist) + len(s_fundo))
 
     L = [f"# Soak, {n_dia}: {DIAS[dia.weekday()]} {dia.strftime('%d/%m')} (05:00 → 05:00)", "",
          f"_Gerado em {datetime.now().strftime('%d/%m %H:%M')} na VPS, código `{rev}`, numa cópia do banco._", "",
+         "## Roteiro de leitura (pra quem lê, antes das suspeitas)", "",
+         "1. Ler **a conversa inteira** com o mundo do lado, não só as suspeitas — o script só acha o que já "
+         "alguém ensinou.",
+         "2. Cada linha de **«O Patrick estranhou»** é pista: achar o que ela ou o mundo fez de errado ali.",
+         "3. Cada **erro de verdade**: seguir até o que ele recebeu no lugar (a linha já mostra o que veio depois).",
+         "4. Conferir **fome** de hora em hora com o que ela comeu, **fotos pedidas** com as que chegaram e o "
+         "**cenário** de cada foto com o lugar.",
+         "5. Bug novo que o script não pegou vira conferência nova aqui (com o caso real no teste).", "",
          "## Resumo", "",
          f"- Conversa: {dele} mensagens dele, {len(marina)} dela ({len(inic)} iniciativas, "
          f"{len(fotos_dela)} fotos, {n_audio} áudios)",
          f"- Suspeitas pra conferir: **{suspeitas}** (fala × mundo {len(s_lugar)}, fala × o que ela fez "
          f"{len(s_fez)}, card × mundo {len(s_card)}, mundo × mundo {len(s_mundo)}, "
-         f"fala quebrada {len(s_quebra) + len(junk)}, foto × roupa {len(s_foto)}, ordem/repetição {len(s_ordem)})",
+         f"fala quebrada {len(s_quebra) + len(junk)}, foto × roupa {len(s_foto)}, ordem/repetição {len(s_ordem)}, "
+         f"comida × fome {len(s_fome)}, foto pedida × chegou {len(s_pedida)}, fora do histórico {len(s_fora_hist)}, "
+         f"fundo × lugar {len(s_fundo)})",
+         f"- O Patrick estranhou: **{len(estranhos)}** fala(s) dele",
          f"- Erros: **{len(reais)}** de verdade, {sum(ruido.values())} de rede/agendador; "
          f"{len(reinicios)} reinício(s)" + (f" ({', '.join(_hm(r) for r in reinicios)})" if reinicios else ""),
          "- Custos: LLM " + (
@@ -676,6 +912,15 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
         f"**{_hm(e['at'])}** o bot pegou e refez: {_curto(e['msg'], 170)}" for e in junk])
     secao("Foto × roupa", s_foto)
     secao("Ordem e repetição", s_ordem)
+    secao("Comida × fome (comeu e não caiu, voltou rápido, comprou e não comeu)", s_fome)
+    secao("Foto pedida ou prometida × foto que chegou", s_pedida)
+    secao("Enviado pro Telegram × histórico", s_fora_hist,
+          "nada" if enviados else "o log ainda não tem «chat.enviado» (código antes de 03/10)")
+    secao("Fundo da foto × lugar do mundo", s_fundo,
+          "nada" if cenas else "o log ainda não tem «photo_director.cena» (código antes de 03/10)")
+
+    secao("O Patrick estranhou (fala dele com cara de «hein?»: o que ela disse, o mundo, o que ela respondeu)",
+          estranhos)
 
     L += ["## Conversa com o mundo", "",
           "_Linhas «mundo» só quando o estado muda. Marcas: (iniciativa), (foto), (áudio)._", ""]
@@ -697,6 +942,7 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
     L.append("")
 
     L += ["## Aba Hoje (como ficou no fim do dia)", ""] + (hoje_linhas or ["_vazia_"]) + [""]
+    secao("Fome de hora em hora (0 = satisfeita, 1 = morrendo de fome)", [", ".join(fome_linha)] if fome_linha else [])
     secao("Acontecimentos (life_events)", [
         f"**{_hm(_dt(e['event_at']))}** {e['event_type']}: {e['title']} ({_curto(e['summary'], 140)})" for e in eventos])
     secao("Fotos que ela mandou (com a roupa do mundo)", linhas_foto)

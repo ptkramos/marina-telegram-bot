@@ -39,8 +39,35 @@ def tempo_agora(weather: dict) -> str:
         partes.append(cond)
     if not partes:
         return ""
+    # Soak, dia 4 (02/10, 19:44, /ruim 060): "tá chovendo também, e tá bem friozinho, 20 graus" — informação demais.
     return (f"[TEMPO AGORA EM BOTAFOGO] {', '.join(partes)}. Se o tempo entrar na conversa, é esse; não invente sol, "
-            "calor ou chuva diferente.")
+            "calor ou chuva diferente. Os graus são pra você saber se está frio ou calor: o número só se ele "
+            "perguntar a temperatura.")
+
+
+def desde_que_voltou(db, now: datetime, ultima_fala_dela: Optional[datetime]) -> Optional[str]:
+    """Soak, dia 4 (02/10): a conversa parou no Quartinho às 21:18; às 23:26, em casa desde 23:06, ela disse "Se
+    divertindo ainda" e depois "cheguei e apaguei no sofá" (viu TikTok, desceu o Milo, pôs a série). O fato da
+    chegada estava no meio do prompt e o histórico venceu: vai como dica no fim, com o que ela fez desde então."""
+    try:
+        from commute import Commute
+        volta = Commute(db).ultima_volta(now, janela=timedelta(hours=3))
+    except Exception:
+        return None
+    if not volta or ":milo:" in volta.key or (ultima_fala_dela and ultima_fala_dela >= volta.end):
+        return None                                   # passeio do Milo, ou já conversaram depois de ela chegar
+    with db.get_connection() as conn:
+        rows = conn.execute("SELECT activity FROM world_state WHERE observed_at>=? AND observed_at<=? "
+                            "ORDER BY observed_at, id", (volta.end.isoformat(), now.isoformat())).fetchall()
+    feito = []
+    for r in rows:
+        a = (r["activity"] or "").strip()
+        if a and not a.startswith(("voltando", "indo")) and a not in feito:
+            feito.append(a)
+    linha = f" Desde então, só isto: {'; '.join(feito)}." if feito else ""
+    return (f"[VOCÊ JÁ ESTÁ EM CASA — FATO] Você voltou {volta.destination} {volta.how} e chegou em casa às "
+            f"{volta.end:%H:%M}.{linha} O que a conversa de antes diz de onde você estava já passou. Não diga que "
+            "ainda está lá e não invente o que fez depois de chegar.")
 
 
 class WorldContextBuilder:
@@ -547,6 +574,16 @@ class WorldContextBuilder:
         mins = int((now - fim).total_seconds() // 60)
         ha = f"há {mins} min" if mins < 60 else f"há {mins // 60}h{mins % 60:02d}"
         cabelo = " e lavou o cabelo" if "lavou o cabelo" in (row["summary"] or "") else ""
+        try:
+            # Soak, dia 4 (02/10, 23:45): "Já tomou banho depois que voltou?" → "Já sim, banho tomado" — o banho
+            # era o das 18:31, antes do Quartinho; o de depois só saiu 00:26.
+            from commute import Commute
+            volta = Commute(self.db).ultima_volta(now, janela=now - fim)
+        except Exception:
+            volta = None
+        if volta and volta.end > fim:
+            return (f"[BANHO — FATO] Seu último banho foi das {ini:%H:%M} às {fim:%H:%M}, antes de sair. Você "
+                    f"voltou pra casa às {volta.end:%H:%M} e ainda NÃO tomou banho desde que voltou.")
         return (f"[BANHO — FATO] Você já tomou banho{cabelo}: das {ini:%H:%M} às {fim:%H:%M} ({ha}). "
                 "Se o Patrick perguntar se você já tomou banho, a resposta é sim.")
 

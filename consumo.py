@@ -196,10 +196,24 @@ class Consumo:
 
     def _outings(self, day) -> list[dict]:
         with self.db.get_connection() as conn:
-            return [dict(r) for r in conn.execute(
+            rows = [dict(r) for r in conn.execute(
                 """SELECT source_key, event_at, end_at, location_key, metadata_json FROM eventos_pendentes
                    WHERE (source_key LIKE ? OR source_key LIKE ?) AND confirmed=1 AND status != 'cancelled'
                    AND end_at IS NOT NULL ORDER BY event_at""", (f"outing:{day.isoformat()}:%", f"vontade:{day.isoformat()}:%"))]
+        return [self._na_chegada(o, day) for o in rows]
+
+    def _na_chegada(self, outing: dict, day) -> dict:
+        """Soak, dia 4 (02/10): chegou no Quartinho 20:22 (22 min atrasada) e a caipirinha saiu 20:06, com ela
+        ainda em casa. O pedido conta da chegada de verdade."""
+        try:
+            from commute import Commute
+            chegou = Commute(self.db).chegada(outing["source_key"], day)
+        except Exception:
+            logger.exception("consumo.chegada")
+            return outing
+        if chegou and chegou > datetime.fromisoformat(outing["event_at"]):
+            return {**outing, "event_at": chegou.isoformat()}
+        return outing
 
     def _place_name(self, key: str) -> str:
         with self.db.get_connection() as conn:

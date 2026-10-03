@@ -4,14 +4,11 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 02/10/2026, noite (soak, dia 4 olhado até 15:41 — item 23: rótulo de prompt na fala, chuvisco
-que o mundo não via, foto sem leitura, as duas fotos com a desculpa fixa "câmera do apê", lógica da foto com o
-Patrick — fundo de loja, caras vestidas escolhidas por ele, unha só como foco quando é o assunto —, comida fora
-que não matava a fome; dia 3 lido e corrigido — item 22; catálogo de textos: lote 1 no ar — seção 2.
-**Soak: dia 1 = terça 29/09**; próxima conversa: "bora no soak, dia 4" no sábado de manhã — **primeiro
-melhorar a leitura do soak (seção 0, "Leitura do soak, melhorada"), depois** o relatório
-`soak/dia-2026-10-02.md` da tarde em diante (15:41 →): o Quartinho com a Júlia, o tempo novo (chuvisco e °C de
-Botafogo), as caras novas e o fundo das fotos, a fome depois da comida fora)._
+_Atualizado em 03/10/2026, manhã (leitura do soak melhorada — seção 0; dia 4 lido até o fim e corrigido — item 24:
+Uber combinado, bar antes de ela chegar, "se divertindo ainda" em casa, banho, avisos sem sorteio e de bom tom,
+chuva sem "a pé"). **Soak: dia 1 = terça 29/09**; próxima conversa: "bora no soak, dia 5" no domingo de manhã
+(relatório `soak/dia-2026-10-03.md`, com `chat.enviado` e `photo_director.cena` a partir do deploy; sábado tem Quartinho de
+novo com a Júlia e o convite da Bia). Aberto pra frente do mundo: o preparo pra dormir que volta de passo._
 
 ---
 
@@ -47,6 +44,14 @@ refeição), foto pedida/prometida × foto que chegou e o que foi no lugar, mens
 da foto × lugar; (2) seção "o Patrick estranhou" (fala dele com "?!", "como assim", "n entendi", correção) com o
 mundo daquela hora; (3) meu roteiro de leitura: além das suspeitas, a conversa inteira com o mundo do lado, e todo
 erro do log seguido até o que ele recebeu. É conserto da ferramenta do soak (infra), não funcionalidade nova.
+**Feito em 03/10** (`scripts/relatorio_soak.py`): roteiro de leitura no topo do relatório; conferências comida ×
+fome (comeu e não caiu, voltou alta em 2 h, comprou e não virou refeição) + fome de hora em hora; foto pedida/
+prometida/começada × foto que chegou, com o que ela mandou no lugar e o erro do log; enviado pro Telegram ×
+histórico e fundo da foto × lugar (o bot passou a registrar `chat.enviado` e `photo_director.cena` no log — valem
+dos relatórios de 04/10 em diante); "O Patrick estranhou" com a fala dela antes, o mundo e a resposta; cada erro de
+verdade com o que veio depois; exceção de handler não cai mais em "rede" (o BadRequest do /ruim 055 caía); e o que
+a leitura de 03/10 achou à mão: compra num lugar com ela em casa, "se divertindo" em casa, "banho tomado" sem
+banho desde a volta. Rodado no 02/10: pega as duas fotos que falharam, 3 dos 6 graves da noite e a caipirinha.
 **Placar:** dia 1 (ter 29/09) — 5 graves (lugar dela errado depois da aula e a fala seguindo, plantão "de amanhã",
 "boa noite" de manhã no banho), 2 médios, 4 textos feios; corrigidos em 30/09 (seção 5, item 19). Dia 2 (qua 30/09), manhã, antes daquele
 deploy — "alucinada": [ELE ESTÁ DOENTE] com a pergunta dele, "dia livre" com ela faltando, check-in do peso dela,
@@ -56,7 +61,11 @@ em 01/10 (item 21). Dia 3 (qui 01/10, os castings) — 3 graves ("hoje é dia li
 no dia seguinte, Hoje com o 2º casting feito que ela largou no meio), 3 médios (foto dele sem leitura, agência duas
 vezes no Hoje, bom dia antes da resposta da madrugada), 4 textos feios; corrigidos em 02/10 (item 22). Dia 4 (sex
 02/10), olhado até 15:41 — 3 graves ("GATE_CHANNEL" na fala, "aqui tá sequinho" com chuvisco, "a câmera do apê travou" no lugar de duas fotos), 2 médios (foto dele
-sem leitura de novo, confirmação do /ruim que não chegou); corrigidos na hora (item 23). Dias limpos: 0.
+sem leitura de novo, confirmação do /ruim que não chegou); corrigidos na hora (item 23). Dia 4, da tarde em diante
+(lido em 03/10) — 6 graves (Uber combinado e foi a pé, caipirinha com ela em casa, "se divertindo ainda" em casa,
+"apaguei no sofá", "banho tomado" sem banho, "vele"), 7 médios (avisos de saída/chegada, convite em cima do da Bia,
+boa noite no banho, TV num item só, jantar "pulado" no bar, preparo pra dormir que volta de passo), 6 textos feios;
+corrigidos em 03/10 menos o preparo pra dormir (item 24). Dias limpos: 0.
 
 **Relatório diário (pronto, 28/09):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
 perguntou 00:00 × 05:00 e ficou 05:00: o rolê da noite e a conversa de madrugada ficam no mesmo dia), cobrindo
@@ -68,6 +77,8 @@ listo os bugs.
 
 **Depois do soak (congelado):** o Patrick rabisca as ideias pelo celular em https://claude.ai/artifact/64rLbsTa3m5CmdhdtnJgEQ
 ("Ideias pós-soak", respostas no banco da página, coleção `ideias`: ler com ArtifactData quando o soak fechar).
+**Preenchida por ele em 02/10, noite** (6 ideias: banheiro, em_casa, lovense, provocar_saida, roupa_nova, selfies); cópia
+em `data/feedback/ideias_pos_soak/ideias/*.json` (não vai pro git).
  **Hoje com bloco "Em casa"** (Patrick, 30/09: o que ela faz em casa, aninhado, como as
 saídas — 1º da frente de apps); salão pelo humor/remarcado pela conversa; virose com banheiro, pai ligando mais, job
 fora do Rio; roupa nova comprada no shopping; iFood da Ma, banco dela, `pedido_dela` no catálogo novo, pedidos dela de
@@ -78,7 +89,9 @@ vão repetir); **ir ao banheiro do lugar pra mandar foto mais ousada** (Patrick,
 que ela vá ao banheiro do local); roupa de provocar + saída (02/10: ela disse "baby-doll por baixo", pro mundo ele
 saiu quando ela se vestiu pro açaí); **brinquedo Lovense pelo Mini App** (Patrick, 02/10, noite: um controle no
 app pra brincar à distância quando ela quiser — decidir com ele quem controla o quê, o brinquedo de verdade é dele ou
-é o dela na história, e como a fala e as fotos dela acompanham).
+é o dela na história, e como a fala e as fotos dela acompanham); **esquecer o aviso pelo sentimento** (03/10: o
+sorteio de 5% saiu e ela sempre cumpre; esquecer de verdade — empolgada com a amiga, bateria lá embaixo — é
+comportamento novo).
 O que era "ver no uso real" (agenda viva, atraso, roupa, Instagram, coerência entre turnos) **é o próprio soak**.
 
 ---
@@ -143,8 +156,17 @@ decisões dele foram salvas em `data/feedback/catalogo_textos/decisoes/textos/*.
 publicar `data/feedback/catalogo_textos/catalogo_textos.html` como artefato novo com `capabilities: {db: {}}`, semear a
 coleção `textos` com os JSON das decisões (ArtifactData batch, sem `version`) e mandar o link. **Feito (01/10):** conta nova em https://claude.ai/artifact/7B9uEC9tqYNai5zC8TPokU com as 59 decisões semeadas (26 mudar, 25 conversar, 8 manter). **Leva 1 decidida inteira (01/10):** 205 fichas, 118 mudar e 87 manter (as 45 "conversar" fechadas no chat, com 6 regras gerais em `data/feedback/catalogo_textos/regras_gerais.md`: "~" vira "por volta das", durações por extenso, gerúndio enquanto acontece, Indo/Está/Foi nas saídas, detalhe aninhado um por linha, "o Patrick" em tudo). Cópia das decisões em `decisoes/textos/`. **Lote 1 aplicado (01/10, noite) ✅:** os 118 "mudar" e as seis regras no Hoje e no card, só na tela (o mundo grava
 igual; detalhe e o que eu decidi sozinho na Auditoria, "Catálogo de textos, lote 1 aplicado"). Ficam pra depois do
-soak os assuntos que vêm como frase e a foto do provador (frente de voz). Próximas levas:
-Bastidores, iFood, Nubank, Instagram.
+soak os assuntos que vêm como frase e a foto do provador (frente de voz).
+**Leva 2 no ar (02/10, noite):** Bastidores (moldura, Por dentro, Por fora, Dinheiro, Mundo), iFood, Nubank (com os
+comprovantes) e Instagram, 253 fichas, no **mesmo link** da leva 1 (a página agora mostra só a leva 2; as decisões da
+leva 1 seguem no banco). Cada ficha mostra o HTML real da tela (o mesmo do `webapp/app.js`/`insta.js`) com o
+`webapp/app.css` escopado, celular com 375 px. Ficha nova "lista": palavras do mesmo campo separadas por " / " (ex.:
+"Exausta / Cansada / Ok / Cheia de energia"). Código em `scripts/catalogo_textos/`: `varre_leva2.py` (roda na VPS
+sobre a cópia do banco em /tmp/catalogo2, com o código copiado pra /tmp/catalogo2/code; só o JSON volta, em
+`data/feedback/catalogo_textos/varredura_leva2.json`), `gera_leva2.py` (fichas) e `monta_leva2.py` (página). Notas já apontam as regras da leva 1 que esbarram aqui: regra 6
+("você" → "o Patrick": 12 fichas), "·" (14), durações abreviadas (4), "~" (1); 61 fichas são cópia do app de verdade
+(iFood/Nubank/Instagram). 29 fichas das regras 1, 2, 6 e "sem ·" já semeadas como "mudar" (OK dele, 02/10; cópia em `decisoes/leva2_preenchidas_pelo_claude.json`). **Próximo:** ele decide pelo celular; eu leio a coleção `textos` (ids `b.`, `d.`, `f.`, `n.`,
+`m.`, `if.`, `nu.`, `ig.`, `i.`, `e.`) e aplico em lote (só tela no soak; "os dois" com cuidado).
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; **Instagram** no ar (27/09) com acervo refeito
@@ -539,7 +561,34 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
     - Texto feio (lote, não zera): reações a elogio repetitivas, "gosto quando você gosta", "plano de elogio bem
       convincente", "convencido" de novo.
 
-**Abertos:** nenhum.
+24. ✅ **Soak, dia 4 (sexta 02/10) — da tarde em diante (15:41 →), lido em 03/10** com o relatório já melhorado
+    (seção 0). `tests/test_soak_dia4_noite.py` (+16), `test_soak_leitura` (+15), `test_arrival_promise` (ajustado).
+    - **19:44 Uber combinado e ela foi a pé, na chuva** (com os R$ 200 dele) — "Quero sim, melhor ir de Uber" não
+      contava como topar. Agora conta ("prefiro ir a pé" segue recusa). E (Patrick, 03/10) **chuva de verdade tira o
+      "a pé"**, como o temporal; chuvisco não. Camada: mundo (`agenda_reativa.TOPOU_RE`, `commute._chuva`).
+    - **20:05/20:06 "encontrou a Júlia" e caipirinha com ela em casa** — chegou 20:22 (22 min atrasada) e o bar
+      seguia a hora marcada. O consumo e o encontro contam da chegada de verdade (`Commute.chegada`). Camada: mundo.
+    - **23:26 "Se divertindo ainda"** em casa desde 23:06, e **23:43 "cheguei e apaguei no sofá"** (viu TikTok,
+      desceu o Milo, pôs a série) — o fato da chegada estava no meio do prompt e o histórico venceu. Agora vai uma
+      dica no fim: chegou às X, desde então fez só isto (`world_context.desde_que_voltou`). Camada: prompt.
+    - **23:45 "Já sim, banho tomado"** — o `[BANHO — FATO]` mandava responder "sim" pelo banho das 18:31, antes do
+      Quartinho. Agora sabe que ela saiu e voltou depois. Camada: prompt.
+    - **"vele"** no fim da fala (20:30 no áudio, 23:39) — palavra inventada; sai da fala (`limpar_fala_marina`).
+    - **Aviso (Patrick, 03/10): sem sorteio.** A chegada no Quartinho foi "esquecida" pelos 5%; "assim que eu sair
+      te mando mensagem" nem virava promessa; uma promessa por vez; a hora não seguia o atraso. Agora: várias
+      promessas, saída de casa também, hora pelo trajeto de agora, e **"cheguei" de bom tom** — volta de rolê à
+      noite, ou qualquer chegada de rolê depois de ele cobrar o aviso no dia (`arrival_promise.implicitas`).
+    - Médios: boa noite no meio do banho (00:19) — espera o passo do banho; One Piece e Paradise Kiss num item só
+      do Hoje — dois acontecimentos, e o mundo diz os dois; "Pulou o jantar: não deu tempo" no bar com fritas — rolê
+      com comida é o jantar (`Meals.por_la`); chamou a Júlia pra sábado com o convite da Bia (mesmo bar e hora) sem
+      resposta — com convite esperando, não chama ninguém (`AgendaViva.planeja`).
+    - Textos: "atrasada 22 min" → no prompt vai "uns 20 min"; os graus só se ele perguntar (/ruim 060); a desculpa
+      fixa do microfone virou fala dela (mesmo defeito da câmera). /ruim 059, 061, 062, 063, 064 anotados.
+    - **Aberto (médio, frente do mundo):** depois do banho de 00:26 o mundo voltou pra "tirando maquiagem" (00:39) —
+      o preparo pra dormir esticou e os passos se redistribuíram. E 19:44 "ainda não sei como vou" com o jeito de
+      ir já decidido (fala; anotado).
+
+**Abertos:** o preparo pra dormir que volta de passo (item 24).
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** congelada até o soak fechar (freio, seção 0); foto errada no uso real é bug do soak

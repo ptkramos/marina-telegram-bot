@@ -126,6 +126,11 @@ def causas(e: dict, now: Optional[datetime] = None) -> list[str]:
     return out
 
 
+def aprox(n: int) -> str:
+    """Soak, dia 4 (02/10, 20:30): "atrasada 22 min" — número de sistema na boca dela. No prompt vai redondo."""
+    return "uns minutinhos" if n < 8 else f"uns {max(10, round(n / 5) * 5)} min"
+
+
 def _junta(itens: list[str]) -> str:
     return itens[0] if len(itens) == 1 else ", ".join(itens[:-1]) + " e " + itens[-1] if itens else ""
 
@@ -493,7 +498,7 @@ class Atraso:
         ini = datetime.fromisoformat(e["inicio"])
         oque = e["onde"].replace("na aula", "pra aula", 1) if e["tipo"] == "aula" else e["onde"]
         return (f"Você está atrasada ({oque}, que começa {ini:%H:%M}): {porque}. "
-                f"Vai chegar ~{chegada(e, now):%H:%M}, uns {minutos(e, now)} min depois.")
+                f"Vai chegar ~{chegada(e, now):%H:%M}, {aprox(minutos(e, now))} depois.")
 
     def aviso(self, now: datetime) -> Optional[dict]:
         a = _load(self.db, now.date()).get("aviso")
@@ -541,9 +546,9 @@ class Atraso:
             if now < ch:
                 avisou = (st.get("aviso") or {}).get("leg") == key and (st.get("aviso") or {}).get("enviado")
                 out.append(f"- Você está ATRASADA {e['onde']} (começa {ini:%H:%M}): {porque}. Chega ~{ch:%H:%M}, "
-                           f"uns {n} min depois — o compromisso começa sem você."
+                           f"{aprox(n)} depois — o compromisso começa sem você."
                            + (" Você já avisou o Patrick." if avisou else
                               " O Patrick ainda não sabe; se estiverem conversando, conte do seu jeito."))
             elif now - ch <= timedelta(minutes=90):
-                out.append(f"- Às {ch:%H:%M} você chegou {n} min atrasada {e['onde']}" + (f" ({porque})." if porque else "."))
+                out.append(f"- Às {ch:%H:%M} você chegou {aprox(n)} atrasada {e['onde']}" + (f" ({porque})." if porque else "."))
         return (["[ATRASO — aconteceu de verdade]", *out]) if out else []

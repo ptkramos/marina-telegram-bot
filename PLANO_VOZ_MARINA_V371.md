@@ -1400,3 +1400,11 @@ croissant. Detalhe na Auditoria ("comeu pra cacete e continuou com fome").
 Ajuste (02/10, noite): as caras novas valem só pro clima de flerte/tesão; e nenhuma pose tem mais cara fixa (regra do
 Patrick: a cara vem só do sentimento) — saíram a mordida da "inclinada pra câmera", sorrisos, língua pra fora e risada
 escritos nas poses.
+
+**03/10, manhã — soak, dia 4 da tarde em diante:** voltando pra casa depois de a conversa parar no rolê, vai no fim do
+prompt que ela chegou e o que fez desde então (ela disse "se divertindo ainda" em casa e inventou um cochilo); o banho
+de antes de sair não vale como "já tomei banho" depois da volta; "vele" sai da fala; os avisos de saída e chegada não
+são mais sorteados, e ela avisa que chegou quando é de bom tom (volta do rolê à noite, ou depois de ele cobrar no
+dia); "quero sim, melhor ir de Uber" vale como combinado; no prompt o atraso vai redondo ("uns 20 min") e os graus só
+se ele perguntar; a desculpa fixa do microfone virou fala dela. /ruim 059–064 anotados. Detalhe na Auditoria
+("Leitura do soak melhorada + Soak, dia 4 da tarde em diante").

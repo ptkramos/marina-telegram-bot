@@ -36,11 +36,10 @@ class VoltaDoQuartinhoTest(unittest.TestCase):
         self.temp.cleanup()
 
     def test_promessa_de_avisar_em_casa_as_2139_amarra_na_volta_das_2359(self):
-        with patch.object(arrival_promise, "FORGET_CHANCE", 0.0):
-            promise = arrival_promise.observe(
-                self.db, "Tá bom, eu te aviso assim que chegar em casa / Prometo não sumir de novo, pode deixar kkk",
-                "tá difícil de lidar com vc em mulher... avisa quando chegar em casa pelo menos",
-                datetime(2026, 9, 26, 21, 39, 50))
+        promise = arrival_promise.observe(
+            self.db, "Tá bom, eu te aviso assim que chegar em casa / Prometo não sumir de novo, pode deixar kkk",
+            "tá difícil de lidar com vc em mulher... avisa quando chegar em casa pelo menos",
+            datetime(2026, 9, 26, 21, 39, 50))
         self.assertEqual(promise["leg"], VOLTA.key)
         self.assertEqual(promise["where"], "em casa")
         self.assertIsNone(arrival_promise.due(self.db, datetime(2026, 9, 27, 0, 4)), "ainda no uber")

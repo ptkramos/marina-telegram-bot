@@ -596,6 +596,15 @@ class AgendaViva:
                 (now.isoformat(), (now + timedelta(days=3)).isoformat())).fetchone()
         if marcado:
             return None
+        try:
+            # Soak, dia 4 (02/10, 20:04): chamou a Júlia pra sábado 21:00 no Quartinho com o convite da Bia (13:42,
+            # mesmo bar e hora) ainda sem resposta. Convite de amiga esperando: responde esse primeiro.
+            from social_day import SocialDay
+            if any(datetime.fromisoformat(i["start"]) < now + timedelta(days=3)
+                   for i in SocialDay(self.db).pending_invites(now)):
+                return None
+        except Exception:
+            logger.exception("agenda_viva.planeja.convites")
         alvo = next((now.date() + timedelta(days=d) for d in (1, 2, 3)
                      if (now.date() + timedelta(days=d)).weekday() in PROPOSTAS), None)
         if not alvo:

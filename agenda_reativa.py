@@ -67,8 +67,11 @@ PLANO_RE = re.compile(
 UBER_PEDIDO_RE = re.compile(r"\buber\b|\bn[aã]o\s+(?:quero|vai)\s+(?:(?:que\s+)?(?:voc[eê]|vc)\s+)?(?:andando|ir|voltar)\s+a\s+p[eé]",
                             re.IGNORECASE)
 TOPOU_RE = re.compile(r"\b(?:pode\s+deixar|t[aá]\s+bom|t[aá]\s+certo|combinado|fechado|fechou|beleza|prometo|"
-                      r"ok|vou\s+de\s+uber|volto\s+de\s+uber|vou\s+sim|pode\s+ficar\s+tranquilo)\b", re.IGNORECASE)
+                      r"ok|vou\s+de\s+uber|volto\s+de\s+uber|vou\s+sim|pode\s+ficar\s+tranquilo|"
+                      # soak, dia 4 (02/10, 19:44): "Quer que eu pague um Uber?" → "Quero sim, melhor ir de Uber"
+                      r"quero(?:\s+sim)?|aceito|melhor\s+(?:ir|voltar)\s+de\s+uber|vou\s+usar)\b", re.IGNORECASE)
 RECUSA_RE = re.compile(r"\bn[aã]o\s+precisa\b|\bexagero\b|\bvou\s+a\s+p[eé]\s+(?:sim|mesmo)\b|"
+                       r"\b(?:prefiro|quero)\s+(?:ir\s+)?a\s+p[eé]\b|"
                        r"\bn[aã]o\s+(?:quero|vou)\s+(?:ir\s+|pegar\s+)?(?:de\s+)?uber\b", re.IGNORECASE)
 IDA_E_VOLTA_RE = re.compile(r"\b(?:vai\s+e\s+volta|ida\s+e\s+volta|indo\s+e\s+voltando|vou\s+e\s+volto)\b",
                             re.IGNORECASE)

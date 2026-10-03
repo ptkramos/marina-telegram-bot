@@ -984,6 +984,10 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     # 28/09: a gaveta íntima dela (roupa.py) — lingerie, fetiche e transparência também vão como adulta
     adult = level >= 2 or bool(outfit and re.search(r"panties|thong|towel|bralette|stockings|bodysuit|vinyl|"
                                                     r"harness|costume|nightie|babydoll", outfit))
+    # Soak, dia 4 (02/10, 15:41): o fundo de rua no Rei do Mate só apareceu porque o Patrick viu. O relatório do soak
+    # confere o cenário de cada foto com o lugar do mundo.
+    logger.info("photo_director.cena lugar=%s comodo=%s pose=%s cena=%s", place or "-", room or "-", pose.id,
+                re.sub(r"\s+", " ", setting or "")[:140])
     if pose.framing == "pov":
         # 26/09: foto tirada por ela, ela não aparece. Não vira sessão (o próximo "manda outra" é dela).
         from visual_profile import krea2_pov_prompt

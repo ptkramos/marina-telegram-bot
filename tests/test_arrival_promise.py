@@ -27,10 +27,9 @@ class ArrivalPromiseTest(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def _kept(self, forget=False):
-        with patch.object(arrival_promise, "FORGET_CHANCE", 1.0 if forget else 0.0):
-            return arrival_promise.observe(self.db, "Verdade, amor, confundi! Te aviso assim que chegar no shopping, prometo",
-                                           "Chegar em casa não princesa, quando chegar no shopping!", NOW)
+    def _kept(self):
+        return arrival_promise.observe(self.db, "Verdade, amor, confundi! Te aviso assim que chegar no shopping, prometo",
+                                       "Chegar em casa não princesa, quando chegar no shopping!", NOW)
 
     def test_the_shopping_promise_is_kept_when_she_arrives(self):
         promise = self._kept()
@@ -46,18 +45,11 @@ class ArrivalPromiseTest(unittest.TestCase):
         self.assertEqual(promise["where"], "em casa")
         self.assertEqual(promise["leg"], VOLTA.key)
 
-    def test_sometimes_she_forgets(self):
-        self._kept(forget=True)
-        self.assertIsNone(arrival_promise.due(self.db, IDA.end + timedelta(minutes=7)))
-
-    def test_forgets_rarely_and_never_twice_in_a_week(self):
-        self.assertLessEqual(arrival_promise.FORGET_CHANCE, 0.06)
-        self._kept(forget=True)
-        self.assertIsNone(arrival_promise.due(self.db, IDA.end + timedelta(minutes=7)), "esqueceu uma vez")
-        self.assertTrue(self.db.get_estado_relacional(arrival_promise.FORGOT_KEY))
-        self._kept(forget=True)
-        self.assertIsNotNone(arrival_promise.due(self.db, IDA.end + timedelta(minutes=7)),
-                             "levou bronca: não esquece de novo na mesma semana")
+    def test_never_forgets_by_chance(self):
+        """03/10 (Patrick): o "esquecer" sorteado (5%) saiu — decisão dela vem do sentimento, nunca de sorteio."""
+        for _ in range(3):
+            self._kept()
+            self.assertIsNotNone(arrival_promise.due(self.db, IDA.end + timedelta(minutes=7)))
 
     def test_no_double_notice_if_she_already_said_she_arrived(self):
         self._kept()
