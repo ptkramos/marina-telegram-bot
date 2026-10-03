@@ -1439,3 +1439,5 @@ ela negou ter mandado. Detalhe na Auditoria ("Eu nem mandei áudio!").
 se repete dentro da mesma resposta agora é cortada (`cortar_eco`). Pra decidir: o modo íntimo desligou durante o
 banho, no meio do sexting.
 Arena do Grok 4.3 no sexting (03/10): repetitivo, mais caro e mais lento que o Gemini; **fica o Gemini** (decisão do Patrick).
+O tempo do Rio agora chega ao prompt mesmo sem o Patrick escrever (renovado a cada 10 min): de manhã ela passeou
+com o Milo na chuva e disse "o dia tá bonito demais" e "tá um solzinho" — o /ruim 065. Garoa densa conta como chuva.

@@ -2579,3 +2579,14 @@ Cada /feedback lido com conversa, mundo e log da hora (cópias no scratchpad da 
   `tests/test_soak_eco_0310.py` (+4). Aberto pra frente da voz: o modo íntimo desligar durante o banho no meio do
   sexting.
 - **Arena Grok 4.3 × Gemini 3.8 Flash no sexting (03/10, pedido do Patrick; o Grok é o do outro bot dele):** 4 cenas íntimas, 1 rodada, ~US$ 0,30. Grok repetiu a si mesmo dentro da cena ("gemendo teu nome" 4x, "ai amor" abrindo o clímax todo), +50% de custo, 2x mais lento (7 s × 3,4 s), pede áudio quase toda fala. **Decisão do Patrick: fica o Gemini.** Resultados em `data/model_arena/grok43_vs_gemini`.
+- **O tempo no dia de chuva (Patrick: "andou na chuva e agora tá pegando sol") — camadas: mundo e prompt.** Open-Meteo
+  de 03/10: chuva 6h–10h (61, 63, 80), garoa densa (55) depois, nuvens 100%. (1) `RealContextProvider.refresh` só
+  rodava no turno do Patrick (cache de 30 min): das 08:47 às 09:28 os `world_state` saíram com
+  `weather_context_json` vazio; o passeio do Milo (08:52–09:30, código 61) aconteceu sem chuva no mundo e ela disse
+  "O dia tá bonito demais" (09:12) e "tá um solzinho agora" (09:26) — o /ruim 065. Agora `bot.tempo_real_routine`
+  (a cada 10 min, `REAL_CONTEXT_FETCH_ENABLED`). (2) 14:37 `free_time` "tomando sol (piscina do prédio)" com
+  `condition: drizzle`: `tempo_livre` só tirava o sol com `_chuva()` (chuva/temporal). Agora `_sol()` = céu limpo
+  (código 0–1) em `tempo_livre` e na praia de `vontade`; sem tempo, não. (3) Decisão do Patrick: `_condicao` 55/57
+  (garoa densa) → `rain`. Obs.: o `rain` do `current` é a soma dos últimos 15 min (o `heavy_rain` ≥ 3 mm equivale a
+  ~12 mm/h, chuva forte de fato — mantido). `tests/test_soak_tempo_0310.py` (+7).
+

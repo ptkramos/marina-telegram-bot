@@ -776,6 +776,8 @@ provocar e no sexting a mesma voz, um pouco mais devagar). Detalhe na Auditoria 
 como áudio na conversa (ela lembra que mandou; o relatório do soak conta os áudios).
 Às 14:16, a fala em laço dentro da mesma resposta passa a ser cortada; nada muda no Mini App.
 Arena do Grok 4.3 no sexting: fica o Gemini; nada muda no Mini App.
+Tempo: no Bastidores não aparece mais "Tomando sol" (nem praia) com nublado, garoa ou chuva; garoa densa conta
+como chuva (some a ida a pé). Sem tela nova.
 
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):

@@ -660,9 +660,19 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       do "nem precisa se vestir" foi pelo modelo principal, não pelo do sexting.
     - Arena Grok 4.3 × Gemini 3.8 Flash no sexting (03/10, pedido do Patrick; o Grok é o do outro bot dele): 4 cenas íntimas, 1 rodada, ~US$ 0,30. Grok repetiu a si mesmo dentro da cena ("gemendo teu nome" 4x, "ai amor" abrindo o clímax todo), +50% de custo, 2x mais lento (7 s × 3,4 s), pede áudio quase toda fala.
       **Decisão do Patrick: fica o Gemini.** Resultados em `data/model_arena/grok43_vs_gemini`.
+    - ✅ **O tempo no dia de chuva ("andou na chuva e agora tá pegando sol")** — Open-Meteo: chuva (61–80) das 6h às
+      10h, garoa densa (55) depois, 100% de nuvens o dia todo. Três furos:
+      - 08:52–09:30 passeio do Milo na Enseada com o mundo **sem tempo**: o tempo só era lido no turno do Patrick, e
+        ele ainda não tinha escrito. Ela disse "O dia tá bonito demais" e "tá um solzinho agora" (= /ruim 065, "o
+        tempo sem personalidade"). Agora `tempo_real_routine` renova o tempo a cada 10 min fora do turno. Camada: mundo.
+      - 14:37 "tomando sol (piscina do prédio)" com `drizzle` na mesma linha: o sol só era barrado por chuva forte.
+        Agora tomar sol e a praia em Copacabana pedem céu limpo (`_sol`, código 0–1); sem tempo conhecido, não.
+      - **Decisão do Patrick:** garoa densa (55, 57; ~1,2 mm/h) é chuva — tira a caminhada e pesa contra sair.
+        Garoa fraca e moderada (51, 53) seguem chuvisco.
+      `tests/test_soak_tempo_0310.py` (+7); `test_soak_dia4` atualizado (55 era chuvisco).
 
-**Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo). Pra leitura do dia 5: /ruim 065
-("o tempo sem personalidade") e "tenho um compromisso de manhã" repetido às 09:29–09:30 de 03/10.
+**Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo). Pra leitura do dia 5: (/ruim 065,
+"o tempo sem personalidade", já explicado no item 26) e "tenho um compromisso de manhã" repetido às 09:29–09:30 de 03/10.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** congelada até o soak fechar (freio, seção 0); foto errada no uso real é bug do soak

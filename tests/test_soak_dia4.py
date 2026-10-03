@@ -48,7 +48,8 @@ class TempoDeVerdadeTest(unittest.TestCase):
     def test_codigo_vira_condicao(self):
         from real_context_provider import _condicao
         self.assertEqual(_condicao(51, 0.1), "drizzle")       # 02/10 13:00
-        self.assertEqual(_condicao(55, 1.1), "drizzle")
+        self.assertEqual(_condicao(53, 0.2), "drizzle")
+        self.assertEqual(_condicao(55, 1.1), "rain")          # 03/10 (Patrick): garoa densa é chuva
         self.assertEqual(_condicao(63, 2.0), "rain")
         self.assertEqual(_condicao(53, 3.4), "rain")
         self.assertEqual(_condicao(95, 0), "storm")

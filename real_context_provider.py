@@ -28,7 +28,8 @@ def _condicao(code, rain_mm: float) -> str:
         return 'rain' if rain_mm > 0 else 'unknown'
     if code >= 95:
         return 'storm'
-    if 61 <= code <= 67 or 80 <= code <= 82 or rain_mm >= 3.0:
+    # Soak, dia 5 (03/10, decisão do Patrick): garoa densa (55, 57; ~1,2 mm/h, molha em 20 min de rua) é chuva.
+    if 61 <= code <= 67 or 80 <= code <= 82 or code in (55, 57) or rain_mm >= 3.0:
         return 'rain'
     if 51 <= code <= 57 or rain_mm > 0:
         return 'drizzle'

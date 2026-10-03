@@ -169,6 +169,17 @@ class TempoLivre:
         except Exception:
             return False
 
+    def _sol(self) -> bool:
+        """Soak, dia 5 (03/10, 14:37): "tomando sol (piscina do prédio)" com garoa e 100% de nuvens o dia todo —
+        o filtro só olhava chuva forte. Sol de verdade é céu limpo (Open-Meteo 0–1); sem tempo conhecido, não."""
+        try:
+            with self.db.get_connection() as conn:
+                row = conn.execute("SELECT weather_context_json FROM world_state ORDER BY id DESC LIMIT 1").fetchone()
+            w = json.loads(row["weather_context_json"] or "null") if row else None
+            return bool(w and w.get("condition") == "clear")
+        except Exception:
+            return False
+
     def _quer_se_masturbar(self, now: datetime, rng: random.Random) -> Optional[bool]:
         """None: não quer. False: quer, sozinha. True: quer e chama o Patrick (saudade/desejo por ele).
         Sem cota nem intervalo fixo: o tesão depois do gozo cai sozinho (emotion._libido)."""
@@ -220,7 +231,7 @@ class TempoLivre:
         elif umectar:
             tipo = UMECTACAO
         else:
-            opcoes = [t for t in TIPOS if _hora(h, *t[4]) and not (t[0] == "sol" and chuva)
+            opcoes = [t for t in TIPOS if _hora(h, *t[4]) and not (t[0] == "sol" and not self._sol())
                       and not (t[0] == "plantas" and chuva)]
             # Soak, dia 2 (30/09): "Regando as plantas" 07:01, 07:26, 07:39, 07:49 — cada pedaço sorteava de novo.
             # O que ela acabou de fazer não se repete em seguida; regar as plantas é uma vez por dia.

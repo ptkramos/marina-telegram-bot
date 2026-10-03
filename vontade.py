@@ -176,7 +176,7 @@ class Vontade:
 
     def _pesos(self, now: datetime, feito: set) -> dict:
         h = now.hour + now.minute / 60
-        chuva = self._chuva()
+        chuva, sol = self._chuva(), self._sol()
         try:
             from emotion import EmotionEngine
             f = EmotionEngine(self.db).feeling(now)
@@ -184,7 +184,8 @@ class Vontade:
             f = None
         pesos = {}
         for tipo, s in SAIDAS.items():
-            if tipo in feito or not any(a <= h < b for a, b in s["horas"]) or (s.get("seco") and chuva):
+            if tipo in feito or not any(a <= h < b for a, b in s["horas"]) or (s.get("seco") and chuva) \
+                    or (tipo == "praia" and not sol):
                 continue
             p = s["peso"]
             if f:
@@ -313,6 +314,18 @@ class Vontade:
                 row = conn.execute("SELECT weather_context_json FROM world_state ORDER BY id DESC LIMIT 1").fetchone()
             w = json.loads(row["weather_context_json"] or "null") if row else None
             return bool(w and (w.get("heavy_rain") or w.get("condition") in ("rain", "storm")))
+        except Exception:
+            return False
+
+    def _sol(self) -> bool:
+        """Soak, dia 5 (03/10, 14:37): "tomando sol" na piscina com garoa e 100% de nuvens (tempo_livre); a praia
+        em Copacabana tinha o mesmo furo — só a chuva barrava. Sol de verdade é céu limpo (Open-Meteo 0–1); sem
+        tempo conhecido, não."""
+        try:
+            with self.db.get_connection() as conn:
+                row = conn.execute("SELECT weather_context_json FROM world_state ORDER BY id DESC LIMIT 1").fetchone()
+            w = json.loads(row["weather_context_json"] or "null") if row else None
+            return bool(w and w.get("condition") == "clear")
         except Exception:
             return False
 

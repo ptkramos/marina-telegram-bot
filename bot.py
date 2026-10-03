@@ -5211,6 +5211,19 @@ async def memory_hygiene_routine(application: Application):
     except Exception as e:
         logger.error(f"Erro no job de memory_hygiene_routine: {e}", exc_info=True)
 
+async def tempo_real_routine(application: Application):
+    """Soak, dia 5 (03/10): o tempo do Rio só era lido no turno do Patrick. De manhã ela acordou e passeou com o
+    Milo na chuva (08:52–09:30, código 61) antes de ele escrever: o mundo ficou sem tempo, ela foi a pé e disse
+    "o dia tá bonito demais" e "tá um solzinho". Agora o cache (30 min) é renovado fora do turno."""
+    if not getattr(settings, 'REAL_CONTEXT_FETCH_ENABLED', False):
+        return
+    try:
+        from real_context_provider import RealContextProvider
+        await asyncio.to_thread(RealContextProvider(memory_manager.db).refresh, datetime.now())
+    except Exception as e:
+        logger.error(f"Erro no job de tempo_real_routine: {e}", exc_info=True)
+
+
 async def media_lookup_routine(application: Application):
     """Atualiza o cache de mídia em alta fora do caminho da conversa.
 
@@ -5936,6 +5949,10 @@ async def post_init(application: Application):
             next_run_time=datetime.now() + timedelta(seconds=20),
         )
         logger.info(f"Job de Media Lookup agendado a cada {media_hours}h.")
+
+    # Soak, dia 5 (03/10): o tempo do Rio também fora do turno (ela vive mesmo sem o Patrick escrever).
+    scheduler.add_job(tempo_real_routine, "interval", minutes=10, args=[application], max_instances=1,
+                      coalesce=True, next_run_time=datetime.now() + timedelta(seconds=30))
 
     # 26/09 — mídia real: músicas (iTunes) e Botafogo (ESPN), fora do caminho do turno.
     scheduler.add_job(midia_real_routine, "interval", minutes=5, args=[application], max_instances=1,
