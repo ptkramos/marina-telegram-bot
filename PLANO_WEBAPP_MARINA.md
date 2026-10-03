@@ -779,6 +779,14 @@ Arena do Grok 4.3 no sexting: fica o Gemini; nada muda no Mini App.
 Tempo: no Bastidores não aparece mais "Tomando sol" (nem praia) com nublado, garoa ou chuva; garoa densa conta
 como chuva (some a ida a pé). Sem tela nova.
 
+**03/10, noite — o sexting no Bastidores (frente de bugs, item 26):** o Patrick notou que o sexting não aparecia no
+Agora nem no Hoje (o mundo seguia sorteando "olhando o Pinterest no closet" no meio da cena, e ela usou isso na fala).
+Agora, com ela em casa no tempo livre, o modo íntimo é o bloco do momento. **Agora:** "Em casa", linha 2 "Transando
+com o Patrick por mensagem", Cômodo Quarto, sem barra (mostra "desde" e há quanto tempo). **Hoje:** "Transou com o
+Patrick por mensagem" (enquanto acontece, "Transando…" com a hora aberta), linha cinza "No quarto por mensagem" e,
+se ela gozou, ", gozou"; ícone balão com coração (`message-heart`). O que ela fazia antes acaba quando o clima começa.
+Textos escolhidos pelo Patrick (03/10). Fora de casa não vira bloco.
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

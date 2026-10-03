@@ -163,6 +163,15 @@ def _curto(ev: dict, db=None) -> dict:
         out.update(ic="music", texto="Ouviu a playlist dela", presente="Ouvindo a playlist dela",
                    sub=_e(artistas) if artistas else "", filhos_presente=[{"texto": a} for a in artistas])
         return out
+    if tipo == "tempo_livre" and s.startswith("Transou com o Patrick por mensagem"):
+        # 03/10 (Patrick): o sexting no Hoje — "Transou com o Patrick por mensagem", embaixo "No quarto por
+        # mensagem, gozou"; enquanto acontece, "Transando com o Patrick por mensagem"
+        m = re.search(r"por mensagem ((?:n[oa]s?|em) [^,.]+?)(?: e gozou)?$", s)
+        base = f"{_cap(m.group(1)) if m else 'Em casa'} por mensagem"
+        out.update(ic="message-heart", texto="Transou com o Patrick por mensagem",
+                   presente="Transando com o Patrick por mensagem", sub_presente=base,
+                   sub=base + (", gozou" if s.endswith(" e gozou") else ""))
+        return out
     if tipo == "tempo_livre":
         out.update(ic=_ic_midia(title), texto=passado(_cap(title)) if title else _painel(s))
         return out

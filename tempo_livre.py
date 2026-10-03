@@ -70,6 +70,11 @@ MASTURBANDO = ("masturbando", "Se masturbando", ("quarto",), None, (8, 27), 0.0,
 UNHAS = ("unhas", "Fazendo as unhas", ("quarto", "sala", "varanda"), None, (9, 23), 0.0, (40, 60))
 # 26/09 (Patrick): cabelo ressecado e entediada → umectação (óleo e touca; lava no próximo banho — cabelo.py)
 UMECTACAO = ("umectacao", "Umectando o cabelo", ("quarto", "sala", "varanda"), "celular", (10, 21), 0.0, (60, 90))
+# 03/10 (Patrick, soak dia 5): o sexting não aparecia no Agora nem no Hoje — das 15:04 às 15:44 o mundo tinha ela
+# "olhando o Pinterest no closet", e às 15:41 ela usou isso na fala. Agora o modo íntimo vira bloco em casa.
+SEXTING_TEXTO = "Transando com o Patrick por mensagem"
+SEXTING_FOLGA = timedelta(minutes=5)     # o bloco vai até 5 min depois da última fala no clima
+SEXTING_EMENDA = timedelta(minutes=15)   # voltou ao clima logo depois (o gozo dela antes do dele): mesmo bloco
 SOLO_BLOCK_CHANCE = 0.45            # com tesão (>= SOLO_MIN_LIBIDO); mais tesão, mais chance
 CHAMA_ELE_CHANCE = 0.5              # com saudade/desejo por ele, chama pro sexting
 CONVITE_KEY = "sexting_convite_json"
@@ -89,6 +94,7 @@ class Bloco:
     faixas: Optional[list] = None   # música: a playlist real que toca no bloco
     leitura: Optional[dict] = None  # leitura: título, volume, páginas (início → fim)
     jogo: Optional[str] = None      # jogo do Botafogo (id da ESPN)
+    gozou: bool = False             # sexting: ela gozou
 
     @property
     def comodo_nome(self) -> str:
@@ -360,6 +366,9 @@ class TempoLivre:
         with self.db.get_connection() as conn:           # mesma trava dos outros: nada antes do início limpo
             if not conn.execute("SELECT 1 FROM world_bootstrap WHERE key='clean_canonical_start_done'").fetchone():
                 return None
+        sexting = self._sexting_aberto(now)
+        if sexting:
+            return sexting
         i, ini, fim_slot = self._slot(now)
         dia = self._dia(now).isoformat()
         st = self._state()
@@ -439,6 +448,8 @@ class TempoLivre:
 
     def _resumo(self, b: Bloco) -> str:
         onde, texto = self._onde(b), b.texto[:1].lower() + b.texto[1:]
+        if b.tipo == "sexting":
+            return f"Transou com o Patrick por mensagem {onde}{' e gozou' if b.gozou else ''}."
         if b.faixas:
             nomes = [f"\"{f['nome']}\" ({f['artista']})" for f in b.faixas[:4]]
             return f"Ficou ouvindo a playlist dela {onde}: " + ", ".join(nomes) + "."
@@ -458,12 +469,99 @@ class TempoLivre:
         if b.tipo == "umectacao":                         # touca até o fim; lava no próximo banho (cabelo.py)
             from cabelo import Cabelo
             Cabelo(self.db).umectou(b.inicio, b.fim, now)
+        sexting = b.tipo == "sexting"                     # foi com ele: ela lembra, mas não tem o que contar
         with self.db.get_connection() as conn:
             conn.execute(
                 """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
                    autonomy_level,importance,participants_json,share_worthy,created_at)
-                   VALUES (?,?,'tempo_livre',?,?,'simulated',1,0.1,?,0.3,?)""",
-                (b.chave, b.inicio.isoformat(), b.texto, self._resumo(b), json.dumps(["marina"]), now.isoformat()))
+                   VALUES (?,?,'tempo_livre',?,?,'simulated',1,?,?,?,?)""",
+                (b.chave, b.inicio.isoformat(), b.texto, self._resumo(b), 0.3 if sexting else 0.1,
+                 json.dumps(["marina", "patrick"] if sexting else ["marina"]), 0.0 if sexting else 0.3,
+                 now.isoformat()))
+            conn.commit()
+        if sexting:
+            try:
+                from social_day import SocialDay
+                SocialDay(self.db).mark_shared(b.chave)
+            except Exception:
+                pass
+
+    # ------------------------------------------------------------ sexting --
+    @staticmethod
+    def _bloco(g: dict) -> Bloco:
+        return Bloco(**{**g, "inicio": datetime.fromisoformat(g["inicio"]), "fim": datetime.fromisoformat(g["fim"])})
+
+    def _sextings(self, st: dict, dia: str) -> list[tuple[str, dict]]:
+        return sorted(((k, g) for k, g in st.get(dia, {}).items() if g.get("tipo") == "sexting"),
+                      key=lambda kg: kg[1]["inicio"])
+
+    def _sexting_aberto(self, now: datetime) -> Optional[Bloco]:
+        for _, g in self._sextings(self._state(), self._dia(now).isoformat()):
+            b = self._bloco(g)
+            if b.inicio <= now < b.fim:
+                return b
+        return None
+
+    def _sexting_recente(self, st: dict, now: datetime) -> Optional[dict]:
+        """O último sexting do dia, se acabou há pouco e nada começou depois dele (dá pra emendar)."""
+        dia = self._dia(now).isoformat()
+        sextings = self._sextings(st, dia)
+        if not sextings:
+            return None
+        chave, g = sextings[-1]
+        fim = datetime.fromisoformat(g["fim"])
+        if fim + SEXTING_EMENDA < now:
+            return None
+        if any(k != chave and not k.startswith("j") and fim <= datetime.fromisoformat(o["inicio"]) <= now
+               for k, o in st.get(dia, {}).items()):
+            return None
+        return g
+
+    def _em_casa_livre(self, now: datetime) -> bool:
+        """Em casa e no tempo livre dela (não numa saída, refeição, banho ou dormindo)."""
+        with self.db.get_connection() as conn:
+            if not conn.execute("SELECT 1 FROM world_bootstrap WHERE key='clean_canonical_start_done'").fetchone():
+                return False
+            row = conn.execute("SELECT activity FROM world_state WHERE observed_at<=? ORDER BY observed_at DESC, id DESC"
+                               " LIMIT 1", (now.isoformat(),)).fetchone()
+        return bool(row and (row["activity"] or "").casefold().startswith("em casa, "))
+
+    def sexting(self, now: datetime) -> Optional[Bloco]:
+        """Modo íntimo ligado com ela em casa: o que ela faz agora é o sexting. Abre o bloco (o que ela fazia acaba
+        ali) ou estica até SEXTING_FOLGA depois desta fala."""
+        st = self._state()
+        g = self._sexting_recente(st, now)
+        if g:
+            g["fim"] = max(datetime.fromisoformat(g["fim"]), now + SEXTING_FOLGA).isoformat()
+            self._save(st, now)
+            return self._bloco(g)
+        if not self._em_casa_livre(now):
+            return None
+        self.interrompe(now, now)
+        st = self._state()
+        dia = self._dia(now).isoformat()
+        n = len(self._sextings(st, dia)) + 1
+        b = Bloco(f"livre:{dia}:s{n}", "sexting", SEXTING_TEXTO, "quarto", "celular", True, now, now + SEXTING_FOLGA)
+        st.setdefault(dia, {})[f"s{n}"] = {**b.__dict__, "inicio": b.inicio.isoformat(), "fim": b.fim.isoformat()}
+        self._save(st, now)
+        self._registra(b, now)
+        logger.info("tempo_livre.sexting inicio=%s", now.isoformat(timespec="minutes"))
+        return b
+
+    def sexting_acabou(self, now: datetime, *, gozou: bool = False) -> None:
+        """Ele cortou/foi dormir, ou ela gozou: o bloco acaba agora (gozando, fica registrado no Hoje)."""
+        st = self._state()
+        g = self._sexting_recente(st, now)
+        if not g:
+            return
+        # gozando, a cena foi até agora; cortando, acaba aqui (a folga de SEXTING_FOLGA cai)
+        g["fim"] = (now if gozou else min(datetime.fromisoformat(g["fim"]), now)).isoformat()
+        if gozou:
+            g["gozou"] = True
+        self._save(st, now)
+        b = self._bloco(g)
+        with self.db.get_connection() as conn:
+            conn.execute("UPDATE life_events SET summary=? WHERE event_key=?", (self._resumo(b), b.chave))
             conn.commit()
 
     def _se_masturbou(self, b: Bloco, now: datetime, onde: str) -> None:

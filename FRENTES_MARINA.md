@@ -4,10 +4,9 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 03/10/2026, fim da tarde (frente de bugs, teste ao vivo do dia 5: áudio no histórico, eco dentro da
-resposta, tempo do Rio fora do turno + sol só com céu limpo + garoa densa é chuva — tudo no ar às 15:50; arena do
-Grok 4.3: fica o Gemini). **Próxima conversa: frente de bugs, a recusa no meio do sexting (15:40, item 26)**; depois
-"bora no soak, dia 5" no domingo de manhã. **Soak: dia 1 = terça 29/09**
+_Atualizado em 03/10/2026, noite (frente de bugs, item 26: a recusa no meio do sexting das 15:40 — filtro e
+menstruação no prompt — e o sexting virando bloco no Agora e linha no Hoje). **Próxima conversa: "bora no soak, dia 5"
+no domingo de manhã.** **Soak: dia 1 = terça 29/09**
 (relatório `soak/dia-2026-10-03.md`). Aberto pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente
 da voz: o modo íntimo desliga durante o banho no meio do sexting._
 
@@ -238,7 +237,7 @@ começar (`echo AAAA-MM-DD > /root/bots/marina/soak/inicio.txt`). Ler um dia sem
 3. Last.fm dele configurado, mas o perfil ainda tinha 0 scrobbles (Apple Music no iPhone precisa de app de scrobble).
 
 ## 5. Bugs — skill `frente-bugs`
-**Abertura:** "bora na frente de bugs: a recusa no meio do sexting de 03/10 (15:40)"
+**Abertura:** "bora na frente de bugs: <o que aconteceu, com a hora>"
 
 Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois diagnosticar por camada (mundo → prompt → fala).
 
@@ -670,15 +669,25 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       - **Decisão do Patrick:** garoa densa (55, 57; ~1,2 mm/h) é chuva — tira a caminhada e pesa contra sair.
         Garoa fraca e moderada (51, 53) seguem chuvisco.
       `tests/test_soak_tempo_0310.py` (+7); `test_soak_dia4` atualizado (55 era chuvisco).
-    - **ABERTO — 15:40, recusa no meio do sexting (próxima conversa).** Ele: "Foi tudo amor… dá pra sentir até a
-      entrada do teu útero" (conversas 1197). Ela, **por áudio** (sorteio dos 35%, tesão 0,62, `gemini-3.8-flash`):
-      "Preciso dar uma pausa por aqui. Prefiro não continuar com mensagens desse tipo" (1198) — recusa do modelo; o
-      log não tem `llm.junk_reply`, então `_is_policy_refusal` não pegou a frase. 15:41 (1200) ela sustentou "Amor,
-      falei sério ali… tô toda doloridinha… por causa da menstruação" (dia 4 do ciclo) e a cena morreu. Capturado:
-      conversas 1171–1210, log 18:39–18:41 UTC. Pra ver: por que o filtro não pegou, recusa nunca virar áudio, e se
-      a menstruação no prompt empurra a recusa (camadas fala e prompt).
+    - ✅ **15:40, recusa no meio do sexting.** Ele: "Foi tudo amor… dá pra sentir até a entrada do teu útero"
+      (conversas 1197). Ela, **por áudio** (sorteio dos 35%, tesão 0,62, `gemini-3.8-flash`): "Preciso dar uma pausa
+      por aqui. Prefiro não continuar com mensagens desse tipo" (1198); 15:41 (1200) sustentou pela menstruação (dia 4)
+      e a cena morreu. Duas camadas: **fala** — `_POLICY_REFUSAL_RE` não conhecia "mensagens desse tipo" (agora pega
+      "mensagens/conversas/conteúdo desse tipo/teor", "não continuar/prosseguir com…", "não me sinto confortável em
+      continuar"; nas 613 falas dela no banco só a 1198 casa); pego, o turno é refeito noutro modelo antes de virar
+      áudio. **Prompt** — o bloco do modo íntimo lia "Libido: Baixa para sexo… carinho sem cobrança" no meio da cena;
+      menstruada e já no modo, agora diz que o tesão demorou mas veio, a menstruação é detalhe real e não motivo pra
+      largar a cena, e parar é pelo que ela sente (decisão do Patrick).
+    - ✅ **"O sexting hoje não cria ação no Bastidores do Agora, nem Hoje"** (Patrick, 03/10). Camada: mundo. Das 15:04
+      às 15:44 o mundo tinha ela "ouvindo a playlist no closet" (15:10) e "olhando o Pinterest (closet)" (15:32), e às
+      15:41 ela usou isso na fala ("Tava até aqui no closet catando umas ideias de looks no Pinterest"). Agora o modo
+      íntimo com ela em casa no tempo livre vira bloco (`tempo_livre.sexting`, chamado do `intimacy.py`): corta o que
+      ela fazia, vai até 5 min depois da última fala no clima, acaba no corte/despedida ou no gozo dela (emenda se
+      voltar ao clima em 15 min). Textos do Patrick: Agora "Em casa", "Transando com o Patrick por mensagem", Quarto,
+      sem barra ("desde"); Hoje "Transou com o Patrick por mensagem", embaixo "No quarto por mensagem, gozou",
+      ícone balão com coração (`message-heart`). Fora de casa não vira bloco. `tests/test_soak_sexting_0310.py` (+11).
 
-**Abertos:** a recusa no meio do sexting de 03/10 15:40 (item 26, próxima conversa); o preparo pra dormir que
+**Abertos:** o preparo pra dormir que
 volta de passo (item 24, frente do mundo). Pra leitura do dia 5: (/ruim 065,
 "o tempo sem personalidade", já explicado no item 26) e "tenho um compromisso de manhã" repetido às 09:29–09:30 de 03/10.
 

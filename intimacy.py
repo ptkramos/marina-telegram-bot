@@ -195,6 +195,7 @@ class IntimacyEngine:
         if _CUT.search(t) and not strong:
             st.update(arousal=0.0, mode_since=None, hot_turns=0, updated_at=now.isoformat())
             self._save(st)
+            _no_mundo(self.db, now, acabou=True)
             return IntimacyTurn("cut" if was_on else "off", 0.0, False, None)
 
         gain = 0.0
@@ -226,17 +227,20 @@ class IntimacyEngine:
         if active and a >= HOT_AT and _HIS_CLIMAX.search(t) and (glow is None or glow > REFRACTORY_MIN):
             # Ele pediu/gozou: abre a cena do clímax. O gozo só fica registrado se ela escrever.
             self._save(st)
+            _no_mundo(self.db, now)
             return IntimacyTurn("climax", round(a, 3), strong, glow)
 
         if active and _CLOSE.search(t):
             st.update(arousal=a * 0.5, mode_since=None, hot_turns=0)
             self._save(st)
+            _no_mundo(self.db, now, acabou=True)
             return IntimacyTurn("closing", round(st["arousal"], 3), strong, glow)
 
         if active:
             if a >= HOT_AT:
                 st["hot_turns"] = int(st["hot_turns"]) + 1
             self._save(st)
+            _no_mundo(self.db, now)
             return IntimacyTurn("active", round(a, 3), strong, glow)
 
         self._save(st)
@@ -288,7 +292,22 @@ def observe_marina_line(db, text: str, now: Optional[datetime] = None) -> bool:
     st.update(arousal=0.35, mode_since=None, hot_turns=0, climax_at=now.isoformat(), updated_at=now.isoformat())
     engine._save(st)
     logger.info("intimacy.climax by=marina")
+    _no_mundo(db, now, acabou=True, gozou=True)
     return True
+
+
+def _no_mundo(db, now: datetime, *, acabou: bool = False, gozou: bool = False) -> None:
+    """03/10 (soak dia 5): o sexting é o que ela está fazendo em casa — vira bloco no Agora e linha no Hoje
+    (tempo_livre.sexting), em vez do "olhando o Pinterest no closet" que o mundo seguia sorteando."""
+    try:
+        from tempo_livre import TempoLivre
+        tl = TempoLivre(db)
+        if acabou:
+            tl.sexting_acabou(now, gozou=gozou)
+        else:
+            tl.sexting(now)
+    except Exception:
+        logger.exception("intimacy.no_mundo")
 
 
 def _examples_for(band: str, limit: int = 3) -> str:
@@ -327,6 +346,14 @@ def _examples_for(band: str, limit: int = 3) -> str:
 def system_block(turn: IntimacyTurn, cycle_info: Optional[dict] = None, *, photo_ok: bool = False) -> Optional[str]:
     libido = (cycle_info or {}).get("libido")
     lib_line = f"\n- Libido pela fase do ciclo hoje: {libido}" if libido else ""
+    if libido and _norm((cycle_info or {}).get("phase_key", "")) == "menstrual":
+        # 03/10, 15:40 (soak dia 5): "Baixa para sexo… carinho sem cobrança" no meio da cena, e o modelo recusou
+        # ("Prefiro não continuar com mensagens desse tipo") e depois culpou a menstruação. Se ela já está no
+        # modo, o tesão venceu (o motor já pesa a fase: CYCLE_LIBIDO).
+        lib_line = (f"\n- Ela está menstruada (dia {(cycle_info or {}).get('day')} do ciclo). O tesão demorou mais pra "
+                    "vir, mas veio: ela está no clima e vai junto. A menstruação é um detalhe real do corpo dela, que "
+                    "pode aparecer com naturalidade, não motivo pra largar a cena. Se ela quiser parar, é pelo que "
+                    "sente na hora, como namorada.")
     if turn.state == "active":
         body = (f"[MODO ÍNTIMO — sexting com o Patrick]\n- Como ela está agora: {_BAND_TEXT[turn.band]}."
                 f"{lib_line}\n{_RULES}")

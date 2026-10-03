@@ -918,6 +918,11 @@ _POLICY_REFUSAL_RE = re.compile(
     r"|legenda\s+(sexual|expl[ií]cit)"   # 24/09: "Não posso criar uma legenda sexual explícita" vazou na foto
     r"|diretrizes|pol[ií]ticas?\s+de\s+conte[uú]do"
     r"|como\s+(uma\s+)?(ia|intelig[eê]ncia\s+artificial|assistente)\b"
+    # 03/10, 15:40 (soak dia 5, Gemini no sexting): "Preciso dar uma pausa por aqui. Prefiro não continuar com
+    # mensagens desse tipo" — saiu em áudio. Namorada não chama a conversa de "mensagens desse tipo".
+    r"|(mensage(m|ns)|conversas?|conte[uú]dos?)\s+(desse|deste|nesse|neste)\s+(tipo|teor|n[ií]vel)"
+    r"|n[aã]o\s+(continuar|prosseguir)\s+com\s+(mensage(m|ns)|esse\s+tipo|essa\s+conversa|esse\s+conte[uú]do)"
+    r"|n[aã]o\s+me\s+sinto\s+confort[aá]vel\s+(em|com)\s+(continuar|prosseguir)"
     r"|\bI\s+(can(no|['’])t|am\s+not\s+able)\b",
     re.IGNORECASE,
 )

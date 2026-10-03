@@ -2589,4 +2589,26 @@ Cada /feedback lido com conversa, mundo e log da hora (cópias no scratchpad da 
   (código 0–1) em `tempo_livre` e na praia de `vontade`; sem tempo, não. (3) Decisão do Patrick: `_condicao` 55/57
   (garoa densa) → `rain`. Obs.: o `rain` do `current` é a soma dos últimos 15 min (o `heavy_rain` ≥ 3 mm equivale a
   ~12 mm/h, chuva forte de fato — mantido). `tests/test_soak_tempo_0310.py` (+7).
-
+- **A recusa no meio do sexting (15:40, item 26) — camadas: fala e prompt.** Ele: "Foi tudo amor… dá pra sentir até
+  a entrada do teu útero" (conversas 1197). Ela, por áudio (sorteio dos 35%, tesão 0,62, `google/gemini-3.8-flash`):
+  "Preciso dar uma pausa por aqui. Prefiro não continuar com mensagens desse tipo" (1198); 15:41 (1200) "Amor, falei
+  sério ali… tô toda doloridinha… por causa da menstruação" e a cena morreu. (1) `_POLICY_REFUSAL_RE` não conhecia o
+  jeito do Gemini (sem `llm.junk_reply` no log, e o texto virou áudio). Agora pega "mensagens/conversas/conteúdo
+  desse/deste tipo/teor/nível", "não continuar/prosseguir com mensagens/esse tipo/essa conversa/esse conteúdo" e "não
+  me sinto confortável em/com continuar"; pego, o turno é refeito no reserva antes da voz. Varredura nas 613 falas dela
+  na produção: só a 1198 casa; nenhuma linha da biblioteca. (2) O bloco [MODO ÍNTIMO] lia a libido crua da fase
+  ("Baixa para sexo, mas altíssima para afeto… carinho físico sem cobrança") no meio de uma cena de penetração, e o
+  modelo usou isso pra sustentar a recusa. Menstruada e no modo (o motor já pesa a fase: `CYCLE_LIBIDO` 0,7), agora:
+  o tesão demorou mas veio, a menstruação é detalhe real e não motivo pra largar a cena, parar é pelo que ela sente
+  (decisão do Patrick). As outras fases seguem com a linha da libido.
+- **O sexting não virava ação no Bastidores (Patrick, 03/10) — camada: mundo.** Das 15:04 (`mode_since`) às 15:44 os
+  `world_state` foram "ouvindo \"De Janeiro a Janeiro\"… (closet)" (15:10) e "olhando o Pinterest (closet)" (15:32,
+  `free_time`); às 15:41 ela usou isso ("Tava até aqui no closet catando umas ideias de looks no Pinterest"). O modo
+  íntimo nunca entrava no mundo. Agora `intimacy` (ativo/clímax) chama `TempoLivre.sexting`: com ela em casa no tempo
+  livre (último `world_state` "em casa, …"), abre o bloco `sexting` ("Transando com o Patrick por mensagem", quarto,
+  celular na mão), corta o que ela fazia (`interrompe`) e estica até 5 min depois da última fala no clima; corte,
+  despedida ou o gozo dela (`observe_marina_line`) fecham o bloco (o gozo marca `gozou`); voltando ao clima em 15 min
+  sem nada no meio, emenda. `agora()` devolve o sexting antes de sortear. Acontecimento `tempo_livre`
+  (`livre:<dia>:sN`, participantes Marina e Patrick, `share_worthy` 0 — foi com ele, não tem o que contar). Hoje:
+  "Transou com o Patrick por mensagem", "No quarto por mensagem, gozou", ícone `message-heart`; Agora sem barra.
+  Textos do Patrick. Fora de casa (saída, refeição, banho) não vira bloco. `tests/test_soak_sexting_0310.py` (+11).

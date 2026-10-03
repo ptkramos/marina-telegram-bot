@@ -963,6 +963,8 @@ class Agenda:
         bloco = TempoLivre(self.db).atual(now) if low.startswith("em casa, ") else None
         if bloco:
             linha2, comodo, inicio, fim = bloco.texto, bloco.comodo_nome, bloco.inicio, bloco.fim
+            if bloco.tipo == "sexting":                   # 03/10: acaba quando o clima acaba — sem barra, "desde"
+                fim = None
             passos, grade_extra = self._passos_midia(bloco, now)
             if bloco.faixas:                              # a linha 2 acompanha o artista que está tocando
                 from musica import Musica

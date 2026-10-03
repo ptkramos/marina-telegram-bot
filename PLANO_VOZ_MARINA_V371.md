@@ -1441,3 +1441,12 @@ banho, no meio do sexting.
 Arena do Grok 4.3 no sexting (03/10): repetitivo, mais caro e mais lento que o Gemini; **fica o Gemini** (decisão do Patrick).
 O tempo do Rio agora chega ao prompt mesmo sem o Patrick escrever (renovado a cada 10 min): de manhã ela passeou
 com o Milo na chuva e disse "o dia tá bonito demais" e "tá um solzinho" — o /ruim 065. Garoa densa conta como chuva.
+
+**03/10, noite — a recusa no meio do sexting (frente de bugs, item 26):** às 15:40, no meio da cena, o Gemini
+respondeu "Preciso dar uma pausa por aqui. Prefiro não continuar com mensagens desse tipo", e saiu em áudio. O filtro
+de recusa agora reconhece esse jeito ("mensagens desse tipo", "não continuar com…", "não me sinto confortável em
+continuar") e refaz o turno noutro modelo antes de virar áudio. No modo íntimo, menstruada, o prompt não diz mais
+"libido baixa para sexo… sem cobrança": se ela já entrou no clima, vai junto, a menstruação é detalhe real e não
+motivo pra largar a cena, e parar é pelo que ela sente (decisão do Patrick). E o sexting virou o que ela está fazendo
+em casa: o mundo para de dizer "olhando o Pinterest no closet" no meio da cena (às 15:41 ela usou isso na fala).
+Detalhe na Auditoria ("A recusa no meio do sexting").
