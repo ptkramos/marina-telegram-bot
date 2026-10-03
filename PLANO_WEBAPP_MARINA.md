@@ -766,7 +766,9 @@ conferir as barras do app contra o que ela sentia. Sem mudança de tela.
 Indo dormir) o Celular é "Pega após o banho", não "No bolso"; do banho até o passo da roupa o Por fora mostra
 "Enrolada na toalha" (sem a linha "Para"); quando o atraso é "Trocou de look", a roupa do Por fora troca de verdade
 naquela hora; "olhando o X" é celular "Na mão". Detalhe na Auditoria ("/feedback do soak de 02/10").
-/feedback antigo a conferir (frente de bugs): 27/09 01:58, card do "colocando pijama" com layout errado.
+/feedback antigo de 27/09 01:58 (card do "colocando pijama"): conferido em 03/10, já corrigido em 27/09 ("um card
+só") — o pijama ficava preso depois do fim do card; hoje o "Indo dormir" vai até ela deitar (noite de 02→03/10 bateu).
+Nada muda no Mini App (Auditoria, "Os dois /feedback antigos do item 25").
 **03/10 — frente da voz (item 25):** nada muda no Mini App. A voz dos áudios virou uma só (o clone original; no
 provocar e no sexting a mesma voz, um pouco mais devagar). Detalhe na Auditoria ("Voz do áudio e o lote dos /ruim").
 

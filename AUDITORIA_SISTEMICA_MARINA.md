@@ -2496,6 +2496,25 @@ Cada /feedback lido com conversa, mundo e log da hora (cópias no scratchpad da 
   reais; dois pendentes antigos (26/09 fundo do cômodo e looks em álbum; 27/09 card do pijama) ficam pra frente de
   bugs conferir.
 
+## Os dois /feedback antigos do item 25 (03/10, frente de bugs; sem código novo)
+- **26/09 03:59 "fundo do cômodo mudando entre fotos; looks não podem vir em álbum" — camada: foto.** Corrigido no
+  mesmo dia: `621e847` (opções de look uma por vez, a próxima 3–6 min depois, mesma seed) e `ea93bb5` (look no tripé
+  do closet, pose muda com o look). Prova de hoje: o diretor rodado pras opções 1 e 2 (cinco minutos de diferença, de
+  tarde e de noite) devolve o closet palavra por palavra igual (`apartamento.setting`, luz do ring light, que não
+  depende da hora); só a pose e a roupa mudam. Testes já existentes: `test_opcoes_de_look_uma_de_cada_vez`,
+  `test_looks_no_tripe_pose_muda_com_o_look`. Limite: o fluxo não rodou no uso real desde então (nenhum
+  `promessa_foto.looks` no journal) e, com pose diferente, o Krea 2 ainda pode desenhar o closet com pequenas
+  diferenças — acompanhar no soak quando ela mostrar looks.
+- **27/09 01:58 "card do colocando pijama com layout errado" — camada: mundo.** Na produção (world_state 194–210):
+  banho 00:31, outro 01:20 e outro 01:35 (o bug dos banhos repetidos, item 2 da seção 5), reinícios às 01:54 e 02:12,
+  e "se arrumando pra dormir (colocando pijama)" das 01:28 às 02:32, depois do fim do card da saída — a aba caía fora
+  da etapa com um passo de preparo. Corrigido em `73de304` (27/09 01:54, "um card só"). Prova de hoje: o caso
+  reconstruído (rolê do Quartinho, banho de chegada 00:31–01:12, cama 01:30) no Mini App local dá "Indo dormir" com
+  banho → maquiagem → pijama; e na noite de 02→03/10, com o código no ar, os 8 retratos do preparo (00:14–00:44)
+  batem com o card recalculado numa cópia do banco na VPS, e o pijama vira "dormindo" às 00:49. O "volta de passo"
+  daquela noite (00:39) é o item 24, aberto na frente do mundo.
+- Na tabela `feedbacks` os dois continuam `pendente` até o OK do Patrick pra escrever na produção.
+
 
 ## Voz do áudio e o lote dos /ruim de 02/10 (03/10, frente da voz; FRENTES item 25)
 - **19:52 "a voz está variando muito e perdendo a naturalidade" — camada: motor de voz.** Eram **dois clones

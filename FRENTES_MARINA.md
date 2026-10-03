@@ -629,9 +629,18 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       - Anotados pro "enxugar VOZ" depois do soak: 053, 054, 056, 058 (reações a elogio repetitivas/formais); 063
         erro de leitura da conversa, sem padrão.
     - **Ideia → depois do soak:** 30/09 mais bebidas nos pedidos, vinho no mercado, Marina bêbada.
-    - No banco: os 9 corrigidos marcados `resolvido` (03/10, OK do Patrick). **Pendentes antigos a conferir (frente de
-      bugs, OK do Patrick):** 26/09 03:59 fundo do cômodo mudando entre fotos e looks mandados em álbum (trocar de roupa
-      leva minutos); 27/09 01:58 card do "colocando pijama" com layout errado. Ver se já foram resolvidos; se sim, marcar.
+    - No banco: os 9 corrigidos marcados `resolvido` (03/10, OK do Patrick).
+    - ✅ **Pendentes antigos (conferidos em 03/10, frente de bugs; sem código novo):**
+      - 26/09 03:59 fundo do cômodo mudando e looks em álbum — corrigido em 26/09 (`621e847`: uma opção por vez,
+        a próxima 3–6 min depois, mesma seed; `ea93bb5`: tripé do closet). Conferido: as duas opções saem com o
+        closet palavra por palavra igual no prompt (só pose e roupa mudam). Ainda não exercitado no uso real (o log
+        não tem `promessa_foto.looks` desde então); o desenho da imagem pode variar um pouco com a pose. Camada: foto.
+      - 27/09 01:58 card do "colocando pijama" — naquela noite o mundo ficou em "colocando pijama" de 01:28 a 02:32,
+        depois de três banhos (00:31, 01:20, 01:35) e reinícios, e o card da saída já tinha acabado. Corrigido em
+        27/09 01:54 (`73de304`, "um card só", item 2 desta seção). Conferido: o mesmo caso com o código de hoje dá o
+        card "Indo dormir" (banho → maquiagem → pijama) e, na noite de 02→03/10, os 8 retratos do preparo (00:14–00:44)
+        batem com o card e o pijama vira dormindo em 5 min. Camada: mundo.
+      - **No banco ainda `pendente`:** marcar `resolvido` é escrita na produção e ficou pro OK do Patrick nesta conversa.
 
 **Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo). Pra leitura do dia 5: /ruim 065
 ("o tempo sem personalidade") e "tenho um compromisso de manhã" repetido às 09:29–09:30 de 03/10.
