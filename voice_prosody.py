@@ -110,10 +110,13 @@ def render_voice(display_text, policy, capabilities, *, max_sound_tags=None):
         else:
             render = LAUGH_PATTERN.sub('',render)
     if policy.pause_profile!='none' and capabilities.supports_pause_tags and len(render.split())>=7:
-        # One pause at a natural sentence boundary, never after a fixed word.
-        match = re.search(r'(?<=[.!?…])\s+',render)
-        if match:
-            duration = .30 if policy.pause_profile=='casual' else .35
+        # Pauses at natural sentence boundaries, never after a fixed word. 03/10 (Patrick, voz única): when she
+        # teases or in sexting she drags a little — up to two pauses (.35 then .30), as in the P2 test he picked.
+        durations = (.35, .30) if policy.pause_profile=='provocar' else (.30 if policy.pause_profile=='casual' else .35,)
+        for duration in durations:
+            match = re.search(r'(?<=[.!?…])\s+(?!<#)',render)
+            if not match:
+                break
             render = render[:match.start()] + f' <#{duration:.2f}#> ' + render[match.end():]
     if not capabilities.supports_pause_tags:
         render=PAUSE_PATTERN.sub(' ',render)

@@ -2496,3 +2496,43 @@ Cada /feedback lido com conversa, mundo e log da hora (cópias no scratchpad da 
   reais; dois pendentes antigos (26/09 fundo do cômodo e looks em álbum; 27/09 card do pijama) ficam pra frente de
   bugs conferir.
 
+
+## Voz do áudio e o lote dos /ruim de 02/10 (03/10, frente da voz; FRENTES item 25)
+- **19:52 "a voz está variando muito e perdendo a naturalidade" — camada: motor de voz.** Eram **dois clones
+  diferentes** (`voice_d91c…`, dataset de 1m43s, no perfil `conversational`; `voice_73e7…`, dataset de 3 min, no
+  `intimate`) e o `VoiceRouter` trocava de clone a cada áudio pela intenção/tom do planner. Em 02/10: 13:04 conversa,
+  14:13 e 14:35 íntima, 15:07–19:51 conversa. Medido nos arquivos que ficaram em `temp_audio/` da VPS (tom por
+  autocorrelação, script no scratchpad): conversa ~205–235 Hz, íntima ~250–258 Hz e bem mais baixa — com o mesmo texto,
+  211–216 × 258 Hz, uns 3,5 semitons: outra pessoa. Dentro da conversa a emoção `surprised` (15:34) também subia o tom.
+  **Ouvido com o Patrick** (13 áudios de teste, centavos na Novita): mistura de timbres (`timbre_weights` 70/30 e
+  50/50 — a Novita mistura de verdade, 242 Hz) e o modo provocar com `voice_modify` (intensity/timbre/pitch) + 0.88
+  soaram "extremamente artificiais". A voz que ele reconhece é o demo de 15/09 (`temp_audio/marina_clone_demo.mp3`, a
+  prévia da clonagem do `voice_73e7`); com a mesma frase do demo (transcrita pelo Gemini) ele escolheu o **v1 a 1.0**,
+  e pro provocar o **P2** (a mesma voz a 0.95, pausas onde a frase fecha). Os modelos antigos (`speech-02-hd`, 2.6)
+  não existem mais na Novita (404).
+  **Agora:** uma voz só — os dois perfis usam `voice_73e7…` (`voice_profile._voice_id`; `NOVITA_VOICE_ID_INTIMATE`
+  saiu do config e dos `.env`); o perfil `intimate` é o modo provocar: velocidade 0.95 e `pause_profile='provocar'`
+  (até duas pausas, .35 e .30, `voice_prosody.render_voice`; aplicado em `VoiceEngine.synthesize`). O sexting de
+  verdade (`IntimacyTurn` ativo/clímax) também vai no modo provocar, mesmo em pergunta (`VoiceSelectionContext.sexting`,
+  motivo `sexting`). A emoção do MiniMax ficou (o Patrick não decidiu; recomendação era manter). O preflight do soak
+  não exige mais perfis distintos.
+- **/ruim 057 e 066 "eu sabia que era boa" (o 066 com "ordinaries") — camada: resposta à reação.** Os dois vieram de
+  `handle_reaction` depois de 🤣 (02/10 15:11 e 03/10 09:28), não do turno: o modelo não sabia em qual balão ele
+  riu, o pedido dizia "sem 'sabia que você ia rir'" (o exemplo negativo puxava o "sabia que"), a fala não passava por
+  `limpar_fala_marina` e não entrava em `conversas`. Agora ela recebe o balão (`ULTIMAS_MENSAGENS_MARINA` pelo
+  `message_id`) e a conversa (`with_history`), sem frase proibida citada; a fala sai limpa e vai pro histórico; balão
+  que não está entre os últimos guardados → silêncio (antes respondia às cegas ou com o fixo "kkkk né amor").
+  "ordinaries" sai da fala junto com o "vele".
+- **/ruim 059 "Tenho sim, amor, e já tomei banho tb kkk" (pergunta era dinheiro) — camada: prompt.** O
+  `[BANHO — FATO]` fica até 8 h no prompt e virava assunto. Agora diz que fora da pergunta dele não é assunto.
+- **23:34 "como foi o dia hoje, mas devagar" → o dia em 7 balões — camada: prompt.** Pedido de contar "devagar / com
+  calma / aos poucos / por partes" leva `[DEVAGAR]`: só o começo, um ou dois balões, e espera ele puxar
+  (`chat_naturalness.contar_devagar_hint`). "De manhã eu acordei de manhã" era o mesmo resumo apressado.
+- **Anotados, sem código (crítica geral, vão pro "enxugar VOZ" depois do soak):** 053 reações a provocação "porcas e
+  repetitivas", 054 "gosto quando você gosta", 056 "plano de elogio bem convincente" (formal), 058 "a ideia é boa, a
+  fala tem de ser mais natural e enxuta". 063 (23:39, "vc n muda de assunto" → "tô presa nesse vestidinho"): erro de
+  leitura da conversa, sem padrão pra corrigir; o "vele" já saía. Todos já estão na antibiblioteca (66 exemplos no
+  prompt).
+- **Pra leitura do dia 5 (03/10):** /ruim 065 "o tempo tá completamente sem personalidade" (09:26) e "Hoje tenho um
+  compromisso de manhã" / "Sim, tenho compromisso de manhã" (09:29–09:30), vago e repetido quando ele perguntou.
+- **Testes:** `tests/test_soak_voz_0210.py` (+9), `test_voice_router` (0.95 e mesma voz).

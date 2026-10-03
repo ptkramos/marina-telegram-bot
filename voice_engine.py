@@ -14,6 +14,7 @@ import asyncio
 import base64
 import subprocess
 import requests
+from dataclasses import replace
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -37,7 +38,7 @@ TEMP_AUDIO_DIR.mkdir(exist_ok=True)
 class VoiceEngine:
     def __init__(self):
         self.novita_api_key = os.getenv("NOVITA_API_KEY", "").strip()
-        self.novita_voice_id = os.getenv("NOVITA_VOICE_ID", "voice_d91c415d-f6a2-4d6f-b32c-aacfd5ad2e39").strip()
+        self.novita_voice_id = os.getenv("NOVITA_VOICE_ID", "voice_73e73b73-65be-4cf9-9ab6-35d84f1946a3").strip()
         self.novita_voice_model = os.getenv("NOVITA_VOICE_MODEL", "speech-2.8-hd").strip()
 
         self.eleven_api_key = os.getenv("ELEVENLABS_API_KEY", "").strip()
@@ -389,6 +390,9 @@ class VoiceEngine:
             if not hasattr(self, '_last_prosody_tag'):
                 self._last_prosody_tag = None
             prosody = select_voice_prosody(clean_text,response_policy,last_sound_tag=self._last_prosody_tag)
+            if selected_profile.name == PROFILE_INTIMATE:
+                # 03/10: a mesma voz, arrastando um pouco (velocidade do perfil + pausas onde a frase fecha).
+                prosody = replace(prosody, pause_profile='provocar')
             voice_plan = render_voice(clean_text,prosody,capabilities_for('novita',self.novita_voice_model))
             clean_text = voice_plan.render_text
             self._last_prosody_tag = '(chuckle)' if '(chuckle)' in clean_text else None

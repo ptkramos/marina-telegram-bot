@@ -557,8 +557,9 @@ def limpar_fala_marina(texto: str) -> str:
     t = re.sub(r'\(\s*(No áudio|No audio|Na voz|Com voz|voz manhosa)[^)]*\)', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\*[^*]+\*', '', t)
     t = re.sub(r'#{2,}', '', t)                     # soak, dia 2 (30/09, 15:14): "Mas tô treinando com você, vai###"
-    # soak, dia 4 (02/10, 20:30 e 23:39): "vacilei feio vele", "tô presa nesse vestidinho mesmo vele"
-    t = re.sub(r'[ \t]*\bvele\b', '', t, flags=re.IGNORECASE)
+    # soak, dia 4 (02/10, 20:30 e 23:39): "vacilei feio vele", "tô presa nesse vestidinho mesmo vele"; dia 5 (03/10,
+    # 09:28, /ruim 066): "eu sabia que era boa ordinaries"
+    t = re.sub(r'[ \t]*\b(?:vele|ordinaries)\b', '', t, flags=re.IGNORECASE)
     t = _pontuacao_de_chat(t)
     # Remove qualquer parêntese residual explicativo no final da mensagem
     t = re.sub(r'\s*\([^)]*\)\s*$', '', t)
@@ -1369,43 +1370,37 @@ async def handle_reaction(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info("reaction.verbal_reply skipped reason=cooldown")
         return
 
-    speech_prompt: str | None = None
-    fallback: str = ""
-    if heart_hit and random.random() < settings.REACT_TO_HEART_REACTION_CHANCE:
-        speech_prompt = (
-            "Patrick acabou de reagir com coração numa mensagem sua. Mande UMA frase "
-            "curta e viva de namorada — sem 'ai amor', sem 'me derrete toda', "
-            "sem clichê. Pode ser um beicinho verbal, um comentário leve ou um agrado "
-            "curto. Máximo 8 palavras."
-        )
-        fallback = "vi seu coração aí 🥺"
-    elif fire_hit and random.random() < settings.REACT_TO_FIRE_REACTION_CHANCE:
-        speech_prompt = (
-            "Patrick reagiu com 🔥 numa foto/mensagem sua. Mande UMA frase curta, "
-            "maliciosa e natural — sem 'gostou do que viu', sem 'ficou louco por mim'. "
-            "Um mini-provoco de namorada. Máximo 8 palavras."
-        )
-        fallback = "kkkk safado"
-    elif laugh_hit and random.random() < settings.REACT_TO_LAUGH_REACTION_CHANCE:
-        speech_prompt = (
-            "Patrick reagiu 😂 numa mensagem sua. Mande UMA frase curta rindo junto "
-            "— sem 'sabia que você ia rir', sem repetir a piada. Máximo 6 palavras."
-        )
-        fallback = "kkkk né amor"
+    # Soak, dia 4–5 (/ruim 057 e 066): "eu sabia que era boa" duas vezes, a 2ª com "ordinaries" no fim. Ela respondia
+    # sem saber EM QUAL balão ele reagiu, o "sem 'sabia que você ia rir'" puxava justamente o "sabia que", a fala não
+    # passava pela limpeza e não ia pro histórico. Agora ela lê o balão e a conversa; sem o balão, absorve em silêncio.
+    if heart_hit:
+        sorteio, emoji, jeito = settings.REACT_TO_HEART_REACTION_CHANCE, "um coração", "um carinho curto de volta"
+    elif fire_hit:
+        sorteio, emoji, jeito = settings.REACT_TO_FIRE_REACTION_CHANCE, "🔥", "uma provocação curta de volta"
+    else:
+        sorteio, emoji, jeito = settings.REACT_TO_LAUGH_REACTION_CHANCE, "risada", "rindo junto, puxando o assunto do balão"
+    if random.random() >= sorteio:
+        return   # resposta verbal não sorteada desta vez: absorve em silêncio
 
-    if speech_prompt is None:
-        # Verbal reply not drawn this time — pure silent absorb.
+    balao = next((m.get("text") for m in reversed(ULTIMAS_MENSAGENS_MARINA.get(chat_id, []))
+                  if m.get("message_id") == reaction_update.message_id), None)
+    if not balao:
+        logger.info("reaction.verbal_reply skipped reason=balao_desconhecido message_id=%s", reaction_update.message_id)
         return
-
+    speech_prompt = (
+        f"Patrick reagiu com {emoji} a este balão seu: «{balao}». Responda como na conversa, com {jeito}, "
+        "sobre o que esse balão dizia. UMA frase curta, no máximo 8 palavras, sem explicar a reação."
+    )
     try:
-        fala = generate_dynamic_speech(speech_prompt, max_tokens=40) or fallback
+        fala = await asyncio.to_thread(generate_dynamic_speech, speech_prompt, 40, with_history=True)
     except Exception as exc:
         logger.warning(f"reaction.verbal_reply generate_fail exc={exc}")
-        fala = fallback
-
+        return
+    fala = limpar_fala_marina(fala or "")
     if fala:
         _record_verbal_reply_to_reaction(chat_id)
         await send_human_messages(chat_id, context.bot, fala)
+        memory_manager.registrar_mensagem_assistente(fala)
 
 # --- BUFFER INTELIGENTE DE DIGITAÇÃO (DEBOUNCE ANTI-ATROPELO) ---
 
@@ -3617,6 +3612,10 @@ async def process_incoming_batch(
                 "role": "system",
                 "content": TURN_CONSTRAINTS['photo_request'],
             })
+    from chat_naturalness import contar_devagar_hint
+    devagar_hint = contar_devagar_hint(texto_usuario)
+    if devagar_hint:
+        messages.append({"role": "system", "content": devagar_hint})
     # Ela conta do dia dela sem esperar o Patrick perguntar (chat_naturalness).
     if (not pediu_foto and not pediu_audio and intimacy_turn.state == "off"
             and not reminder_decision_instruction):
@@ -3971,7 +3970,8 @@ async def process_incoming_batch(
                 tone=plan.get("tone", "") if plan else "",
                 emotional_state=_emotional_state_for_voice(),
                 user_text=texto_usuario,
-                is_proactive=False
+                is_proactive=False,
+                sexting=intimacy_turn.state in ("active", "climax"),
             )
             if settings.VOICE_PROSODY_ENABLED:
                 audio_path = await voice_engine.synthesize(fala_limpa, context=voice_ctx, response_policy=response_policy)

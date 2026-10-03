@@ -37,8 +37,6 @@ def main():
     for key in ('NOVITA_API_KEY', 'FERIADOS_API_KEY'):
         if not getattr(settings, key, None):
             errors.append(f'Credencial ausente: {key}')
-    if settings.NOVITA_VOICE_ID_CONVERSATIONAL == settings.NOVITA_VOICE_ID_INTIMATE:
-        errors.append('Os dois perfis de voz precisam ser distintos.')
     if settings.PROMPT_CONTROL_LANGUAGE not in ('en', 'pt-BR'):
         errors.append("PROMPT_CONTROL_LANGUAGE deve ser 'en' ou 'pt-BR'; a saída para o usuário continua pt-BR.")
     if settings.MARINA_OUTPUT_LANGUAGE != 'pt-BR':

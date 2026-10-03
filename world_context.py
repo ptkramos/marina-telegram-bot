@@ -584,8 +584,11 @@ class WorldContextBuilder:
         if volta and volta.end > fim:
             return (f"[BANHO — FATO] Seu último banho foi das {ini:%H:%M} às {fim:%H:%M}, antes de sair. Você "
                     f"voltou pra casa às {volta.end:%H:%M} e ainda NÃO tomou banho desde que voltou.")
+        # Soak, dia 4 (02/10, 19:40, /ruim 059): "Tem dinheiro pra curtir bem?" → "Tenho sim, amor, e já tomei banho
+        # tb kkk" — o fato servia pra pergunta dele e virou assunto puxado do nada.
         return (f"[BANHO — FATO] Você já tomou banho{cabelo}: das {ini:%H:%M} às {fim:%H:%M} ({ha}). "
-                "Se o Patrick perguntar se você já tomou banho, a resposta é sim.")
+                "Se o Patrick perguntar se você já tomou banho, a resposta é sim. Fora disso, não é assunto: não "
+                "mencione o banho sem ele ter tocado no tema.")
 
     def _energy(self) -> float:
         from world_state import current_energy

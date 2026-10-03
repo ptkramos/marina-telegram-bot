@@ -156,17 +156,16 @@ class Settings:
     ELEVENLABS_VOICE_ID: str = os.getenv("ELEVENLABS_VOICE_ID", "").strip()
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
     GEMINI_VOICE_NAME: str = os.getenv("GEMINI_VOICE_NAME", "Leda").strip()
-    NOVITA_VOICE_ID: str = os.getenv("NOVITA_VOICE_ID", "voice_d91c415d-f6a2-4d6f-b32c-aacfd5ad2e39").strip()
+    NOVITA_VOICE_ID: str = os.getenv("NOVITA_VOICE_ID", "voice_73e73b73-65be-4cf9-9ab6-35d84f1946a3").strip()
     NOVITA_VOICE_MODEL: str = os.getenv("NOVITA_VOICE_MODEL", "speech-2.8-hd").strip()
 
-    # Adaptive Dual Voice (Release 3.5.2)
+    # Perfis de voz (3.5.2). 03/10: uma voz só (o clone original); o perfil íntimo é o modo provocar da mesma voz.
     DUAL_VOICE_ENABLED: bool = os.getenv("DUAL_VOICE_ENABLED", "true").lower() in ("true", "1", "yes")
-    NOVITA_VOICE_ID_CONVERSATIONAL: str = os.getenv("NOVITA_VOICE_ID_CONVERSATIONAL", "voice_d91c415d-f6a2-4d6f-b32c-aacfd5ad2e39").strip()
-    NOVITA_VOICE_ID_INTIMATE: str = os.getenv("NOVITA_VOICE_ID_INTIMATE", "voice_73e73b73-65be-4cf9-9ab6-35d84f1946a3").strip()
+    NOVITA_VOICE_ID_CONVERSATIONAL: str = os.getenv("NOVITA_VOICE_ID_CONVERSATIONAL", "voice_73e73b73-65be-4cf9-9ab6-35d84f1946a3").strip()
     VOICE_ALLOW_CROSS_PROFILE_FALLBACK: bool = os.getenv("VOICE_ALLOW_CROSS_PROFILE_FALLBACK", "false").lower() in ("true", "1", "yes")
     NOVITA_CONVERSATIONAL_SPEED: float = float(os.getenv("NOVITA_CONVERSATIONAL_SPEED", "1.00"))
     NOVITA_CONVERSATIONAL_PITCH: int = int(os.getenv("NOVITA_CONVERSATIONAL_PITCH", "0"))
-    NOVITA_INTIMATE_SPEED: float = float(os.getenv("NOVITA_INTIMATE_SPEED", "0.96"))
+    NOVITA_INTIMATE_SPEED: float = float(os.getenv("NOVITA_INTIMATE_SPEED", "0.95"))
     NOVITA_INTIMATE_PITCH: int = int(os.getenv("NOVITA_INTIMATE_PITCH", "0"))
 
     MEMORY_CONSOLIDATION_ENABLED: bool = os.getenv("MEMORY_CONSOLIDATION_ENABLED", "true").lower() in ("true", "1", "yes")

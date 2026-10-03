@@ -341,6 +341,21 @@ def mensagem_cruzada_hint(baloes: list, chegou_em) -> str:
             "repita nem conte de novo: reaja curto ou siga do ponto em que parou.")
 
 
+# Soak, dia 4 (02/10, 23:34): "Então fala pro seu namorado, como foi o dia hoje, mas devagar" → o dia inteiro em 7
+# balões, e ele teve de pedir "começa pela manhã". Devagar é por partes: ela conta o começo e espera ele puxar.
+_DEVAGAR_RE = re.compile(r"\b(?:devagar(?:zinho)?|com calma|aos poucos|por partes|uma coisa de cada vez|"
+                         r"passo a passo|sem pressa)\b", re.IGNORECASE)
+_CONTAR_RE = re.compile(r"\b(?:conta|conte|contar|me fala|fala|me diz|explica|narra|descreve)\b", re.IGNORECASE)
+
+
+def contar_devagar_hint(texto: str) -> str:
+    """Ele pediu pra ela contar algo devagar: só a primeira parte nesta resposta."""
+    if not texto or not (_DEVAGAR_RE.search(texto) and _CONTAR_RE.search(texto)):
+        return ""
+    return ("[DEVAGAR] Ele pediu pra você contar devagar, por partes. Nesta resposta conte só o começo (uma parte, "
+            "um ou dois balões) e pare ali; o resto vem quando ele puxar ou reagir.")
+
+
 def drop_repeated_ideas(reply: str, previous: Iterable[str]) -> str:
     """Tira da resposta o pedaço (frase ou trecho entre vírgulas) que repete uma ideia.
     Se não sobra fala, devolve a resposta como estava."""

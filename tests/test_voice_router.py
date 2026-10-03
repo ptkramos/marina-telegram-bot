@@ -168,8 +168,9 @@ class TestVoiceRouter(unittest.TestCase):
         self.assertIn("voice_", conv.voice_id)
 
         self.assertEqual(intim.name, PROFILE_INTIMATE)
-        self.assertEqual(intim.speed, 0.96)
-        self.assertIn("voice_", intim.voice_id)
+        self.assertEqual(intim.speed, 0.95)
+        # 03/10: uma voz só — o perfil íntimo é o modo provocar da mesma voz.
+        self.assertEqual(intim.voice_id, conv.voice_id)
 
 
 class TestVoiceEngineExpressionTagsAndFallback(unittest.IsolatedAsyncioTestCase):

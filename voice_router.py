@@ -5,6 +5,7 @@ Mapeia deterministicamente o contexto conversacional, intenção do Planner,
 estado emocional e pedidos explícitos para o perfil vocal adequado:
 - Conversational (padrão natural)
 - Intimate (dengosa / sensual / romântica)
+Desde 03/10 os dois perfis são a MESMA voz; o Intimate só arrasta um pouco (modo provocar/sexting, voice_profile).
 
 Regras Centrais:
 1. Lembretes sempre em voz Conversational.
@@ -61,6 +62,7 @@ class VoiceSelectionContext:
     source: str = ""
     time_of_day: str = ""
     is_reminder: bool = False
+    sexting: bool = False    # 03/10: sexting rolando (IntimacyTurn ativo/clímax) — provoca mesmo em pergunta
 
 
 class VoiceRouter:
@@ -88,6 +90,7 @@ class VoiceRouter:
                 source=context.get("source", ""),
                 time_of_day=context.get("time_of_day", ""),
                 is_reminder=context.get("is_reminder", False),
+                sexting=context.get("sexting", False),
             )
         else:
             ctx = context
@@ -109,6 +112,11 @@ class VoiceRouter:
         if RE_EXPLICIT_INTIMATE.search(user_text):
             logger.info("🎙️ Voice Router: perfil 'intimate' selecionado (motivo: explicit_manhosa_override).")
             return get_intimate_profile(), "explicit_manhosa_override"
+
+        # 2b. Sexting rolando de verdade: o modo provocar vale pra qualquer fala dela, inclusive pergunta.
+        if ctx.sexting:
+            logger.info("🎙️ Voice Router: perfil 'intimate' selecionado (motivo: sexting).")
+            return get_intimate_profile(), "sexting"
 
         # 3. Situação de Apoio Emocional / Dia Difícil (sempre Conversational com tom suave)
         if intent in ("support_needed", "support", "empathy", "comfort") or RE_SUPPORT_KEYWORDS.search(user_text):

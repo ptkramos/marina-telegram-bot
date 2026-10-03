@@ -4,10 +4,9 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 03/10/2026, manhã (/feedback de 02/10 lidos e corrigidos — seção 5, item 25: não responde mais no
-banho, foto e Pix esperam como mensagem, toalha depois do banho, troca de look de verdade, mensagem cruzada, Pix com o
-combinado, "Kkkkk" no começo). **Próxima conversa: frente da voz — a voz do áudio variando (ouvir junto) e o lote dos
-/ruim de 02/10** (item 25, "Aberto"). **Soak: dia 1 = terça 29/09**; depois: "bora no soak, dia 5" no domingo de manhã
+_Atualizado em 03/10/2026, fim da manhã (frente da voz, item 25 fechado: uma voz só nos áudios, escolhida de
+ouvido; resposta à reação lê o balão; banho não vira assunto; "conta devagar" por partes). **Próxima conversa:
+"bora no soak, dia 5"** no domingo de manhã. **Soak: dia 1 = terça 29/09**
 (relatório `soak/dia-2026-10-03.md`, com `chat.enviado` e `photo_director.cena` a partir do deploy; sábado tem Quartinho de
 novo com a Júlia e o convite da Bia). Aberto pra frente do mundo: o preparo pra dormir que volta de passo._
 
@@ -205,6 +204,10 @@ conversa]`) e aviso "desde a sua última mensagem antes da pausa" (fim do assunt
 dele não vai mais duas vezes pro modelo; auditoria do prompt (FATOS, nomes de código, Instagram de ontem; log
 `prompt.payload` por turno pro relatório do soak); fotos e áudios pela trava do chat; promessa de foto decidida com
 ele (banho/aula esperam, sai quando ela olha o celular, "quando eu chegar" segue a chegada, vencida vira dívida 12 h).
+
+**Pronto (03/10, item 25 — conserto do soak):** **uma voz só nos áudios** (o clone original do demo de 15/09; ao
+provocar e no sexting a mesma voz a 0.95 com pausas), escolhida de ouvido pelo Patrick; resposta à reação dele lê o
+balão e vai pro histórico; banho não vira assunto; "conta devagar" por partes.
 
 **Próximo (depois do soak):** coerência entre turnos e iniciativas (PLANO_VOZ 12, /bom e /ruim); técnicas antigas
 (PLANO_VOZ 13); enxugar VOZ/LINHAS DURAS/RITMO com comparação antes × depois (auditoria do prompt manteve).
@@ -616,17 +619,22 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
     - ✅ **Voz:** 19:48 Pix sem contexto (= /ruim 061) — o Pix lê o que ele acabou de combinar; 14:34 "Kkkkk" no começo
       — no máximo 1 a cada 5 respostas.
     - ✅ **App (texto):** 01/10 23:14 "olhando o X" com "No bolso" — o `' x '` do jogo na TV pegava o X; agora "Na mão".
-    - **Aberto (voz):** 19:52 "a voz está variando muito e perdendo a naturalidade" — ouvir junto antes de mexer (os
-      perfis `conversational` e `intimate` do MiniMax se alternam por turno). E o lote dos /ruim de 02/10 (053, 054,
-      056–059, o contexto da 063; 053 e 058 são crítica geral), mais os 9 balões pra quem pediu "devagar" e "De manhã
-      eu acordei de manhã" (23:34).
+    - ✅ **Voz (03/10, frente da voz)** — `tests/test_soak_voz_0210.py` (+9). Detalhe na Auditoria ("Voz do áudio e o
+      lote dos /ruim de 02/10").
+      - 19:52 "a voz está variando muito": eram dois clones (o íntimo ~3,5 semitons mais agudo) trocando a cada áudio.
+        Ouvido junto: **uma voz só**, o clone original a 1.0 (o do demo de 15/09); provocando e no sexting a mesma
+        voz a 0.95 com pausas (P2). Mistura de timbres e `voice_modify` soaram artificiais.
+      - /ruim 057 e 066 "eu sabia que era boa (ordinaries)": a resposta à reação dele agora lê o balão e a conversa,
+        sai limpa e vai pro histórico; sem o balão, silêncio. 059 banho puxado do nada; "conta devagar" por partes.
+      - Anotados pro "enxugar VOZ" depois do soak: 053, 054, 056, 058 (reações a elogio repetitivas/formais); 063
+        erro de leitura da conversa, sem padrão.
     - **Ideia → depois do soak:** 30/09 mais bebidas nos pedidos, vinho no mercado, Marina bêbada.
     - No banco: os 9 corrigidos marcados `resolvido` (03/10, OK do Patrick). **Pendentes antigos a conferir (frente de
       bugs, OK do Patrick):** 26/09 03:59 fundo do cômodo mudando entre fotos e looks mandados em álbum (trocar de roupa
       leva minutos); 27/09 01:58 card do "colocando pijama" com layout errado. Ver se já foram resolvidos; se sim, marcar.
 
-**Abertos:** a voz do áudio e o lote dos /ruim (item 25, frente da voz); o preparo pra dormir que volta de passo
-(item 24, frente do mundo).
+**Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo). Pra leitura do dia 5: /ruim 065
+("o tempo sem personalidade") e "tenho um compromisso de manhã" repetido às 09:29–09:30 de 03/10.
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** congelada até o soak fechar (freio, seção 0); foto errada no uso real é bug do soak

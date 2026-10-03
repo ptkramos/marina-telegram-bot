@@ -1421,3 +1421,12 @@ lote dos /ruim. Detalhe na Auditoria ("/feedback do soak de 02/10"). /feedback a
 26/09, fundo do cômodo mudando entre fotos e looks mandados em álbum.
 O relatório do soak passou a mostrar o que ela sentia de hora em hora e o que pesou em cada decisão — pra conferir se a
 fala bate com o sentimento (ex.: 02/10, 00:30, "carinhosa 0,88" só por ele perguntar do banho).
+
+**03/10 — voz do áudio e o lote dos /ruim de 02/10 (frente da voz; item 25):** **uma voz só.** Os áudios
+alternavam entre dois clones (o "íntimo" ~3,5 semitons mais agudo e sussurrado); ouvido com o Patrick, ficou o clone
+original (`voice_73e7…`, o do demo de 15/09) a 1.0, e quando ela provoca ou no sexting a mesma voz a 0.95 com
+pausas onde a frase fecha (mistura de timbres e `voice_modify` soaram artificiais). Resposta à reação dele (🤣, ❤️,
+🔥) agora sabe a qual balão ele reagiu, vê a conversa, sai limpa e entra no histórico (/ruim 057 e 066, "eu sabia
+que era boa"); o banho não vira assunto sem ele perguntar (059); "conta devagar" é por partes. 053, 054, 056 e 058
+(reações a elogio repetitivas, formais) ficam pro "enxugar VOZ" depois do soak. Detalhe na Auditoria ("Voz do áudio
+e o lote dos /ruim de 02/10").
