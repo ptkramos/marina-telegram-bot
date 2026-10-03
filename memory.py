@@ -53,7 +53,7 @@ class MemoryManager:
         return u_id
 
     def registrar_mensagem_assistente(self, bot_msg: str, *, is_initiative: bool = False,
-                                       model: Optional[str] = None) -> int:
+                                       model: Optional[str] = None, media_type: str = "text") -> int:
         """Persist an assistant utterance after Telegram confirms delivery.
 
         `model` records which LLM produced the text (Patch 018 — auditoria).
@@ -67,7 +67,7 @@ class MemoryManager:
             except Exception:
                 model = None
         return self.db.adicionar_mensagem(
-            role="assistant", content=bot_msg, is_initiative=is_initiative, model=model)
+            role="assistant", content=bot_msg, is_initiative=is_initiative, model=model, media_type=media_type)
 
     def get_historico_recente(self, limit: int = 10) -> list[dict]:
         """Retorna as últimas N mensagens do banco para alimentar o chat ativo."""

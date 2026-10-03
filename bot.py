@@ -549,6 +549,7 @@ def limpar_fala_marina(texto: str) -> str:
     t = texto or ""
     t = re.sub(r'\*?\s*\[MANDAR_AUDIO\]\s*\*?', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\*?\s*\[AUDIO\]\s*\*?', '', t, flags=re.IGNORECASE)
+    t = re.sub(r'\[áudio\]\s*', '', t, flags=re.IGNORECASE)    # marca do histórico (context_builder.MARCA_AUDIO_DELA)
     t = re.sub(r'\[APAGAR_ANTERIOR\]', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\s*\[FOTO\]\s*', ' ', t, flags=re.IGNORECASE)
     t = re.sub(r'\[CORRIGIR_ANTERIOR:\s*.*?\]', '', t, flags=re.DOTALL | re.IGNORECASE)
@@ -4039,19 +4040,21 @@ async def process_incoming_batch(
     # 3. `record_actual_latency` estava dentro do `elif`, então a latência real
     #    só era medida no caminho ao vivo. Entregas de batch — exatamente as que
     #    mais interessam para calibrar latência humana — ficavam fora da amostra.
+    # Soak, dia 5 (03/10, 13:41): o áudio ia pro histórico como texto e ela negou que tinha mandado.
+    midia_dela = "voice" if audio_enviado and not notice_text else "text"
     if pending_batch_id:
         if sent_mid:
             if availability_service.repo.mark_sent(pending_batch_id, sent_message_id=sent_mid):
                 memory_manager.db.adicionar_mensagem(
                     role='assistant', content=notice_text or fala_limpa or resposta_marin,
-                    model=turn_model)
+                    model=turn_model, media_type=midia_dela)
                 if plan and u_id is not None:
                     planner.apply_plan_effects(plan, conversation_id=u_id)
         else:
             logger.warning('Pending batch %s had no confirmed Telegram message ID', pending_batch_id)
     elif sent_mid:
         memory_manager.registrar_mensagem_assistente(
-            notice_text or fala_limpa or resposta_marin, model=turn_model)
+            notice_text or fala_limpa or resposta_marin, model=turn_model, media_type=midia_dela)
         if plan and u_id is not None:
             planner.apply_plan_effects(plan, conversation_id=u_id)
     if sent_mid and fala_limpa:

@@ -772,6 +772,9 @@ Nada muda no Mini App (Auditoria, "Os dois /feedback antigos do item 25").
 **03/10 — frente da voz (item 25):** nada muda no Mini App. A voz dos áudios virou uma só (o clone original; no
 provocar e no sexting a mesma voz, um pouco mais devagar). Detalhe na Auditoria ("Voz do áudio e o lote dos /ruim").
 
+**03/10, tarde — "Eu nem mandei áudio!" (frente de bugs):** nada muda no Mini App. O áudio dela passa a ser gravado
+como áudio na conversa (ela lembra que mandou; o relatório do soak conta os áudios).
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

@@ -643,6 +643,15 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
         batem com o card e o pijama vira dormindo em 5 min. Camada: mundo.
       - **No banco ainda `pendente`:** marcar `resolvido` é escrita na produção e ficou pro OK do Patrick nesta conversa.
 
+26. **Teste ao vivo, sábado 03/10 (dia 5), à tarde — frente de bugs**
+    - ✅ **13:42 "Eu nem mandei áudio!"** — no sexting ela mandou um áudio de vontade própria (13:41:18, log
+      `chat.enviado tipo=audio`, sorteio dos 6%); ele falou do áudio e ela negou. A fala do áudio ia pro banco como
+      texto (`media_type='text'`) e o histórico nem lia a coluna. Agora grava `voice` e, no prompt, a fala dela que
+      saiu por voz leva `[áudio]` (o banco guarda o texto limpo; marca copiada é limpa antes de sair). O relatório
+      do soak, que já contava áudios por `media_type`, passa a contá-los. Camada: fala (histórico).
+      `tests/test_soak_audio_0310.py` (+5). No banco (OK do Patrick): a linha 1122 (o áudio das 13:41) virou `voice`;
+      original em `soak/originais-2026-10-03-audio-1122.json` na VPS.
+
 **Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo). Pra leitura do dia 5: /ruim 065
 ("o tempo sem personalidade") e "tenho um compromisso de manhã" repetido às 09:29–09:30 de 03/10.
 

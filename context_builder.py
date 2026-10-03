@@ -32,6 +32,12 @@ MAX_TOTAL_CONTEXT_CHARS = 64000
 # depois de uma pausa leva a hora e o tamanho da pausa (só nas dele: nas dela o modelo copiaria o formato).
 PAUSA_NO_HISTORICO = timedelta(minutes=20)
 
+# Soak, dia 5 (03/10, 13:41): ela mandou áudio de vontade própria ("O drama meu pai kkkkkk…") e, quando o Patrick
+# falou do áudio, respondeu "Eu nem mandei áudio!" — no histórico a fala era texto igual às outras. A fala que saiu
+# por voz leva a marca (o banco guarda o texto limpo, com media_type='voice'); se o modelo copiar a marca na
+# resposta, limpar_fala_marina tira.
+MARCA_AUDIO_DELA = "[áudio]"
+
 
 def _duracao(d: timedelta) -> str:
     minutos = int(d.total_seconds() // 60)
@@ -59,6 +65,8 @@ def marcar_pausas(history: List[Dict]) -> List[Dict[str, str]]:
             quando = f"{ts:%d/%m, %H:%M}" if ts.date() != inicio.date() else f"{ts:%H:%M}"
             content = f"[{quando} — depois de {_duracao(pausa)} sem conversa] {content}"
             pausa = None
+        if item.get("role") == "assistant" and item.get("media_type") in ("voice", "audio"):
+            content = f"{MARCA_AUDIO_DELA} {content}"
         if ts:
             anterior = ts
         out.append({"role": item["role"], "content": content})

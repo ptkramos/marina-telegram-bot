@@ -1431,3 +1431,7 @@ pausas onde a frase fecha (mistura de timbres e `voice_modify` soaram artificiai
 que era boa"); o banho não vira assunto sem ele perguntar (059); "conta devagar" é por partes. 053, 054, 056 e 058
 (reações a elogio repetitivas, formais) ficam pro "enxugar VOZ" depois do soak. Detalhe na Auditoria ("Voz do áudio
 e o lote dos /ruim de 02/10").
+
+**03/10, tarde — "Eu nem mandei áudio!" (frente de bugs, teste ao vivo):** o áudio que ela manda entra no histórico
+como áudio (`[áudio]` antes da fala, só no prompt). Antes ia como texto e, quando o Patrick falou do áudio das 13:41,
+ela negou ter mandado. Detalhe na Auditoria ("Eu nem mandei áudio!").

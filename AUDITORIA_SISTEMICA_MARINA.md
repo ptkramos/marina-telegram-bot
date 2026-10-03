@@ -2555,3 +2555,19 @@ Cada /feedback lido com conversa, mundo e log da hora (cópias no scratchpad da 
 - **Pra leitura do dia 5 (03/10):** /ruim 065 "o tempo tá completamente sem personalidade" (09:26) e "Hoje tenho um
   compromisso de manhã" / "Sim, tenho compromisso de manhã" (09:29–09:30), vago e repetido quando ele perguntou.
 - **Testes:** `tests/test_soak_voz_0210.py` (+9), `test_voice_router` (0.95 e mesma voz).
+
+## "Eu nem mandei áudio!" (03/10, tarde; frente de bugs, teste ao vivo do dia 5)
+
+- **13:41:18, no sexting, ela mandou um áudio de vontade própria** ("O drama meu pai kkkkkk… vem cá receber um
+  chamego"; `chat.enviado tipo=audio`, sorteio dos 6% com tesão 0,55). 13:42:32 ele: "Mds tu não imagina como esse
+  audio me deixou agr"; 13:42:45 ela: "Que áudio, Patrick? Ficou doido de vez? Eu nem mandei áudio!". **Camada: fala
+  (histórico).** Mundo e envio certos; o turno gravava a fala do áudio em `conversas` como texto
+  (`media_type='text'`) e `get_mensagens_recentes` nem lia a coluna — pro modelo, ela tinha digitado.
+- **Correção:** o turno grava `media_type='voice'` quando o que saiu foi áudio (os dois caminhos, ao vivo e lote
+  pendente; `registrar_mensagem_assistente` ganhou `media_type`). `get_mensagens_recentes` devolve `media_type` e
+  `marcar_pausas` põe `[áudio]` na fala dela que saiu por voz — vale pro turno e pras falas geradas com histórico
+  (iniciativa, reação). O banco guarda o texto limpo (relatório e observadores leem o `content`); `[áudio]` copiado
+  pelo modelo sai em `limpar_fala_marina` (não vira pedido de áudio). Efeito no relatório do soak: os áudios dela
+  passam a ser contados (já contava por `media_type`, e dava 0).
+- **Testes:** `tests/test_soak_audio_0310.py` (+5).
+

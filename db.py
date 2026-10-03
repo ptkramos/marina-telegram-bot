@@ -520,13 +520,14 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, timestamp, role, content FROM conversas
+                SELECT id, timestamp, role, content, media_type FROM conversas
                 ORDER BY id DESC LIMIT ?
                 """,
                 (limit,)
             )
             rows = cursor.fetchall()
-            return [{"id": r["id"], "timestamp": r["timestamp"], "role": r["role"], "content": r["content"]}
+            return [{"id": r["id"], "timestamp": r["timestamp"], "role": r["role"], "content": r["content"],
+                     "media_type": r["media_type"]}
                     for r in reversed(rows)]
 
     def get_conversas_desde(self, since_id: int = 0, limit: int = 50) -> list[dict]:
