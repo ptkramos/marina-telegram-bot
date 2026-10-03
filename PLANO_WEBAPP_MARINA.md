@@ -774,6 +774,7 @@ provocar e no sexting a mesma voz, um pouco mais devagar). Detalhe na Auditoria 
 
 **03/10, tarde — "Eu nem mandei áudio!" (frente de bugs):** nada muda no Mini App. O áudio dela passa a ser gravado
 como áudio na conversa (ela lembra que mandou; o relatório do soak conta os áudios).
+Às 14:16, a fala em laço dentro da mesma resposta passa a ser cortada; nada muda no Mini App.
 
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):

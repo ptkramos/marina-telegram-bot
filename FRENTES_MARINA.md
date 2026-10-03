@@ -651,6 +651,13 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       do soak, que já contava áudios por `media_type`, passa a contá-los. Camada: fala (histórico).
       `tests/test_soak_audio_0310.py` (+5). No banco (OK do Patrick): a linha 1122 (o áudio das 13:41) virou `voice`;
       original em `soak/originais-2026-10-03-audio-1122.json` na VPS.
+    - ✅ **14:16 "né?- Juntos há 14 meses e 5 dias" ×3** — a resposta que esperou o banho (13:56–14:13) saiu pelo modelo
+      principal e entrou em laço dentro da própria resposta; a frase não existe no prompt nem no banco. Nada barrava
+      eco dentro da mesma resposta (`repeated_run` só olha as falas anteriores). Agora `cortar_eco`: trecho de 4+
+      palavras repetido na mesma resposta → ela termina antes da primeira vez (log `chat.eco_interno`). Varredura
+      nas 571 falas dela no banco: só esse caso cortaria. Camada: fala (modelo). `tests/test_soak_eco_0310.py` (+4).
+      **Pergunta pra frente da voz:** no banho de 20 min o tesão caiu de 0,28 e o modo íntimo desligou; a resposta
+      do "nem precisa se vestir" foi pelo modelo principal, não pelo do sexting.
 
 **Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo). Pra leitura do dia 5: /ruim 065
 ("o tempo sem personalidade") e "tenho um compromisso de manhã" repetido às 09:29–09:30 de 03/10.

@@ -1435,3 +1435,6 @@ e o lote dos /ruim de 02/10").
 **03/10, tarde — "Eu nem mandei áudio!" (frente de bugs, teste ao vivo):** o áudio que ela manda entra no histórico
 como áudio (`[áudio]` antes da fala, só no prompt). Antes ia como texto e, quando o Patrick falou do áudio das 13:41,
 ela negou ter mandado. Detalhe na Auditoria ("Eu nem mandei áudio!").
+Às 14:16 a resposta que esperou o banho entrou em laço ("né?- Juntos há 14 meses e 5 dias" três vezes): frase que
+se repete dentro da mesma resposta agora é cortada (`cortar_eco`). Pra decidir: o modo íntimo desligou durante o
+banho, no meio do sexting.

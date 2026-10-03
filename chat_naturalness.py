@@ -194,6 +194,36 @@ def repeated_run(reply: str, previous: Iterable[str], *, min_words: int = REPEAT
     return None
 
 
+# Soak, dia 5 (03/10, 14:16): a resposta adiada do banho saiu "…sem condição de voltar pro quarto, né?- Juntos há
+# 14 meses e 5 dias.- Juntos há 14 meses e 5 dias.- Juntos há 14 meses e 5 dias" — o modelo entrou em laço dentro da
+# própria resposta. `repeated_run` só compara com as falas anteriores. Trecho de 4+ palavras que se repete na mesma
+# resposta: ela termina antes da primeira vez.
+ECO_MIN_WORDS = 4
+_ECO_SPLIT_RE = re.compile(r"(?<=[.!?…])[ \t]*-?[ \t]*|\n+|(?<=[.!?…])-")
+
+
+def cortar_eco(reply: str, *, min_words: int = ECO_MIN_WORDS) -> Optional[tuple[str, str]]:
+    """(resposta cortada, trecho repetido) quando uma frase se repete na própria resposta; None se não há eco ou se
+    não sobra fala antes dela."""
+    text = reply or ""
+    spans, pos = [], 0
+    for m in _ECO_SPLIT_RE.finditer(text):
+        spans.append((pos, m.start()))
+        pos = m.end()
+    spans.append((pos, len(text)))
+    vistos = {}
+    for ini, fim in spans:
+        chave = tuple(_norm_words(text[ini:fim]))
+        if len(chave) < min_words:
+            continue
+        if chave in vistos:
+            primeira = vistos[chave]
+            cortada = re.sub(r"[\s\-–—,;:]+$", "", text[:primeira])
+            return (cortada, " ".join(chave)) if _norm_words(cortada) else None
+        vistos[chave] = ini
+    return None
+
+
 def _clauses(text: str) -> list[str]:
     # "…" no meio da fala também separa ("...sabotando… então vou cobrar")
     parts = re.split(r"(?<=[.!?…])\s+|\n+|…\s*", text)

@@ -3769,7 +3769,11 @@ async def process_incoming_batch(
     try:
         from chat_naturalness import (repeated_run, drop_repeated, repetition_constraint,
                                       thin_vocative, strip_closing_periods, drop_repeated_ideas,
-                                      abbreviate)
+                                      abbreviate, cortar_eco)
+        eco = cortar_eco(resposta_marin)
+        if eco:
+            logger.warning("chat.eco_interno cut=%r", eco[1])      # aparece nos avisos do relatório do soak
+            resposta_marin = eco[0]
         anteriores = [m["content"] for m in memory_manager.db.get_mensagens_recentes(limit=16)
                       if m["role"] == "assistant"][-6:]
         run = repeated_run(resposta_marin, anteriores)

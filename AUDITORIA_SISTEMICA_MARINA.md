@@ -2570,4 +2570,12 @@ Cada /feedback lido com conversa, mundo e log da hora (cópias no scratchpad da 
   pelo modelo sai em `limpar_fala_marina` (não vira pedido de áudio). Efeito no relatório do soak: os áudios dela
   passam a ser contados (já contava por `media_type`, e dava 0).
 - **Testes:** `tests/test_soak_audio_0310.py` (+5).
+- **14:16, a resposta adiada do banho em laço — camada: fala (modelo).** Ele (13:56): "quando voltar não precisa nem
+  se vestir"; banho 13:56–14:13, lote 86 adiado (`in_shower_until_dressed`), entregue 14:16 por `openai/gpt-5.6-luna`
+  (o tesão estava em 0,28 às 13:55 e caiu no banho: modo íntimo desligado). Saiu "…voltar pro quarto, né?- Juntos há
+  14 meses e 5 dias." três vezes; a frase não está no prompt, no código nem no banco. `chat_naturalness.cortar_eco`:
+  trecho de 4+ palavras repetido dentro da mesma resposta → corta antes da primeira vez (antes do `repeated_run`,
+  log `chat.eco_interno`); sem fala antes do eco, não mexe. Varredura nas 571 falas dela na produção: só a das 14:16.
+  `tests/test_soak_eco_0310.py` (+4). Aberto pra frente da voz: o modo íntimo desligar durante o banho no meio do
+  sexting.
 
