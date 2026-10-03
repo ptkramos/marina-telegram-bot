@@ -2437,4 +2437,11 @@ com o mundo em casa, "banho tomado" sem banho desde a volta, e o passeio do Milo
   O relatório traz agora a seção "/feedback do Patrick", com o mundo daquela hora e a fala dela antes, e o roteiro diz
   que cada um é bug a investigar. Lista e situação no FRENTES, seção 5, item 25 (1 resolvido no item 24, 5 graves,
   3 de voz, 1 de texto do app, 1 ideia pra depois do soak).
+- **Por dentro e decisões no relatório (03/10, o Patrick: "não lê nenhum sentimento").** Seção "Por dentro, de
+  hora em hora": `EmotionEngine(db).feeling(at)` na cópia do banco pra cada hora (energia, `mood_words`, fome, libido,
+  horas dormidas, desconforto e o porquê, fase do ciclo, episódios ≥ 0,15 com a causa). Seção "Decisões dela e o que
+  pesou": `agenda_viva_json.decisoes` (vontade × peso, vai/não vai) com os fatores de `Disposicao.avaliar(tipo, em)`
+  refeitos na hora da decisão, os itens de `hoje` com motivo e os acontecimentos de agenda/vontade/atraso. ~46 s a mais
+  na VPS. Limite: a bateria social é só o valor atual (`estado_emocional`), sem histórico; o `appraise_world` refeito
+  depois pode diferir do que ela sentiu ao vivo.
 

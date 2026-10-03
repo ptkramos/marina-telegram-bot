@@ -759,6 +759,8 @@ série da noite são dois itens, cada um na sua hora; num rolê com comida não 
 tempo" (a comida de lá é o jantar). Sem tela nova. Detalhe na Auditoria ("Soak, dia 4 da tarde em diante").
 Pendentes do app vindos do /feedback (FRENTES, item 25): no Bastidores, "olhar redes sociais" com "celular no bolso";
 secando o cabelo com a roupa da academia (ali é toalha); atraso "por trocar de look" e o Por fora com a mesma roupa.
+O relatório do soak mostra o por dentro de hora em hora (o mesmo que a aba Por dentro deveria mostrar) — serve pra
+conferir as barras do app contra o que ela sentia. Sem mudança de tela.
 
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):

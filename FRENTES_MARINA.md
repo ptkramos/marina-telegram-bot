@@ -53,6 +53,13 @@ dos relatórios de 04/10 em diante); "O Patrick estranhou" com a fala dela antes
 verdade com o que veio depois; exceção de handler não cai mais em "rede" (o BadRequest do /ruim 055 caía); e o que
 a leitura de 03/10 achou à mão: compra num lugar com ela em casa, "se divertindo" em casa, "banho tomado" sem
 banho desde a volta. Rodado no 02/10: pega as duas fotos que falharam, 3 dos 6 graves da noite e a caipirinha.
+Ainda em 03/10 (o Patrick: "não lê nenhum sentimento pra saber por que a Marina toma as decisões que toma"): seções
+**/feedback do Patrick**, **Por dentro, de hora em hora** (energia, humor, fome, tesão, sono, desconforto, ciclo e os
+sentimentos com a causa — o mesmo `EmotionEngine.feeling` que decide a agenda, refeito pra cada hora) e **Decisões
+dela e o que pesou** (vontade × peso de cada saída/compromisso, a favor e contra pelo `Disposicao.avaliar` daquela
+hora, mais vontades, remarcações, convites e atrasos com o motivo). A bateria social não tem histórico no banco
+(só o valor de agora) — lacuna anotada. Pistas já no 02/10: "carinhosa 0,88" às 00:30 porque ele perguntou do banho;
+a dor de cabeça das 18:30 não aparece entre os pesos da saída.
 **Placar:** dia 1 (ter 29/09) — 5 graves (lugar dela errado depois da aula e a fala seguindo, plantão "de amanhã",
 "boa noite" de manhã no banho), 2 médios, 4 textos feios; corrigidos em 30/09 (seção 5, item 19). Dia 2 (qua 30/09), manhã, antes daquele
 deploy — "alucinada": [ELE ESTÁ DOENTE] com a pergunta dele, "dia livre" com ela faltando, check-in do peso dela,

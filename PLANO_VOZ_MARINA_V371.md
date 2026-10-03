@@ -1410,3 +1410,5 @@ se ele perguntar; a desculpa fixa do microfone virou fala dela. /ruim 059–064 
 ("Leitura do soak melhorada + Soak, dia 4 da tarde em diante").
 Pendentes de voz vindos do /feedback (FRENTES, item 25): Pix sem olhar o contexto da conversa, a mania de começar
 com "Kkkkk", a voz do áudio variando e perdendo naturalidade; e o lote dos /ruim de 02/10 (053, 054, 056–059, 061).
+O relatório do soak passou a mostrar o que ela sentia de hora em hora e o que pesou em cada decisão — pra conferir se a
+fala bate com o sentimento (ex.: 02/10, 00:30, "carinhosa 0,88" só por ele perguntar do banho).

@@ -711,6 +711,67 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
                          f" (o último banho foi {'às ' + _hm(ult_banho) if ult_banho else 'antes do dia'}, antes de sair;"
                          f" voltou às {_hm(max(voltas))})")
 
+    # --- por dentro: o que ela sentia, de hora em hora, e por que decidiu o que decidiu -----------
+    # Soak, dia 4 (03/10, Patrick): "não lê nenhum sentimento pra saber por que a Marina toma as decisões que toma".
+    # O mesmo `feeling` que a agenda viva usa, refeito pra cada hora (a cópia do banco aceita a reconstrução).
+    por_dentro, decisoes_linhas = [], []
+    try:
+        from emotion import EmotionEngine
+        eng = EmotionEngine(db)
+        for h in range(24):
+            at = ini + timedelta(hours=h, minutes=30)
+            if at > datetime.now():
+                break
+            try:
+                f = eng.feeling(at)
+            except Exception as exc:
+                por_dentro.append(f"**{_hm(at)}** (erro: {type(exc).__name__})")
+                continue
+            sent = ", ".join(f"{ep.word} {ep.intensity:.2f} ({_curto(ep.cause, 50)})" for ep in f.episodes
+                             if ep.intensity >= 0.15)
+            partes = [f"energia {f.energy:.2f}", f"humor {eng.mood_words(f.valence, f.arousal)}",
+                      f"fome {f.hunger:.2f}", f"tesão {f.libido:.2f}"]
+            if f.hours_slept is not None:
+                partes.append(f"dormiu {f.hours_slept:.1f} h")
+            if f.discomfort >= 0.15:
+                partes.append(f"desconforto {f.discomfort:.2f} ({f.discomfort_why})")
+            if f.cycle_phase:
+                partes.append(f"ciclo {f.cycle_phase}")
+            por_dentro.append(f"**{_hm(at)}** " + ", ".join(partes) + (f"; sentindo: {sent}" if sent else ""))
+    except Exception as exc:
+        por_dentro.append(f"(o por dentro deu erro: {type(exc).__name__}: {_curto(str(exc), 120)})")
+    try:
+        from agenda_viva import Disposicao, KEY as AV_KEY
+        av = json.loads(db.get_estado_relacional(AV_KEY) or "{}")
+        disp = Disposicao(db)
+        tipos = {"milo": "milo", "gym": "academia", "outing": "role", "aula": "aula", "mercado": "mercado_semana"}
+        for key, d in sorted(av.get("decisoes", {}).items(), key=lambda kv: kv[1].get("em", "")):
+            em = _dt(d["em"]) if d.get("em") else None
+            if not em or not (ini <= em < fim):
+                continue
+            tipo = tipos.get(key.split(":")[0], key.split(":")[0])
+            try:
+                aval = disp.avaliar(tipo, em)
+                contra = [t for _, t, dv in sorted(aval.fatores, key=lambda x: x[2]) if dv < 0][:3]
+                favor = [t for _, t, dv in sorted(aval.fatores, key=lambda x: -x[2]) if dv > 0][:3]
+            except Exception:
+                contra = favor = []
+            decisoes_linhas.append(
+                f"**{_hm(em)}** {key}: {'vai' if d.get('vai') else 'não vai'} (vontade {d.get('vontade', 0):.2f} × peso "
+                f"{d.get('peso', 0):.2f})" + (f"; a favor: {', '.join(favor)}" if favor else "")
+                + (f"; contra: {', '.join(contra)}" if contra else ""))
+        for it in av.get("hoje", []):
+            em = _dt(it["em"]) if it.get("em") else None
+            if em and ini <= em < fim:
+                decisoes_linhas.append(f"**{_hm(em)}** {it.get('tipo')}: {_curto(it.get('texto', ''), 120)}"
+                                       + (f" — motivo: {it['motivo']}" if it.get("motivo") else ""))
+    except Exception as exc:
+        decisoes_linhas.append(f"(as decisões deram erro: {type(exc).__name__}: {_curto(str(exc), 120)})")
+    for ev in eventos:
+        if ev["event_type"] == "agenda" or ev["title"] in ("vontade", "atraso", "provocando"):
+            decisoes_linhas.append(f"**{_hm(_dt(ev['event_at']))}** {ev['title']}: {_curto(ev['summary'], 160)}")
+    decisoes_linhas.sort()
+
     # foto pedida/prometida × foto que chegou (e o que foi no lugar)
     s_pedida = []
     fotos_at = [m["at"] for m in fotos_dela]
@@ -894,7 +955,9 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
          "3. Cada **erro de verdade**: seguir até o que ele recebeu no lugar (a linha já mostra o que veio depois).",
          "4. Conferir **fome** de hora em hora com o que ela comeu, **fotos pedidas** com as que chegaram e o "
          "**cenário** de cada foto com o lugar.",
-         "5. Bug novo que o script não pegou vira conferência nova aqui (com o caso real no teste).", "",
+         "5. Ler o **por dentro** (sentimentos, energia, sono, ciclo, tesão) e as **decisões** com o que pesou: cada "
+         "saída, falta, atraso ou recusa tem que fazer sentido pelo que ela sentia; e a fala dela também.",
+         "6. Bug novo que o script não pegou vira conferência nova aqui (com o caso real no teste).", "",
          "## Resumo", "",
          f"- Conversa: {dele} mensagens dele, {len(marina)} dela ({len(inic)} iniciativas, "
          f"{len(fotos_dela)} fotos, {n_audio} áudios)",
@@ -963,6 +1026,9 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
 
     L += ["## Aba Hoje (como ficou no fim do dia)", ""] + (hoje_linhas or ["_vazia_"]) + [""]
     secao("Fome de hora em hora (0 = satisfeita, 1 = morrendo de fome)", [", ".join(fome_linha)] if fome_linha else [])
+    secao("Por dentro, de hora em hora (o mesmo sentimento que decide a agenda dela; a bateria social não tem "
+          "histórico no banco)", por_dentro)
+    secao("Decisões dela e o que pesou (vontade × peso; a favor/contra pelo sentimento daquela hora)", decisoes_linhas)
     secao("Acontecimentos (life_events)", [
         f"**{_hm(_dt(e['event_at']))}** {e['event_type']}: {e['title']} ({_curto(e['summary'], 140)})" for e in eventos])
     secao("Fotos que ela mandou (com a roupa do mundo)", linhas_foto)
