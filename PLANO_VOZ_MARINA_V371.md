@@ -1451,3 +1451,12 @@ motivo pra largar a cena, e parar é pelo que ela sente (decisão do Patrick). E
 em casa: o mundo para de dizer "olhando o Pinterest no closet" no meio da cena (às 15:41 ela usou isso na fala).
 Detalhe na Auditoria ("A recusa no meio do sexting").
 No Hoje a linha é "Transou com o Patrick" (o "por mensagem" fica embaixo, pedido dele); a fala dela não muda.
+
+**03/10, noite — o sexting da Marina × o da Lilith (frente da voz, pedido do Patrick):** as duas no mesmo modelo
+(Gemini 3.8 Flash); a diferença estava no prompt e no caminho da resposta. No sexting a Marina mandava 2 a 3 vezes o
+texto da Lilith (até 8 balões), porque o modo íntimo subia o limite e o fatiador cortava nas vírgulas; e seguia uma
+fórmula (abre com "Nossa, Patrick…", devolve o que ele fez, conta no "eu ia…", fecha pedindo pra não parar). Agora o
+sexting tem ritmo próprio: curto, 1 a 3 balões, quebrando só onde ela pulou linha; ela fala no presente em vez de
+narrar, não repete a ação dele e varia começo e fim — sempre namorada, do jeito dela (decisão do Patrick: "ela é
+namorada ainda, não uma súcubo"). A reação dele com emoji no meio do sexting não vira mais um balão. Pra depois do
+soak: o modo íntimo enxuto (prompt sem o mundo inteiro e com o estado da cena). Detalhe na Auditoria.

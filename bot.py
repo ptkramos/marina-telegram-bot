@@ -1371,6 +1371,15 @@ async def handle_reaction(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not (heart_hit or fire_hit or laugh_hit):
         return
 
+    # 03/10 (sexting das 15:27): 🔥 no áudio dela virou um balão a mais pelo modelo do dia a dia ("não para agora,
+    # amor"), repetindo o que o áudio já dizia. No meio do sexting a reação dele é absorvida; a próxima fala dele segue.
+    try:
+        if IntimacyEngine(memory_manager.db).current().state in ("active", "climax"):
+            logger.info("reaction.verbal_reply skipped reason=sexting")
+            return
+    except Exception:
+        logger.exception("reaction.intimacy_check")
+
     # Default humano: absorver em silêncio.
     if not _reaction_verbal_reply_allowed(chat_id):
         logger.info("reaction.verbal_reply skipped reason=cooldown")
@@ -3520,11 +3529,11 @@ async def process_incoming_batch(
         availability_budget_hint=availability_budget_hint,
     )
     if intimacy_turn.expanded:
-        # Sexting não cabe em "1 a 2 frases curtas" nem em 95 tokens.
+        # 03/10 (sexting Marina × Lilith): com 420 caracteres e o ritmo "normal" ela mandava 180–284 caracteres em
+        # 4–8 balões por turno; a Lilith, no mesmo modelo, 54–118 em 2–3. Sexting é curto: ritmo próprio.
         response_policy = dataclasses.replace(
-            response_policy, mode="normal", verbosity="medium", cadence="flowing", target_bubbles=2,
-            soft_char_limit=max(response_policy.soft_char_limit, settings.RESPONSE_NORMAL_SOFT_CHARS),
-            reason_code="intimate_mode")
+            response_policy, mode="intimate", verbosity="low", cadence="brief", target_bubbles=2,
+            soft_char_limit=settings.RESPONSE_INTIMATE_SOFT_CHARS, reason_code="intimate_mode")
     messages[0]['content'] = apply_policy(messages[0]['content'], response_policy)
     # 25/09 (Patrick): na maioria das vezes "um balão com 2 a 3 palavras já resolve".
     from chat_naturalness import short_turn, SHORT_TURN_HINT

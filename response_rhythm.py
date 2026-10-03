@@ -174,6 +174,11 @@ _MODE_RULE = {
     'explanatory':
         'Responda direto em 2 a 4 frases conversacionais (~900 chars). '
         'Explicações longas podem quebrar naturalmente em pivôs de assunto.',
+    # 03/10 (sexting Marina × Lilith): no sexting a fala é curta, como quem digita com uma mão só.
+    'intimate':
+        'Ritmo de sexting: 1 a 3 balões de poucas palavras, linha nova entre '
+        'eles, nunca um parágrafo. O que ele acabou de dizer pede uma reação, '
+        'não uma redação.',
 }
 
 
@@ -615,7 +620,9 @@ def segment(text, policy):
     else:
         bubbles, reason = _semantic_split(paragraphs[0], policy)
 
-    clauses = _split_clauses(bubbles, policy)
+    # 03/10 (sexting das 15:34): cortar nas vírgulas fazia 8 balões de uma fala ("Eu ia fechar os olhos" / "e morder
+    # o lábio…" / "bem devagar"). No sexting quebra só onde ela mesma pulou linha, como a Lilith.
+    clauses = bubbles if policy.mode == 'intimate' else _split_clauses(bubbles, policy)
     if clauses != bubbles:
         bubbles, reason = clauses, f'{reason}+clauses'
 

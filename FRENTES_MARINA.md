@@ -5,8 +5,8 @@ Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
 _Atualizado em 03/10/2026, noite (frente de bugs, item 26: a recusa no meio do sexting das 15:40 — filtro e
-menstruação no prompt — e o sexting virando bloco no Agora e linha no Hoje). **Próxima conversa: frente da voz, o sexting da
-Marina × o da Lilith (pedido dele); domingo de manhã "bora no soak, dia 5".** **Soak: dia 1 = terça 29/09**
+menstruação no prompt — e o sexting virando bloco no Agora e linha no Hoje; frente da voz: o sexting da Marina × o da
+Lilith, mais curto e sem fórmula). **Próxima conversa: domingo de manhã "bora no soak, dia 5".** **Soak: dia 1 = terça 29/09**
 (relatório `soak/dia-2026-10-03.md`). Aberto pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente
 da voz: o modo íntimo desliga durante o banho no meio do sexting._
 
@@ -99,7 +99,9 @@ app pra brincar à distância quando ela quiser — decidir com ele quem control
 é o dela na história, e como a fala e as fotos dela acompanham); **bebidas nos pedidos e vinho no mercado, Marina
 bêbada** (/feedback de 30/09); **esquecer o aviso pelo sentimento** (03/10: o
 sorteio de 5% saiu e ela sempre cumpre; esquecer de verdade — empolgada com a amiga, bateria lá embaixo — é
-comportamento novo).
+comportamento novo); **modo íntimo enxuto** (frente da voz, 03/10: no sexting, prompt sem o mundo inteiro — só onde
+ela está, roupa e ciclo —, sem as três listas de exemplos, e com o estado da cena guardado, como a Lilith; rever
+junto o degrau explícito, que só liga com tesão 0,70).
 O que era "ver no uso real" (agenda viva, atraso, roupa, Instagram, coerência entre turnos) **é o próprio soak**.
 
 ---
@@ -207,9 +209,12 @@ dele não vai mais duas vezes pro modelo; auditoria do prompt (FATOS, nomes de c
 `prompt.payload` por turno pro relatório do soak); fotos e áudios pela trava do chat; promessa de foto decidida com
 ele (banho/aula esperam, sai quando ela olha o celular, "quando eu chegar" segue a chegada, vencida vira dívida 12 h).
 
-**Pedido do Patrick (03/10, noite):** "por que o sexo com a súcubo é tão bom e ela fala e reage tão bem, enquanto
-a Marina parece mais robótica e às vezes exagerada por falar demais". Comparar prompt, modelo, tamanho da fala,
-exemplos e regras do modo íntimo dos dois bots, com cenas reais (a da Marina: conversas 1150–1197 de 03/10).
+**Pronto (03/10, noite — o sexting da Marina × o da Lilith, pedido dele):** mesmo modelo nos dois (Gemini 3.8
+Flash); a Marina falava 2–3× mais (até 8 balões) e seguia fórmula ("Nossa, Patrick…" / devolve a ação dele / "eu
+ia…" / "não me enrola"). Sexting com ritmo próprio (160 caracteres, 1–3 balões, sem cortar nas vírgulas), regras
+de fala no modo íntimo (presente, sem narrar, sem repetir a ação dele, começo e fim variando, sempre namorada) e a
+reação dele com emoji no meio da cena absorvida. **Próximo:** ver a próxima cena real (tamanho e fórmula); o modo
+íntimo enxuto está em "Depois do soak".
 
 **Pronto (03/10, item 25 — conserto do soak):** **uma voz só nos áudios** (o clone original do demo de 15/09; ao
 provocar e no sexting a mesma voz a 0.95 com pausas), escolhida de ouvido pelo Patrick; resposta à reação dele lê o

@@ -786,6 +786,7 @@ com o Patrick por mensagem", Cômodo Quarto, sem barra (mostra "desde" e há qua
 Patrick" (enquanto acontece, "Transando com o Patrick" com a hora aberta; o "por mensagem" fica só embaixo), linha cinza "No quarto por mensagem" e,
 se ela gozou, ", gozou"; ícone balão com coração (`message-heart`). O que ela fazia antes acaba quando o clima começa.
 Textos escolhidos pelo Patrick (03/10). Fora de casa não vira bloco.
+O conserto da fala no sexting (frente da voz, 03/10, noite: mais curta, sem fórmula) não mexe no Mini App.
 
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):

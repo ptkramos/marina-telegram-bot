@@ -2612,3 +2612,31 @@ Cada /feedback lido com conversa, mundo e log da hora (cópias no scratchpad da 
   (`livre:<dia>:sN`, participantes Marina e Patrick, `share_worthy` 0 — foi com ele, não tem o que contar). Hoje:
   "Transou com o Patrick", "No quarto por mensagem, gozou", ícone `message-heart`; Agora sem barra.
   Textos do Patrick. Fora de casa (saída, refeição, banho) não vira bloco. `tests/test_soak_sexting_0310.py` (+11).
+
+### O sexting da Marina × o da Lilith (frente da voz, 03/10, noite)
+
+Pedido do Patrick: "por que com a súcubo ela fala e reage tão bem e a Marina parece robótica e às vezes exagerada por
+falar demais". Cena da Marina: conversas 1146–1196 (15:10–15:38) com `intimacy.turn`, `prompt.payload` e
+`response_policy.segmented` do log; cena da Lilith: `sucubo.db` 99–138 (14:44–16:18), só leitura.
+- **Mesmo modelo.** O `.env` da Lilith na VPS usa `google/gemini-3.8-flash` (raciocínio low) como principal e
+  `deepseek/deepseek-v4-pro` de reserva; desde 01/10, 2 recusas em 63 respostas. A diferença é toda prompt e caminho.
+- **Números por turno.** Lilith: prompt ~4k caracteres, resposta 54–118 caracteres em 2–3 balões. Marina: prompt ~34k
+  (system 19,5k + histórico 12,2k + dicas 2,4k), resposta 180–284 em 4–8 balões; 6 exemplos da biblioteca + 3 do
+  modo íntimo + 69 da antibiblioteca por turno.
+- **Falar demais — camada: ritmo.** O modo íntimo trocava a política por `normal` com 420 caracteres ("um pouco mais
+  de conteúdo… quantos a fala pedir") e o `_split_clauses` ainda cortava cada linha nas vírgulas (15:34: 4 linhas
+  viraram 8 balões). Agora o modo íntimo tem ritmo próprio, `mode="intimate"` com `RESPONSE_INTIMATE_SOFT_CHARS` (160;
+  teto ~112 tokens) e regra "1 a 3 balões de poucas palavras", e o fatiador no sexting quebra só onde ela pulou linha.
+- **Robótica — camada: prompt do modo íntimo.** A fórmula: "Nossa, Patrick/amor…" abrindo 6 de 27 turnos; a ação
+  dele devolvida com outras palavras ("Essas mordidinhas de leve no grelo me deixam…"); o "eu ia…" de quem conta
+  fantasia; e o fecho cobrando ("não me enrola", "cai de boca logo" duas vezes seguidas, "não me deixa esperando")
+  em 14 de 27, mesmo com ele já fazendo. O `_BAND_TEXT` explícito pedia "descreve o que faria". Agora `_RULES` diz:
+  curtinho, fala e não narra (presente, primeira pessoa, nunca condicional), não repete a ação dele nem pede o que já
+  está acontecendo, começo e fim variam, o nome dele só às vezes, e ela continua namorada (toma a frente, provoca,
+  ri, fala que ama — nada da súcubo submissa). Sem fala pronta no prompt.
+- **Resposta à reação — camada: chat.** 15:27: o 🔥 dele no áudio virou "não para agora, amor" pelo GPT Luna (o
+  `handle_reaction` não olhava o modo íntimo). No sexting ativo/clímax a reação é absorvida em silêncio.
+- **Depois do soak:** modo íntimo enxuto no formato da Lilith — prompt sem o mundo inteiro (só onde ela está, roupa,
+  ciclo), sem as 3 listas de exemplos, e estado da cena guardado (posição, o que já aconteceu). O tesão ficou em
+  0,46–0,66 até 15:25 com a cena já explícita (degrau `explicito` só a partir de 0,70): rever junto.
+`tests/test_sexting_curto_0310.py` (+7).
