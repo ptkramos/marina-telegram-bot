@@ -2578,4 +2578,4 @@ Cada /feedback lido com conversa, mundo e log da hora (cópias no scratchpad da 
   log `chat.eco_interno`); sem fala antes do eco, não mexe. Varredura nas 571 falas dela na produção: só a das 14:16.
   `tests/test_soak_eco_0310.py` (+4). Aberto pra frente da voz: o modo íntimo desligar durante o banho no meio do
   sexting.
-
+- **Arena Grok 4.3 × Gemini 3.8 Flash no sexting (03/10, pedido do Patrick; o Grok é o do outro bot dele):** 4 cenas íntimas, 1 rodada, ~US$ 0,30. Grok repetiu a si mesmo dentro da cena ("gemendo teu nome" 4x, "ai amor" abrindo o clímax todo), +50% de custo, 2x mais lento (7 s × 3,4 s), pede áudio quase toda fala. **Decisão do Patrick: fica o Gemini.** Resultados em `data/model_arena/grok43_vs_gemini`.

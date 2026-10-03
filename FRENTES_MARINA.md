@@ -658,6 +658,8 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       nas 571 falas dela no banco: só esse caso cortaria. Camada: fala (modelo). `tests/test_soak_eco_0310.py` (+4).
       **Pergunta pra frente da voz:** no banho de 20 min o tesão caiu de 0,28 e o modo íntimo desligou; a resposta
       do "nem precisa se vestir" foi pelo modelo principal, não pelo do sexting.
+    - Arena Grok 4.3 × Gemini 3.8 Flash no sexting (03/10, pedido do Patrick; o Grok é o do outro bot dele): 4 cenas íntimas, 1 rodada, ~US$ 0,30. Grok repetiu a si mesmo dentro da cena ("gemendo teu nome" 4x, "ai amor" abrindo o clímax todo), +50% de custo, 2x mais lento (7 s × 3,4 s), pede áudio quase toda fala.
+      **Decisão do Patrick: fica o Gemini.** Resultados em `data/model_arena/grok43_vs_gemini`.
 
 **Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo). Pra leitura do dia 5: /ruim 065
 ("o tempo sem personalidade") e "tenho um compromisso de manhã" repetido às 09:29–09:30 de 03/10.

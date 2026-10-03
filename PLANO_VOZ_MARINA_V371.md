@@ -1438,3 +1438,4 @@ ela negou ter mandado. Detalhe na Auditoria ("Eu nem mandei áudio!").
 Às 14:16 a resposta que esperou o banho entrou em laço ("né?- Juntos há 14 meses e 5 dias" três vezes): frase que
 se repete dentro da mesma resposta agora é cortada (`cortar_eco`). Pra decidir: o modo íntimo desligou durante o
 banho, no meio do sexting.
+Arena do Grok 4.3 no sexting (03/10): repetitivo, mais caro e mais lento que o Gemini; **fica o Gemini** (decisão do Patrick).
