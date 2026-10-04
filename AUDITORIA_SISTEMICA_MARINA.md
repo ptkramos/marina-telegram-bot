@@ -2763,3 +2763,13 @@ Completa, "De ensaio" → Profissional; cor das luzes é das pontas (Dourada, Pl
   do redesenho.
 - Ficou com "·" o que não era ficha "mudar": linhas do card fora de etapa (Ciclo "Dia 24 · TPM", Saúde, "Em casa ·
   Botafogo"), "Entrega rastreável •" do iFood (app de verdade).
+
+## Lovense, teste de fotos (04/10, noite, frente de imagens; sem código)
+
+Pesquisa pro depois do soak (FRENTES, "Depois do soak"). Nada mudou na produção. Decidido com o Patrick: dois
+brinquedos dela na história (Lush e Hush), rosa. 4 fotos adultas pelo Civitai (~100 Buzz, combinado antes), só
+por texto, porque não há LoRA de vibrador pro Krea 2. O Lush foi aprovado na 4ª foto. Texto, as quatro tentativas
+e a lição ("antena" não funciona, a comparação física sim) em PLANO_VOZ, "Fotos pelo Civitai". Achado de prompt que
+vale pro catálogo atual: "both hands free" junto com cada mão posicionada gerou três mãos (a pose
+`cama_tripe_duas_maos` tem esse texto, e as batidas dela somam as mãos posicionadas por cima, então o risco existe
+na produção; fica pra conferir nas fotos do soak e, se aparecer, corrigir como bug).

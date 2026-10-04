@@ -819,6 +819,8 @@ franja", "A cortar", "cerca de 3 semanas", Estado e "Feita em" nas unhas); Dinhe
 comprovantes "04 OUT 2026, 19:02" e "Itaú Unibanco S.A. (Personnalité)". Coluna do rótulo das linhas com 114 px.
 Detalhe e o que eu decidi sozinho na Auditoria ("Catálogo de textos, lote 2 aplicado").
 
+**04/10, noite — Lovense pelo Mini App (depois do soak), teste de fotos feito:** o controle no app ainda não existe (freio). A frente de imagens confirmou que a foto dá conta só pelo texto: os dois brinquedos dela (Lush e Hush, rosa), com o Lush aprovado. Detalhe em PLANO_VOZ, "Fotos pelo Civitai".
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que
