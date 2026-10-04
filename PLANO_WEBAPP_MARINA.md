@@ -913,6 +913,42 @@ manda uma mensagem a cada mexida na barra: fala quando sente diferença.
 **A decidir no código (texto interno, eu decido e listo):** a janela de juntar comandos, o ganho de tesão por nível,
 o gasto da bateria, quanto a confiança cai/sobe. Textos visíveis da tela passam por ele (catálogo).
 
+### Hoje com o bloco "Em casa" — plano (04/10, noite, frente de apps; sem código até o soak fechar) 📝
+Primeiro da frente de apps depois do soak. Base: respostas dele de 02/10 (`ideias_pos_soak/ideias/em_casa.json`: o
+bloco abre quando ela **chega** em casa e fecha quando ela **sai**; dentro, tudo o que ela faz **dentro do
+apartamento**; academia do prédio e descer com o Milo já são fora). Mockup com o Hoje real de 02 e 03/10 (tirado na
+VPS, cópia do banco em /tmp, só o JSON voltou). Decisões do Patrick, todas por múltipla escolha:
+
+- **Nome:** "Em casa" no passado; **"Está em casa"** enquanto ela está lá (como "Está no Quartinho").
+- **Linha cinza embaixo do nome:** quem estava junto, "Sozinha, com o Milo", "Com a Bia", "Com o Patrick".
+- **Visita:** embaixo do nome "Com a Bia"; "A Bia chegou" e "A Bia foi embora" viram linhas dentro do bloco. (O
+  mundo ainda não tem visita em casa — o desenho fica pronto pra quando tiver.)
+- **Virada de período (Manhã/Tarde/Noite): o bloco se parte**, e **as saídas passam a fazer o mesmo** (Patrick).
+  O pedaço que continua diz onde ela estava: **"Na academia"**, "No Quartinho com a Júlia", "Em casa" ("Foi para"
+  só no pedaço em que ela saiu). A linha cinza (motivo da saída, quem estava junto) **só no primeiro pedaço**.
+- **Aberto/fechado:** o bloco de agora aberto; os que acabaram fechados, "Em casa, 9 acontecimentos", com a hora
+  à direita, abrem ao tocar (como os períodos passados).
+- **Começo do dia:** o primeiro bloco começa quando ela acorda; **"Acordou" é a primeira linha dentro**.
+- **Saída curta parte o bloco sempre:** fora do apê é fora, até os 5 minutos da portaria (Milo na calçada, buscar
+  entrega). Picota, mas é fiel à regra.
+- **Previsto em cinza** (jantar, dormir) fica **dentro do bloco de agora**, no fim.
+- Dentro do bloco, cada linha mantém o ícone dela (TikTok, música, banho…); nos filhos das saídas segue sem ícone.
+
+**Plano de implementação (depois do soak):**
+1. `hoje.py` (`_hoje_view`): montar os intervalos dentro do apê como o complemento das saídas (incluindo "Desceu com
+   o Milo", hoje um item com filhos, e a portaria, se o mundo registrar; `delivery.py` grava `portaria:` no social),
+   do acordar até a próxima saída e de cada chegada (fim do "Voltou para casa") até a próxima; tudo o que não é saída
+   e cai no intervalo vira filho do bloco; previstos de casa entram no bloco de agora.
+2. Partir blocos e saídas na virada do período, com o nome de continuação ("Na/No/Em …", função nova ao lado de
+   `_foi`/`_para`), a linha cinza só no primeiro pedaço e o "Voltou para casa" no pedaço em que acontece.
+3. `webapp/app.js` + `app.css`: filhos com ícone no bloco de casa (grade de 3 colunas + ícone); bloco passado fechado
+   com "Em casa, N acontecimentos", lembrado como os `HOJE_ABERTOS` (chave = período + hora de início).
+4. Testes em `tests/test_hoje.py` (Acordou dentro, Milo parte, previsto dentro, virada parte bloco e saída, nome da
+   continuação, linha cinza só no 1º) e a conferência antigo × novo nos dias reais do soak, na VPS: todo item do
+   Hoje antigo aparece uma vez só no novo (nada some, nada duplica).
+5. Textos novos de tela pro catálogo: "Em casa", "Está em casa", "Em casa, N acontecimentos", "Sozinha, com o Milo",
+   "Com a Bia", "A Bia chegou", "A Bia foi embora", "Na academia" e as outras continuações.
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

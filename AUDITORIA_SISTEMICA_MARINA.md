@@ -2787,3 +2787,12 @@ plano". O que eu decidi sozinho: a forma do plano, os nomes dos avisos da tela (
 encerrou o controle", "Marina conectada/desconectada") e os nomes dos padrões (Pulso, Onda, Fogos, Terremoto) —
 rascunhos, passam pelo catálogo de textos. Achado: a foto normal vai pro Civitai sem `currencies` (só a adulta pede
 amarelo); quando o Buzz azul chegar, conferir na frente de imagens que a normal gasta o azul.
+
+## Bloco "Em casa" do Hoje, plano (04/10, noite, frente de apps; sem código)
+
+Só planejamento. Mockup com o Hoje real de 02 e 03/10, tirado na VPS (cópia em /tmp/emcasa, apagada no fim; só o
+JSON voltou). Decisões do Patrick no PLANO_WEBAPP, "Hoje com o bloco Em casa — plano"; a novidade que vai além do
+bloco: **as saídas também se partem na virada do período**, com "Na academia" na continuação. O que eu decidi
+sozinho: ícones dentro do bloco de casa (nas saídas os filhos seguem sem), a chave de lembrar o bloco aberto, a
+linha cinza com todos que passaram por lá quando a visita chega no segundo pedaço. Achado: o mundo não tem visita em
+casa (`social_day.py`), então "Com a Bia" só aparece quando isso existir.

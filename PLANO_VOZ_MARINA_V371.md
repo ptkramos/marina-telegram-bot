@@ -89,6 +89,9 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
 
+**04/10, noite — bloco "Em casa" do Hoje planejado (frente de apps, sem código):** só tela (o Hoje não entra no
+prompt dela); nada muda na voz. Plano no PLANO_WEBAPP, "Hoje com o bloco Em casa — plano".
+
 **01/10, noite — catálogo de textos, lote 1 (frente de apps):** Hoje e card do Agora com os textos decididos pelo
 Patrick. Nada do que ela lê mudou, fora o passo "chamando o Uber" e o "(fictícia)" que saiu do nome da agência no
 "se arrumando pra sair pra…". O celular da tela ("Na mão", "No bolso"…) é só tradução: `bot._celular_na_mao`

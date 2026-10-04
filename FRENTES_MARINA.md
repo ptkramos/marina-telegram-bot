@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 04/10/2026, noite (Lovense planejado na frente de apps: decisões, mockup e plano de implementação no PLANO_WEBAPP, "Lovense pelo Mini App — plano"; sem código).
+_Atualizado em 04/10/2026, noite (planejados na frente de apps, sem código: o Lovense e o bloco "Em casa" do Hoje — decisões e plano no PLANO_WEBAPP).
 **Próximas conversas: segunda de manhã, "bora no soak, dia 6"** (relatório `soak/dia-2026-10-04.md`; atenção: em 04/10 ela topou o Lovense na conversa, mas o mundo não tem o
 brinquedo — se ela disser que está usando, é incoerência a anotar; nas fotos da pose do tripé, conferir se sai mão a mais — ver Auditoria, "Lovense, teste de fotos"). **Soak: dia 1 = terça 29/09.** Aberto
 pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente da voz: o modo íntimo desliga durante o banho
@@ -216,9 +216,10 @@ círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
 **Próximo:**
 0. **Depois do soak, o primeiro:** Hoje com bloco "Em casa" — o que ela faz em casa (celular, belisco, mensagens,
    closet…) aninhado num bloco com hora e cômodo, como as saídas já são (esboço de 30/09, com TikTok, chocolate,
-   manicure marcada e Bia dentro). A decidir linha a linha: **o nome do bloco** (não é "Ficou em casa", Patrick
-   30/09 — só rascunho do esboço) e os textos; onde o bloco começa e termina; se banho, Milo na calçada, refeições,
-   sessão de trabalho e o íntimo entram dentro ou ficam fora.
+   manicure marcada e Bia dentro). **Planejado (04/10, noite) ✅:** "Em casa"/"Está em casa", quem estava junto
+   embaixo, bloco e saídas se partem na virada do período ("Na academia" na continuação), passados fechados, Acordou
+   dentro, saída curta parte, previsto dentro — PLANO_WEBAPP, "Hoje com o bloco Em casa — plano". Código depois do
+   soak: "bora na frente de apps: bloco Em casa".
 1. Instagram no uso real: o próximo post de rolê da noite (luz e cabelo) e os textos ao vivo (tipo por pessoa, sem molde).
 2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
 3. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).
