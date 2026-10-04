@@ -5,7 +5,7 @@ Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
 _Atualizado em 04/10/2026, noite (teste de fotos do Lovense feito na frente de imagens — Lush aprovado só por texto, ~100 Buzz; sem código; detalhe no PLANO_VOZ, "Fotos pelo Civitai").
-**Próxima conversa: segunda de manhã, "bora no soak, dia 6"** (relatório `soak/dia-2026-10-04.md`; atenção: em 04/10 ela topou o Lovense na conversa, mas o mundo não tem o
+**Próximas conversas: segunda de manhã, "bora no soak, dia 6"**; e, quando der, na frente de apps, "bora na frente de apps: planejar o Lovense" (só plano e mockup, sem código) (relatório `soak/dia-2026-10-04.md`; atenção: em 04/10 ela topou o Lovense na conversa, mas o mundo não tem o
 brinquedo — se ela disser que está usando, é incoerência a anotar; nas fotos da pose do tripé, conferir se sai mão a mais — ver Auditoria, "Lovense, teste de fotos"). **Soak: dia 1 = terça 29/09.** Aberto
 pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente da voz: o modo íntimo desliga durante o banho
 no meio do sexting; ela sumir 2h30 depois de "vou te prender aqui a tarde toda" (M4 do dia 5); o Silo (M5)._
@@ -88,6 +88,7 @@ com hora; o mundo (`world_state`) × card × Hoje × acontecimentos; **contradi�
 journal; custos (Buzz, rotas, LLM) e fotos geradas; iniciativas. Eu leio na conversa "bora no soak, dia N", explico e
 listo os bugs.
 
+**Primeiro da fila depois do soak (Patrick, 04/10, noite): o Lovense pelo Mini App.** Durante o soak pode andar só o planejamento, na frente de apps: decisões em aberto (palavra de segurança, modos do controle, quanto tempo ela fica com ele, fala e foto em cada lugar, quando a vontade parte dela), mockup da tela do controle e plano de implementação (arquivos, ordem, testes). Código só quando o soak fechar.
 **Depois do soak (congelado):** o Patrick rabisca as ideias pelo celular em https://claude.ai/artifact/64rLbsTa3m5CmdhdtnJgEQ
 ("Ideias pós-soak", respostas no banco da página, coleção `ideias`: ler com ArtifactData quando o soak fechar).
 **Preenchida por ele em 02/10, noite** (6 ideias: banheiro, em_casa, lovense, provocar_saida, roupa_nova, selfies); cópia
