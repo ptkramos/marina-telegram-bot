@@ -821,6 +821,98 @@ Detalhe e o que eu decidi sozinho na Auditoria ("Catálogo de textos, lote 2 apl
 
 **04/10, noite — Lovense pelo Mini App (depois do soak), teste de fotos feito:** o controle no app ainda não existe (freio). A frente de imagens confirmou que a foto dá conta só pelo texto: os dois brinquedos dela (Lush e Hush, rosa), com o Lush aprovado. Detalhe em PLANO_VOZ, "Fotos pelo Civitai".
 
+### Lovense pelo Mini App — plano (04/10, noite, frente de apps; sem código até o soak fechar) 📝
+Primeiro da fila depois do soak. Base: respostas dele de 02/10 (`data/feedback/ideias_pos_soak/ideias/lovense.json`:
+o brinquedo é o dela na história, ele controla; às vezes ele pede e ela topa pelo humor, às vezes parte dela;
+enquanto está com ele, a espera pra ver o celular some; o lugar decide se ela digita, manda áudio ou foto; parar o
+estímulo não é tirar, e fora de casa ela só tira escondida, no banheiro) e o teste de fotos de 04/10 (Lush aprovado
+só por texto). Decisões do Patrick nesta conversa, por múltipla escolha com mockup:
+
+**Tela**
+- **Igual ao Lovense Remote de verdade** (ele perguntou se o app tem tudo; tem: barra 0–20, painel de toque, padrões,
+  música/som, chamada). Abas **Clássico** (barra vertical 0–20), **Toque** (arrasta o dedo; soltou, para) e
+  **Padrões** (Pulso, Onda, Fogos, Terremoto…). **Música** fica pra uma segunda leva. Topo: "Marina" e a bateria;
+  embaixo, os brinquedos que ela está usando (Lush, Hush, ou os dois, cada um controlado à parte); botão Parar.
+- **Ícone na tela inicial sempre lá:** apagado com "Marina desconectada"; aceso com "Marina conectada" quando ela
+  coloca e avisa no chat. Avisos na tela: "Marina pediu pra parar" (palavra) e "Marina encerrou o controle" (cortou).
+
+**Palavra de segurança e confiança**
+- **Combinada no chat a cada vez que ela coloca.** Só a palavra conta; "para" no meio da brincadeira é provocação.
+- **Ele tem que parar de verdade** (Patrick: "ia ser legal eu ter que parar realmente antes dela se irritar e me dar
+  bronca… se eu for malvado ela perde um pouco da confiança"). Prazo: **uns 30 s** depois da palavra. Parou: a
+  confiança sobe um pouco. Não parou: ela repete firme, depois bronca de verdade, e a confiança cai.
+- **Ela corta pelo celular dela só como último recurso** (o Lovense de verdade deixa): se ele não para e ela consegue
+  mexer no celular; cortar já é a briga (ícone apaga, confiança cai mais). Na aula ou no meio de gente pode não
+  conseguir na hora. Pra tirar: em casa, na hora; fora, só no banheiro do lugar, e até chegar lá sente tudo.
+- **Confiança só volta conversando:** ela não esquece sozinha; com a confiança baixa, recusa a próxima vez até
+  vocês conversarem; se aconteceu mais de uma vez, demora mais.
+
+**Como ela reage (por lugar)** — aprovado como no mockup:
+
+| Onde | Responde | Texto | Áudio | Foto |
+|---|---|---|---|---|
+| Em casa sozinha | segundos | solto | sim, gemendo | sim (cama, Lush aparecendo) |
+| Em casa com alguém (amiga, ligação) | segundos | escondido, curto | não | no banheiro |
+| Aula, trabalho, consulta | segundos | escondido, curto, com erro | não | pede pra ir ao banheiro |
+| Bar, restaurante, amigas | segundos | debaixo da mesa | não | banheiro do lugar |
+| Rua, Uber, metrô | segundos | sim | sussurrado, se sozinha | selfie corada, vestida |
+| Banho | ao sair | sente, não pega o celular | não | não |
+| Celular impossível (apresentação, prova) | quando der | "você me pegou no meio da…" | não | não |
+
+Enquanto ele está ligado, **todas** as mensagens do Patrick ganham resposta rápida, não só o estímulo. Ela não
+manda uma mensagem a cada mexida na barra: fala quando sente diferença.
+
+**Quando e por quanto tempo**
+- **Dela:** propõe pelo **tesão + ocasião + confiança** (saída longa, aula chata, rolê com amigas), sem sorteio; se
+  repetir, a novidade cansa e ela propõe menos. **Pedido dele:** ela aceita ou recusa pelo humor (`Disposicao`).
+- **Fora de casa:** às vezes o Lush está na bolsa (quando ela sai sabendo que pode rolar); com ele na bolsa,
+  coloca no banheiro do lugar; sem, fica pra quando voltar.
+- **Duração pelo sentimento + bateria de verdade:** ela tira quando quer (desconforto, cansou, academia, tesão
+  passou), pode passar o dia; a bateria aparece no app, gasta mais com vibração forte e, quando acaba, a sessão
+  acaba (ela põe pra carregar).
+- **Hush mais raro:** mesma regra, mas ela topa menos, mais com muito tesão e confiança alta, e tira antes. Pode
+  usar os dois juntos.
+- **Gozar fora de casa pode, pelo tesão:** acontece onde ela estiver e vira história (disfarça, fica vermelha, a
+  amiga pergunta); conta no mundo como um gozo de verdade.
+
+**Fotos e Bastidores**
+- **Foto pelo humor, sem teto** (Patrick: com o Buzz azul e o amarelo separados, Buzz não é problema; só não pode
+  gastar repetindo quase a mesma pose). Regra: na mesma sessão, nada de repetir pose + expressão + gesto de mão.
+  Texto aprovado do Lush no começo da `action` (PLANO_VOZ, "Fotos pelo Civitai"). Pendente na frente de imagens: Hush,
+  Lush em outras poses, brinquedo na mão; e a carteira: hoje só a foto adulta pede `currencies: ["yellow"]`
+  (`civitai_images.py`), a normal vai sem — conferir que ela gasta o azul quando ele chegar.
+- **Bastidores:** Por fora "Com o Lush desde 14:10" e a bateria; Por dentro a confiança dela no brinquedo e se está
+  chateada com o Patrick.
+
+**Plano de implementação (depois do soak), na ordem:**
+1. **Estado (`lovense.py` + `migrations/034_lovense.sql`):** sessão (brinquedos, desde, onde colocou, palavra,
+   estado conectada/pausada/cortada, motivo do fim), bateria de cada um (gasta pelo nível, carrega em casa), linha do
+   tempo dos comandos, confiança (cai com desrespeito, sobe quando ele para; volta só com conversa), bolsa. Testes
+   `tests/test_lovense.py`: bateria, prazo de 30 s, escalada, cortar, confiança só volta conversando.
+2. **Rotas + tela:** `GET /api/lovense` e `POST /api/lovense/comando` (nível, modo, padrão, parar) em
+   `webapp_server.py`; `webapp/index.html` (ícone + `v-lovense` com as três abas), `webapp/app.js` (estado a cada
+   poucos segundos; manda o comando ao soltar e no máximo 1 por segundo arrastando), `webapp/app.css` (rosa da marca).
+   Pré-visualização com dados falsos antes de ligar no bot.
+3. **O que ela sente vira turno:** hook `lovense` no `Hooks` (como o Pix: `_webapp_lovense` em `bot.py` cria o turno
+   sem mensagem real e chama `process_incoming_batch`), juntando os comandos de uma janela curta num turno só, e só
+   quando muda de verdade (ligou, parou, salto de nível, padrão novo) ou depois de um tempo parado no mesmo nível
+   (o tesão subindo). Texto interno descreve a sensação, nunca a fala dela.
+4. **Disponibilidade:** perfil "com o brinquedo ligado" em `response_availability.py`: responde em segundos a tudo,
+   exceto banho (já adia hoje) e celular impossível (prova, apresentação).
+5. **Corpo e mundo:** estímulo soma tesão no `intimacy.py` (ganho pelo nível e pelo tempo); gozo fora de casa vai pro
+   mundo como gozo de verdade; colocar/tirar fora usa a pausa no banheiro da `agenda_reativa.py` (`RESERVADO`);
+   aceitar/recusar/propor por um tipo novo na `Disposicao` (`agenda_viva.py`); bloco do prompt em
+   `world_context.py` (com qual, desde quando, nível agora, bateria, palavra combinada, confiança, quem está perto, e
+   a tabela de como responder no lugar); detectar a palavra na fala dela e a conversa que reconstrói a confiança.
+6. **Fotos e áudio:** texto do Lush/Hush no `photo_director.py` quando o brinquedo aparece; variedade na sessão;
+   áudio gemendo e sussurrado **testado antes** (memória da voz: efeito sintético do MiniMax soa artificial).
+7. **Bastidores + catálogo de textos:** linhas novas do Por fora e Por dentro; todos os textos novos de tela entram no
+   catálogo pra ele revisar.
+8. Segunda leva: aba Música (vibrar no ritmo do que ela ouve, `musica.py`).
+
+**A decidir no código (texto interno, eu decido e listo):** a janela de juntar comandos, o ganho de tesão por nível,
+o gasto da bateria, quanto a confiança cai/sobe. Textos visíveis da tela passam por ele (catálogo).
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

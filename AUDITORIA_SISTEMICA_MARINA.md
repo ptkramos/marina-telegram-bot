@@ -2773,3 +2773,17 @@ e a lição ("antena" não funciona, a comparação física sim) em PLANO_VOZ, "
 vale pro catálogo atual: "both hands free" junto com cada mão posicionada gerou três mãos (a pose
 `cama_tripe_duas_maos` tem esse texto, e as batidas dela somam as mãos posicionadas por cima, então o risco existe
 na produção; fica pra conferir nas fotos do soak e, se aparecer, corrigir como bug).
+
+## Lovense, plano (04/10, noite, frente de apps; sem código)
+
+Só planejamento, liberado durante o soak (FRENTES, "Primeiro da fila depois do soak"). Nada mudou na produção. O
+Patrick decidiu, com mockup e múltipla escolha: tela igual ao Lovense Remote (abas Clássico, Toque, Padrões; Música
+numa segunda leva), ícone sempre na tela inicial, palavra de segurança combinada a cada vez, prazo de ~30 s pra ele
+parar (não parou: bronca e a confiança cai; ela corta pelo celular só como último recurso; a confiança volta só
+conversando), resposta em segundos por lugar (tabela), duração pelo sentimento + bateria, proposta dela por tesão +
+ocasião + confiança, Lush às vezes na bolsa, Hush mais raro, gozar fora pode, foto sem teto mas sem repetir pose,
+Bastidores com o Lovense. Tudo, com o plano de implementação em 8 passos, no PLANO_WEBAPP, "Lovense pelo Mini App —
+plano". O que eu decidi sozinho: a forma do plano, os nomes dos avisos da tela ("Marina pediu pra parar", "Marina
+encerrou o controle", "Marina conectada/desconectada") e os nomes dos padrões (Pulso, Onda, Fogos, Terremoto) —
+rascunhos, passam pelo catálogo de textos. Achado: a foto normal vai pro Civitai sem `currencies` (só a adulta pede
+amarelo); quando o Buzz azul chegar, conferir na frente de imagens que a normal gasta o azul.
