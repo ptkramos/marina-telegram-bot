@@ -229,8 +229,13 @@ class CalendarWorld:
             from academic_life import AcademicLife
 
             blocks = AcademicLife(self.db).upcoming_blocks(now, horizon_days=horizon_days)
+        # Soak, dia 5 (03/10): o prompt dizia "[PRÓXIMO COMPROMISSO] compromisso hoje às 10:58" (era o mercado) e ela
+        # falou "tenho um compromisso de manhã" duas vezes; às 19:02 o das 21:00 (Quartinho com a Júlia, marcado na
+        # sexta) virou "a gente tá decidindo". O próximo diz o que é, como o `current` já fazia.
         options = [(row['event_at'], {'activity':
                                      ('compromisso da faculdade' if row['event_type'] in ACADEMIC_EVENTS
+                                      else row['description'] if row['event_type'] in (
+                                          'social', 'lazer', 'encontro', 'trabalho') and row.get('description')
                                       else 'compromisso'),
                                      'start_at': row['event_at'], 'end_at': row['end_at'],
                                      'place_key': row['location_key'], 'calendar_event_id': row['id']})

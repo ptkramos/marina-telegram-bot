@@ -16,9 +16,12 @@ sozinha": quando termina um título, ela escolhe o próximo numa lista de títul
 from __future__ import annotations
 
 import json
+import logging
 import random
 from datetime import date, datetime, time, timedelta
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 STATE_KEY = "marina_watch_json"
 
@@ -269,7 +272,11 @@ class Watching:
             return 0          # na rua ou ocupada na hora: tenta no próximo tick
         # Chegou em casa depois do horário planejado: a sessão começa agora.
         start = plan["start"] if now - plan["start"] < timedelta(minutes=10) else now
-        room = max(0, int((plan["bed"] - start).total_seconds() // 60) - 15)
+        # Soak, dia 5 (/feedback 03/10 19:52): a sessão começou 19:37 por cima do Se arrumando pro Quartinho (19:41) —
+        # o mundo ficou "vendo Paradise Kiss no sofá" até 20:26 e o card dizia "Tomando banho". Só cabe o que acaba
+        # antes de ela começar a se arrumar.
+        livre_ate = min(plan["bed"], self._preparo_depois(start, now) or plan["bed"])
+        room = max(0, int((livre_ate - start).total_seconds() // 60) - 15)
         events = []
         minutes_total = 0
         if plan["one_piece"] and room >= ONE_PIECE[3]:
@@ -325,6 +332,17 @@ class Watching:
                        "transition_at": start.isoformat(), "end_at": end.isoformat()}
             self.db.set_estado_relacional("pending_transition_json", json.dumps(payload, ensure_ascii=False))
         return 1
+
+    def _preparo_depois(self, start: datetime, now: datetime) -> Optional[datetime]:
+        """Início do próximo Se arrumando pra sair (não o de dormir) a partir de `start`, ou None."""
+        try:
+            from agenda import Agenda
+            inicios = [e.inicio for e in Agenda(self.db).etapas(start.date(), now)
+                       if e.tipo == "arrumando" and e.prep_tipo != "dormir" and e.fim > start]
+        except Exception:
+            logger.exception("watch.preparo")
+            return None
+        return min(inicios, default=None)
 
     def _remember_liked(self, cur: dict, now: datetime) -> None:
         category = {"anime": "watched_anime", "série": "watched_series", "dorama": "watched_dorama"}[cur["kind"]]

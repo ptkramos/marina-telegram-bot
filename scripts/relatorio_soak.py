@@ -86,6 +86,8 @@ def situacao(activity: str, region: str) -> str:
         return "arrumando"
     if "faculdade" in a or a.startswith("na puc"):
         return "aula"
+    if "academia do predio" in a:
+        return "casa"          # soak, dia 5 (03/10, 18:06): é no prédio, sobe pro apê sem trajeto
     if "academia" in a or "treinando" in a:
         return "academia"
     if "rapidinho" in a:
@@ -98,6 +100,9 @@ def situacao(activity: str, region: str) -> str:
         return "casa"
     return "fora"
 
+
+REFEICAO_PERTO = timedelta(hours=2)
+RE_AVISO_CHEGADA = re.compile(r"\bte aviso (?:assim )?que (?:eu )?cheg|\bte aviso quando (?:eu )?cheg")
 
 # Lugar que ela diz que está → palavras que o texto do mundo precisa ter.
 LUGARES = {
@@ -456,7 +461,8 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
         w["at"] = _dt(w["observed_at"])
         w["sit"] = situacao(w["activity"], w["location_region"])
     eventos = [dict(r) for r in conn.execute(
-        "SELECT event_at, end_at, event_type, title, summary FROM life_events WHERE event_at >= ? AND event_at < ? "
+        "SELECT event_key, event_at, end_at, event_type, title, summary FROM life_events WHERE event_at >= ? "
+        "AND event_at < ? "
         "ORDER BY event_at", (s_ini, s_fim))]
     try:
         posts = [dict(r) for r in conn.execute(
@@ -604,8 +610,9 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
                 look = f"(erro: {type(exc).__name__})"
         linhas_foto.append(f"**{_hm(m['at'])}** {_curto(m['content'], 160)} → roupa no mundo: {look or '(sem registro)'}")
         desc = (m["content"].split("]")[0] if m["content"].startswith("[") else m["content"]).lower()
+        # soak, dia 5 (19:15): "grey cotton shorts" × "short de moletom cinza" é a mesma peça (plural do inglês)
         falta = [p for p in ROUPA_PALAVRAS if re.search(rf"\b{p}\b", desc) and p not in _sem_acento(look)
-                 and _sem_acento(p) not in _sem_acento(look)]
+                 and _sem_acento(p) not in _sem_acento(look) and _sem_acento(p).rstrip("s") not in _sem_acento(look)]
         if look and falta:
             s_foto.append(f"**{_hm(m['at'])}** foto fala de {', '.join(falta)}, mundo diz {look}")
 
@@ -692,6 +699,21 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
     except Exception as exc:
         s_fome.append(f"(compras de comida deram erro: {type(exc).__name__}: {_curto(str(exc), 100)})")
 
+    # soak, dia 5 (03/10): brunch às 12:40 e almoço às 13:44 — refeição em cima de refeição
+    principais = [ev for ev in eventos if ev["event_type"] == "meal"]
+    for a, b in zip(principais, principais[1:]):
+        if _dt(b["event_at"]) - _dt(a["event_at"]) < REFEICAO_PERTO:
+            s_fome.append(f"**{_hm(_dt(b['event_at']))}** {b['title']} logo depois de {a['title']} "
+                          f"({_hm(_dt(a['event_at']))}): duas refeições em menos de 2 h")
+    # soak, dia 5 (03/10, 11:20): "comprou vestidos" e "lingerie transparente" na compra do mercado
+    try:
+        from lista_compras import FORA_DO_MERCADO_RE
+        for ev in eventos:
+            if (ev.get("event_key") or "").startswith("lista:") and FORA_DO_MERCADO_RE.search(ev["title"] or ""):
+                s_mundo.append(f"**{_hm(_dt(ev['event_at']))}** {_curto(ev['summary'], 90)} — não é coisa de mercado")
+    except Exception as exc:
+        s_mundo.append(f"(lista do mercado deu erro: {type(exc).__name__})")
+
     # compra num lugar com ela em casa (02/10, 20:06: caipirinha no Quartinho, chegou 20:22)
     for ev in eventos:
         if ev["event_type"] != "consumo" or " · " not in (ev["title"] or ""):
@@ -774,6 +796,22 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
 
     # foto pedida/prometida × foto que chegou (e o que foi no lugar)
     s_pedida = []
+    # soak, dia 5 (03/10, 12:04): "te aviso quando chegar" e nenhum "cheguei" dela sozinha depois
+    for m in marina:
+        if not RE_AVISO_CHEGADA.search((m["content"] or "").lower()):
+            continue
+        if not any(x["is_initiative"] and m["at"] < x["at"] <= m["at"] + timedelta(hours=3)
+                   and re.search(r"\bcheguei\b", (x["content"] or "").lower()) for x in marina):
+            s_pedida.append(f"**{_hm(m['at'])}** ela prometeu avisar quando chegasse («{_curto(m['content'], 80)}») "
+                            f"e não avisou sozinha em 3 h")
+    # soak, dia 5 (03/10, 08:57): "lembrei do seu plantão" antes do "Bom dia… acordei faz pouquinho" (09:12)
+    inic_dia = [m for m in marina if m["is_initiative"] and ini <= m["at"] < fim]
+    bom_dia = next((m for m in inic_dia if re.search(r"\bbom dia\b", (m["content"] or "").lower())), None)
+    if bom_dia:
+        for m in inic_dia:
+            if bom_dia["at"] - timedelta(hours=4) <= m["at"] < bom_dia["at"]:
+                s_ordem.append(f"**{_hm(m['at'])}** iniciativa antes do bom dia ({_hm(bom_dia['at'])}): "
+                               f"«{_curto(m['content'], 80)}»")
     fotos_at = [m["at"] for m in fotos_dela]
     pedidos = []
     # O intent=photo_request do log não serve: em 02/10 (11:35) era a foto que ELE mandou.

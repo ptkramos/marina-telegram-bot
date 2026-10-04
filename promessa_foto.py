@@ -46,6 +46,7 @@ _LOOKS_RE = re.compile(r"\b(?:look|lookinho|op[cç](?:[aã]o|[oõ]es)|finalistas
 _HEDGE_BEFORE_RE = re.compile(r"\b(?:n[aã]o|nem|quem\s+sabe|talvez|na\s+pr[oó]xima|um\s+dia)\b[^.!?\n]{0,30}$",
                               re.IGNORECASE)
 _TWO_RE = re.compile(r"\b(?:duas|dois|2|op[cç][oõ]es|finalistas)\b", re.IGNORECASE)
+_ROUPA_RE = re.compile(r"roupa|vestindo|biqu[ií]ni", re.IGNORECASE)     # o passo em que ela se veste (agenda)
 
 
 def _load(db) -> dict:
@@ -105,9 +106,18 @@ def observe_marina_line(db, line: str, context: str, now: datetime, *, intimate:
     chegada = _chegada(db, line, now)
     if chegada:                            # "te mando quando eu chegar": na chegada de verdade (28/09, Patrick)
         due = chegada + timedelta(minutes=rng.randint(2, 10))
+    da_saida = None
+    if kind == "looks" and count == 1:
+        # Soak, dia 5 (03/10, 19:11): "te mando uma foto quando fechar o look" (saía às 21:00) — vencia 40 min depois,
+        # com ela no sofá e sem roupa escolhida. A foto do look sai quando ela termina de se vestir pra saída.
+        da_saida = _look_pronto(db, now)
+        if da_saida:
+            due = da_saida
     promise = {"kind": kind, "count": count, "subject": subject, "said": line.strip()[:200],
                "made_at": now.isoformat(), "due_at": due.isoformat(), "status": "pendente",
                "expira_at": max(now + EXPIRE_AFTER, due + timedelta(hours=1)).isoformat()}
+    if da_saida:
+        promise["look_da_saida"] = True
     st = _load(db)
     st["promessa"] = promise
     _save(db, st)
@@ -130,6 +140,26 @@ def _chegada(db, line: str, now: datetime) -> Optional[datetime]:
     return min((leg.end for leg in legs), default=None)
 
 
+def _look_pronto(db, now: datetime) -> Optional[datetime]:
+    """Quando ela termina de se vestir pra saída de hoje (o passo depois da roupa no Se arrumando), ou None."""
+    try:
+        from agenda import Agenda
+        etapas = Agenda(db).etapas(now.date(), now)
+    except Exception:
+        logger.exception("promessa_foto.look_pronto")
+        return None
+    for e in etapas:
+        if e.tipo != "arrumando" or e.prep_tipo in ("dormir", "milo") or e.fim <= now:
+            continue
+        passos = sorted((p for p in e.passos if not p.aviso), key=lambda p: p.inicio)
+        i = next((n for n, p in enumerate(passos) if _ROUPA_RE.search(p.texto)), None)
+        if i is None:
+            continue
+        pronto = passos[i + 1].inicio if i + 1 < len(passos) else e.fim - timedelta(minutes=5)
+        return max(now + timedelta(minutes=2), pronto)
+    return None
+
+
 def pending(db) -> Optional[dict]:
     p = _load(db).get("promessa")
     return p if p and p.get("status") == "pendente" else None
@@ -141,10 +171,30 @@ def due(db, now: datetime) -> Optional[dict]:
         return None
     expira = (datetime.fromisoformat(p["expira_at"]) if p.get("expira_at")
               else datetime.fromisoformat(p["made_at"]) + EXPIRE_AFTER)
+    if p.get("look_da_saida") and p.get("part", 1) == 1:
+        # o Se arrumando se mexe (atraso, troca de look): a hora segue o card de agora
+        pronto = _look_pronto(db, now)
+        if pronto and pronto > datetime.fromisoformat(p["due_at"]):
+            p["due_at"] = pronto.isoformat()
+            expira = max(expira, pronto + timedelta(hours=1))
+            st = _load(db)
+            st["promessa"].update(due_at=p["due_at"], expira_at=expira.isoformat())
+            _save(db, st)
     if now > expira:
         close(db, "expirou")
         return None
     return p if datetime.fromisoformat(p["due_at"]) <= now else None
+
+
+def cumpre_com(db, pose_id: str) -> None:
+    """A foto da conversa vale a promessa (sem foto em dobro) — menos a do look: só foto de look cumpre (soak, dia 5:
+    a selfie de camiseta na varanda das 19:15 "cumpriu" o "te mando uma foto quando fechar o look")."""
+    p = pending(db)
+    if p and p["kind"] == "looks":
+        from photo_director import LOOK_POSES
+        if pose_id not in LOOK_POSES:
+            return
+    close(db, "cumprida")
 
 
 def olhou_o_celular(db, p: dict, now: datetime) -> bool:

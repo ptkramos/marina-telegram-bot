@@ -197,6 +197,13 @@ _CONTOU_RE = re.compile(r"lingerie|calcinha|renda|por baixo|suti[aã]|conjuntinh
 _PRIMEIRA_RE = re.compile(r"\b(?:a |o )?(?:primeir[ao]|1)\b", re.IGNORECASE)
 _SEGUNDA_RE = re.compile(r"\b(?:a |o )?(?:segund[ao]|2)\b", re.IGNORECASE)
 CLIMA = ("warming", "active", "climax", "afterglow")
+# o look de sair que ela diz que vai usar (a ordem importa: "vestidinho preto" antes de "vestido preto")
+_LOOK_DITO = ((r"vestidinho preto", ("vestidinho_preto",)), (r"vestido preto", ("vestido_preto",)),
+              (r"vestido (?:de cetim )?verde|cetim verde", ("vestido_verde",)),
+              (r"vestido vermelho", ("vestido_vermelho",)), (r"vestido (?:envelope )?floral", ("vestido_floral",)),
+              (r"\bcorset", ("corset_rosa", "jeans_escuro")), (r"ombro a ombro", ("top_ombro_branco", "jeans_claro")),
+              (r"cropped azul", ("cropped_azul", "saia_midi_branca")))
+_LOOK_CONTEXTO = re.compile(r"\blook\b|\broupa\b|\bvestir\b|\busar\b|\bsair\b|\bvou de\b")
 PROVOCAR_FIM = timedelta(minutes=60)       # sem clima há 1 h: volta pra roupa de casa
 DORME_CHANCE, DORME_CHANCE_GOZOU = 0.3, 0.6
 POR_BAIXO_CHANCE, POR_BAIXO_CHANCE_TESAO = 0.15, 0.6
@@ -392,7 +399,10 @@ class Roupa:
         antes = json.dumps(st, ensure_ascii=False, sort_keys=True)
         casa = self._em_casa(snap)
         self._clima(st, now, casa)
-        if casa and self._na_cama(now):
+        if casa and "academia do prédio" in ((snap or {}).get("activity") or "").lower():
+            self._academia_predio(st, now)
+            casa = False                                  # na volta pro apê, a troca de "chegou" vale
+        elif casa and self._na_cama(now):
             self._deitada(st, now)
         else:
             etapa = None
@@ -511,6 +521,16 @@ class Roupa:
         if re.search(r"ensaio|freela|sess[aã]o de fotos|job\b", act) and not self._feito(st, f"{chave}:ensaio"):
             self._make(st, "ensaio", now)                # a make do freela é feita lá
         self._choro(st, now)
+
+    def _academia_predio(self, st: dict, now: datetime) -> None:
+        """/feedback 03/10 17:44: treinando na academia do prédio "com roupa de ficar em casa". Ela desce de treino
+        (não tem Se arrumando: é no prédio) e sua."""
+        st["pos_banho"] = None
+        chave = f"gym_predio:{now.date().isoformat()}"
+        if st["atual"]["ocasiao"] != "treino":
+            self._vestir(st, self._escolhe(st, "treino", now, chave), "treino", now, PRA["academia"], chave)
+        if not self._feito(st, f"{chave}:suor"):
+            self._borra(st, "suor")
 
     def _prep_recente(self, now: datetime):
         """O Se arrumando da saída de agora (acabou há até 3 h)."""
@@ -757,14 +777,40 @@ class Roupa:
         self._save(st)
 
     # ------------------------------------------------------------- conversa --
-    def observe_marina(self, text: str, now: datetime) -> None:
-        """Ela contou pro Patrick o que está usando por baixo: agora aparece no painel."""
+    def observe_marina(self, text: str, now: datetime, his: str = "") -> None:
+        """Ela contou pro Patrick o que está usando por baixo: agora aparece no painel. E o look que ela diz que vai
+        usar pra sair hoje vira a escolha dela."""
         st = self._load()
         pb = st.get("por_baixo")
         if pb and not pb.get("contou") and _CONTOU_RE.search(text or ""):
             pb["contou"] = True
             self._save(st)
             logger.info("roupa.por_baixo.contou")
+        self._look_dito(text or "", his or "", now)
+
+    def _look_dito(self, text: str, his: str, now: datetime) -> None:
+        """Soak, dia 5 (03/10, 19:11): "que look que tu vai sair?" → "Um vestido preto, bem básico" — e às 20:31 o
+        mundo vestiu corset e jeans (depois o verde). O que ela disse que vai usar é o que ela veste no passo da roupa."""
+        low = text.lower()
+        look = next((list(lk) for pat, lk in _LOOK_DITO if re.search(pat, low)), None)
+        if not look or not _LOOK_CONTEXTO.search(f"{his} {text}".lower()):
+            return
+        st = self._state(now)
+        if (st.get("atual") or {}).get("ocasiao") == "sair":
+            return                                        # já está vestida pra sair
+        try:
+            from agenda import Agenda
+            etapas = Agenda(self.db).etapas(now.date(), now)
+        except Exception:
+            logger.exception("roupa.look_dito")
+            return
+        vai = any(e.tipo == "arrumando" and e.prep_tipo in ("noite", "encontro") and e.fim > now
+                  and any(_ROUPA_PASSO.search(p.texto) and p.inicio > now for p in e.passos) for e in etapas)
+        if not vai or (st.get("escolha") or {}).get("look") == look:
+            return
+        st["escolha"] = {"look": look, "ate": (now + timedelta(hours=12)).isoformat()}
+        self._save(st)
+        logger.info("roupa.look_dito look=%s", "+".join(look))
 
     def observe_patrick(self, text: str, now: datetime) -> Optional[list]:
         """Ele escolheu uma das duas opções de look que ela mandou: é essa que ela veste pra sair."""

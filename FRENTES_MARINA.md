@@ -4,11 +4,10 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 03/10/2026, noite (frente de bugs, item 26: a recusa no meio do sexting das 15:40 — filtro e
-menstruação no prompt — e o sexting virando bloco no Agora e linha no Hoje; frente da voz: o sexting da Marina × o da
-Lilith, mais curto e sem fórmula). **Próxima conversa: domingo de manhã "bora no soak, dia 5".** **Soak: dia 1 = terça 29/09**
-(relatório `soak/dia-2026-10-03.md`). Aberto pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente
-da voz: o modo íntimo desliga durante o banho no meio do sexting._
+_Atualizado em 04/10/2026 (soak, dia 5 lido e consertado — item 27: 8 graves e 3 médios). **Próxima conversa:
+segunda de manhã "bora no soak, dia 6"** (relatório `soak/dia-2026-10-04.md`). **Soak: dia 1 = terça 29/09.** Aberto
+pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente da voz: o modo íntimo desliga durante o banho
+no meio do sexting; ela sumir 2h30 depois de "vou te prender aqui a tarde toda" (M4 do dia 5); o Silo (M5)._
 
 ---
 
@@ -72,7 +71,13 @@ sem leitura de novo, confirmação do /ruim que não chegou); corrigidos na hora
 (lido em 03/10) — 6 graves (Uber combinado e foi a pé, caipirinha com ela em casa, "se divertindo ainda" em casa,
 "apaguei no sofá", "banho tomado" sem banho, "vele"), 7 médios (avisos de saída/chegada, convite em cima do da Bia,
 boa noite no banho, TV num item só, jantar "pulado" no bar, preparo pra dormir que volta de passo), 6 textos feios;
-corrigidos em 03/10 menos o preparo pra dormir (item 24). Dias limpos: 0.
+corrigidos em 03/10 menos o preparo pra dormir (item 24). Dia 5 (sáb 03/10; o teste ao vivo da tarde já tinha
+consertado áudio negado, eco, tempo, recusa e sexting no Agora — item 26) — 8 graves ("ainda não" do casting que
+já tinha saído, "compromisso de manhã" e "a gente tá decidindo" com o mercado e o Quartinho marcados, "te aviso quando
+chegar" sem aviso, a selfie de camiseta cumprindo a foto do look, academia do prédio "Em casa", série por cima do
+Se arrumando, vestidos e lingerie no Zona Sul, brunch e almoço numa hora), 5 médios (lembrete de plantão de 28/09
+antes do bom dia, foto pelada pedida com a lingerie, "vestido preto" ignorado, 2h30 sumida, Silo), 6 textos feios;
+corrigidos em 04/10 menos M4 e M5 (voz) (item 27). Dias limpos: 0.
 
 **Relatório diário (pronto, 28/09):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
 perguntou 00:00 × 05:00 e ficou 05:00: o rolê da noite e a conversa de madrugada ficam no mesmo dia), cobrindo
@@ -698,9 +703,23 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       sem barra ("desde"); Hoje "Transou com o Patrick" (enquanto acontece, "Transando com o Patrick"), embaixo "No quarto por mensagem, gozou",
       ícone balão com coração (`message-heart`). Fora de casa não vira bloco. `tests/test_soak_sexting_0310.py` (+11).
 
-**Abertos:** o preparo pra dormir que
-volta de passo (item 24, frente do mundo). Pra leitura do dia 5: (/ruim 065,
-"o tempo sem personalidade", já explicado no item 26) e "tenho um compromisso de manhã" repetido às 09:29–09:30 de 03/10.
+27. ✅ **Soak, dia 5 (sábado 03/10) — relatório lido em 04/10** (o que o item 26 já tinha consertado ficou de fora).
+    `tests/test_soak_dia5.py` (+24). Detalhe na Auditoria ("Soak, dia 5").
+    - Graves: casting "ainda não" com o resultado das 10:48 (freela no prompt); "[PRÓXIMO COMPROMISSO] compromisso"
+      sem nome (09:29 e 19:02); "te aviso quando chegar" dentro do aviso de saída; selfie de camiseta cumprindo a
+      foto do look (e o look às 21:10 do closet com ela na rua); /feedback 17:44 academia do prédio "Em casa" com
+      roupa de casa (agora "Na academia", Onde "Academia do prédio", roupa de treino); /feedback 19:52 série por
+      cima do Se arrumando; vestidos e lingerie comprados no Zona Sul; brunch 12:40 e almoço 13:44.
+    - Médios: lembrete do "plantão de segunda (28/09)" recriado todo dia e saindo antes do bom dia; "deixa eu ver
+      você com ela" (a lingerie) → pelada, e "fala primeiro" com a foto saindo junto; "vestido preto" ignorado.
+    - **Anotados pra frente da voz:** M4 sumiu 15:44→18:11 depois de "vou te prender aqui a tarde toda" (foi à
+      farmácia e à academia sem falar); M5 Silo "continua que melhora" × "ainda n vi"; /ruim 067–072.
+    - No banco (OK do Patrick): os 2 acontecimentos da roupa no Zona Sul apagados e os itens `tirado`; o lembrete 49
+      do plantão fechado; originais em `soak/originais-2026-10-03.json` na VPS.
+    - Relatório do soak: refeição em cima de refeição, compra que não é de mercado, aviso de chegada prometido e não
+      dado, iniciativa antes do bom dia; academia do prédio não é teleporte; "shorts" × "short".
+
+**Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo); M4 e M5 do dia 5 (frente da voz).
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** congelada até o soak fechar (freio, seção 0); foto errada no uso real é bug do soak

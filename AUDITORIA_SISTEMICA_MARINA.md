@@ -2640,3 +2640,63 @@ falar demais". Cena da Marina: conversas 1146–1196 (15:10–15:38) com `intima
   ciclo), sem as 3 listas de exemplos, e estado da cena guardado (posição, o que já aconteceu). O tesão ficou em
   0,46–0,66 até 15:25 com a cena já explícita (degrau `explicito` só a partir de 0,70): rever junto.
 `tests/test_sexting_curto_0310.py` (+7).
+
+## Soak, dia 5 — sábado 03/10 (relatório `soak/dia-2026-10-03.md`, lido em 04/10; FRENTES item 27)
+
+O que o teste ao vivo de sábado já tinha consertado (áudio negado, "Juntos há 14 meses", o tempo, a recusa das 15:40,
+o sexting no Agora, o "ordinaries" fora do histórico das 09:28 — deploy às 10:34) ficou de fora. Lido inteiro: a
+conversa com o mundo, os 2 /feedback, os 8 "O Patrick estranhou", o por dentro e as decisões. **8 graves.**
+- **G1 — 19:49 "a Lívia deu notícias do casting?" → "Ainda não, tô aguardando ela". Camada: prompt (freela).** O
+  resultado saiu às 10:48 (não passou; `life_events` 319, criado 10:49). Com o passo em `fim`, o bloco de trabalho
+  dizia "Nenhum casting… tá parada, esperando a Lívia". Agora o que a Lívia avisou nas últimas 48 h vai no bloco
+  ("Você já sabe (hoje às 10:48): …"), também com casting marcado (`Freela._ja_sabe`).
+- **G2 — 09:29 "Hoje tenho um compromisso de manhã" (e "Sim, tenho compromisso de manhã"); 19:00–19:02 "vou sair com a
+  galera… a gente tá decidindo". Camada: prompt (agenda).** O `[PRÓXIMO COMPROMISSO]` dizia só "compromisso hoje às
+  10:58" (era o mercado, `eventos_pendentes` 23) e às 21:00 (o Quartinho com a Júlia, marcado desde sexta, 22). O
+  `CalendarWorld.next` agora dá a descrição pra social/lazer/encontro/trabalho, como o `current` já fazia (faculdade
+  segue genérica). O /status dele também passa a dizer o que é.
+- **G3 — 12:04 "Tô indo pra casa a pé, te aviso quando chegar" e não avisou (12:29 "Cheguei faz um tempinho"). Camada:
+  chat (promessas).** A mensagem era o próprio aviso de saída (ele pediu às 11:18 "quando for pra casa me avisa";
+  `arrival_promise.kept`), e iniciativa não passava pelo leitor de promessas. Agora toda iniciativa de texto passa
+  (`bot._registrar_iniciativa`); e no leitor, o "tô indo pra casa" antes do "te aviso" é o que ela está fazendo — a
+  promessa é o que vem depois (chegar). "Te aviso quando estiver indo pra casa" segue promessa de saída.
+- **G4 — 19:11 "te mando uma foto quando fechar o look": a selfie de camiseta na varanda (19:15, `unhas_selfie`)
+  fechou a promessa (`promessa_foto.cumprida`); ela saiu sem mandar o look e às 21:10 a foto do closet chegou com
+  ela na rua (fundo × lugar). Camada: foto (promessa).** Promessa de look só se cumpre com foto de look
+  (`cumpre_com`, poses `LOOK_POSES`); "quando fechar o look" vence quando ela termina de se vestir (o passo depois da
+  roupa no Se arrumando, seguindo o card se ele mudar) e a foto mostra a roupa de sair que ela está usando.
+- **G5 — /feedback 17:44 "na academia do prédio mas mostrando em casa e com roupa de ficar em casa". Camada: app +
+  mundo (roupa).** O card era "Em casa / Treinando / Cômodo: Academia do prédio" e a roupa não mudava (o treino no
+  prédio não tem Se arrumando). Agora: **"Na academia" / "Treinando", Onde "Academia do prédio"** (escolha do
+  Patrick); a roupa vira a de treino (sua a make) e, na volta pro apê, troca como quem chega da rua.
+- **G6 — /feedback 19:52 "o problema dela responder no banho continua". Camada: mundo (série × Se arrumando).** O
+  card estava em Se arrumando › Tomando banho (19:41) e o mundo em "vendo Paradise Kiss no sofá" (19:40–20:26): a
+  sessão da noite (`watch.materialize`) começou às 19:37 e a transição anunciada ganha do preparo no resolve. Agora a
+  sessão só cabe até o próximo Se arrumando pra sair; não cabe um episódio, não tem série.
+- **G7 — 11:20 "Comprou vestidos" e 11:21 "Comprou lingerie transparente" no Zona Sul. Camada: mundo (lista).** O
+  "da próxima vez que for no shopping… vestido novo" dele (02/10, 15:21–15:36) entrou na lista do mercado.
+  Roupa, lingerie, sapato, bolsa, perfume não entram (`FORA_DO_MERCADO_RE`) nem são comprados se já estiverem lá.
+  No banco (OK do Patrick): os 2 acontecimentos saíram e os 2 itens ficaram `tirado`; originais em
+  `soak/originais-2026-10-03.json`.
+- **G8 — brunch 12:40–13:30 e almoço 13:44 ("Tenho só o brunch pra terminar" às 13:21). Camada: mundo (refeições).**
+  O brunch de sábado (10:30) não cabia antes do mercado e foi pra volta (12:40); o almoço ficou. Café que acaba depois
+  do meio-dia é o almoço do dia: o almoço em casa que viria menos de 3 h depois sai (`Meals._brunch_e_almoco`). O
+  brunch de fim de semana na hora (10:30–11:20) segue com almoço depois, como antes (`test_meals`).
+- **Médios consertados.** **M1** 08:57 "lembrei do seu plantão de segunda": `open_loops` "Patrick terá um plantão na
+  segunda-feira (28/09)" recriado em 02/10 e 03/10 pelo planner, que lia o texto já ancorado. Assunto com todas as
+  datas mais de 2 dias pra trás nasce resolvido e não vira lembrete (`db._data_vencida`); o 49 fechado no banco (OK).
+  E a iniciativa espera o bom dia do dia (`Rituals.bom_dia_pendente`). **M2** 15:08 "deixa eu ver você com ela" (o
+  conjunto de renda rosa vestido pra provocar) → foto pelada (nível 3): ver "com ela/com essa/com o conjunto" com a
+  peça de provocar vestida é nível 2, com a peça; e o turno de foto diz que a foto sai logo depois da fala (ela tinha
+  dito "fala primeiro com jeitinho" e a foto saiu no mesmo minuto). **M3** 19:11 "Um vestido preto, bem básico" → o
+  mundo vestiu corset e jeans (20:31), depois o verde: o look de sair que ela diz que vai usar, com saída à noite
+  pela frente, vira a escolha dela (`Roupa._look_dito`).
+- **Anotados (frente da voz):** M4 15:44→18:11 ela some depois de "vou te prender aqui no chat a tarde toda" e vai à
+  farmácia e à academia sem falar nada; M5 19:42 "continua que melhora bastante" sobre Silo e logo "ainda n vi".
+  Textos /ruim 067–072 pro lote. Resto do bug de sexta (já corrigido em 03/10): 17:02 "Recusou o convite (Saindo com
+  a Bia no Quartinho Bar): já tinha compromisso" — o mesmo bar e hora do rolê com a Júlia.
+- **Relatório do soak (conferências novas, com o caso real):** refeição em cima de refeição (< 2 h); compra da lista
+  que não é de mercado; "te aviso quando chegar" sem "cheguei" dela sozinha em 3 h; iniciativa antes do bom dia; e
+  dois falsos alarmes a menos — academia do prédio → quarto não é teleporte, "shorts" × "short de moletom" é a mesma
+  peça. Rodado no 03/10 numa cópia: pega G7, G8, G3 e M1.
+`tests/test_soak_dia5.py` (+24).

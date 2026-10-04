@@ -26,7 +26,11 @@ logger = logging.getLogger(__name__)
 
 KEY = "lista_compras_json"
 LISTA_RE = re.compile(r"\blista\b|compras? da semana|pr[oó]xima compra|mercado|supermercado|zona sul", re.IGNORECASE)
-CARRINHO = 0.35              # "Enchendo o carrinho" começa em 35% do Lá (agenda.LA_PASSOS["mercado_semana"])
+FORA_DO_MERCADO_RE = re.compile(
+    r"\b(?:roupas?|vestid\w*|lingerie|calcinhas?|suti[aã]s?|suti[eê]ns?|biqu[ií]nis?|mai[oô]s?|pijamas?|camisol\w*|"
+    r"blusas?|saias?|cal[cç]as?|shorts?|jaquetas?|casacos?|sapatos?|t[eê]nis|sand[aá]lias?|bolsas?|brincos?|colar|"
+    r"anel|an[eé]is|perfumes?|look)\b", re.IGNORECASE)
+CARRINHO = 0.35             # "Enchendo o carrinho" começa em 35% do Lá (agenda.LA_PASSOS["mercado_semana"])
 COMPRADO_NO_PROMPT = timedelta(hours=48)
 DIAS = ("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")
 
@@ -58,6 +62,11 @@ class ListaCompras:
     def adicionar(self, item: str, quem: str, now: datetime) -> bool:
         item = re.sub(r"\s+", " ", (item or "").strip().strip(".")).lower()[:60]
         if not item:
+            return False
+        if FORA_DO_MERCADO_RE.search(item):
+            # Soak, dia 5 (03/10): "vestidos" e "lingerie transparente" (o Patrick, 02/10: "da próxima vez que for no
+            # shopping") entraram na lista e às 11:20 ela "comprou vestidos" no Zona Sul. Roupa não é de mercado.
+            logger.info("lista_compras.fora_do_mercado item=%s", item)
             return False
         st = self._load()
         if any(i["item"] == item and i["status"] == "pendente" for i in st["itens"]):
@@ -167,7 +176,8 @@ class ListaCompras:
             at = self.carrinho(compra)
             if at > now or at > compra["fim"]:
                 continue
-            itens = [i for i in st["itens"] if i["status"] == "pendente" and datetime.fromisoformat(i["em"]) <= at]
+            itens = [i for i in st["itens"] if i["status"] == "pendente" and datetime.fromisoformat(i["em"]) <= at
+                     and not FORA_DO_MERCADO_RE.search(i["item"])]
             if not itens or not self._estava_la(compra, at):
                 continue
             lugar = self._lugar(compra.get("location_key"))

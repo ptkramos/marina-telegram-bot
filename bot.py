@@ -4184,7 +4184,7 @@ async def process_incoming_batch(
             # e se ela contou o que está usando por baixo, aparece no Por fora.
             from roupa import Roupa
             Roupa(memory_manager.db).observe_patrick(texto_usuario, datetime.now())
-            Roupa(memory_manager.db).observe_marina(fala_limpa, datetime.now())
+            Roupa(memory_manager.db).observe_marina(fala_limpa, datetime.now(), texto_usuario)
         except Exception:
             logger.exception("roupa.observe.error")
         try:
@@ -4303,7 +4303,7 @@ async def process_incoming_batch(
                                                          model=legenda_model or getattr(settings, "LLM_MODEL", None))
                     _guardar_pro_insta(shot, foto_stream, now_foto)
                     import promessa_foto
-                    promessa_foto.close(memory_manager.db, "cumprida")   # a foto de agora vale a promessa
+                    promessa_foto.cumpre_com(memory_manager.db, shot.pose_id)   # a foto de agora vale a promessa
                     if foto_dela:
                         photo_director.mark_self_initiated(memory_manager.db, now_foto)
                     from visual_profile import visual_profile
@@ -4754,6 +4754,13 @@ async def _autonomous_routine_v36(application: Application):
         if gap < INITIATIVE_GAP_MIN:
             logger.info("proactivity.skip_recent_initiative why=%s gap_min=%.1f", why, gap)
             return
+        try:
+            from rituals import Rituals
+            if why not in ('saiu_mais_cedo', 'atraso') and Rituals(memory_manager.db).bom_dia_pendente(now):
+                logger.info("proactivity.espera_bom_dia why=%s", why)
+                return
+        except Exception:
+            logger.exception("proactivity.bom_dia")
         candidate = proactivity_service.determine_living_world_candidate(now)
         if why == 'tesao':
             from emotion import EmotionEngine, TESAO_KEY
@@ -4908,12 +4915,26 @@ async def _autonomous_routine_v36(application: Application):
         if loop_id:
             next_check = (now + timedelta(days=3)).isoformat(timespec='seconds')
             proactivity_service.db.atualizar_open_loop_touch(loop_id, next_check_after=next_check)
-        memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
+        _registrar_iniciativa(text)
         proactivity_service.record_autonomous_sent(
             reason=reason,
             topic=str(candidate['subject_id']) if reason == 'shared_topic_callback' else None)
     except Exception as exc:
         logger.error('Erro na proatividade Living World: %s', exc, exc_info=True)
+
+
+def _registrar_iniciativa(text: str) -> None:
+    """Iniciativa de texto que saiu: vai pro histórico e, se promete aviso, a promessa vale. Soak, dia 5 (03/10,
+    12:04): o aviso de saída do Zona Sul disse "te aviso quando chegar" e ela não avisou — só as respostas passavam
+    pelo leitor de promessas."""
+    memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
+    try:
+        import arrival_promise
+        if arrival_promise.observe(memory_manager.db, text, ""):
+            logger.info("arrival_promise.made origem=iniciativa")
+    except Exception:
+        logger.exception("arrival_promise.observe.error")
+
 
 async def ritual_routine(application: Application):
     async with INITIATIVE_LOCK:
@@ -4960,7 +4981,7 @@ async def _ritual_routine(application: Application):
                     f"Você acabou de chegar {promise['where']}", "Cheguei, amor 🖤")
             sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
             if sent:
-                memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
+                _registrar_iniciativa(text)
                 logger.info("arrival_promise.kept where=%s", promise['where'])
             return
         engine = Rituals(memory_manager.db, getattr(memory_manager, 'cycle_mgr', None))
@@ -4974,7 +4995,7 @@ async def _ritual_routine(application: Application):
         sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
         if not isinstance(getattr(sent, 'message_id', None), int) or sent.message_id <= 0:
             raise RuntimeError('Telegram did not confirm ritual message')
-        memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
+        _registrar_iniciativa(text)
         engine.mark(ritual, now, 'sent')
     except Exception as exc:
         logger.error('Erro nos rituais (C.3): %s', exc, exc_info=True)
@@ -5393,7 +5414,10 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
         # 26/09 (/feedback): uma de cada vez, com a troca de roupa no meio; mesma cena (mesma seed).
         # 28/09: as opções saem do guarda-roupa dela (roupa.py); a que ele escolher é a que ela veste pra sair
         from roupa import Roupa
-        outfits = p.get("outfits") or Roupa(db).opcoes_de_look(p["count"], now, random.Random(seed))
+        outfits = p.get("outfits")
+        if not outfits and p["count"] == 1 and Roupa(db).ocasiao_em(now) == "sair":
+            outfits = [Roupa(db).en_em(now)]     # soak, dia 5: "quando fechar o look" — o que ela está vestindo
+        outfits = outfits or Roupa(db).opcoes_de_look(p["count"], now, random.Random(seed))
         # 26/09 (Patrick): look ela mostra no tripé do closet, e a pose muda junto com o look.
         poses = p.get("poses") or random.sample(photo_director.LOOK_POSES, len(outfits))
         seed = p.get("seed") or seed

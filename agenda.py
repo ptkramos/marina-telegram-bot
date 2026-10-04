@@ -958,6 +958,7 @@ class Agenda:
             fim = datetime.fromisoformat(fonte["slot_end"])
         desde = self._desde(snap)
         titulo, linha2, comodo, passos = "Em casa", act[:1].upper() + act[1:], None, []
+        onde = "Botafogo"
         grade_extra = []
         from tempo_livre import TempoLivre
         bloco = TempoLivre(self.db).atual(now) if low.startswith("em casa, ") else None
@@ -1010,7 +1011,8 @@ class Agenda:
         elif low.startswith(("acordando", "acabou de acordar")):
             linha2, comodo = "Acordando", "Quarto"
         elif "academia do prédio" in low:
-            linha2, comodo = "Treinando", "Academia do prédio"
+            # /feedback 03/10 17:44: "na academia do prédio mas mostrando em casa" — o título não é "Em casa"
+            titulo, linha2, onde = "Na academia", "Treinando", "Academia do prédio"
         elif "milo" in low:
             rapidinho = "rapidinho" in low
             titulo = "Na calçada" if rapidinho else "Na Enseada"
@@ -1025,7 +1027,7 @@ class Agenda:
             titulo, linha2 = "Na academia", "Treinando"
         elif "mercado" in low:
             titulo, linha2 = "No mercado", "Fazendo as compras da semana"
-        grade = [["map-pin", "Onde", "Botafogo"]]
+        grade = [["map-pin", "Onde", onde]]
         if comodo:
             grade.append(["door", "Cômodo", comodo])
         grade += grade_extra

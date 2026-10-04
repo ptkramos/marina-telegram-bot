@@ -315,6 +315,8 @@ PHOTO_TURN_CONSTRAINT_EN = """[PHOTO TURN CONSTRAINT]
 Response Availability has already allowed this turn to execute.
 If a photo request is being processed now, attempt the photo in this turn.
 Do not falsely claim the photo was already captured or delivered.
+The photo goes out right after this message, so your words lead into it: do not tell him he has to wait, earn it or
+do something first.
 Do not invent a current location for the shoot unless Camera World / WorldState supplies it."""
 
 REMINDER_OFFER_CONSTRAINT_EN = """[TURN CONSTRAINT — REMINDER OFFER]

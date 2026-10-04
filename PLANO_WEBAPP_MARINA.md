@@ -788,6 +788,13 @@ se ela gozou, ", gozou"; ícone balão com coração (`message-heart`). O que el
 Textos escolhidos pelo Patrick (03/10). Fora de casa não vira bloco.
 O conserto da fala no sexting (frente da voz, 03/10, noite: mais curta, sem fórmula) não mexe no Mini App.
 
+**04/10 — soak, dia 5 (sábado 03/10), o que muda no Bastidores:** treino na academia do prédio (/feedback 17:44)
+deixa de ser "Em casa": **"Na academia" / "Treinando", Onde "Academia do prédio"**, sem Cômodo (escolha do Patrick), e
+o Por fora fica com a roupa de treino (sua a make); na volta, troca pra roupa de casa como quem chega da rua. A série
+da noite não começa mais por cima do Se arrumando (/feedback 19:52: o card estava no banho e o mundo no sofá). No
+Hoje: nada de "Comprou vestidos" no mercado (roupa não entra na lista) e o brunch é o almoço do dia (não aparece
+"Almoçou" uma hora depois). Detalhe na Auditoria ("Soak, dia 5").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

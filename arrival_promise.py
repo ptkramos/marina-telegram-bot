@@ -77,12 +77,19 @@ def observe(db, her_line: str, his_last: str, now: Optional[datetime] = None) ->
     Devolve a primeira promessa gravada (ou None)."""
     now = now or datetime.now()
     text, his = her_line or "", his_last or ""
-    if not _PROMISE_RE.search(text):
+    m = _PROMISE_RE.search(text)
+    if not m:
         return None
+    # Soak, dia 5 (03/10, 12:04): "Tô indo pra casa a pé, te aviso quando chegar" — o "tô indo pra casa" é o que ela
+    # está fazendo; a promessa é o que vem depois do "te aviso" (chegar).
+    depois = text[m.start():]
+    chegada = bool(_ARRIVE_RE.search(depois))
+    volta = bool(_LEAVE_RE.search(depois)) or (not chegada and bool(
+        _LEAVE_RE.search(text) or (_LEAVE_RE.search(his) and not _ARRIVE_RE.search(text))))
     feitas = []
-    if _LEAVE_RE.search(text) or (_LEAVE_RE.search(his) and not _ARRIVE_RE.search(text)):
+    if volta:
         feitas.append(_observe_leave(db, now, so_volta=True))
-    else:
+    if not volta or chegada:
         if _SAIR_RE.search(text) or _SAIR_RE.search(his):
             feitas.append(_observe_leave(db, now, so_volta=False))
         if _ARRIVE_RE.search(text) or _ARRIVE_RE.search(his):

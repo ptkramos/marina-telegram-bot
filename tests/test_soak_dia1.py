@@ -117,7 +117,7 @@ class PlantaoDeAmanhaTest(Base):
             conn.execute("UPDATE open_loops SET content='Patrick terá um plantão amanhã', created_at=?, "
                          "next_check_after=? WHERE id=?", ("2026-09-27T18:15:31", "2026-09-28T00:00:00", lid))
             conn.commit()
-        ativos = self.db.get_open_loops_ativos(limit=5)
+        ativos = self.db.get_open_loops_ativos(limit=5, now=datetime(2026, 9, 29, 19, 1))
         self.assertEqual([l["content"] for l in ativos], ["Patrick terá um plantão na segunda (28/09)"])
         prontos = self.db.get_open_loops_para_checkin(now=datetime(2026, 9, 29, 19, 1))
         self.assertEqual([l["content"] for l in prontos], ["Patrick terá um plantão na segunda (28/09)"])

@@ -1460,3 +1460,14 @@ sexting tem ritmo próprio: curto, 1 a 3 balões, quebrando só onde ela pulou l
 narrar, não repete a ação dele e varia começo e fim — sempre namorada, do jeito dela (decisão do Patrick: "ela é
 namorada ainda, não uma súcubo"). A reação dele com emoji no meio do sexting não vira mais um balão. Pra depois do
 soak: o modo íntimo enxuto (prompt sem o mundo inteiro e com o estado da cena). Detalhe na Auditoria.
+
+**04/10 — soak, dia 5 (sábado 03/10), o que muda na fala e nas fotos:** ela sabe a resposta da Lívia depois que
+chega (às 19:49 disse "ainda não" com o "não passou" desde as 10:48); o próximo compromisso tem nome no prompt (o
+mercado virou "tenho um compromisso de manhã", e o Quartinho com a Júlia virou "a gente tá decidindo"); a promessa
+de avisar a chegada vale também dentro de uma mensagem que ela mesma puxou; a primeira iniciativa do dia é o bom dia;
+lembrete de assunto com data que já passou não sai mais ("seu plantão de segunda" de 28/09). **Fotos:** "te mando
+quando fechar o look" sai quando ela termina de se vestir, com a roupa de sair dela, e só foto de look cumpre (uma
+selfie de camiseta tinha fechado a promessa); "deixa eu ver você com ela" com a lingerie de provocar vestida é foto
+com a peça; no turno de foto, a fala leva pra foto (nada de "fala primeiro" com a foto saindo junto). Anotados pro
+lote da voz: ela sumir 2h30 depois de "vou te prender aqui a tarde toda", o Silo ("continua que melhora" × "ainda
+não vi") e os /ruim 067–072. Detalhe na Auditoria ("Soak, dia 5").

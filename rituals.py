@@ -283,6 +283,14 @@ class Rituals:
         self._set(key, "quiet", now)
         self.start_shower(now, self._rng(day, "banho_manha").randint(12, 20), told_patrick=False)
 
+    def bom_dia_pendente(self, now: datetime) -> bool:
+        """Ela acordou e o bom dia de hoje ainda não saiu nem foi pulado (soak, dia 5: às 08:57 saiu "lembrei do seu
+        plantão" e o "Bom dia… acordei faz pouquinho" só às 09:12). A iniciativa do dia começa pelo bom dia."""
+        day = now.date()
+        wake = self.wake_at(day)
+        return bool(wake and wake <= now < wake + timedelta(hours=3)
+                    and not self._get(f"{PREFIX}{day.isoformat()}:bom_dia"))
+
     def _bom_dia(self, now: datetime, kind: str, activity: str = "") -> Optional[Ritual]:
         day = now.date()
         key = f"{PREFIX}{day.isoformat()}:bom_dia"

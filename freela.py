@@ -53,6 +53,7 @@ JOBS = (
     ("vídeo pra uma marca de cosméticos", (700, 1100), 4),
 )
 WEEKDAYS = ("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")
+JA_SABE = timedelta(hours=48)   # resultado da Lívia que ainda vai no prompt
 
 
 def _rng(key: str) -> random.Random:
@@ -361,17 +362,36 @@ class Freela:
                     out.append({"kind": kind, "what": st["what"], "start": start})
         return sorted(out, key=lambda x: x["start"])
 
+    def _ja_sabe(self, now: datetime) -> list[str]:
+        """Soak, dia 5 (03/10, 19:49): "a Lívia deu notícias do casting?" → "Ainda não, tô aguardando ela" — a
+        resposta tinha chegado às 10:48 (não passou). Depois do resultado o bloco dizia só "nenhum casting… esperando
+        a Lívia". O que a Lívia avisou nas últimas 48 h vai no prompt: ela sabe."""
+        with self.db.get_connection() as conn:
+            rows = conn.execute(
+                """SELECT event_at, summary FROM life_events WHERE event_key LIKE 'freela:%'
+                   AND (event_key LIKE '%:resultado' OR event_key LIKE '%_perdido') AND event_at>? AND event_at<=?
+                   ORDER BY event_at""",
+                ((now - JA_SABE).isoformat(), now.isoformat())).fetchall()
+        out = []
+        for r in rows:
+            at = datetime.fromisoformat(r["event_at"])
+            dia = "hoje" if at.date() == now.date() else "ontem" if at.date() == now.date() - timedelta(days=1) \
+                else f"{WEEKDAYS[at.weekday()]} ({at:%d/%m})"
+            out.append(f"- Você já sabe ({dia} às {at:%H:%M}): {r['summary']}")
+        return out
+
     def prompt_lines(self, now: datetime) -> list[str]:
         data = self._state()
         items = self.upcoming(now)
         waiting = [st for st in data.values() if st["step"] == "esperando"]
         to_receive = [st for st in data.values() if st["step"] == "a_receber"]
+        ja_sabe = self._ja_sabe(now)
         if not items and not waiting and not to_receive:
             # 25/09 13:18: sem job o bloco sumia, e "vem ensaio por aí?" virou "vem sim, tenho ensaio hj às
             # 19h30 no Quartinho com o Theo e a Júlia" (era o rolê no bar). Sem nada marcado, ela sabe disso.
             return ["[TRABALHO DE MODELO (agência da Lívia)] Nenhum casting, prova ou job marcado agora. Se ele "
-                    "perguntar de ensaio (sessão de fotos) ou job, a resposta é não: tá parada, esperando a Lívia. "
-                    "Rolê com amigos não é ensaio."]
+                    "perguntar de ensaio (sessão de fotos) ou job, a resposta é não: tá parada, esperando a Lívia "
+                    "mandar coisa nova. Rolê com amigos não é ensaio."] + ja_sabe
         names = {"casting": "casting", "prova": "prova de roupa", "job": "JOB (sessão de fotos)"}
 
         def quando(dt: datetime) -> str:
@@ -382,6 +402,7 @@ class Freela:
         lines = ["[TRABALHO DE MODELO (agência da Lívia) — agenda real; não invente casting nem job fora daqui]"]
         lines += [f"- {names[i['kind']]}: {i['what']} — {quando(i['start'])}" for i in items[:4]]
         lines += [f"- Esperando a resposta do casting: {st['what']}" for st in waiting[:2]]
+        lines += ja_sabe
         lines += [f"- Falta a Lívia mandar o resto do cachê: R$ {st.get('rest', st['pay'])} ({st['what']}), "
                   f"até {datetime.fromisoformat(st['pay_at']):%d/%m %H:%M}" for st in to_receive[:2]]
         pendentes = [st for st in data.values() if st["step"] == "job_marcado" and st.get("rest")]

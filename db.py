@@ -53,6 +53,26 @@ def ancorar_datas(texto: Optional[str], criado_em) -> str:
     return texto
 
 
+DATA_VENCIDA = timedelta(days=2)    # assunto com data explícita mais velha que isso já passou
+
+
+def _data_vencida(texto: Optional[str], hoje: date) -> bool:
+    """Soak, dia 5 (03/10, 08:57): "lembrei do seu plantão de segunda" — o planner recriava todo dia o assunto
+    "Patrick terá um plantão na segunda-feira (28/09)", lendo o texto já ancorado. Todas as datas do assunto
+    ficaram para trás (mais de 2 dias): não é mais assunto em aberto."""
+    import re as _re
+    datas = []
+    for d, m in _re.findall(r"\b(\d{2})/(\d{2})\b", texto or ""):
+        try:
+            dia = date(hoje.year, int(m), int(d))
+        except ValueError:
+            continue
+        if dia > hoje + timedelta(days=183):         # dezembro lido em janeiro
+            dia = dia.replace(year=hoje.year - 1)
+        datas.append(dia)
+    return bool(datas) and max(datas) < hoje - DATA_VENCIDA
+
+
 def _assunto_dela(texto: Optional[str]) -> bool:
     """O assunto em aberto é só da Marina (o peso dela, a cólica dela) — nada do Patrick nele."""
     import re as _re
@@ -1434,6 +1454,9 @@ class DatabaseManager:
         now_dt = datetime.now()
         now_iso = now_dt.isoformat()
         content = ancorar_datas(content, now_dt)
+        vencido = _data_vencida(content, now_dt.date())
+        if vencido:
+            logger.info("open_loop.data_vencida content=%s", content[:120])
         short_lived = loop_type in SHORT_LIVED_LOOP_TYPES and next_check_after is None and due_at is None
         if next_check_after is None and not short_lived:
             # P2.1: Prazo inicial padrão (24h) para evitar check-in imediato em loops sem prazo
@@ -1445,6 +1468,14 @@ class DatabaseManager:
             # ("Patrick avisar quando chegar em casa" ×4 em 22/09). Pendência
             # parecida e aberta do mesmo tipo é tocada, não duplicada.
             words = _loop_words(content)
+            if vencido:                                   # nasce resolvido: não vira lembrete nem pergunta
+                cursor.execute(
+                    """INSERT INTO open_loops (loop_type, content, status, importance, due_at, next_check_after,
+                       source_conversation_id, created_at, last_touched_at, resolved_at, resolution_notes)
+                       VALUES (?, ?, 'resolved', ?, ?, NULL, ?, ?, ?, ?, 'data já passou')""",
+                    (loop_type, content, importance, due_at, source_conversation_id, now_iso, now_iso, now_iso))
+                conn.commit()
+                return cursor.lastrowid
             for row in cursor.execute(
                     "SELECT id, content FROM open_loops WHERE status='open' AND loop_type=? "
                     "AND (is_archived = 0 OR is_archived IS NULL)", (loop_type,)).fetchall():
@@ -1471,7 +1502,7 @@ class DatabaseManager:
             row = cursor.fetchone()
             return dict(row) if row else None
 
-    def get_open_loops_ativos(self, limit: int = 3) -> list[dict]:
+    def get_open_loops_ativos(self, limit: int = 3, now: Optional[datetime] = None) -> list[dict]:
         """Retorna os open loops ativos prioritários para injeção no prompt da Marina."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -1487,7 +1518,8 @@ class DatabaseManager:
                 """,
                 ((datetime.now() - timedelta(hours=SHORT_LIVED_LOOP_HOURS)).isoformat(), limit)
             )
-            return [{**dict(r), "content": ancorar_datas(r["content"], r["created_at"])} for r in cursor.fetchall()]
+            linhas = [{**dict(r), "content": ancorar_datas(r["content"], r["created_at"])} for r in cursor.fetchall()]
+            return [r for r in linhas if not _data_vencida(r["content"], (now or datetime.now()).date())]
 
     def get_open_loops_para_checkin(self, now_iso: Optional[Union[str, datetime]] = None, limit: int = 2, now: Optional[Union[str, datetime]] = None) -> list[dict]:
         """Retorna open loops que já atingiram a data para checagem/pergunta carinhosa (P2.1)."""
@@ -1514,8 +1546,11 @@ class DatabaseManager:
             )
             # Soak, dia 2 (30/09, 08:36): "Esclarecer se o peso mencionado por Marina aumentou ou diminuiu" virou
             # "tem alguma novidade ou continua tudo igual por aí?" pra ele. Assunto só dela não vira pergunta a ele.
-            linhas = [r for r in cursor.fetchall() if not _assunto_dela(r["content"])][:limit]
-            return [{**dict(r), "content": ancorar_datas(r["content"], r["created_at"])} for r in linhas]
+            linhas = [{**dict(r), "content": ancorar_datas(r["content"], r["created_at"])} for r in cursor.fetchall()
+                      if not _assunto_dela(r["content"])]
+            hoje = check_time[:10]
+            hoje = datetime.fromisoformat(hoje).date() if len(hoje) == 10 else datetime.now().date()
+            return [r for r in linhas if not _data_vencida(r["content"], hoje)][:limit]
 
     def resolver_open_loop(self, loop_id: int, resolution_notes: Optional[str] = None) -> bool:
         """Marca o open loop como resolvido com notas contextuais."""

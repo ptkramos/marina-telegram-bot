@@ -565,6 +565,18 @@ def _friend_outfit(marina_outfit: Optional[str], rng: random.Random) -> str:
     return rng.choice(options or [o for o in WARDROBE["sair"] if o != marina_outfit])
 
 
+_VER_COM_A_PECA = re.compile(r"\b(?:ver|v[eê]|mostra|manda)\b[^.?!\n]{0,25}\bcom\s+(?:ela|ele|essa|esse|isso|"
+                             r"aquel[ae]|o conjunto|a lingerie|a renda)\b")
+
+
+def _vestida_pra_ele(db, now: datetime) -> bool:
+    try:
+        from roupa import Roupa
+        return Roupa(db).ocasiao_em(now) == "provocar"
+    except Exception:
+        return False
+
+
 def asked_level(text: str) -> Optional[int]:
     low = (text or "").lower()
     for level, pattern in _ASK:
@@ -813,6 +825,10 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     if session and session.get("place") != (place or HOME):
         session = None
     asked = asked_level(request)
+    if asked is None and _VER_COM_A_PECA.search((request or "").lower()) and _vestida_pra_ele(db, now):
+        # Soak, dia 5 (03/10, 15:08): "deixa eu ver você com ela" (o conjunto de renda rosa que ela vestiu pra
+        # provocar) virou foto pelada. Ver com a peça é com a peça.
+        asked = 2
     level = decide_level(asked, turn, session, her_initiative=her_initiative, rng=rng)
     declined = ""
     if not at_home and level > 1:

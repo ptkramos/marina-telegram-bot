@@ -106,6 +106,8 @@ LANCHE_NOITE_ANTES_DE_DEITAR = timedelta(minutes=15)
 SAIDA_CURTA = timedelta(minutes=90)
 SAIDA_DEPOIS_DA_AULA = timedelta(hours=2)   # saída até 2 h depois da última aula: não almoça por lá antes
 REFEICAO_INTERVALO = timedelta(minutes=60)
+BRUNCH_DEPOIS_DE = time(12, 0)                # café que acaba depois disso já é o almoço (o brunch empurrado)
+ALMOCO_DEPOIS_DO_BRUNCH = timedelta(hours=3)
 REFEICAO_PISO = {"almoco": time(11, 0), "jantar": time(18, 0)}   # mais cedo que isso não é almoço/jantar
 
 
@@ -356,7 +358,18 @@ class Meals:
             # 28/09 (auditoria): o Hoje previa "~22:55 Lanche" depois de "~22:30 Dormir" — só se couber antes de deitar
             if night + timedelta(minutes=minutos) <= self._deitar(day) - LANCHE_NOITE_ANTES_DE_DEITAR:
                 slots.append(MealSlot("lanche", f"meal:{iso}:lanche:2", night, minutos, "casa", prato))
-        return self._antes_das_saidas(day, sorted(slots, key=lambda s: s.at), wake, volta)
+        return self._brunch_e_almoco(self._antes_das_saidas(day, sorted(slots, key=lambda s: s.at), wake, volta))
+
+    @staticmethod
+    def _brunch_e_almoco(slots: list[MealSlot]) -> list[MealSlot]:
+        """Soak, dia 5 (sáb 03/10): o brunch foi pra depois do mercado (12:40–13:30) e o almoço ficou às 13:44 — duas
+        refeições numa hora ("tenho só o brunch pra terminar" às 13:21). Café que acaba depois do meio-dia é o almoço
+        do dia: o almoço em casa que viria menos de 3 h depois sai."""
+        cafe = next((s for s in slots if s.kind == "cafe" and not s.skipped and s.where == "casa"), None)
+        if cafe is None or cafe.end.time() < BRUNCH_DEPOIS_DE:
+            return slots
+        return [s for s in slots if not (s.kind == "almoco" and s.where == "casa" and not s.skipped
+                                         and s.at < cafe.end + ALMOCO_DEPOIS_DO_BRUNCH)]
 
     def _deitar(self, day: date) -> datetime:
         """A hora de deitar sem os fatores do corpo (ou a congelada): o sono não depende das refeições."""
