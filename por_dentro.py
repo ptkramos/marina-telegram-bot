@@ -11,7 +11,9 @@ Aqui entram, com dados que o mundo já tem:
   não pensou nisso: aparece sem estado nem barra.
 - **Vocês dois** (`voces_linhas`): quando foi a última conversa e o que está pendente entre vocês.
 Tudo o mais curto possível, com o detalhe indo pro lado (Patrick): título | quando; estado | barra | detalhe.
-Voz de painel (opção C do Patrick): "você" é ele, ela em 3ª pessoa; o motivo sai de `webapp_server.motivo_tela`.
+Os dois em 3ª pessoa (04/10, catálogo leva 2, regra 6: "o Patrick", nunca "você"); o motivo sai de
+`webapp_server.motivo_tela`. Textos da tela decididos no catálogo, leva 2 (04/10): título no infinitivo (regra 12),
+estado em uma palavra (regra 10).
 """
 from __future__ import annotations
 
@@ -27,14 +29,14 @@ DIAS = ("seg", "ter", "qua", "qui", "sex", "sáb", "dom")
 DIAS_LONGOS = ("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")
 QUER_DESISTIR = {"aula": "Quer faltar", "academia": "Quer pular", "milo": "Quer adiar", "role": "Quer desmarcar",
                  "mercado_semana": "Quer adiar"}
-ORIGEM = {"vontade": "Ideia dela", "conversa": "Combinado", "emenda": "Emenda"}
-RITMO = {"adiantada": "Adiantada", "normal": "No ritmo", "ultima_hora": "Última hora"}
+ORIGEM = {"vontade": "Espontânea", "conversa": "Combinada", "emenda": "Emendada"}
+RITMO = {"adiantada": "Adiantado", "normal": "Em dia", "ultima_hora": "Apertado"}
 FREELA = {"casting": "Casting", "prova": "Prova de roupa", "job": "Job"}
 FOTO = {"unhas": "Foto das unhas", "cabelo": "Foto do cabelo", "intimo": "Foto do banho"}
 # o fator da agenda viva que mais pesou, curto pra coluna da direita
 FATOR = {"sono": "Dormiu mal", "tedio": "Entediada", "alegria": "Empolgada", "desabafo": "Quer desabafar",
          "espairecer": "Espairecer", "descarregar": "Descarregar", "remedio": "Precisa de remédio", "tpm": "TPM",
-         "chuva": "Chovendo", "grana": "Sem grana", "amigos": "Com amigos", "chateada": "Chateada com você"}
+         "chuva": "Chovendo", "grana": "Sem grana", "amigos": "Com amigos", "chateada": "Chateada com o Patrick"}
 PENSA_ANTES_H = 4.0               # a agenda viva repensa até ~4 h antes; mais longe ela ainda não pensou
 DETALHE_MAX = 18
 
@@ -48,12 +50,13 @@ def hora(at: datetime) -> str:
 
 
 def quando(at: datetime, now: datetime) -> str:
-    """'há 20 min', 'hoje, 14h', 'ontem, 22h01', 'sáb, 18h', '12/09'."""
+    """'há 20 minutos', 'hoje, 14h', 'ontem, 22h01', 'sáb, 18h', '12/09'."""
     seg = (now - at).total_seconds()
     if 0 <= seg < 60:
         return "agora"
     if 0 <= seg < 3600:
-        return f"há {int(seg // 60)} min"
+        n = int(seg // 60)
+        return f"há {n} minuto{'s' if n > 1 else ''}"           # 04/10 (catálogo, regra 2): por extenso
     dias = (now.date() - at.date()).days
     if dias == 0:
         return f"hoje, {hora(at)}"
@@ -86,8 +89,8 @@ def materia(nome: str) -> str:
 
 
 def _sentimento(word: str, target: Optional[str]) -> str:
-    from webapp_server import _alguem, cap
-    return cap(" ".join(x for x in (word, _alguem(target or "", word)) if x))
+    from webapp_server import sentimento_tela
+    return sentimento_tela(word, target)
 
 
 # ------------------------------------------------------------- Hoje por dentro --
@@ -116,18 +119,18 @@ def _titulo_agenda(it: dict) -> tuple[str, str]:
     if tipo == "aula":
         nomes = [materia(b["display_name"]) for b in it.get("blocos") or []]
         if len(nomes) > 1:
-            return f"{len(nomes)} aulas", f"{nomes[0]} e +{len(nomes) - 1}"
+            return f"Aula de {nomes[0]}", f"e +{len(nomes) - 1}"       # 04/10 (Patrick); layout depois do soak
         return (f"Aula de {nomes[0]}" if nomes else "Aula"), ""
     if tipo == "milo":
-        return "Passeio do Milo", ""
+        return "Passear com o Milo", ""
     if tipo == "academia":
-        return "Treino", ""
+        return "Treinar na academia", ""
     if tipo == "mercado_semana":
-        return "Mercado", ""
+        return "Fazer compras no mercado", ""
     lugar = re.search(r"\b(?:no|na|em) ([A-ZÁÉÍÓÚ][^,;(]*)$", it["texto"])
     if tipo == "role" and it.get("com"):
         from social_day import short_name
-        return f"Rolê com {short_name(it['com'][0])}", _curto(lugar.group(1)) if lugar else ""
+        return f"Sair com {short_name(it['com'][0])}", _curto(lugar.group(1)) if lugar else ""
     if lugar:
         return _curto(it["texto"][:lugar.start()].strip(), 24), _curto(lugar.group(1))
     return _curto(it["texto"], 24), ""
@@ -146,8 +149,8 @@ def _estado(av, it: dict, now: datetime, feeling, decisoes: dict) -> tuple[str, 
     if feito:
         v = feito.get("vontade")
         if not feito.get("vai"):
-            return "Desistiu", v, ""
-        return ("Animada" if v is not None and v >= 0.7 else "Vai"), v, ""
+            return "Desmotivada", v, ""
+        return ("Animada" if v is not None and v >= 0.7 else "Confirmada"), v, ""
     if it.get("origem") in ORIGEM:
         return ORIGEM[it["origem"]], None, ""
     if feeling is None or it["inicio"] - now > timedelta(hours=PENSA_ANTES_H):
@@ -158,11 +161,11 @@ def _estado(av, it: dict, now: datetime, feeling, decisoes: dict) -> tuple[str, 
     if margem < 0:
         estado, sinal = QUER_DESISTIR.get(it["tipo"], "Quer desistir"), -1
     elif margem < 0.15:
-        estado, sinal = "Na dúvida", -1
+        estado, sinal = "Indecisa", -1
     elif aval.vontade >= 0.7:
         estado, sinal = "Animada", +1
     else:
-        estado, sinal = "Vai", +1
+        estado, sinal = "Confirmada", +1
     motivo = aval.motivo(sinal)
     return estado, round(aval.vontade, 2), _fator(*motivo) if motivo else ""
 
@@ -190,8 +193,8 @@ def cabeca_view(db, now: datetime, dormindo: bool) -> list[dict]:
             dias = (due - now.date()).days
             if dias < 0:
                 continue
-            estado = "Correndo" if dias <= 1 and a["pace"] != "adiantada" else RITMO.get(a["pace"], "")
-            out.append({"titulo": "Entrega", "quando": "hoje" if dias == 0 else "amanhã" if dias == 1
+            estado = "Atrasado" if dias <= 1 and a["pace"] != "adiantada" else RITMO.get(a["pace"], "")
+            out.append({"titulo": "Fazer trabalho da facul", "quando": "hoje" if dias == 0 else "amanhã" if dias == 1
                         else DIAS_LONGOS[due.weekday()], "estado": estado, "vontade": None,
                         "detalhe": materia(a["course"]), "_at": datetime.combine(due, time(18))})
     except Exception:
@@ -217,7 +220,7 @@ def voces_linhas(db, now: datetime) -> list[list[str]]:
         with db.get_connection() as conn:
             r = conn.execute("SELECT role, timestamp FROM conversas ORDER BY id DESC LIMIT 1").fetchone()
         if r:
-            linhas.append(["message-circle", "Conversa", cap(quando(datetime.fromisoformat(r["timestamp"]), now))])
+            linhas.append(["message-circle", "Última mensagem", cap(quando(datetime.fromisoformat(r["timestamp"]), now))])
             if r["role"] == "user":
                 pend.append("Resposta dela")                # a última mensagem é sua
     except Exception:
@@ -245,5 +248,5 @@ def voces_linhas(db, now: datetime) -> list[list[str]]:
             pend.append("Mágoa")
     except Exception:
         logger.exception("por_dentro.magoa")
-    linhas.append(["hourglass", "Pendente", " · ".join(pend) if pend else "Nada"])
+    linhas.append(["hourglass", "Assunto pendente", ", ".join(pend) if pend else "Nada"])
     return linhas

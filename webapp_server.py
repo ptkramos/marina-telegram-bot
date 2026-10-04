@@ -202,7 +202,7 @@ def timeline(ordered: datetime, eta: datetime, now: datetime, *, delivered: bool
     steps = [{"label": label, "at": at.strftime("%H:%M") if i <= current else None,
               "done": i < current or (delivered and i == 3), "current": i == current}
              for i, (label, at) in enumerate(marks)]
-    headline = f"{final_label} · {eta:%H:%M}" if delivered else f"Previsão de entrega: {eta:%H:%M}"
+    headline = f"{final_label} às {eta:%H:%M}" if delivered else f"Previsão de entrega: {eta:%H:%M}"
     return steps, headline
 
 
@@ -285,7 +285,7 @@ async def api_inicio(request: web.Request) -> web.Response:
 
 
 # --------------------------------------------- Bastidores: textos (Patrick, 26/09) --
-# Voz híbrida: rótulos e dados falam como painel ("você"); sentimento fala do jeito dela.
+# 04/10 (catálogo, leva 2, regra 6): o app é dela e fala do Patrick na 3ª pessoa, nunca "você".
 # 26/09 (Patrick): o celular sempre como "Olha …"
 TELEFONE = (("Dormindo", "Olha quando acordar"), ("Ocupada", "Olha nos intervalos"),
             ("Concentrada", "Olha nos intervalos"), ("Online", "Olha com frequência"))
@@ -301,10 +301,29 @@ CELULAR_POR_ATIVIDADE = {
 FASES = {"fase menstrual": "Menstruada", "fase folicular": "Fase folicular",       # nomes do cycle.py, em minúscula
          "fase ovulatória / período fértil": "Período fértil", "fase lútea inicial": "Fase lútea",
          "fase pré-menstrual / tpm": "TPM"}
-# preposição de cada sentimento quando é por alguém: "com saudade DELE", "grata A ELE", "chateada COM ele"
-DE_ALGUEM = {"com saudade", "orgulhosa", "admirada", "com vergonha", "com ciuminho"}
+# preposição de cada sentimento quando é por alguém: "Saudade DO Patrick", "Gratidão AO Patrick",
+# "Carinho PELO Patrick", "Irritação COM o Patrick" (a chave é a palavra que ela lê no prompt)
+DE_ALGUEM = {"com saudade", "orgulhosa", "com vergonha", "com ciuminho"}
 A_ALGUEM = {"grata"}
+POR_ALGUEM = {"carinhosa", "derretida", "admirada"}
 SEM_ALGUEM = {"com culpa", "com saudade de casa"}   # o motivo embaixo já diz com quem ("Falou com o pai")
+# 04/10 (catálogo, leva 2, regra 11): na tela o sentimento é substantivo; o prompt dela segue com a palavra dela
+SENTIMENTO_TELA = {
+    "empolgada": "Empolgação", "se divertindo": "Diversão", "orgulhosa": "Orgulho", "aliviada": "Alívio",
+    "grata": "Gratidão", "contente": "Satisfação", "carinhosa": "Carinho", "com saudade": "Saudade",
+    "derretida": "Ternura", "admirada": "Admiração",
+    "desanimada": "Desânimo", "decepcionada": "Decepção", "sozinha": "Solidão", "com saudade de casa": "Saudade",
+    "irritada": "Irritação", "frustrada": "Frustração", "impaciente": "Impaciência", "chateada": "Aborrecimento",
+    "ansiosa": "Ansiedade", "preocupada": "Preocupação", "insegura": "Insegurança", "com vergonha": "Vergonha",
+    "com culpa": "Culpa", "entediada": "Tédio", "inquieta": "Inquietude", "com ciuminho": "Ciúme"}
+# 04/10 (catálogo, leva 2): Corpo e Humor só na tela (o /emocao e o prompt seguem com as palavras do emotion.py)
+CORPO_ROTULO = {"Fome": "Saciedade", "Tesão": "Excitação"}
+CORPO_PALAVRA = {"ok": "Normal", "cheia de energia": "Elétrica",
+                 "sem fome": "Satisfeita", "beliscaria algo": "Beliscaria", "com fome": "Faminta",
+                 "morrendo de fome": "Esfomeada",
+                 "sem clima": "Desanimada", "de boa": "Receptiva", "esquentando": "Instigada", "com tesão": "Molhada",
+                 "com muito tesão": "Incontrolável"}
+HUMOR_ROTULO = {"Brincadeira": "Humor", "Pique social": "Social"}
 
 
 def _hora(at: datetime) -> str:
@@ -348,33 +367,28 @@ def cap(s: str) -> str:
 
 
 def _alguem(target: str, word: str) -> str:
-    """'o Patrick' vira você (28/09, Patrick: o painel fala com você também no sentimento — "Carinhosa com
-    você", "Com saudade de você"); os outros ficam com o nome curto ('a Bia')."""
+    """Por quem ela sente ('do Patrick', 'da Bia', 'ao Theo', 'pelo Patrick', 'com a Bia'). 04/10 (catálogo, leva 2,
+    regra 6): o app é dela e fala dele na 3ª pessoa, nunca "você"."""
     if not target or word in SEM_ALGUEM:
         return ""
-    if target == "o Patrick":
-        return "de você" if word in DE_ALGUEM else "a você" if word in A_ALGUEM else "com você"
     art, _, resto = target.partition(" ")
     if word in DE_ALGUEM:
-        return f"d{art} {resto}"                                  # "da Bia", "do Theo"
+        return f"d{art} {resto}"                                  # "da Bia", "do Patrick"
     if word in A_ALGUEM:
         return f"à {resto}" if art == "a" else f"ao {resto}"
+    if word in POR_ALGUEM:
+        return f"pel{art} {resto}"                                # "pela Bia", "pelo Patrick"
     return f"com {target}"
 
 
-# os eventos do mundo são gravados em 3ª pessoa ("O Patrick fez um pix pra ela"); na tela vira a voz certa
-_PATRICK_RE = re.compile(r"\b[Oo] Patrick\b")
+def sentimento_tela(word: str, target: Optional[str]) -> str:
+    """'com saudade' + 'o Patrick' → 'Saudade do Patrick' (Sentindo agora e Hoje por dentro)."""
+    return cap(" ".join(x for x in (SENTIMENTO_TELA.get(word, word), _alguem(target or "", word)) if x))
 
 
-def voz_painel(txt: str) -> str:
-    """Painel falando com você: 'O Patrick fez um pix pra ela' → 'Você fez um Pix pra ela'."""
-    txt = re.sub(r"\b([oa])s? (\w+) do Patrick\b", lambda m: f"{m.group(1)} {'seu' if m.group(1) == 'o' else 'sua'} {m.group(2)}", txt or "")
-    txt = re.sub(r"\bdo Patrick\b", "de você", txt)
-    txt = re.sub(r"\bno Patrick\b", "em você", txt)
-    txt = re.sub(r"\b(?:pro|para o) Patrick\b", "pra você", txt)
-    txt = _PATRICK_RE.sub("você", txt)
-    txt = re.sub(r"\bPatrick\b", "você", txt)                   # "(Patrick ficou de enviar…)"
-    return cap(txt.replace("pix", "Pix"))
+def _voz_tela(txt: str) -> str:
+    """O mundo grava em 3ª pessoa ('o Patrick fez um pix pra ela') e a tela mantém (04/10, regra 6)."""
+    return cap((txt or "").replace("pix", "Pix"))
 
 
 FATO_MAX, DETALHE_MAX = 42, 22
@@ -412,7 +426,7 @@ def _legado(txt: str) -> str:
 def motivo_tela(cause: str, target: str = "") -> dict:
     """28/09 (Patrick): o motivo segue um padrão só — o fato curto em voz de painel e o detalhe ao lado, em
     cinza ({"motivo": "Viu Paradise Kiss", "detalhe": "eps 1 e 2"}). O mundo e o planner já gravam "fato ·
-    detalhe" em 3ª pessoa ("o Patrick mandou comida · surpresa" → "Você mandou comida"); os motivos antigos
+    detalhe" em 3ª pessoa ("o Patrick mandou comida · surpresa" → "O Patrick mandou comida"); os motivos antigos
     ("Trocou mensagens com a Bia; assunto: festas", "Ele provocou, insinuando que…") passam pelo mesmo molde."""
     txt = _legado((cause or "").strip().rstrip("."))
     base, _, assunto = txt.partition("; assunto: ")
@@ -425,8 +439,8 @@ def motivo_tela(cause: str, target: str = "") -> dict:
     if " · " not in txt and len(txt) > FATO_MAX and ", " in txt:
         txt = txt.replace(", ", " · ", 1)                     # "Ele recuou, dizendo que…" → fato · detalhe
     fato, _, detalhe = txt.partition(" · ")
-    fato, detalhe = voz_painel(fato.strip()), detalhe.strip()
-    return {"motivo": _corta(fato, FATO_MAX), "detalhe": _PATRICK_RE.sub("você", _corta(detalhe, DETALHE_MAX))}
+    fato, detalhe = _voz_tela(fato.strip()), detalhe.strip()
+    return {"motivo": _corta(fato, FATO_MAX), "detalhe": _corta(detalhe, DETALHE_MAX)}
 
 
 def _corta(txt: str, n: int) -> str:
@@ -435,13 +449,6 @@ def _corta(txt: str, n: int) -> str:
         return txt
     corte = txt[:n] if txt[n] == " " else txt[:n].rsplit(" ", 1)[0]
     return corte.rstrip(",") + "…"
-
-
-def _horas(h: float) -> str:
-    h_int, m = int(h), int(round((h - int(h)) * 60))
-    if m == 60:
-        h_int, m = h_int + 1, 0
-    return f"{h_int}h{m:02d}" if m else f"{h_int}h"
 
 
 def _desconforto(why: str, fase: str) -> str:
@@ -453,34 +460,71 @@ def _desconforto(why: str, fase: str) -> str:
     return cap(why)
 
 
-def emocao_view(e: dict, dormindo: bool, now: Optional[datetime] = None, ciclo: str = "", fase: str = "") -> dict:
+def _orgasmo(h: float) -> str:
+    """04/10 (catálogo, leva 2, regras 2 e 14): por extenso e sem "atrás" — "Há 5 horas", "Há 3 dias"."""
+    if h < 1:
+        n = max(1, round(h * 60))
+        return f"Há {n} minuto{'s' if n > 1 else ''}"
+    if h < 48:
+        n = round(h)
+        return f"Há {n} hora{'s' if n > 1 else ''}"
+    return f"Há {round(h / 24)} dias"
+
+
+def emocao_view(e: dict, dormindo: bool, now: Optional[datetime] = None, ciclo: str = "", fase: str = "",
+                dormiu_em: Optional[datetime] = None) -> dict:
     """Painel de emoção em texto de gente: linhas rotuladas em vez de 'dormiu 8,7 h · TPM'.
-    28/09 (Patrick): palavras com maiúscula, linha Ciclo, e o Sentindo agora diz quando começou."""
-    body = [{**b, "word": cap(b.get("word") or "")} for b in e["body"]]
+    28/09 (Patrick): palavras com maiúscula, linha Ciclo, e o Sentindo agora diz quando começou.
+    04/10 (catálogo, leva 2): rótulos e palavras novos só na tela; a barra Saciedade é a fome ao contrário."""
+    from agenda import duracao, por_volta
+    body = []
+    for b in e["body"]:
+        word = b.get("word") or ""
+        b = {**b, "label": CORPO_ROTULO.get(b["label"], b["label"]), "word": cap(CORPO_PALAVRA.get(word, word))}
+        if b["label"] == "Saciedade":
+            b["value"] = round(1 - b["value"], 3)
+        body.append(b)
     if dormindo:
         body[0]["word"] = "Dormindo"                 # 'exausta' dormindo era pressão de sono, não ela mal
     linhas = []
     if dormindo:
-        linhas.append(["moon", "Sono", "Dormindo agora"])
+        linhas.append(["moon", "Dormindo", f"Dormiu {por_volta(dormiu_em)}" if dormiu_em else ""])
     elif e.get("hours_slept") is not None:
         acordou = e.get("awake_since")
-        linhas.append(["moon", "Sono", f"Dormiu {_horas(e['hours_slept'])}"
-                       + (f" · acordou às {_hora(datetime.fromisoformat(str(acordou)))}" if acordou else "")])
+        linhas.append(["moon", "Acordada", f"Dormiu por {duracao(timedelta(hours=e['hours_slept']))}"
+                       + (f", acordou {por_volta(datetime.fromisoformat(str(acordou)))}" if acordou else "")])
     if ciclo:
-        linhas.append(["droplet", "Ciclo", ciclo])
+        dia, _, nome = ciclo.partition(" · ")       # "Dia 3 de 28 · Menstruada" → Menstruada | Dia 3 de 28
+        linhas.append(["droplet", nome or "Ciclo", dia])
     if e.get("hours_since_release") is not None:
-        h = e["hours_since_release"]
-        linhas.append(["heartbeat", "Último orgasmo", f"Há {round(h)} h" if h < 48 else f"Há {round(h / 24)} dias"])
+        linhas.append(["heartbeat", "Último orgasmo", _orgasmo(e["hours_since_release"])])
     if e.get("discomfort_why"):
-        linhas.append(["bandage", "Desconforto", _desconforto(e["discomfort_why"], fase if ciclo else "")])
+        linhas.append(["bandage", "Mal-estar", _desconforto(e["discomfort_why"], fase if ciclo else "")])
     from por_dentro import quando
-    sentindo = [{"texto": cap(" ".join(x for x in (f["word"], _alguem(f["target"], f["word"])) if x)),
+    sentindo = [{"texto": sentimento_tela(f["word"], f["target"]),
                  **motivo_tela(f.get("cause_raw") or f["cause"], f["target"] or ""), "valor": f["value"],
                  "vezes": f["count"], "ate_resolver": f["until_resolved"],
                  "quando": quando(f["at"], now) if f.get("at") and now else ""}
                 for f in e["feelings"]]
     return {"body": body, "no_clima": e.get("in_the_mood", False), "linhas": linhas, "humor": cap(e["mood"]),
-            "humor_barras": e["mood_bars"], "sentindo": sentindo, "voces": e["bond"]}
+            "humor_barras": [{**b, "label": HUMOR_ROTULO.get(b["label"], b["label"])} for b in e["mood_bars"]],
+            "sentindo": sentindo, "voces": e["bond"]}
+
+
+def _dormiu_em(db, now: datetime) -> Optional[datetime]:
+    """Hora em que ela pegou no sono (noite ou cochilo), pra linha "Dormindo" do Corpo."""
+    try:
+        from sleep_plan import SleepPlan
+        plan = SleepPlan(db)
+        for _noite, bed, wake in plan.nights_around(now):
+            if bed <= now < wake:
+                return bed
+        nap = plan.nap(now.date())
+        if nap and nap[0] <= now < nap[1]:
+            return nap[0]
+    except Exception:
+        logger.exception("webapp.sono.error")
+    return None
 
 
 async def api_bastidores(request: web.Request) -> web.Response:
@@ -499,7 +543,8 @@ async def api_bastidores(request: web.Request) -> web.Response:
             logger.exception("webapp.agenda.error")
             status["card"] = None
         out = {"status": status, "emocao": emocao_view(EmotionEngine(hooks.db).panel(now), status["dormindo"], now,
-                                                       status["ciclo"], status.get("ciclo_fase", "")),
+                                                       status["ciclo"], status.get("ciclo_fase", ""),
+                                                       _dormiu_em(hooks.db, now) if status["dormindo"] else None),
                "hoje": _hoje(hooks.db, now)}
         try:
             import por_dentro                        # 28/09 (Patrick): Hoje por dentro, Na cabeça, Vocês dois

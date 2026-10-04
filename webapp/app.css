@@ -123,6 +123,7 @@ button.primary:disabled { opacity: .5; }
 .nc-e { font-size: 13px; }
 .nc-s .w { font-size: 12px; color: var(--muted); white-space: nowrap; text-align: right; overflow: hidden; text-overflow: ellipsis; }
 .dt { color: var(--muted); }
+.feel .t .vezes { color: var(--muted); font-weight: 600; margin-right: 6px; }   /* 04/10: "2x Saudade do Patrick" */
 /* Hoje por dentro: hora, sentimento e o motivo embaixo */
 .dr { display: grid; grid-template-columns: 44px 1fr; gap: 8px; padding: 6px 0; font-size: 14px; border-bottom: 1px solid var(--line); }
 .dr:last-of-type { border-bottom: 0; }
@@ -305,9 +306,11 @@ button.primary:disabled { opacity: .5; }
 .linhas { display: flex; flex-direction: column; }
 .linhas:not(:empty) { margin-top: 10px; }
 .linhas.sep { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 4px; }
-.linha { display: grid; grid-template-columns: 22px 78px 1fr; align-items: baseline; gap: 8px; padding: 5px 0; font-size: 14px; }
+/* 04/10 (catálogo, leva 2): rótulos maiores ("Assunto pendente", "Última pesagem") numa linha só; a coluna é a
+   mesma em todos os cards, pros valores ficarem na mesma régua */
+.linha { display: grid; grid-template-columns: 22px 114px 1fr; align-items: baseline; gap: 8px; padding: 5px 0; font-size: 14px; }
 .li-ic { color: var(--muted); text-align: center; }
-.li-rot { color: var(--muted); }
+.li-rot { color: var(--muted); white-space: nowrap; }
 .li-val { min-width: 0; }
 .vazio-txt { margin: 2px 0; }
 /* 26/09 (Patrick): ícones próprios — chuveiro no traço do Tabler; hand-love-you invertido (masturbação) */
@@ -341,7 +344,6 @@ button.primary:disabled { opacity: .5; }
 .bn-mes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
 .bn-mes .d { display: block; }
 .bn-mes b { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.bn-linhas .linha { grid-template-columns: 22px 108px 1fr; }
 .mov { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; width: 100%; padding: 9px 0;
   border: 0; border-bottom: 1px solid var(--line); background: none; font: inherit; color: inherit; text-align: left; }
 .mov:last-child, .mov.aberto { border-bottom: 0; }

@@ -186,6 +186,9 @@ PRA = {"noite": "Sair à noite", "encontro": "Encontro", "jogo": "Jogo do Botafo
        "cabelo": "Salão", "milo": "Passeio do Milo", "dormir": "Dormir"}
 PRA_OCASIAO = {"casa": "Ficar em casa", "pijama": "Dormir", "provocar": "Te provocar", "rua": "Sair",
                "treino": "Treino", "praia": "Praia", "sair": "Sair à noite", "jogo": "Jogo do Botafogo"}
+# 04/10 (catálogo, leva 2): só na tela; o mundo e o prompt dela seguem com os nomes de cima
+PRA_TELA = {"Te provocar": "Provocar o Patrick"}
+MAKE_TELA = {"festa": "Completa", "ensaio": "Profissional"}
 RUA_OK = ("rua", "sair", "jogo", "praia", "treino", "casa")      # dá pra pôr o pé na rua assim (casa: short e camiseta)
 LEVE_IMPLICITA = ("faculdade", "cafe", "acai", "medico", "manicure", "cabelo")   # rímel e gloss junto com a roupa
 _ROUPA_PASSO = re.compile(r"roupa|biqu[ií]ni|camisa do|pijama|t[eê]nis", re.IGNORECASE)
@@ -905,20 +908,21 @@ class Roupa:
             return None
         mk = st.get("make") or {"nivel": "sem"}
         banho = self._no_banho(now)
-        out = {"look": "No banho" if banho else nome_look(atual["look"]), "linhas": [], "make": None}
+        out = {"look": "Nua" if banho else nome_look(atual["look"]), "linhas": [], "make": None}
         if not banho and atual["ocasiao"] != "toalha":   # de toalha não tem "pra quê"
-            out["linhas"].append(["hanger", "Para", f"{atual.get('pra') or PRA_OCASIAO.get(atual['ocasiao'], '')}, "
+            pra = atual.get("pra") or PRA_OCASIAO.get(atual["ocasiao"], "")
+            out["linhas"].append(["hanger", "Vestida para", f"{PRA_TELA.get(pra, pra)}, "
                                                       f"desde {_hhmm(datetime.fromisoformat(atual['desde']))}"])
             pb = st.get("por_baixo")
             if pb and pb.get("contou") and atual["ocasiao"] in ("sair", "jogo", "rua"):
-                out["linhas"].append(["heart", "Por baixo", _nome(pb["peca"])[:1].upper() + _nome(pb["peca"])[1:]])
+                out["linhas"].append(["heart", "Roupa íntima", _nome(pb["peca"])[:1].upper() + _nome(pb["peca"])[1:]])
         nivel = mk.get("nivel", "sem")
         if nivel == "sem":
             out["linhas"].append(["brush", "Maquiagem", "Sem maquiagem"])
         else:
             d = self.make_desgaste(now)
             out["make"] = {"valor": d, "palavra": self._palavra_make(d), "alerta": d >= 0.7}
-            out["linhas"].append(["brush", "Maquiagem", f"{MAKE[nivel][0]}, às {_hhmm(datetime.fromisoformat(mk['feita_em']))}"])
+            out["linhas"].append(["brush", "Maquiagem", f"{MAKE_TELA.get(nivel, MAKE[nivel][0])}, às {_hhmm(datetime.fromisoformat(mk['feita_em']))}"])
         return out
 
     def prompt_lines(self, now: datetime) -> list[str]:

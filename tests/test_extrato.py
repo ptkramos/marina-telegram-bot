@@ -85,8 +85,8 @@ class ExtratoTest(unittest.TestCase):
         self.assertEqual(s["filhos"], [])           # um item só: sem abrir
 
     def test_fora_de_saida_acao_na_linha(self):
-        self.assertEqual(self._item("Recebeu seu Pix")["sub"], "")          # sem recado, nada embaixo
-        self.assertEqual(self._item("Usou seu Pix")["sub"], "Um açaí caprichado")
+        self.assertEqual(self._item("Recebeu o Pix do Patrick")["sub"], "")          # sem recado, nada embaixo
+        self.assertEqual(self._item("Usou o Pix do Patrick")["sub"], "Um açaí caprichado")
         self.assertEqual(self._item("Pagou as contas")["sub"], "Celular e streamings")
         self.assertEqual(self._item("Recebeu metade do cachê")["sub"], "Catálogo da Farm")
 
@@ -113,7 +113,7 @@ class TopoTest(unittest.TestCase):
 
     def test_contas_passadas_sem_registro_mostram_o_mes_que_vem(self):
         txt = extrato._contas(self.db, AGORA)
-        self.assertRegex(txt, r"^Dia [5-8]/10 · R\$ 189$")
+        self.assertRegex(txt, r"^Dia [5-8]/10, R\$ 189$")
 
     def test_contas_pagas(self):
         with self.db.get_connection() as conn:
@@ -122,7 +122,7 @@ class TopoTest(unittest.TestCase):
                             VALUES ('casa:2026-09-06:contas_dela','2026-09-06T15:00:00','casa','contas','x',
                             'simulated',1,0.1,'[]',0.1,'2026-09-06T15:00:00')""")
             conn.commit()
-        self.assertRegex(extrato._contas(self.db, AGORA), r"^Pagas dia [5-8] · R\$ 189$")
+        self.assertRegex(extrato._contas(self.db, AGORA), r"^Pagas dia [5-8], R\$ 189$")
 
 
 if __name__ == "__main__":

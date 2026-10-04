@@ -131,7 +131,7 @@ class RoupaDoSeArrumandoTest(_Base):
         r.tick(at(19, 6))
         p = r.painel(at(19, 6))
         self.assertEqual(p["look"], "Enrolada na toalha")
-        self.assertNotIn("Para", [l[1] for l in p["linhas"]])
+        self.assertNotIn("Vestida para", [l[1] for l in p["linhas"]])
         self.assertIn("enrolada na toalha", "\n".join(r.prompt_lines(at(19, 6))))
         r.tick(at(19, 35))
         st = json.loads(self.db.get_estado_relacional(KEY))

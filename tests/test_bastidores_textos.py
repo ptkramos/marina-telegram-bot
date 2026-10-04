@@ -43,16 +43,19 @@ class EmocaoTest(unittest.TestCase):
     def test_dormindo_nao_aparece_exausta(self):
         e = w.emocao_view(self.PANEL, dormindo=True)
         self.assertEqual(e["body"][0]["word"], "Dormindo")
-        self.assertIn(["moon", "Sono", "Dormindo agora"], e["linhas"])
+        self.assertIn(["moon", "Dormindo", ""], e["linhas"])
+        e = w.emocao_view(self.PANEL, dormindo=True, dormiu_em=datetime(2026, 9, 26, 23, 12))
+        self.assertIn(["moon", "Dormindo", "Dormiu por volta das 23:10"], e["linhas"])
         self.assertEqual(self.PANEL["body"][0]["word"], "exausta", "não altera o painel original")
 
     def test_linhas_rotuladas(self):
         # 28/09 (Patrick): palavras com maiúscula em toda a aba
         e = w.emocao_view(self.PANEL, dormindo=False)
         self.assertEqual(e["body"][0]["word"], "Exausta")
-        self.assertIn(["moon", "Sono", "Dormiu 8h40 · acordou às 9h05"], e["linhas"])
-        self.assertIn(["heartbeat", "Último orgasmo", "Há 30 h"], e["linhas"])
-        self.assertIn(["bandage", "Desconforto", "Cólica"], e["linhas"])
+        # 04/10 (catálogo, leva 2): rótulo diz o que é, durações por extenso, "por volta das", sem "·"
+        self.assertIn(["moon", "Acordada", "Dormiu por 8 horas e 40 minutos, acordou por volta das 09:05"], e["linhas"])
+        self.assertIn(["heartbeat", "Último orgasmo", "Há 30 horas"], e["linhas"])
+        self.assertIn(["bandage", "Mal-estar", "Cólica"], e["linhas"])
         self.assertEqual(e["humor"], "Normal, nem lá nem cá")
 
     def test_ciclo_e_desconforto_sem_repetir_a_fase(self):
@@ -60,11 +63,27 @@ class EmocaoTest(unittest.TestCase):
         s = w.status_view({**SNAP, "ciclo_dia": 27, "ciclo_len": 28})
         self.assertEqual((s["ciclo"], s["ciclo_fase"]), ("Dia 27 de 28 · TPM", "TPM"))
         e = w.emocao_view({**self.PANEL, "discomfort_why": "inchada da TPM"}, False, ciclo=s["ciclo"], fase="TPM")
-        self.assertEqual([l[1] for l in e["linhas"]], ["Sono", "Ciclo", "Último orgasmo", "Desconforto"])
-        self.assertIn(["bandage", "Desconforto", "Inchada"], e["linhas"])
+        self.assertEqual([l[1] for l in e["linhas"]], ["Acordada", "TPM", "Último orgasmo", "Mal-estar"])
+        self.assertIn(["droplet", "TPM", "Dia 27 de 28"], e["linhas"], "04/10: a fase vira o rótulo")
+        self.assertIn(["bandage", "Mal-estar", "Inchada"], e["linhas"])
         e = w.emocao_view({**self.PANEL, "discomfort_why": "menstruada, corpo meio dolorido"}, False,
                           ciclo="Dia 2 de 28 · Menstruada", fase="Menstruada")
-        self.assertIn(["bandage", "Desconforto", "Corpo meio dolorido"], e["linhas"])
+        self.assertIn(["bandage", "Mal-estar", "Corpo meio dolorido"], e["linhas"])
+
+    def test_corpo_e_humor_com_as_palavras_da_tela(self):
+        # 04/10 (catálogo, leva 2): só na tela; a barra Saciedade é a fome ao contrário
+        panel = {**self.PANEL, "body": [{"label": "Energia", "value": 0.7, "word": "ok"},
+                                        {"label": "Fome", "value": 0.2, "word": "sem fome"},
+                                        {"label": "Tesão", "value": 0.8, "word": "com tesão"}],
+                 "mood_bars": [{"label": "Brincadeira", "value": 0.5}, {"label": "Pique social", "value": 0.4}],
+                 "hours_since_release": 0.4}
+        e = w.emocao_view(panel, dormindo=False)
+        self.assertEqual([(b["label"], b["word"]) for b in e["body"]],
+                         [("Energia", "Normal"), ("Saciedade", "Satisfeita"), ("Excitação", "Molhada")])
+        self.assertEqual(e["body"][1]["value"], 0.8)
+        self.assertEqual([b["label"] for b in e["humor_barras"]], ["Humor", "Social"])
+        self.assertIn(["heartbeat", "Último orgasmo", "Há 24 minutos"], e["linhas"])
+        self.assertEqual(panel["body"][1]["word"], "sem fome", "não altera o painel original")
 
     def test_sentindo_agora_diz_quando(self):
         at = datetime(2026, 9, 27, 22, 1)
@@ -75,7 +94,7 @@ class EmocaoTest(unittest.TestCase):
     def test_motivo_fato_curto_e_detalhe_ao_lado(self):
         # 28/09 (Patrick): um padrão só — fato curto em voz de painel, detalhe ao lado; os antigos passam pelo molde
         m = lambda c, t="": w.motivo_tela(c, t)
-        self.assertEqual(m("o Patrick mandou comida · surpresa", "o Patrick"), {"motivo": "Você mandou comida", "detalhe": "surpresa"})
+        self.assertEqual(m("o Patrick mandou comida · surpresa", "o Patrick"), {"motivo": "O Patrick mandou comida", "detalhe": "surpresa"})
         self.assertEqual(m("Viu Paradise Kiss · eps 1 e 2"), {"motivo": "Viu Paradise Kiss", "detalhe": "eps 1 e 2"})
         self.assertEqual(m("Trocou mensagens com a Bia; assunto: conflitos leves"),   # antigo, pelo molde novo
                          {"motivo": "Se estranhou com a Bia", "detalhe": "por mensagem"})
@@ -83,21 +102,25 @@ class EmocaoTest(unittest.TestCase):
         self.assertEqual(m("Viu episódios 1 a 2 de Paradise Kiss (começou essa semana)"),
                          {"motivo": "Viu Paradise Kiss", "detalhe": "eps 1 e 2"})
         self.assertEqual(m("Ele recuou, dizendo que não queria atrapalhar", "o Patrick"),
-                         {"motivo": "Você recuou", "detalhe": "dizendo que não queria…"})
+                         {"motivo": "O Patrick recuou", "detalhe": "dizendo que não queria…"})
         self.assertEqual(m("Encontrou a Bia (Quartinho Bar); assunto: festas"), {"motivo": "Encontrou a Bia", "detalhe": "festas"})
-        self.assertEqual(m("Ele desconfiou de uma foto minha", "o Patrick")["motivo"], "Você desconfiou de uma foto dela")
+        self.assertEqual(m("Ele desconfiou de uma foto minha", "o Patrick")["motivo"], "O Patrick desconfiou de uma foto dela")
 
-    def test_sentimento_em_voz_de_painel(self):
+    def test_sentimento_substantivo_e_o_patrick(self):
+        # 04/10 (catálogo, leva 2, regras 6 e 11): "Saudade do Patrick", nunca "você"
+        from emotion import KIND_WORDS
         s = w.emocao_view(self.PANEL, dormindo=False)["sentindo"]
-        self.assertEqual((s[0]["texto"], s[0]["motivo"], s[0]["vezes"]), ("Com saudade de você", "Você fez um Pix pra ela", 3))
-        self.assertEqual((s[1]["texto"], s[1]["motivo"], s[1]["detalhe"]), ("Grata à Bia", "A Bia elogiou o look", "Instagram"))
+        self.assertEqual((s[0]["texto"], s[0]["motivo"], s[0]["vezes"]), ("Saudade do Patrick", "O Patrick fez um Pix pra ela", 3))
+        self.assertEqual((s[1]["texto"], s[1]["motivo"], s[1]["detalhe"]), ("Gratidão à Bia", "A Bia elogiou o look", "Instagram"))
+        self.assertEqual(set(w.SENTIMENTO_TELA), set(KIND_WORDS.values()), "toda palavra dela tem a da tela")
 
     def test_preposicoes(self):
-        self.assertEqual(w._alguem("o Patrick", "chateada"), "com você")
-        self.assertEqual(w._alguem("o Patrick", "grata"), "a você")
+        self.assertEqual(w._alguem("o Patrick", "chateada"), "com o Patrick")
+        self.assertEqual(w._alguem("o Patrick", "grata"), "ao Patrick")
         self.assertEqual(w._alguem("o Theo", "orgulhosa"), "do Theo")
         self.assertEqual(w._alguem("o Patrick", "com culpa"), "")
-        self.assertEqual(w._alguem("o Patrick", "com ciuminho"), "de você")
+        self.assertEqual(w._alguem("o Patrick", "com ciuminho"), "do Patrick")
+        self.assertEqual(w._alguem("a Bia", "carinhosa"), "pela Bia")
         self.assertEqual(w._alguem("o pai", "com saudade de casa"), "", "o motivo já diz: Falou com o pai")
 
     def test_mundo_grava_no_padrao(self):
@@ -134,7 +157,8 @@ class PorDentroTest(unittest.TestCase):
     def test_quando(self):
         import por_dentro as pd
         now = datetime(2026, 9, 28, 15, 0)
-        self.assertEqual(pd.quando(datetime(2026, 9, 28, 14, 40), now), "há 20 min")
+        self.assertEqual(pd.quando(datetime(2026, 9, 28, 14, 40), now), "há 20 minutos")
+        self.assertEqual(pd.quando(datetime(2026, 9, 28, 14, 58, 30), now), "há 1 minuto")
         self.assertEqual(pd.quando(datetime(2026, 9, 28, 9, 0), now), "hoje, 9h")
         self.assertEqual(pd.quando(datetime(2026, 9, 27, 22, 1), now), "ontem, 22h01")
         self.assertEqual(pd.quando(datetime(2026, 9, 26, 18, 0), now), "sáb, 18h")
@@ -152,7 +176,7 @@ class PorDentroTest(unittest.TestCase):
         d = pd.diario_view(self.db, datetime(2026, 9, 28, 5, 55))
         self.assertEqual(d["titulo"], "Ontem por dentro", "madrugada ainda é a noite anterior; hoje está vazio")
         self.assertEqual([x["hora"] for x in d["itens"]], ["00:06", "23:02", "18:00"])
-        self.assertEqual(d["itens"][1]["texto"], "Com ciuminho de você")
+        self.assertEqual(d["itens"][1]["texto"], "Ciúme do Patrick")
         self.assertEqual((d["itens"][2]["motivo"], d["itens"][2]["detalhe"]), ("Mensagens com a Bia", "festas"))
         eng.feel("alegria", "empolgacao", 0.4, "saiu episódio novo", datetime(2026, 9, 28, 9, 0))
         d = pd.diario_view(self.db, datetime(2026, 9, 28, 10, 0))
@@ -166,19 +190,12 @@ class PorDentroTest(unittest.TestCase):
             conn.commit()
         now = datetime(2026, 9, 28, 5, 55)
         self.assertEqual(pd.voces_linhas(self.db, now),
-                         [["message-circle", "Conversa", "Ontem, 23h04"], ["hourglass", "Pendente", "Nada"]])
+                         [["message-circle", "Última mensagem", "Ontem, 23h04"], ["hourglass", "Assunto pendente", "Nada"]])
         with self.db.get_connection() as conn:
             conn.execute("INSERT INTO conversas(role, content, timestamp) VALUES ('user', 'bom dia', ?)",
                          ("2026-09-28T05:50:00",))
             conn.commit()
-        self.assertEqual(pd.voces_linhas(self.db, now)[1], ["hourglass", "Pendente", "Resposta dela"])
-
-
-class VozTest(unittest.TestCase):
-    def test_painel_fala_com_voce(self):
-        self.assertEqual(w.voz_painel("O Patrick fez um pix de R$ 150 pra ela"), "Você fez um Pix de R$ 150 pra ela")
-        self.assertEqual(w.voz_painel("Devolveu o empréstimo do Patrick"), "Devolveu o seu empréstimo")
-        self.assertEqual(w.voz_painel("Pediu comida pro Patrick"), "Pediu comida pra você")
+        self.assertEqual(pd.voces_linhas(self.db, now)[1], ["hourglass", "Assunto pendente", "Resposta dela"])
 
 
 class MundoTest(unittest.TestCase):
@@ -223,10 +240,10 @@ class NaCabecaTest(unittest.TestCase):
         self.assertEqual(pd.materia("Práticas Experimentais VI"), "Práticas VI")
         aula = {"tipo": "aula", "texto": "", "blocos": [{"display_name": "Práticas Experimentais II"},
                                                           {"display_name": "Linguagem Visual"}]}
-        self.assertEqual(pd._titulo_agenda(aula), ("2 aulas", "Práticas II e +1"))
-        self.assertEqual(pd._titulo_agenda({"tipo": "academia", "texto": "Treino na Bodytech"}), ("Treino", ""))
+        self.assertEqual(pd._titulo_agenda(aula), ("Aula de Práticas II", "e +1"))
+        self.assertEqual(pd._titulo_agenda({"tipo": "academia", "texto": "Treino na Bodytech"}), ("Treinar na academia", ""))
         role = {"tipo": "role", "texto": "Saindo com a Bia no Quartinho Bar", "com": ("bia_andrade",)}
-        self.assertEqual(pd._titulo_agenda(role), ("Rolê com a Bia", "Quartinho Bar"))
+        self.assertEqual(pd._titulo_agenda(role), ("Sair com a Bia", "Quartinho Bar"))
 
     def test_estado_pela_agenda_viva(self):
         import por_dentro as pd
@@ -258,7 +275,8 @@ class NaCabecaTest(unittest.TestCase):
         self.assertEqual(pd._estado(Av(0.3, []), it, now, None, {}), ("", None, ""), "dormindo: ainda não pensou")
         longe = {**it, "inicio": now + timedelta(hours=6)}
         self.assertEqual(pd._estado(Av(0.3, []), longe, now, f, {}), ("", None, ""), "longe da hora: ainda não pensou")
-        self.assertEqual(pd._estado(Av(0.3, []), it, now, f, {it["key"]: {"vai": True, "vontade": 0.62}}), ("Vai", 0.62, ""))
+        self.assertEqual(pd._estado(Av(0.3, []), it, now, f, {it["key"]: {"vai": True, "vontade": 0.62}}), ("Confirmada", 0.62, ""))
+        self.assertEqual(pd._estado(Av(0.3, []), it, now, f, {it["key"]: {"vai": False, "vontade": 0.2}}), ("Desmotivada", 0.2, ""))
 
 
 

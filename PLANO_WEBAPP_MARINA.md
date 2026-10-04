@@ -807,6 +807,18 @@ dela), os Planos no infinitivo na origem e as 28 fichas "conversar" que são red
 Sentindo agora, look por partes, cabelo separando penteado/estado e higiene/características). Próximo: aplicar o
 lote 2 (os "mudar" só de tela).
 
+**04/10, noite — catálogo de textos, lote 2 aplicado (só tela) ✅:** os 69 "mudar" da leva 2 no ar: tela inicial
+"Aplicativos" (Amazon, Calendário); Bastidores "Só o Patrick vê isso" e "Acontecimentos de hoje"; Por dentro com
+Saciedade (barra invertida) e Excitação, palavras novas (Normal/Elétrica, Satisfeita…Esfomeada, Desanimada…
+Incontrolável), Acordada/Dormindo, fase como rótulo do ciclo, Mal-estar, "Há 5 horas", Humor/Social, sentimentos em
+substantivo e "o Patrick" ("Saudade do Patrick"), "2x" antes do sentimento, detalhe entre parênteses, Na cabeça no
+infinitivo e estados em uma palavra, Última mensagem / Assunto pendente; Por fora (Roupas e maquiagem, Vestida para,
+Roupa íntima, Nua, Peso e altura, Limites, Última pesagem, Em dieta, Última lavagem, Cor das luzes, cortes "Com
+franja", "A cortar", "cerca de 3 semanas", Estado e "Feita em" nas unhas); Dinheiro sem "·" e com "o Patrick"; Mundo
+"Acontecendo agora / Planos / Lugares visitados"; iFood "Pedido entregue às 19:40" e a portaria com vírgula;
+comprovantes "04 OUT 2026, 19:02" e "Itaú Unibanco S.A. (Personnalité)". Coluna do rótulo das linhas com 114 px.
+Detalhe e o que eu decidi sozinho na Auditoria ("Catálogo de textos, lote 2 aplicado").
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

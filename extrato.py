@@ -3,7 +3,7 @@
 - Topo: saldo, o que entrou e saiu no mês, próximo cachê e as contas dela (celular e streamings).
 - Extrato **agrupado por saída**, como o Hoje: "Foi no Shopping da Gávea" · "Cinema, pipoca, refri e uber" com o total;
   tocar abre os itens (Uber · Ida, Cinema, Pipoca · Dividiu com a Bia…). Fora de saída, uma linha por movimento no
-  molde do painel: a ação no passado na linha e o detalhe curto embaixo ("Recebeu seu Pix", "Pagou as contas" ·
+  molde do painel: a ação no passado na linha e o detalhe curto embaixo ("Recebeu o Pix do Patrick", "Pagou as contas" ·
   "Celular e streamings"). Dias como título ("Hoje", "Ontem", "Sáb, 26/09").
 
 O movimento guarda a chave do acontecimento desde 28/09 (`financas._mov`); os antigos acham a chave pelo título e pela
@@ -116,13 +116,13 @@ def _sozinho(mov: dict, key: str, ev: dict) -> dict:
     desc, summary = mov["desc"], ev.get("summary") or ""
     texto, sub = _cap(desc), ""
     if desc.startswith("pix do Patrick"):
-        texto, sub = "Recebeu seu Pix", _cap(desc.partition(": ")[2])
+        texto, sub = "Recebeu o Pix do Patrick", _cap(desc.partition(": ")[2])
     elif desc.startswith("presente do Patrick: "):
-        texto, sub = "Usou seu Pix", _cap(desc.split(": ", 1)[1].split(" (ele disse:")[0])
+        texto, sub = "Usou o Pix do Patrick", _cap(desc.split(": ", 1)[1].split(" (ele disse:")[0])
     elif desc.startswith("delivery pro Patrick: "):
-        texto, sub = "Mandou um delivery pra você", _cap(desc.split(": ", 1)[1])
+        texto, sub = "Mandou um delivery para o Patrick", _cap(desc.split(": ", 1)[1])
     elif desc == "devolveu o empréstimo do Patrick":
-        texto = "Devolveu seu empréstimo"
+        texto = "Devolveu o empréstimo do Patrick"
     elif desc.startswith("contas dela"):
         texto, sub = "Pagou as contas", "Celular e streamings"
     elif key.startswith("freela:"):
@@ -201,28 +201,28 @@ def _dia_das_contas(mes: date) -> int:
 
 
 def _contas(db, now: datetime) -> str:
-    """'Dia 6 · R$ 189'; pagas no mês, 'Pagas dia 6 · R$ 189'; o dia passou sem conta (antes da vida registrada),
-    a do mês que vem, 'Dia 7/10 · R$ 189'."""
+    """'Dia 6, R$ 189'; pagas no mês, 'Pagas dia 6, R$ 189'; o dia passou sem conta (antes da vida registrada),
+    a do mês que vem, 'Dia 7/10, R$ 189'. 04/10 (catálogo, leva 2): vírgula no lugar do "·"."""
     from financas import CONTAS_DELA
     dia = _dia_das_contas(now.date())
     with db.get_connection() as conn:
         paga = conn.execute("SELECT 1 FROM life_events WHERE event_key LIKE ? AND event_at <= ? LIMIT 1",
                             (f"casa:{now:%Y-%m}-%:contas_dela", now.isoformat())).fetchone()
     if paga:
-        return f"Pagas dia {dia} · R$ {CONTAS_DELA}"
+        return f"Pagas dia {dia}, R$ {CONTAS_DELA}"
     if now.day <= dia:
-        return f"Dia {dia} · R$ {CONTAS_DELA}"
+        return f"Dia {dia}, R$ {CONTAS_DELA}"
     prox = (now.date().replace(day=28) + timedelta(days=4)).replace(day=1)
-    return f"Dia {_dia_das_contas(prox)}/{prox:%m} · R$ {CONTAS_DELA}"
+    return f"Dia {_dia_das_contas(prox)}/{prox:%m}, R$ {CONTAS_DELA}"
 
 
 def _cache(db) -> str:
     from freela import Freela
     for st in Freela(db)._state().values():
         if st.get("step") == "a_receber" and st.get("pay_at"):
-            return f"R$ {st.get('rest', st.get('pay'))} · até {datetime.fromisoformat(st['pay_at']):%d/%m}"
+            return f"R$ {st.get('rest', st.get('pay'))}, até {datetime.fromisoformat(st['pay_at']):%d/%m}"
         if st.get("step") == "job_marcado" and st.get("rest") and st.get("job_at"):
-            return f"R$ {st['rest']} · job dia {datetime.fromisoformat(st['job_at']):%d/%m}"
+            return f"R$ {st['rest']}, job dia {datetime.fromisoformat(st['job_at']):%d/%m}"
     return "Nenhum marcado"
 
 

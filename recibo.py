@@ -57,7 +57,7 @@ def _wrap(text: str, font, width: int) -> list[str]:
 
 
 def _data(when: datetime) -> str:
-    return f"{when.day:02d} {MESES[when.month - 1]} {when.year} · {when:%H:%M}"
+    return f"{when.day:02d} {MESES[when.month - 1]} {when.year}, {when:%H:%M}"
 
 
 def _logo(name: str, height: int, crop_symbol: bool = False) -> Optional[Image.Image]:
@@ -135,7 +135,7 @@ def pix(valor: float, mensagem: str, when: datetime, para: str = "Marina Salles"
     c.text(_brl(valor), 60, bold=True, color=NU_PURPLE, gap=4)
     c.rule()
     c.field("Tipo de transferência", "Pix", icon=_logo("pix", 30, crop_symbol=True))
-    c.field("Destino", para, extra=" · ".join(BANCO_DELA))
+    c.field("Destino", para, extra=f"{BANCO_DELA[0]} ({BANCO_DELA[1]})")
     c.field("Origem", "Patrick Ramos", extra="Nu Pagamentos S.A. – Instituição de Pagamento")
     if mensagem:
         c.field("Mensagem", mensagem)

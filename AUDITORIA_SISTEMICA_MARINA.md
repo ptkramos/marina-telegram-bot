@@ -2724,3 +2724,42 @@ decisões, tirei seis padrões e propus estender às 136 em branco; ele decidiu 
   ("Crescendo", "Desbotando").
 - Mundo: hora "Hoje, 19:07" mantida (o Por dentro usa "19h07"; a hora vai ser revista com o "quando começou").
 
+## Catálogo de textos, lote 2 aplicado (04/10, noite, frente de apps)
+
+As 69 fichas "mudar" da leva 2 (Bastidores, tela inicial, iFood, Nubank e comprovantes) entraram na tela, com as
+regras 9–17. **Só a tela muda:** o mundo grava igual, o prompt dela e o /emocao seguem com as palavras de sempre (as
+fichas "os dois" — sentimentos, pontas, cortes, "Te provocar", maquiagem — viraram mapa de tela). As 48 "conversar"
+ficam pro redesenho depois do soak (abas com ícone, Sentindo agora, look por partes, cabelo, Dinheiro como extrato,
+Planos no infinitivo na origem, títulos do Por dentro).
+
+**Onde mexeu.** `webapp_server.py`: `SENTIMENTO_TELA` + `sentimento_tela` (substantivo e "do/ao/pelo/com o Patrick"),
+`CORPO_ROTULO`/`CORPO_PALAVRA`/`HUMOR_ROTULO`, `emocao_view` (Acordada/Dormindo, fase como rótulo do ciclo,
+`_orgasmo` por extenso, Mal-estar, barra Saciedade = 1 − fome), `_dormiu_em` (hora que pegou no sono, do
+`SleepPlan`), `motivo_tela` sem a voz "você" (`voz_painel` saiu), iFood "Pedido entregue às 19:40". `por_dentro.py`:
+títulos no infinitivo, estados (Confirmada/Indecisa/Desmotivada, Espontânea/Combinada/Emendada, Adiantado/Em dia/
+Apertado/Atrasado), "há 20 minutos", Última mensagem / Assunto pendente com vírgula. `roupa.py`/`cabelo.py`/`meals.py`:
+`PRA_TELA`, `MAKE_TELA`, `CORTES_TELA`, `TONS_TELA`, `PONTAS_TELA` e os rótulos da aba Por fora. `extrato.py`: "o Pix
+do Patrick", vírgula no lugar do "·". `recibo.py`: "04 OUT 2026, 19:02" e "Itaú Unibanco S.A. (Personnalité)".
+`webapp/index.html`, `app.js`, `app.css`: tela inicial "Aplicativos" (Amazon, Calendário), "Só o Patrick vê isso",
+"Acontecimentos de hoje", títulos do Por fora, Limites/Estado/Feita em, "2x" antes do sentimento, detalhe entre
+parênteses, títulos do Mundo, coluna do rótulo das linhas de 78 px pra 114 px.
+
+**Perguntado e decidido com o Patrick (04/10):** barra Saciedade invertida (cheia = Satisfeita); make "De festa" →
+Completa, "De ensaio" → Profissional; cor das luzes é das pontas (Dourada, Platinada); aulas como ele escreveu
+("Aula de Projeto" | "e +2"), com o layout pra texto maior no redesenho.
+
+**Decidi sozinho (pra ele revisar):**
+- Preposição dos sentimentos substantivos: "Saudade / Orgulho / Vergonha / Ciúme **do** Patrick", "Gratidão **ao**
+  Patrick", "Carinho / Ternura / Admiração **pelo** Patrick", o resto "**com o** Patrick".
+- Hora do sono no padrão da leva 1: "acordou por volta das 08:45", "Dormiu por volta das 23:10" (na ficha ele
+  escreveu "8 horas" e "21"). Dormindo sem hora conhecida, a linha fica só "Dormindo".
+- Último orgasmo com menos de 1 hora: "Há 24 minutos".
+- "2x" em cinza antes do sentimento ("2x Saudade do Patrick"); a pílula "até resolver" continua.
+- Cabelo todo loiro (tom "Loira iluminada"): a linha vira "Cor do cabelo | Loira iluminada". O "Rosada" que ele
+  escreveu nas luzes mexe no mundo (o rosa hoje é linha própria): vai junto com o redesenho do cabelo.
+- "Correndo" (entrega hoje ou amanhã) → "Atrasado", pela ordem da ficha.
+- Coluna do rótulo única (114 px) em todos os cards, pra os valores ficarem na mesma régua ("Assunto pendente" e
+  "Última pesagem" quebravam em duas linhas com 78 px). Efeito: o sono acordada ocupa três linhas — texto maior é
+  do redesenho.
+- Ficou com "·" o que não era ficha "mudar": linhas do card fora de etapa (Ciclo "Dia 24 · TPM", Saúde, "Em casa ·
+  Botafogo"), "Entrega rastreável •" do iFood (app de verdade).

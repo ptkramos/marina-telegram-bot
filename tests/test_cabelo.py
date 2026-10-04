@@ -48,7 +48,7 @@ class CabeloTest(unittest.TestCase):
         self.assertEqual(p["penteado"], "Solto natural")
         self.assertEqual([b["label"] for b in p["barras"]], ["Lavagem", "Pontas", "Luzes", "Hidratação"])
         self.assertEqual(p["linhas"][1][2], "Reto, há 5 semanas")
-        self.assertEqual(p["linhas"][2][:2], ["palette", "Cor"], "28/09: a barra já se chama Luzes")
+        self.assertEqual(p["linhas"][2][:2], ["palette", "Cor das luzes"], "28/09: a barra já se chama Luzes")
         cor, estilo = self.c.visual(T)
         self.assertEqual(cor, "long chestnut brown hair with golden blonde tips")
         self.assertEqual(estilo, "semi-straight with soft waves at the ends")
@@ -67,7 +67,7 @@ class CabeloTest(unittest.TestCase):
         st.update(lavado_em="2026-09-28T00:06:00", secagem="natural")
         self.db.set_estado_relacional(KEY, json.dumps(st))
         agora = datetime(2026, 9, 28, 5, 55)
-        self.assertEqual(self.c.painel(agora)["linhas"][0], ["droplet", "Lavou", "Ontem à noite, secou natural"])
+        self.assertEqual(self.c.painel(agora)["linhas"][0], ["droplet", "Última lavagem", "Ontem à noite, secou natural"])
         self.assertEqual(self.c.condicao(agora)["lavagem"], "2º dia")
         self.assertEqual(self.c.condicao(datetime(2026, 9, 28, 2, 0))["lavagem"], "Lavado hoje", "antes das 5h: a mesma noite")
 
@@ -139,7 +139,7 @@ class CabeloTest(unittest.TestCase):
         linhas = self.c.painel(fim + timedelta(minutes=2))["linhas"]
         self.assertEqual(linhas[0][2], "Hoje, escova no salão")
         self._set(rosa_em=3)
-        self.assertEqual(self.c.painel(T)["linhas"][-1], ["brush", "Rosa", "Há 3 dias, desbota em ~3 semanas"])
+        self.assertEqual(self.c.painel(T)["linhas"][-1], ["brush", "Rosa", "Há 3 dias, desbota em cerca de 3 semanas"])
 
     def test_sugestao_dele_vira_mudanca(self):
         self.assertEqual(self.c.observe_patrick("vc ficaria linda de franja sabia", T), "franja")

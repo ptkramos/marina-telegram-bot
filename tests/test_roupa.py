@@ -61,7 +61,7 @@ class RoupaTest(unittest.TestCase):
     def test_partida_em_casa_sem_make(self):
         p = self.r.painel(T)
         self.assertIn(tuple(self.st()["atual"]["look"]), LOOKS["casa_dia"])
-        self.assertEqual(p["linhas"], [["hanger", "Para", "Ficar em casa, desde 15:00"],
+        self.assertEqual(p["linhas"], [["hanger", "Vestida para", "Ficar em casa, desde 15:00"],
                                        ["brush", "Maquiagem", "Sem maquiagem"]])
         self.assertIsNone(p["make"])
         self.assertIn("Make: sem make", "\n".join(self.r.prompt_lines(T)))
@@ -84,7 +84,7 @@ class RoupaTest(unittest.TestCase):
         self.assertIn(tuple(st["atual"]["look"]), LOOKS["sair"])
         self.assertEqual(st["atual"]["desde"][11:16], "20:10", "na hora do passo, não na hora do tick")
         p = self.r.painel(datetime(2026, 9, 26, 20, 20))
-        self.assertEqual(p["linhas"][0], ["hanger", "Para", "Sair à noite, desde 20:10"])
+        self.assertEqual(p["linhas"][0], ["hanger", "Vestida para", "Sair à noite, desde 20:10"])
         self.assertEqual(p["make"]["palavra"], "Intacta")
         self.assertEqual(p["linhas"][-1][1:], ["Maquiagem", f"{p['linhas'][-1][2].split(',')[0]}, às 19:45"])
         # na rua continua com a mesma roupa
@@ -165,7 +165,7 @@ class RoupaTest(unittest.TestCase):
         self.assertEqual(self.st()["make"]["nivel"], "sem")
         self.banho = True
         self.r.tick(ini + timedelta(minutes=5))
-        self.assertEqual(self.r.painel(ini + timedelta(minutes=5))["look"], "No banho")
+        self.assertEqual(self.r.painel(ini + timedelta(minutes=5))["look"], "Nua")
         self.banho = False
         self.r.tick(ini + timedelta(minutes=25))
         self.assertEqual(self.st()["atual"]["ocasiao"], "casa")
@@ -177,7 +177,7 @@ class RoupaTest(unittest.TestCase):
         self.assertTrue(peca)
         st = self.st()
         self.assertEqual(st["atual"]["ocasiao"], "provocar")
-        self.assertEqual(self.r.painel(noite)["linhas"][0], ["hanger", "Para", "Te provocar, desde 22:10"])
+        self.assertEqual(self.r.painel(noite)["linhas"][0], ["hanger", "Vestida para", "Provocar o Patrick, desde 22:10"])
         self.assertIn("pra provocar o Patrick", self.eventos("roupa:provocar:%")[0])
         en = self.r.pro_clima(noite + timedelta(minutes=5), 2)
         self.assertEqual(en, self.r.pro_clima(noite + timedelta(minutes=9), 1), "mesma peça a sessão toda")
@@ -215,10 +215,10 @@ class RoupaTest(unittest.TestCase):
         self.assertTrue(pb and not pb["contou"])
         self.etapa = None
         agora = datetime(2026, 9, 26, 20, 10)
-        self.assertNotIn("Por baixo", [l[1] for l in self.r.painel(agora)["linhas"]])
+        self.assertNotIn("Roupa íntima", [l[1] for l in self.r.painel(agora)["linhas"]])
         self.assertIn("Ele não sabe", "\n".join(self.r.prompt_lines(agora)))
         self.r.observe_marina("adivinha o que eu tô usando por baixo desse vestido 😏", agora)
-        self.assertIn("Por baixo", [l[1] for l in self.r.painel(agora)["linhas"]])
+        self.assertIn("Roupa íntima", [l[1] for l in self.r.painel(agora)["linhas"]])
         # em casa, no clima: tirou o vestido e é a peça de baixo que aparece
         en = self.r.pro_clima(datetime(2026, 9, 26, 23, 50), 2)
         self.assertEqual(self.st()["atual"]["look"][0], pb["peca"])

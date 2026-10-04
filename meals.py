@@ -259,7 +259,7 @@ class Meals:
         folga = self.AGENCY_MAX_KG - kg
         palavra = (f"Folga {_kg(folga)} kg" if folga > 0.05 else "No limite" if folga > -0.05
                    else f"Passou {_kg(-folga)} kg")
-        pesou = "Ainda não"
+        pesou = "Ainda não se pesou"                 # 04/10 (catálogo, leva 2): rótulo diz o que é
         if data.get("known_at") and data.get("known_kg") is not None:
             dias = (now.date() - datetime.fromisoformat(data["known_at"]).date()).days
             quando = ("Hoje" if dias == 0 else "Ontem" if dias == 1
@@ -271,7 +271,7 @@ class Meals:
         span = self.AGENCY_MAX_KG - self.HEALTH_MIN_KG
         return {"kg": f"{_kg(kg)} kg", "barra": round(max(0.0, min(1.0, (kg - self.HEALTH_MIN_KG) / span)), 2),
                 "palavra": palavra, "alerta": folga < -0.05,
-                "linhas": [["scale", "Pesou", pesou], ["salad", "Dieta", dieta], ["ruler-2", "Altura", "1,68 m"]]}
+                "linhas": [["scale", "Última pesagem", pesou], ["salad", "Em dieta", dieta], ["ruler-2", "Altura", "1,68 m"]]}
 
     def day_plan(self, day: date) -> list[MealSlot]:
         """O dia de comida dela, determinístico por data."""

@@ -4,9 +4,8 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 04/10/2026 (soak, dia 5 lido e consertado — item 27: 8 graves e 3 médios, no ar desde 08:23).
-**Próxima conversa: frente de apps, "bora na frente de apps: catálogo de textos, aplicar o lote 2"** (leva 2
-decidida em 04/10, noite: ler as decisões da coleção `textos` do link da seção 2 e as regras 9–17; só tela). **Depois: segunda de manhã "bora no soak, dia 6"**
+_Atualizado em 04/10/2026 (catálogo de textos, lote 2 aplicado — só tela; detalhe na Auditoria).
+**Próxima conversa: segunda de manhã "bora no soak, dia 6"**
 (relatório `soak/dia-2026-10-04.md`). **Soak: dia 1 = terça 29/09.** Aberto
 pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente da voz: o modo íntimo desliga durante o banho
 no meio do sexting; ela sumir 2h30 depois de "vou te prender aqui a tarde toda" (M4 do dia 5); o Silo (M5)._
@@ -113,7 +112,9 @@ junto o degrau explícito, que só liga com tesão 0,70).
 Planos do Mundo e saídas por vontade do Na cabeça no infinitivo, na origem, com "por volta das" na hora; abas dos
 Bastidores com ícones e telas separadas; Sentindo agora (quando começou, sentimento por pessoa, motivo padronizado);
 roupa por partes (cima, baixo, acessórios, íntima); cabelo separando penteado de estado (molhado) e higiene de
-características, cor do cabelo × cor das luzes; barras do casal (texto e se estão mexendo); "No clima" e o lugar das
+características, cor do cabelo × cor das luzes (as pontas rosa viram "Rosada" nas luzes, Patrick 04/10); **layout pra
+texto maior** (Patrick, 04/10: "posicionar textos maiores nos locais certos" — ex.: "Aula de Projeto | e +2", sono
+em três linhas); barras do casal (texto e se estão mexendo); "No clima" e o lugar das
 barras (maquiagem perto do estado, chance de ir à aula). As 28 fichas "conversar" do banco têm a nota dele.
 O que era "ver no uso real" (agenda viva, atraso, roupa, Instagram, coerência entre turnos) **é o próprio soak**.
 
@@ -195,9 +196,11 @@ as 6 da leva 1) e propõe estender às fichas ainda em branco antes de aplicar. 
 têm decisão no banco (117 dele + 136 que eu preenchi pelos padrões, com os casos de dúvida decididos no chat). Regras 9–17
 em `data/feedback/catalogo_textos/regras_gerais.md` (rótulo diz o que é; estado em uma palavra; sentimento é
 substantivo; pensando = infinitivo; título nomeia o assunto; só a 1ª maiúscula; app de verdade igual ao de verdade).
-**Próximo: aplicar o lote 2** (os "mudar" só de tela: Por dentro, Por fora, moldura, tela inicial, Mundo, as do "·" do
-Dinheiro). Ficam pra depois do soak: a aba Dinheiro como extrato do banco dela, os Planos no infinitivo na origem e as
-28 "conversar" (redesenho).
+**Lote 2 aplicado (04/10, noite) ✅:** os 69 "mudar" na tela (Por dentro, Por fora, moldura, tela inicial, Mundo, o
+"·" e "o Patrick" do Dinheiro, iFood e comprovantes); o mundo e o prompt dela não mudaram. Perguntado no chat:
+Saciedade com a barra invertida, make de festa = Completa, luzes são das pontas (Dourada/Platinada), aulas como ele
+escreveu. Ficam pra depois do soak: a aba Dinheiro como extrato do banco dela, os Planos no infinitivo na origem e as
+48 "conversar" (redesenho).
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; **Instagram** no ar (27/09) com acervo refeito

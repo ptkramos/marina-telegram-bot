@@ -98,6 +98,10 @@ continua comparando os textos internos "Olha …".
 (sentimentos, humor, cabelo, roupa) mudam só na tela quando o lote 2 entrar; os Planos no infinitivo ("Sair com a
 Júlia no Quartinho Bar") ficam pra depois do soak porque o texto do plano entra no prompt dela.
 
+**04/10, noite — catálogo de textos, lote 2 aplicado (frente de apps):** nada muda na voz. Sentimentos, pontas,
+cortes, "Te provocar" e maquiagem viraram mapa só da tela (`webapp_server.SENTIMENTO_TELA`, `roupa.PRA_TELA`…); o
+prompt dela e o /emocao seguem com as palavras de sempre.
+
 **Voz**
 - **Guards de resposta:** artefato de debug (inclusive `\_` escapado), proposta de ligação, resposta em outra língua, pergunta de entrevista no fim, polidez de atendente.
 - **Filtro de alfabeto:** Unicode matemático e caracteres full-width.

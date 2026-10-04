@@ -14,13 +14,13 @@
   <button id="voltar" class="link" hidden><i class="ti ti-chevron-left"></i> Voltar</button>
 
   <section id="v-inicio" class="view">
-    <header class="top"><h1>Marina</h1></header>
+    <header class="top"><h1>Aplicativos</h1></header>
     <div class="tiles">
       <button class="tile" data-go="nubank"><img src="/static/marcas/nubank.svg" alt="" class="logo"><span>Nubank</span></button>
       <button class="tile" data-go="ifood"><img src="/static/marcas/ifood.svg" alt="" class="logo"><span>iFood</span></button>
       <button class="tile" data-go="ig"><span class="ig-tile"><img src="/static/marcas/instagram.svg" alt="" class="logo"><span class="bolinha" id="ig-bolinha" hidden></span></span><span>Instagram</span></button>
-      <button class="tile off" disabled><span>Presentes</span><span class="soon">em breve</span></button>
-      <button class="tile off" disabled><span>Datas</span><span class="soon">em breve</span></button>
+      <button class="tile off" disabled><span>Amazon</span><span class="soon">em breve</span></button>
+      <button class="tile off" disabled><span>Calendário</span><span class="soon">em breve</span></button>
     </div>
     <div id="inicio-presente"></div>
     <button class="link" data-go="bastidores">Bastidores</button>
@@ -42,7 +42,7 @@
     <div class="saldo nu" id="rev-valor">…</div>
     <div class="rows">
       <div class="row2"><span class="muted">Para</span><span>Marina Salles</span></div>
-      <div class="row2"><span class="muted">Instituição</span><span>Itaú Unibanco S.A. · Personnalité</span></div>
+      <div class="row2"><span class="muted">Instituição</span><span>Itaú Unibanco S.A. (Personnalité)</span></div>
       <div class="row2"><span class="muted">Tipo</span><span class="pixtag"><img src="/static/marcas/pix-simbolo.png" alt="" class="pixicon">Pix</span></div>
       <div class="row2" id="rev-msg-row"><span class="muted">Mensagem</span><span id="rev-msg"></span></div>
       <div class="row2"><span class="muted">Quando</span><span>Agora</span></div>
@@ -127,7 +127,7 @@
   <section id="v-entrega" class="view if" hidden>
     <div class="folha-top"><span></span><b>SACOLA</b><span></span></div>
     <h3 class="if-h">Entregar no portão do endereço</h3>
-    <div class="linha-end"><i class="ti ti-map-pin ic"></i><div><div class="t">Casa da Ma</div><div class="d">Portaria · Seu Jorge recebe se ela não estiver</div></div></div>
+    <div class="linha-end"><i class="ti ti-map-pin ic"></i><div><div class="t">Casa da Ma</div><div class="d">Portaria, o Seu Jorge recebe se ela não estiver</div></div></div>
     <h3 class="if-h">Opções de entrega</h3>
     <div class="opcao-entrega"><div><div class="t">Padrão</div><div class="d" id="en-eta"></div></div><div class="opcao-dir"><span id="en-taxa"></span><span class="radio on"></span></div></div>
     <div class="rodape-total"><div><b id="en-total"></b> <span class="small">• com entrega</span></div><button class="btn-vermelho" data-go="pagamento">Continuar</button></div>
@@ -193,14 +193,14 @@
 
   <!-- 26/09 (Patrick): Bastidores em abas; rótulos falam como painel, sentimento fala do jeito dela -->
   <section id="v-bastidores" class="view" hidden>
-    <header class="top"><h1>Bastidores</h1><p class="sub">Só você vê isso</p></header>
+    <header class="top"><h1>Bastidores</h1><p class="sub">Só o Patrick vê isso</p></header>
     <div class="seg" id="bs-abas">
       <button data-bast="agora" class="on">Agora</button><button data-bast="dentro">Por dentro</button>
       <button data-bast="fora">Por fora</button><button data-bast="dinheiro">Dinheiro</button><button data-bast="mundo">Mundo</button>
     </div>
     <div class="bast-aba" id="ba-agora">
       <div class="card ag" id="ag-card"></div>
-      <h2>Hoje</h2><div id="ag-hoje" class="card"></div>
+      <h2>Acontecimentos de hoje</h2><div id="ag-hoje" class="card"></div>
     </div>
     <div class="bast-aba" id="ba-dentro" hidden>
       <h2>Corpo</h2><div id="bd-corpo" class="card"></div>
@@ -212,8 +212,8 @@
     </div>
     <!-- 28/09 (Patrick): aparência sai do Por dentro — Peso, Cabelo, Unhas -->
     <div class="bast-aba" id="ba-fora" hidden>
-      <h2 id="bf-agora-t" hidden>Agora</h2><div id="bf-agora" class="card" hidden></div>
-      <h2 id="bf-peso-t" hidden>Peso</h2><div id="bf-peso" class="card" hidden></div>
+      <h2 id="bf-agora-t" hidden>Roupas e maquiagem</h2><div id="bf-agora" class="card" hidden></div>
+      <h2 id="bf-peso-t" hidden>Peso e altura</h2><div id="bf-peso" class="card" hidden></div>
       <h2 id="bd-cabelo-t" hidden>Cabelo</h2><div id="bd-cabelo" class="card" hidden></div>
       <h2 id="bd-unhas-t" hidden>Unhas</h2><div id="bd-unhas" class="card" hidden></div>
     </div>

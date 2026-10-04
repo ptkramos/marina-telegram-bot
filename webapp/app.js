@@ -336,7 +336,7 @@ const loaders = {
 
       // Por dentro — 28/09 (Patrick, no celular): Corpo, Humor, Sentindo agora, Na cabeça, Hoje por dentro,
       // Vocês dois. Unhas e Cabelo foram pra aba Por fora (28/09).
-      $("bd-corpo").innerHTML = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Tesão")).join("")
+      $("bd-corpo").innerHTML = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Excitação")).join("")
         + (e.linhas.length || e.no_clima ? `<div class="linhas sep">${e.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}
           ${e.no_clima ? `<div class="linha"><span class="li-ic">${ic("flame")}</span><span class="li-rot">No clima agora</span></div>` : ""}</div>` : "");
       // Por fora — 28/09 (Patrick): Agora (roupa e make de verdade), Peso (barra de folga até a agência, amarela
@@ -353,7 +353,7 @@ const loaders = {
       $("bf-peso-t").hidden = $("bf-peso").hidden = !ps;
       if (ps) {
         $("bf-peso").innerHTML = `<div class="big">${esc(ps.kg)}</div>
-          <div class="ca-barras"><div class="bar-row"><span>Agência</span><div class="bar${ps.alerta ? " alerta" : ""}"><i style="width:${pct(ps.barra)}%"></i></div>
+          <div class="ca-barras"><div class="bar-row"><span>Limites</span><div class="bar${ps.alerta ? " alerta" : ""}"><i style="width:${pct(ps.barra)}%"></i></div>
             <span class="w">${esc(ps.palavra)}</span></div></div>
           <div class="linhas sep">${ps.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
       }
@@ -362,9 +362,9 @@ const loaders = {
       $("bd-unhas-t").hidden = $("bd-unhas").hidden = !u;
       if (u) {
         $("bd-unhas").innerHTML = `<div class="big un-cor">${u.hex ? `<span class="un-dot" style="background:${esc(u.hex)}"></span>` : ""}${esc(u.cor)}</div>
-          <div class="ca-barras"><div class="bar-row"><span>Desgaste</span><div class="bar${u.gasta ? " alerta" : ""}"><i style="width:${pct(u.desgaste)}%"></i></div>
+          <div class="ca-barras"><div class="bar-row"><span>Estado</span><div class="bar${u.gasta ? " alerta" : ""}"><i style="width:${pct(u.desgaste)}%"></i></div>
             <span class="w">${esc(u.estado)}</span></div></div>
-          <div class="linhas sep">${linha("droplet-half", "Tipo", u.tipo)}${linha("calendar-check", "Feita", u.feita)}</div>`;
+          <div class="linhas sep">${linha("droplet-half", "Tipo", u.tipo)}${linha("calendar-check", "Feita em", u.feita)}</div>`;
       }
       // 26/09 (Patrick): cabelo em seção própria — penteado, quatro barras (amarela quando vence) e as linhas
       const cab = d.cabelo;
@@ -376,12 +376,13 @@ const loaders = {
           <div class="linhas sep">${cab.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
       }
       $("bd-humor").innerHTML = `<div class="big">${esc(e.humor)}</div>` + e.humor_barras.map((b) => bar(b.label, b.value)).join("");
-      // 28/09 (Patrick): o motivo ganha quando começou, na direita
+      // 28/09 (Patrick): o motivo ganha quando começou, na direita. 04/10 (catálogo, leva 2): "2x" antes do
+      // sentimento, na mesma linha (só de 2 vezes pra cima); o detalhe entre parênteses
       $("bd-sentindo").innerHTML = e.sentindo.length ? e.sentindo.map((f) => `<div class="feel">
-        <div class="head"><span class="t">${esc(f.texto)}</span><div class="bar"><i style="width:${pct(f.valor)}%"></i></div></div>
-        <div class="why"><span>${esc(f.motivo)}${f.detalhe ? `<span class="dt"> · ${esc(f.detalhe)}</span>` : ""}</span>${f.quando ? `<span class="qd">${esc(f.quando)}</span>` : ""}</div>
-        ${f.vezes > 1 || f.ate_resolver ? `<div class="pilulas">${f.vezes > 1 ? `<span class="pilula">${f.vezes} vezes</span>` : ""}${f.ate_resolver ? '<span class="pilula">até resolver</span>' : ""}</div>` : ""}</div>`).join("")
-        : vazio("Nada marcante agora.");
+        <div class="head"><span class="t">${f.vezes > 1 ? `<span class="vezes">${f.vezes}x</span>` : ""}${esc(f.texto)}</span><div class="bar"><i style="width:${pct(f.valor)}%"></i></div></div>
+        <div class="why"><span>${esc(f.motivo)}${f.detalhe ? `<span class="dt"> (${esc(f.detalhe)})</span>` : ""}</span>${f.quando ? `<span class="qd">${esc(f.quando)}</span>` : ""}</div>
+        ${f.ate_resolver ? '<div class="pilulas"><span class="pilula">até resolver</span></div>' : ""}</div>`).join("")
+        : vazio("Nada marcante até o momento.");
       // 28/09 (Patrick): Na cabeça — o que vem pela frente e a vontade dela de ir (agenda viva).
       // O mais curto possível: título | quando; embaixo estado | barra | motivo (coluna da direita, como no Corpo)
       const cb = d.cabeca || [];
@@ -413,8 +414,8 @@ const loaders = {
       $("bn-mes").innerHTML = `<div><span class="d">Entrou em ${esc(tp.mes)}</span><b class="plus">+ ${brl0(tp.entrou)}</b></div>
         <div><span class="d">Saiu em ${esc(tp.mes)}</span><b>− ${brl0(tp.saiu)}</b></div>`;
       $("bn-linhas").innerHTML = [...tp.linhas.map(([i, r, v]) => linha(i, r, v)),
-        g.devendo && linha("arrow-back-up", "Deve a você", brl0(g.devendo)),
-        g.pedido && linha("alert-circle", "Precisa de", `${brl0(g.pedido.valor)} · ${g.pedido.motivo}`)].filter(Boolean).join("");
+        g.devendo && linha("arrow-back-up", "Deve ao Patrick", brl0(g.devendo)),
+        g.pedido && linha("alert-circle", "Precisa de", `${brl0(g.pedido.valor)} (${g.pedido.motivo})`)].filter(Boolean).join("");
       const valor = (v) => `${v >= 0 ? "+" : "−"} ${brl0(Math.abs(v))}`;
       const mov = (x, extra = "") => `<span class="mov-txt">${esc(x.texto)}${extra}${x.sub ? `<span class="mov-sub">${esc(x.sub)}</span>` : ""}</span>
         <span class="mov-val${x.valor >= 0 ? " plus" : ""}">${valor(x.valor)}<span class="mov-sub">${esc(x.hora)}</span></span>`;
@@ -445,9 +446,9 @@ const loaders = {
       $("bm-pessoas").innerHTML = m.circulos.map((c) => bloco(c, m.pessoas.filter((p) => p.circulo === c).map(pessoa))).join("")
         || `<h2>Pessoas</h2><div class="card">${vazio("Ninguém ainda.")}</div>`;
       $("bm-resto").innerHTML =
-        bloco("Rolando agora", m.rolando.map((r) => `<div class="item-m"><div>${esc(cap(r.titulo))}</div>${r.com.length ? `<div class="d">Com ${esc(r.com.join(", "))}</div>` : ""}</div>`))
+        bloco("Acontecendo agora", m.rolando.map((r) => `<div class="item-m"><div>${esc(cap(r.titulo))}</div>${r.com.length ? `<div class="d">Com ${esc(r.com.join(", "))}</div>` : ""}</div>`))
         + bloco("Planos", m.planos.map((p) => `<div class="item-m dois-lados"><span>${esc(cap(p.descricao))}</span><span class="d">${esc(p.quando)}</span></div>`))
-        + bloco("Onde ela foi", m.lugares.map((l) => `<div class="item-m lugar"><div><div>${esc(l.nome)}</div><div class="d">${esc(l.com)}</div></div>
+        + bloco("Lugares visitados", m.lugares.map((l) => `<div class="item-m lugar"><div><div>${esc(l.nome)}</div><div class="d">${esc(l.com)}</div></div>
           <div class="ps-dir"><div class="d">${esc(l.quando)}</div>${vezes(l.vezes)}</div></div>`));
       deslizaBarras(antes);
     } catch (err) { failIn($("ag-card"), err); }

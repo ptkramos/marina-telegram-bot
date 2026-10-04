@@ -75,6 +75,12 @@ CORTES = {
     "franja": ("Franja", " and thick full blunt bangs cut straight across that cover her forehead down to her "
                          "eyebrows"),
 }
+# 04/10 (catálogo, leva 2): só na tela; o prompt dela segue com os nomes de cima. A cor das luzes é das pontas
+# (Patrick): "Loira iluminada" é o cabelo inteiro, vira "Cor do cabelo"
+CORTES_TELA = {"cortina": "Com franja cortina", "franja": "Com franja"}
+TONS_TELA = {"dourado": ("Cor das luzes", "Dourada"), "bege": ("Cor das luzes", "Platinada"),
+             "loira": ("Cor do cabelo", "Loira iluminada")}
+PONTAS_TELA = {"Pedindo corte": "A cortar"}
 # tom → (nome, cabelo com a cor em dia, cabelo com a cor vencida, bolinha no painel, prazo em dias)
 TONS = {
     "dourado": ("Dourado", "long chestnut brown hair with golden blonde tips",
@@ -815,7 +821,7 @@ class Cabelo:
         barras = [
             {"label": "Lavagem", "valor": round(min(1.0, (c["lavagem_dia"] + 0.5) / 3), 2), "palavra": c["lavagem"],
              "alerta": c["lavagem_dia"] >= 2},
-            {"label": "Pontas", "valor": round(min(1.0, c["corte_dias"] / 90), 2), "palavra": c["pontas"],
+            {"label": "Pontas", "valor": round(min(1.0, c["corte_dias"] / 90), 2), "palavra": PONTAS_TELA.get(c["pontas"], c["pontas"]),
              "alerta": c["corte_dias"] >= 70},
             {"label": "Luzes", "valor": round(min(1.0, c["luzes_dias"] / c["luzes_prazo"]), 2), "palavra": luzes,
              "alerta": c["luzes_dias"] >= c["luzes_prazo"] * 0.75},
@@ -841,10 +847,11 @@ class Cabelo:
         lavou = ("Hoje" if lav <= 0 else ("Ontem à noite" if noite else "Ontem") if lav == 1
                  else f"Há {lav} dias") + (f", {seca}" if seca else "")
         # 28/09 (Patrick): a barra já se chama Luzes; a linha diz a cor e quando fez
+        cor_rot, cor = TONS_TELA.get(c["tom"], ("Cor das luzes", tom[0]))
         return {"penteado": penteado, "hex": ROSA_HEX if c["rosa"] == "viva" else tom[3], "barras": barras,
-                "linhas": [["droplet", "Lavou", lavou],
-                           ["scissors", "Corte", f"{CORTES[c['corte']][0]}, {quando('cortado_em').lower()}"],
-                           ["palette", "Cor", f"{tom[0]}, {quando('tonalizado_em').lower()}"]]
+                "linhas": [["droplet", "Última lavagem", lavou],
+                           ["scissors", "Corte", f"{CORTES_TELA.get(c['corte'], CORTES[c['corte']][0])}, {quando('cortado_em').lower()}"],
+                           ["palette", cor_rot, f"{cor}, {quando('tonalizado_em').lower()}"]]
                 + ([["brush", "Rosa", self._linha_rosa(st, now, quando)]] if c["rosa"] else [])}
 
     def _linha_rosa(self, st: dict, now: datetime, quando) -> str:
@@ -853,7 +860,7 @@ class Cabelo:
         if d >= ROSA_NOVO:
             return f"{quando('rosa_em')}, desbotando"
         semanas = max(1, round((ROSA_SOME - d) / 7))
-        return f"{quando('rosa_em')}, desbota em ~{semanas} semana{'s' if semanas > 1 else ''}"
+        return f"{quando('rosa_em')}, desbota em cerca de {semanas} semana{'s' if semanas > 1 else ''}"
 
     def prompt_lines(self, now: datetime) -> list[str]:
         c = self.condicao(now)

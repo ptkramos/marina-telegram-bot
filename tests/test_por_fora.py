@@ -28,7 +28,7 @@ class PesoTest(unittest.TestCase):
         self.assertEqual(p["palavra"], "Folga 1,6 kg")
         self.assertEqual(p["barra"], 0.6)
         self.assertFalse(p["alerta"])
-        self.assertEqual(p["linhas"], [["scale", "Pesou", "Sáb, 54,0 kg"], ["salad", "Dieta", "Não"],
+        self.assertEqual(p["linhas"], [["scale", "Última pesagem", "Sáb, 54,0 kg"], ["salad", "Em dieta", "Não"],
                                        ["ruler-2", "Altura", "1,68 m"]])
 
     def test_passou_do_limite_fica_amarela_e_mostra_a_dieta(self):
@@ -42,7 +42,7 @@ class PesoTest(unittest.TestCase):
     def test_sem_pesagem_e_dieta_vencida(self):
         p = self._peso(kg=51.5, diet_until="2026-09-20")
         self.assertEqual(p["barra"], 0.0)
-        self.assertEqual(p["linhas"][0][2], "Ainda não")
+        self.assertEqual(p["linhas"][0][2], "Ainda não se pesou")
         self.assertEqual(p["linhas"][1][2], "Não")
 
     def test_pesagem_antiga_vira_ha_n_dias(self):
