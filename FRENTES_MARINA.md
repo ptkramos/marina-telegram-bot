@@ -4,9 +4,12 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 04/10/2026 (catálogo de textos, lote 2 aplicado — só tela; detalhe na Auditoria).
-**Próxima conversa: segunda de manhã "bora no soak, dia 6"**
-(relatório `soak/dia-2026-10-04.md`). **Soak: dia 1 = terça 29/09.** Aberto
+_Atualizado em 04/10/2026 (catálogo de textos, lote 2 aplicado e no ar às 16:44 — só tela; detalhe na Auditoria).
+**Próxima conversa: frente de imagens, "bora na frente de imagens: teste de fotos com o Lovense"** (pesquisa pro
+depois do soak, nada de código na produção; combinar o gasto de Buzz antes; respostas dele em
+`data/feedback/ideias_pos_soak/ideias/lovense.json`). **Depois: segunda de manhã "bora no soak, dia 6"**
+(relatório `soak/dia-2026-10-04.md`; atenção: em 04/10 ela topou o Lovense na conversa, mas o mundo não tem o
+brinquedo — se ela disser que está usando, é incoerência a anotar). **Soak: dia 1 = terça 29/09.** Aberto
 pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente da voz: o modo íntimo desliga durante o banho
 no meio do sexting; ela sumir 2h30 depois de "vou te prender aqui a tarde toda" (M4 do dia 5); o Silo (M5)._
 
@@ -102,7 +105,8 @@ vão repetir); **ir ao banheiro do lugar pra mandar foto mais ousada** (Patrick,
 que ela vá ao banheiro do local); roupa de provocar + saída (02/10: ela disse "baby-doll por baixo", pro mundo ele
 saiu quando ela se vestiu pro açaí); **brinquedo Lovense pelo Mini App** (Patrick, 02/10, noite: um controle no
 app pra brincar à distância quando ela quiser — decidir com ele quem controla o quê, o brinquedo de verdade é dele ou
-é o dela na história, e como a fala e as fotos dela acompanham); **bebidas nos pedidos e vinho no mercado, Marina
+é o dela na história, e como a fala e as fotos dela acompanham; respondido por ele em 02/10 no
+`ideias_pos_soak/ideias/lovense.json`: o dela na história, ele controla; 04/10: teste de fotos na frente de imagens); **bebidas nos pedidos e vinho no mercado, Marina
 bêbada** (/feedback de 30/09); **esquecer o aviso pelo sentimento** (03/10: o
 sorteio de 5% saiu e ela sempre cumpre; esquecer de verdade — empolgada com a amiga, bateria lá embaixo — é
 comportamento novo); **modo íntimo enxuto** (frente da voz, 03/10: no sexting, prompt sem o mundo inteiro — só onde
