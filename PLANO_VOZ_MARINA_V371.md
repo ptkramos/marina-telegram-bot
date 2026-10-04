@@ -94,6 +94,10 @@ Patrick. Nada do que ela lê mudou, fora o passo "chamando o Uber" e o "(fictíc
 "se arrumando pra sair pra…". O celular da tela ("Na mão", "No bolso"…) é só tradução: `bot._celular_na_mao`
 continua comparando os textos internos "Olha …".
 
+**04/10, noite — catálogo de textos, leva 2 decidida (frente de apps):** nada muda na voz. As palavras que ela lê
+(sentimentos, humor, cabelo, roupa) mudam só na tela quando o lote 2 entrar; os Planos no infinitivo ("Sair com a
+Júlia no Quartinho Bar") ficam pra depois do soak porque o texto do plano entra no prompt dela.
+
 **Voz**
 - **Guards de resposta:** artefato de debug (inclusive `\_` escapado), proposta de ligação, resposta em outra língua, pergunta de entrevista no fim, polidez de atendente.
 - **Filtro de alfabeto:** Unicode matemático e caracteres full-width.

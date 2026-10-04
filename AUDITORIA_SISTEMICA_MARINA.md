@@ -2700,3 +2700,27 @@ conversa com o mundo, os 2 /feedback, os 8 "O Patrick estranhou", o por dentro e
   dois falsos alarmes a menos — academia do prédio → quarto não é teleporte, "shorts" × "short de moletom" é a mesma
   peça. Rodado no 03/10 numa cópia: pega G7, G8, G3 e M1.
 `tests/test_soak_dia5.py` (+24).
+
+## Catálogo de textos, leva 2 decidida (04/10, noite, frente de apps; sem código)
+
+O Patrick preencheu 117 das 253 fichas da leva 2 pelo celular (tela inicial, moldura, Por dentro, Por fora). Li as
+decisões, tirei seis padrões e propus estender às 136 em branco; ele decidiu no chat os quatro casos que esbarravam
+(apps de verdade, unhas, títulos do Mundo, extrato) e dois acertos (maiúsculas, "há … atrás").
+
+- **Gravado no banco da página** (https://claude.ai/artifact/7B9uEC9tqYNai5zC8TPokU, coleção `textos`): 114 manter,
+  20 conversar, 2 mudar nas fichas em branco; 6 ajustes em fichas já decididas (`ig.quando` volta a manter;
+  `d.orgasmo.h/d` "Último orgasmo / Há {n} horas"; `f.porbaixo` "Roupa íntima"; `d.fases` em minúscula;
+  `f.cab.pontas` "A cortar"). Cópia em `data/feedback/catalogo_textos/decisoes/` (não vai pro git).
+- **Regras 9–17** em `data/feedback/catalogo_textos/regras_gerais.md`.
+
+**O que eu decidi sozinho (pra revisar):**
+- Planos do Mundo no infinitivo: **depois do soak, na origem** (ele deixou comigo). O texto do plano entra no prompt
+  dela e é lido pelo `hoje.py` (`_lugar_do_plano`, `_para_onde`) e pelo `emotion.py` por regex em "Saindo com…";
+  converter só na tela seria remendo, e mudar a origem no meio do soak mexe no que ele mede.
+- Dinheiro: as 19 fichas em branco viraram "conversar" (a tela vai ser refeita como extrato do banco dela); as 11 que
+  eu já tinha preenchido (só tirar o "·", "o Patrick") ficam como "mudar" e entram no lote 2.
+- "À cortar" → "A cortar" (sem crase), como os erros de digitação da leva 1.
+- Unhas: estado ("Crescendo", "Descascando"), cores e tipo mantidos — o Patrick manteve gerúndio igual no cabelo
+  ("Crescendo", "Desbotando").
+- Mundo: hora "Hoje, 19:07" mantida (o Por dentro usa "19h07"; a hora vai ser revista com o "quando começou").
+

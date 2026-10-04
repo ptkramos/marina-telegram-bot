@@ -795,6 +795,18 @@ da noite não começa mais por cima do Se arrumando (/feedback 19:52: o card est
 Hoje: nada de "Comprou vestidos" no mercado (roupa não entra na lista) e o brunch é o almoço do dia (não aparece
 "Almoçou" uma hora depois). Detalhe na Auditoria ("Soak, dia 5").
 
+**04/10, noite — catálogo de textos, leva 2 decidida (sem mudança de tela ainda):** as 253 fichas dos Bastidores,
+iFood, Nubank e Instagram têm decisão (117 do Patrick pelo celular, 136 preenchidas por mim pelos padrões dele e
+conferidas no chat). Regras novas pra tela (9 a 17 em `data/feedback/catalogo_textos/regras_gerais.md`): rótulo diz o
+que é ("Última pesagem", "Vestida para", unhas "Tipo / Feita em"); estado em uma palavra ("Confirmada", "Faminta");
+sentimento é substantivo ("Empolgação", "Ciúme"); o que ela pensa em fazer no infinitivo ("Passear com o Milo");
+título nomeia o assunto ("Sentimentos", "Pensando", "Relacionamento"; Mundo "Acontecendo agora / Planos / Lugares
+visitados"); só a 1ª letra maiúscula; "Há 5 horas" sem "atrás"; iFood, Nubank e Instagram ficam iguais ao app de
+verdade (o Instagram volta a "20 min"). Ficam pra depois do soak: a aba Dinheiro inteira (vai virar o extrato do banco
+dela), os Planos no infinitivo na origem e as 28 fichas "conversar" que são redesenho (abas com ícone, estrutura do
+Sentindo agora, look por partes, cabelo separando penteado/estado e higiene/características). Próximo: aplicar o
+lote 2 (os "mudar" só de tela).
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que
