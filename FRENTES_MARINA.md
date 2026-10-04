@@ -4,8 +4,11 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 04/10/2026 (soak, dia 5 lido e consertado — item 27: 8 graves e 3 médios). **Próxima conversa:
-segunda de manhã "bora no soak, dia 6"** (relatório `soak/dia-2026-10-04.md`). **Soak: dia 1 = terça 29/09.** Aberto
+_Atualizado em 04/10/2026 (soak, dia 5 lido e consertado — item 27: 8 graves e 3 médios, no ar desde 08:23).
+**Próxima conversa: frente de apps, "bora na frente de apps: catálogo de textos, leva 2 — ler o que eu já preenchi e
+aproveitar os padrões"** (ele avançou bastante pelo celular em 04/10; ler a coleção `textos` do link da seção 2, achar
+as regras que se repetem e propor aplicar nas fichas parecidas). **Depois: segunda de manhã "bora no soak, dia 6"**
+(relatório `soak/dia-2026-10-04.md`). **Soak: dia 1 = terça 29/09.** Aberto
 pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente da voz: o modo íntimo desliga durante o banho
 no meio do sexting; ela sumir 2h30 depois de "vou te prender aqui a tarde toda" (M4 do dia 5); o Silo (M5)._
 
@@ -181,7 +184,9 @@ sobre a cópia do banco em /tmp/catalogo2, com o código copiado pra /tmp/catalo
 `data/feedback/catalogo_textos/varredura_leva2.json`), `gera_leva2.py` (fichas) e `monta_leva2.py` (página). Notas já apontam as regras da leva 1 que esbarram aqui: regra 6
 ("você" → "o Patrick": 12 fichas), "·" (14), durações abreviadas (4), "~" (1); 61 fichas são cópia do app de verdade
 (iFood/Nubank/Instagram). 29 fichas das regras 1, 2, 6 e "sem ·" já semeadas como "mudar" (OK dele, 02/10; cópia em `decisoes/leva2_preenchidas_pelo_claude.json`). **Próximo:** ele decide pelo celular; eu leio a coleção `textos` (ids `b.`, `d.`, `f.`, `n.`,
-`m.`, `if.`, `nu.`, `ig.`, `i.`, `e.`) e aplico em lote (só tela no soak; "os dois" com cuidado).
+`m.`, `if.`, `nu.`, `ig.`, `i.`, `e.`) e aplico em lote (só tela no soak; "os dois" com cuidado). **04/10:** ele
+avançou bastante no preenchimento; a próxima conversa lê o que já está decidido, tira os padrões (regras gerais como
+as 6 da leva 1) e propõe estender às fichas ainda em branco antes de aplicar.
 
 **Pronto:** iFood com abas (Início/Busca/Pedidos), ícones Tabler (outline, trocados em 26/09), recibos alinhados; linha do tempo Hoje (dia inteiro, saídas com o que rolou, previsto em cinza); Bastidores em abas; aba
 Agora decidida linha a linha (card layout D); tela inicial só com os apps; **Instagram** no ar (27/09) com acervo refeito
