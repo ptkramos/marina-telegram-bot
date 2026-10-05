@@ -906,7 +906,8 @@ manda uma mensagem a cada mexida na barra: fala quando sente diferença.
    quando muda de verdade (ligou, parou, salto de nível, padrão novo) ou depois de um tempo parado no mesmo nível
    (o tesão subindo). Texto interno descreve a sensação, nunca a fala dela.
 4. **Disponibilidade:** perfil "com o brinquedo ligado" em `response_availability.py`: responde em segundos a tudo,
-   exceto banho (já adia hoje) e celular impossível (prova, apresentação).
+   exceto banho (já adia hoje) e celular impossível (prova, apresentação). **(05/10: virou "o que ela sente e quando
+   responde" — ponto bom, Incomodada/Gostando/Curtindo, tesão subindo, banho e fim da escada; ver "passo 4 feito".)**
 5. **Corpo e mundo:** estímulo soma tesão no `intimacy.py` (ganho pelo nível e pelo tempo); gozo fora de casa vai pro
    mundo como gozo de verdade; colocar/tirar fora usa a pausa no banheiro da `agenda_reativa.py` (`RESERVADO`);
    aceitar/recusar/propor por um tipo novo na `Disposicao` (`agenda_viva.py`); bloco do prompt em
@@ -985,6 +986,52 @@ Toque soltou → "tirou o dedo".
 **Ainda não (passos 4–5):** a disponibilidade com o brinquedo ligado (hoje o turno segue o perfil da atividade — no
 banho espera e sai depois), o bloco do prompt (com qual, onde, a palavra), o tesão subindo de verdade e quem chama
 `colocar`. Próximo: **"bora na frente de apps: Lovense, passo 4"**.
+
+**05/10, tarde — passo 4 feito ✅ (o que ela sente com o brinquedo e quando responde; sem deploy, e ainda nada no
+bot chama `colocar`):** virou conversa com o Patrick (mockup + múltipla escolha), porque "é um assunto muito
+delicado e decisivo… TODOS OS SENTIMENTOS DELA SÃO EXTREMAMENTE IMPORTANTES PARA O REALISMO". Decisões dele:
+- **Celular perto a sessão inteira, nos dois casos.** O que muda entre **a ideia foi dela** ("tá pro crime":
+  expectativa, reage na hora, provoca de volta; se ele some muito, a expectativa vira impaciência e ela pode cutucar)
+  e **ele pediu e ela topou** (ansiedade gostosa de não saber quando vem; leva o susto, reclama ou se entrega; a
+  espera deixa ela mais ansiosa e com mais tesão) é o **sentimento**, não o celular — os sentimentos entram no
+  passo 5 (`emotion`), o tempo de resposta é igual.
+- **Tudo depende de ela estar gostando** (Patrick: "nada deve ser engessado"). O **ponto bom** dela muda o tempo todo:
+  sobe com o tesão; desce com gente perto (forte demais vira pânico), cólica, exaustão, muito tempo forte sem parar e
+  logo depois de gozar (sensível). Daí **Incomodada** (acima do ponto: reclama na hora, até saindo do banho),
+  **Gostando** (perto: segundos, provoca, diz que tá bom, pede mais), **Curtindo** (no ponto, tesão alto: some
+  aproveitando e fala quando ele para ou quando dá — quanto mais entregue, mais tempo). Nada de sorteio.
+- **Com gente perto** (aula, bar, trabalho, consulta): segundos, mas curtinho e escondido (o modo breve que existe).
+- **Chateada:** puta por causa do brinquedo ela reclama na hora (Incomodada) ou tira — não fica chateada com ele
+  ligado. Briga por outra coisa: tira porque perdeu o clima (passo 5).
+- **Escada quando incomoda:** reclama ("abaixa isso") → não ajustou, **diz a palavra** (Patrick: "mostra o quanto
+  ela realmente confiava/confia em mim e espera que eu honre o acordo") → firme, bronca → no fim acaba **pelo jeito
+  mais fácil no momento**: celular na mão, **corta** (1 toque, −0,08); sem celular em casa (banho), **tira ali** (tão
+  fácil quanto cortar: pesa igual); sem celular fora (casting, prova de roupa, job), **aguenta** até conseguir largar
+  o que faz e ir tirar no banheiro — **o mais punitivo** (−0,15, conta como dois incidentes: a pendência dura mais).
+  "Tirar sem cortar é só quando tirar de uma vez é possível no momento."
+- **Banho:** incômodo leve, ela sai do box pra reclamar; forte, tira ali e dá o esporro depois (fica irritada com
+  ele, sem mexer na confiança — ele nem sabia). **Nos dois o banho não acaba:** é um passo a mais e ela volta.
+- **O ponto bom e o tesão subindo vieram pro passo 4** (o tempo de resposta depende deles).
+
+Código: `lovense.py` — `contexto(atividade)` (fator do ponto bom por lugar, em casa, alcança o celular),
+`recepcao(now, atividade)` (estado, grau, ponto, frase), `estimular` (→ `IntimacyEngine.estimular`, novo: a
+excitação sobe na taxa do estímulo e esfria na meia-vida de sempre, então tende a um patamar), `tick(now,
+atividade=…)` (estimula a cada 10 s, tira no banho forte demais, fim da escada pelo jeito mais fácil),
+`_encerrar_tirando`/`_tirar_incomodada`, e `sentir(now, eventos, atividade)` (o turno ganha como ela recebe; começar a
+incomodar sem ele mexer — cansou, ficou sensível, chegou na aula — vira turno "incomodou"). `response_availability.py`
+— `_com_brinquedo` (por cima do perfil da atividade, mantendo o `activity_type`: o resto do sistema continua sabendo
+da aula) e `_pausa_no_banho` (o fim do banho anda 2 min, uma vez). `bot.py` — `_lovense_atividade` pro relógio e pro
+turno. Pré-visualização: `/dev/lovense?acao=onde&a=CLASS`, `acao=recepcao`, `acao=responde&m=oi`. Testes:
+`RecepcaoTests`, `BanhoEFimDaEscadaTests`, `SentirComRecepcaoTests` (test_lovense) e
+`tests/test_lovense_disponibilidade.py`.
+**Simulação (tesão médio, Lush):** em casa, médio "gostoso" (responde em segundos); forte por uns minutos vira
+"curtindo" (some ~1,5 min); máximo com tesão médio incomoda (reclama em 4 s); voltar pro fraco: "gostoso, mas fraco
+pro tesão que você está". Na aula: o forte já começa a incomodar; tudo curtinho em 4–20 s.
+**Fica pro passo 5:** a reclamação virar a palavra (precisa reconhecer na fala dela a reclamação e a palavra), os
+sentimentos de "dela × dele", quem chama `colocar`/`tirar` pelo chat, o bloco do prompt (onde está, como recebe),
+o gozo pelo brinquedo no mundo, a briga por outra coisa tirando o clima, e — atenção — **o estímulo agora sobe a
+excitação de verdade e pode ligar o modo íntimo no meio da aula**: o bloco do prompt tem que dizer onde ela está
+(escondido, curto). Próximo: **"bora na frente de apps: Lovense, passo 5"**.
 
 ### Hoje com o bloco "Em casa" — plano (04/10, noite, frente de apps; sem código até o soak fechar) 📝
 Primeiro da frente de apps depois do soak. Base: respostas dele de 02/10 (`ideias_pos_soak/ideias/em_casa.json`: o

@@ -403,3 +403,185 @@ class SentirTests(LovenseBase):
 
     def test_os_eventos_dela_nao_viram_turno(self):
         self.assertIsNone(self.lv.sentir(s(5), ["pediu_parar", "tirou"]))
+
+
+
+def sentindo(libido=0.5, excitacao=0.0, desconforto=0.0, energia=0.7, gozou_ha=None):
+    """O que ela sente (os campos de EmotionEngine.feeling que o ponto bom usa)."""
+    from types import SimpleNamespace
+    return SimpleNamespace(libido=libido, excitation=excitacao, discomfort=desconforto, energy=energia,
+                           hours_since_release=gozou_ha, cycle_phase="folicular")
+
+
+class RecepcaoTests(LovenseBase):
+    """Passo 4 (Patrick, 05/10): tudo depende de ela estar gostando — o ponto bom muda com o tesão, o lugar, o
+    corpo e o tempo; acima dele incomoda, perto é gostoso, no ponto com tesão alto ela se entrega."""
+
+    def setUp(self):
+        super().setUp()
+        self.lv.colocar(T0, ["lush"])
+
+    def rec(self, quando, atividade="HOME_RELAXING", **f):
+        return self.lv.recepcao(quando, atividade, feeling=sentindo(**f))
+
+    def test_sem_sessao_e_parado(self):
+        self.assertEqual(self.rec(s(5))["estado"], "parado")
+        self.lv.tirar(s(6))
+        self.assertIsNone(self.rec(s(7)))
+
+    def test_o_tesao_sobe_o_ponto_bom(self):
+        self.lv.comando(s(10), "lush", 16)
+        sem_clima = self.rec(s(20), libido=0.3)
+        com_tesao = self.rec(s(20), libido=0.9)
+        self.assertEqual(sem_clima["estado"], "incomodada")
+        self.assertEqual(com_tesao["estado"], "gostando")
+        self.assertGreater(com_tesao["ponto"], sem_clima["ponto"])
+
+    def test_com_gente_perto_o_forte_incomoda(self):
+        self.lv.comando(s(10), "lush", 10)
+        self.assertEqual(self.rec(s(20), "HOME_RELAXING")["estado"], "gostando")
+        aula = self.rec(s(20), "CLASS")
+        self.assertEqual(aula["estado"], "incomodada")
+        self.assertIn("pra onde você está", aula["frase"])
+        self.assertTrue(aula["publico"])
+
+    def test_corpo_colica_desce_o_ponto(self):
+        self.lv.comando(s(10), "lush", 10)
+        self.assertEqual(self.rec(s(20), desconforto=0.6)["estado"], "incomodada")
+
+    def test_sensivel_logo_depois_de_gozar(self):
+        self.lv.comando(s(10), "lush", 4)
+        self.assertEqual(self.rec(s(20), libido=0.8)["estado"], "gostando")
+        r = self.rec(s(20), libido=0.8, gozou_ha=0.1)
+        self.assertEqual(r["estado"], "incomodada")
+        self.assertIn("sensível", r["frase"])
+
+    def test_forte_sem_parar_cansa(self):
+        self.lv.comando(s(10), "lush", 16)
+        self.assertEqual(self.rec(s(60), libido=0.75)["estado"], "gostando")
+        r = self.rec(T0 + timedelta(minutes=40), libido=0.75)
+        self.assertTrue(r["cansou"])
+        self.assertEqual(r["estado"], "incomodada")
+        self.assertIn("cansou", r["frase"])
+
+    def test_curtindo_precisa_da_excitacao_e_do_ponto(self):
+        self.lv.comando(s(10), "lush", 14)
+        self.assertEqual(self.rec(s(20), libido=0.8, excitacao=0.2)["estado"], "gostando")
+        r = self.rec(s(20), libido=0.8, excitacao=0.7)
+        self.assertEqual(r["estado"], "curtindo")
+        self.assertGreater(r["grau"], 0.5)
+        self.lv.comando(s(30), "lush", 2)                       # muito abaixo do ponto: só gostoso, quer mais
+        r = self.rec(s(40), libido=0.8, excitacao=0.7)
+        self.assertEqual(r["estado"], "gostando")
+        self.assertIn("fraco pro tesão", r["frase"])
+
+    def test_o_estimulo_soma_excitacao_e_incomodando_quase_nada(self):
+        from intimacy import IntimacyEngine
+        self.lv.comando(s(10), "lush", 12)
+        t = s(10)
+        for _ in range(36):                                     # 6 min no relógio de 10 s
+            t += timedelta(seconds=10)
+            self.lv.estimular(t, self.lv.recepcao(t, "HOME_RELAXING", feeling=sentindo(libido=0.6)))
+        gostando = IntimacyEngine(self.db).current(t).arousal
+        self.assertGreater(gostando, 0.3)
+        with self.db.get_connection() as conn:
+            conn.execute("UPDATE intimacy_state SET arousal=0, updated_at=?", (t.isoformat(),))
+            conn.commit()
+        for _ in range(36):
+            t += timedelta(seconds=10)
+            self.lv.estimular(t, self.lv.recepcao(t, "CLASS", feeling=sentindo(libido=0.6)))
+        self.assertLess(IntimacyEngine(self.db).current(t).arousal, gostando / 2)
+
+
+class BanhoEFimDaEscadaTests(LovenseBase):
+    """Passo 4: no banho, forte demais ela tira ali e dá o esporro depois; no fim da escada da palavra ela acaba
+    pelo jeito mais fácil no momento, e largar o que fazia pra ir tirar é o mais punitivo."""
+
+    def setUp(self):
+        super().setUp()
+        self.lv.colocar(T0, ["lush"])
+
+    def test_banho_forte_demais_ela_tira_sem_mexer_na_confianca(self):
+        from unittest.mock import patch
+        self.lv.comando(s(10), "lush", 20)
+        with patch("lovense._feeling", return_value=sentindo(libido=0.4)):
+            eventos = self.lv.tick(s(20), atividade="SHOWER")
+        self.assertIn("tirou_incomodada", eventos)
+        est = self.lv.estado(s(21))
+        self.assertFalse(est["conectada"])
+        self.assertEqual(next(b for b in est["brinquedos"] if b["nome"] == "lush")["onde"], "carregador")
+        self.assertAlmostEqual(self.trust(s(21)), 0.8, places=2)
+        self.assertIsNone(self.lv.pendencia(s(21)))
+        with self.db.get_connection() as conn:
+            ep = conn.execute("SELECT family, kind, target FROM emotion_episodes WHERE source_key LIKE 'lovense:%'"
+                              ).fetchone()
+        self.assertEqual((ep["family"], ep["kind"], ep["target"]), ("raiva", "irritacao", "o Patrick"))
+        t = self.lv.sentir(s(22), eventos)
+        self.assertIn("tirou o brinquedo no banho", t["texto"])
+
+    def test_banho_gostoso_ela_fica(self):
+        from unittest.mock import patch
+        self.lv.comando(s(10), "lush", 6)
+        with patch("lovense._feeling", return_value=sentindo(libido=0.5)):
+            self.assertEqual(self.lv.tick(s(20), atividade="SHOWER"), [])
+        self.assertTrue(self.lv.estado(s(21))["conectada"])
+
+    def _ate_o_fim(self, atividade, quando):
+        from unittest.mock import patch
+        self.lv.comando(s(10), "lush", 16)
+        with patch("lovense._feeling", return_value=sentindo(libido=0.9)):
+            self.lv.pedir_parar(s(20))
+            self.lv.tick(s(81), atividade=atividade)                # bronca
+            return self.lv.tick(quando, atividade=atividade)
+
+    def test_celular_na_mao_corta(self):
+        self.assertIn("cortou", self._ate_o_fim("HOME_RELAXING", s(111)))
+
+    def test_em_casa_sem_celular_tira_ali_e_pesa_igual_ao_corte(self):
+        eventos = self._ate_o_fim("SHOWER", s(111))
+        self.assertIn("tirou_na_bronca", eventos)
+        self.assertAlmostEqual(self.trust(s(112)), 0.8 - 0.10 - 0.08, places=2)
+        self.assertIsNotNone(self.lv.pendencia(s(112)))
+        self.assertFalse(self.lv.estado(s(112))["conectada"])
+        self.assertIsNone(self.lv.estado(s(112))["aviso"])         # tirar não é o corte: o app só desconecta
+
+    def test_fora_sem_celular_aguenta_e_depois_larga_tudo(self):
+        self.assertEqual(self._ate_o_fim("CASTING", s(111)), [])   # no meio do casting: aguenta
+        from unittest.mock import patch
+        with patch("lovense._feeling", return_value=sentindo(libido=0.9)):
+            eventos = self.lv.tick(s(20 + 90 + 120), atividade="CASTING")
+        self.assertIn("tirou_largando", eventos)
+        self.assertAlmostEqual(self.trust(s(231)), 0.8 - 0.10 - 0.15, places=2)
+        est = self.lv.estado(s(231))
+        self.assertEqual(next(b for b in est["brinquedos"] if b["nome"] == "lush")["onde"], "bolsa")
+        self.assertEqual(self.lv._incidentes(s(231)), 2)            # conta em dobro: a pendência dura mais
+        t = self.lv.sentir(s(232), eventos)
+        self.assertIn("largar o que estava fazendo", t["texto"])
+
+
+class SentirComRecepcaoTests(LovenseBase):
+    """Passo 4: o turno diz como ela está recebendo; começar a incomodar sem ele mexer também vira turno."""
+
+    def setUp(self):
+        super().setUp()
+        self.lv.colocar(T0, ["lush"])
+
+    def test_turno_diz_como_ela_recebe(self):
+        from unittest.mock import patch
+        with patch("lovense._feeling", return_value=sentindo(libido=0.6)):
+            self.lv.comando(s(10), "lush", 8)
+            t = self.lv.sentir(s(15), [], "HOME_RELAXING")
+        self.assertIn("ligou o Lush", t["texto"])
+        self.assertIn("está gostoso", t["texto"])
+
+    def test_chegou_na_aula_e_comecou_a_incomodar(self):
+        from unittest.mock import patch
+        with patch("lovense._feeling", return_value=sentindo(libido=0.6)):
+            self.lv.comando(s(10), "lush", 11)
+            self.lv.sentir(s(15), [], "HOME_RELAXING")
+            self.assertIsNone(self.lv.sentir(s(70), [], "HOME_RELAXING"))
+            t = self.lv.sentir(s(80), [], "CLASS")
+            self.assertEqual(t["motivo"], "incomodou")
+            self.assertIn("continua vibrando", t["texto"])
+            self.assertIn("forte demais pra onde você está", t["texto"])
+            self.assertIsNone(self.lv.sentir(s(140), [], "CLASS"))    # já disse: não repete

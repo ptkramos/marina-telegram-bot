@@ -13,6 +13,10 @@ O brinquedo é o dela na história e o Patrick controla pelo app. Este módulo �
 - Confiança é a barra geral `trust` do vínculo. Com pendência aberta ela não volta sozinha (`emocao_travas`) e
   ela recusa a próxima vez; volta só conversando — mais de um incidente no mês pede mais de uma conversa.
 
+- Como ela recebe (passo 4, `recepcao`): o ponto bom dela muda com o tesão, o lugar, o corpo e o tempo; daí
+  parado, gostando, curtindo ou incomodada — e isso decide quando ela responde (response_availability), o tesão
+  que o estímulo soma (`estimular` → intimacy) e, no banho, tirar ali mesmo quando está forte demais.
+
 Quem chama (passos seguintes): o Mini App manda os comandos; o bot transforma os eventos em turno (o que ela
 sente, `sentir`, passo 3), a agenda decide quando ela coloca, tira e se consegue mexer no celular. Nada aqui fala
 por ela: o turno descreve a sensação, nunca a fala.
@@ -38,6 +42,10 @@ BATERIA_MINIMA = 0.05                 # abaixo disso ela não coloca (põe pra c
 PRAZO = timedelta(seconds=30)
 BRONCA = timedelta(seconds=60)
 CORTE = timedelta(seconds=90)
+# Passo 4 (Patrick, 05/10): no fim da escada ela acaba pelo jeito mais fácil NO MOMENTO — celular na mão: corta
+# (1 toque); sem celular em casa (banho): tira ali mesmo, pesa igual ao corte; sem celular fora (casting, prova):
+# aguenta até conseguir pedir licença e ir ao banheiro — largar o que fazia é o mais punitivo.
+LARGAR = timedelta(minutes=2)
 AVISO_CORTOU = timedelta(hours=12)    # quanto tempo o app mostra "Marina encerrou o controle"
 
 # Confiança (`trust`), números meus (calibrar no uso; regra 5 para 1 do recalibrar).
@@ -46,7 +54,8 @@ TRAVA = "lovense"
 CONFIANCA_PAROU = +0.02
 CONFIANCA_PAROU_TARDE = -0.03
 CONFIANCA_BRONCA = -0.10
-CONFIANCA_CORTOU = -0.08
+CONFIANCA_CORTOU = -0.08              # também quando ela tira em casa no fim da escada (tão fácil quanto cortar)
+CONFIANCA_TIROU_LARGANDO = -0.15      # teve que largar a aula, a consulta, as amigas pra ir tirar
 CONFIANCA_CONVERSA = +0.02            # conversa que ainda não fecha a pendência
 CONFIANCA_FECHOU = +0.04
 JANELA_INCIDENTES = timedelta(days=30)
@@ -62,8 +71,28 @@ SUSTENTADO = timedelta(minutes=5)         # no mesmo ritmo há 5 min: o tesão a
 SUSTENTADO_DE_NOVO = timedelta(minutes=10)
 NIVEL_QUE_SENTE = 3                       # abaixo disso, ficar no mesmo nível não vira turno
 EVENTOS_DE_TURNO = ("respeitou", "parou_tarde", "parou_depois_da_bronca", "religou", "firme", "bronca",
-                    "cortou", "sessao_acabou_bateria")       # + bateria_acabou:<brinquedo>; os dela (pediu_parar,
-                                                             # tirou) ela já sabe
+                    "cortou", "tirou_na_bronca", "tirou_largando", "tirou_incomodada",
+                    "sessao_acabou_bateria")       # + bateria_acabou:<brinquedo>; os dela (pediu_parar,
+                                                   # tirou) ela já sabe
+
+# Passo 4 (Patrick, 05/10): como ela está recebendo decide quando ela responde. Tudo depende de ela estar
+# gostando ou não: o PONTO BOM dela muda o tempo todo — sobe com o tesão; desce em lugar com gente (forte demais
+# vira pânico), com cólica ou exausta, depois de muito tempo forte sem parar e logo depois de gozar (sensível).
+# Acima do ponto ela reclama na hora (até saindo do banho); perto dele ela provoca e diz que tá bom; no ponto, com
+# tesão alto, ela some aproveitando e fala quando ele para ou quando dá. Nada de sorteio. Números meus (calibrar).
+PONTO_BASE, PONTO_TESAO = 0.05, 0.85      # ponto bom = 0,05 + 0,85 × tesão (0–1, a fração do máximo)
+FOLGA_CASA, FOLGA_FORA = 0.20, 0.12       # quanto acima do ponto ainda é gostoso
+ABAIXO = 0.25                             # mais que isso abaixo do ponto: gostoso, mas fraco pro tesão dela
+CURTINDO_EXCITACAO = 0.45                 # excitação do momento (intimacy) pra ela se entregar
+FORTE = 0.5                               # forte sem parar…
+FORTE_CANSA = timedelta(minutes=15)       # …depois disso o ponto desce 0,01 por minuto (até 0,2)
+SENSIVEL = timedelta(minutes=20)          # depois de gozar: até o fraco incomoda
+GANHO_TESAO = 0.15                        # excitação por minuto no nível máximo, no ponto (antes do retorno)
+# Fator do ponto bom por onde ela está (tipo da disponibilidade); em casa 1.
+LUGAR_FATOR = {"CLASS": 0.7, "WORK": 0.75, "CASTING": 0.6, "SOCIAL": 0.75, "MANICURE": 0.75, "MEAL": 0.8,
+               "GYM": 0.8, "OUT_SOLO": 0.85, "COMMUTE": 0.85, "PET_WALK": 0.9}
+EM_CASA = ("HOME_RELAXING", "HOME_BUSY", "SOLO", "WAKING", "GETTING_READY", "MICRO_WAKE", "SLEEPING", "SHOWER")
+SEM_CELULAR = ("SHOWER", "SLEEPING", "CASTING")     # celular fora do alcance (o banho) ou impossível (casting, job)
 
 
 def _dt(raw) -> Optional[datetime]:
@@ -77,6 +106,38 @@ def _dt(raw) -> Optional[datetime]:
 
 def _efetivo(nivel: int, modo: str, padrao: Optional[str]) -> float:
     return nivel * (PADROES.get(padrao or "", 1.0) if modo == "padrao" else 1.0)
+
+
+def _junto(fracoes: Iterable[float]) -> float:
+    """O que ela sente somando os brinquedos (0–1): o Lush e o Hush juntos são mais que cada um."""
+    resto = 1.0
+    for f in fracoes:
+        resto *= 1.0 - max(0.0, min(1.0, f))
+    return 1.0 - resto
+
+
+def contexto(atividade: Optional[str], fora_de_casa: bool = False) -> dict:
+    """Onde ela está, pelo tipo da disponibilidade: fator do ponto bom, se está em casa e se alcança o celular."""
+    atividade = atividade or "UNKNOWN"
+    em_casa = atividade in EM_CASA or (atividade in ("UNKNOWN", "MEAL") and not fora_de_casa)
+    fator = 1.0 if em_casa else LUGAR_FATOR.get(atividade, 0.85)
+    return {"atividade": atividade, "em_casa": em_casa, "fator": fator, "publico": fator < 1.0,
+            "pode_celular": atividade not in SEM_CELULAR}
+
+
+_SENTIMENTO: dict = {}
+
+
+def _feeling(db, now: datetime):
+    """O que ela sente agora (EmotionEngine.feeling), guardado por 1 min: o relógio do Lovense roda a cada 10 s."""
+    chave = (id(db), str(getattr(db, "db_path", "")))
+    guardado = _SENTIMENTO.get(chave)
+    if guardado and abs((now - guardado[0]).total_seconds()) < 60:
+        return guardado[1]
+    from emotion import EmotionEngine
+    f = EmotionEngine(db).feeling(now)
+    _SENTIMENTO[chave] = (now, f)
+    return f
 
 
 # Texto interno do turno (eu decido; descreve a sensação e o que ele fez, nunca a fala dela).
@@ -94,6 +155,12 @@ _EVENTO_TEXTO = {
     "bronca": "já faz 1 min que você disse a palavra de segurança e ele continua, ignorando você",
     "cortou": ("você cortou o controle dele pelo seu celular, porque ele não parou depois da palavra de "
                "segurança; o brinquedo continua em você, desligado"),
+    "tirou_na_bronca": ("ele não parou nem depois da palavra de segurança e da sua bronca, e você tirou o brinquedo "
+                        "ali mesmo (o celular estava fora do alcance); o app dele perdeu a conexão com você"),
+    "tirou_largando": ("ele não parou nem depois da palavra de segurança e da sua bronca, e você teve que largar o "
+                       "que estava fazendo e ir ao banheiro tirar o brinquedo; o app dele perdeu a conexão com você"),
+    "tirou_incomodada": ("estava forte demais e você tirou o brinquedo no banho, sem cortar o app; o app dele "
+                         "perdeu a conexão com você"),
     "bateria_acabou": "a bateria {nome_de} acabou e ele parou de vibrar sozinho",
     "sessao_acabou_bateria": "sem bateria, o app dele perdeu a conexão com você",
 }
@@ -144,6 +211,25 @@ def _mudanca(b: str, antes: tuple, agora: tuple, mexida: Optional[dict], *, sist
         return f"ele {'aumentou' if e1 > e0 else 'diminuiu'} {nome}{prov}: {agora_sente}"
     if pico >= max(e0, e1) + SALTO:
         return f"ele subiu {nome} até {_intensidade(pico)[0]} e voltou{prov}: {agora_sente}"
+    return None
+
+
+def _frase(rec: dict) -> Optional[str]:
+    """Como ela está recebendo, pro turno (texto interno: a sensação, nunca a fala)."""
+    estado = rec["estado"]
+    if estado == "incomodada":
+        if rec["sensivel"]:
+            return "você gozou há pouco e está sensível: até o fraco incomoda"
+        if rec["cansou"]:
+            return "faz tempo que está forte sem parar e já cansou: está incomodando"
+        onde = "pra onde você está" if rec["publico"] else "agora"
+        return f"forte demais {onde}: " + ("está te incomodando de verdade" if rec["grau"] >= 0.5
+                                            else "está começando a incomodar")
+    if estado == "curtindo":
+        return "está no ponto, delicioso; você está entregue ao que sente"
+    if estado == "gostando":
+        return ("está gostoso, mas fraco pro tesão que você está" if rec["e"] < rec["ponto"] - ABAIXO
+                else "está gostoso")
     return None
 
 
@@ -440,9 +526,21 @@ class Lovense:
 
     # ---------------------------------------------------------------- relógio
 
-    def tick(self, now: datetime, *, pode_mexer_no_celular: bool = True) -> list[str]:
-        """Anda o relógio: bateria e a escada da palavra (firme aos 30 s, bronca aos 60 s, corta aos 90 s se
-        ela consegue mexer no celular — na aula ou no meio de gente pode não conseguir na hora)."""
+    def tick(self, now: datetime, *, pode_mexer_no_celular: bool = True,
+             atividade: Optional[str] = None) -> list[str]:
+        """Anda o relógio: bateria, o tesão que o estímulo soma e a escada da palavra (firme aos 30 s, bronca aos
+        60 s e, aos 90 s, ela acaba pelo jeito mais fácil no momento: corta pelo celular; sem celular em casa, tira
+        ali; sem celular fora, aguenta até conseguir largar o que faz e ir tirar no banheiro). `atividade` é o tipo
+        da disponibilidade (onde ela está); sem ela, só sabe se dá pra mexer no celular."""
+        em_casa = None
+        if atividade is not None:
+            rec = self.recepcao(now, atividade)
+            if rec:
+                pode_mexer_no_celular, em_casa = rec["pode_celular"], rec["em_casa"]
+                self.estimular(now, rec)
+                if rec["atividade"] == "SHOWER" and rec["estado"] == "incomodada" and rec["grau"] >= 0.5:
+                    # No banho o celular fica fora do box: forte demais, ela tira ali e dá o esporro depois.
+                    return self._tirar_incomodada(now)
         abrir = False
         ajustes = []
         with self.db.get_connection() as conn:
@@ -469,16 +567,59 @@ class Lovense:
                 conn.execute("UPDATE lovense_sessoes SET incidentes=incidentes+1 WHERE id=?", (sessao["id"],))
                 abrir = True
             conn.execute("UPDATE lovense_sessoes SET escada=? WHERE id=?", (escada, sessao["id"]))
-            if escada == 2 and now >= t0 + CORTE and pode_mexer_no_celular:
+            if escada == 2 and now >= t0 + CORTE:
                 sessao = conn.execute("SELECT * FROM lovense_sessoes WHERE id=?", (sessao["id"],)).fetchone()
-                eventos += self._cortar(conn, sessao, now)
-                ajustes.append(CONFIANCA_CORTOU)
-                abrir = True
+                if pode_mexer_no_celular:
+                    eventos += self._cortar(conn, sessao, now)
+                    ajustes.append(CONFIANCA_CORTOU)
+                    abrir = True
+                elif em_casa:
+                    eventos += self._encerrar_tirando(conn, sessao, now, em_casa=True, motivo="tirou_na_bronca")
+                    ajustes.append(CONFIANCA_CORTOU)
+                    abrir = True
+                elif em_casa is False and now >= t0 + CORTE + LARGAR:
+                    eventos += self._encerrar_tirando(conn, sessao, now, em_casa=False, motivo="tirou_largando")
+                    ajustes.append(CONFIANCA_TIROU_LARGANDO)
+                    abrir = True
             conn.commit()
         if abrir:
             self._abrir_pendencia(now)
         for delta in ajustes:
             self.db.ajustar_emocao(TRUST, delta, now=now)
+        return eventos
+
+    def _encerrar_tirando(self, conn, sessao, now: datetime, *, em_casa: bool, motivo: str) -> list[str]:
+        """Ela tira todos (em casa vão pro carregador; fora, pra bolsa) e a sessão acaba. No fim da escada conta o
+        incidente (se a bronca ainda não contou) e, largando o que fazia, conta em dobro: a pendência dura mais."""
+        for b in self._em_uso(conn, sessao):
+            self._registrar(conn, sessao["id"], b, 0, "sistema", None, now)
+            conn.execute("UPDATE lovense_brinquedos SET onde=?, bateria_em=? WHERE brinquedo=?",
+                         ("carregador" if em_casa else "bolsa", now.isoformat(), b))
+        conn.execute("UPDATE lovense_sessoes SET estado='encerrada', fim_em=?, motivo_fim=? WHERE id=?",
+                     (now.isoformat(), motivo, sessao["id"]))
+        if motivo != "tirou_incomodada":                            # o fim da escada da palavra
+            incidentes = (1 if int(sessao["escada"]) < 2 else 0) + (1 if motivo == "tirou_largando" else 0)
+            conn.execute("UPDATE lovense_sessoes SET escada=3, respeitou=0, incidentes=incidentes+? WHERE id=?",
+                         (incidentes, sessao["id"]))
+        return [motivo]
+
+    def _tirar_incomodada(self, now: datetime) -> list[str]:
+        """No banho, forte demais: ela tira ali mesmo sem cortar o app (não é desrespeito à palavra — ele nem
+        sabia), fica irritada com ele e dá o esporro quando sair."""
+        with self.db.get_connection() as conn:
+            eventos = self._assentar(conn, now)
+            sessao = self._ativa(conn)
+            if not sessao:
+                conn.commit()
+                return eventos
+            eventos += self._encerrar_tirando(conn, sessao, now, em_casa=True, motivo="tirou_incomodada")
+            conn.commit()
+        try:
+            from emotion import EmotionEngine, PATRICK
+            EmotionEngine(self.db).feel("raiva", "irritacao", 0.35, "o Patrick exagerou no brinquedo", now,
+                                        target=PATRICK, source_key=f"lovense:tirou:{sessao['id']}")
+        except Exception:
+            pass
         return eventos
 
     # ---------------------------------------------------------------- confiança
@@ -535,12 +676,83 @@ class Lovense:
         with self.db.get_connection() as conn:
             return self._ativa(conn) is not None
 
-    def sentir(self, now: datetime, eventos: Iterable[str] = ()) -> Optional[dict]:
+    # ---------------------------------------------------------------- como ela está recebendo (passo 4)
+
+    @staticmethod
+    def _forte_desde(conn, sessao_id: int) -> Optional[datetime]:
+        """Desde quando está forte (os brinquedos somados) sem parar."""
+        niveis, desde = {}, None
+        for c in conn.execute("""SELECT brinquedo, nivel, modo, padrao, criado_em FROM lovense_comandos
+                                 WHERE sessao_id=? ORDER BY criado_em, id""", (sessao_id,)):
+            niveis[c["brinquedo"]] = _efetivo(c["nivel"], c["modo"], c["padrao"]) / NIVEL_MAX
+            desde = (desde or _dt(c["criado_em"])) if _junto(niveis.values()) >= FORTE else None
+        return desde
+
+    def recepcao(self, now: datetime, atividade: Optional[str] = None, *, feeling=None) -> Optional[dict]:
+        """Como ela está recebendo o estímulo agora: parado, gostando, curtindo ou incomodada (com o grau), o ponto
+        bom dela e onde ela está. None sem sessão aberta."""
+        with self.db.get_connection() as conn:
+            sessao = self._ativa(conn)
+            if not sessao:
+                return None
+            em_uso = self._em_uso(conn, sessao)
+            niveis = self._niveis(conn, sessao["id"])
+            e = _junto(_efetivo(*niveis.get(b, (0, "classico", None))) / NIVEL_MAX for b in em_uso)
+            forte_desde = self._forte_desde(conn, sessao["id"]) if e >= FORTE else None
+        ctx = contexto(atividade, bool(sessao["fora_de_casa"]))
+        from intimacy import CYCLE_LIBIDO, IntimacyEngine
+        try:
+            f = feeling or _feeling(self.db, now)
+            libido, excitacao = float(f.libido), float(f.excitation)
+            desconforto, energia = float(f.discomfort), float(f.energy)
+            gozou_ha, fase = f.hours_since_release, f.cycle_phase or ""
+            if feeling is None:      # o sentimento fica guardado 1 min; a excitação muda a cada 10 s: lê na hora
+                excitacao = float(IntimacyEngine(self.db).current(now).arousal)
+        except Exception:
+            libido, excitacao, desconforto, energia, gozou_ha, fase = 0.5, 0.0, 0.0, 0.6, None, ""
+        ciclo = next((v for k, v in CYCLE_LIBIDO.items() if fase and fase.startswith(k.split("_")[0])), 1.0)
+        tesao = max(libido, excitacao)
+        ponto = (PONTO_BASE + PONTO_TESAO * tesao) * ctx["fator"]
+        ponto -= 0.35 * desconforto + (0.1 if energia < 0.35 else 0.0)
+        cansou = bool(forte_desde and now - forte_desde > FORTE_CANSA)
+        if cansou:
+            ponto -= min(0.2, 0.01 * (now - forte_desde - FORTE_CANSA).total_seconds() / 60)
+        folga = FOLGA_FORA if ctx["publico"] else FOLGA_CASA
+        sensivel = gozou_ha is not None and gozou_ha * 3600 < SENSIVEL.total_seconds()
+        if sensivel:
+            ponto, folga = 0.1, 0.05                # só um toque bem de leve (nível 3) não incomoda
+        ponto = max(0.1, min(1.0, ponto))
+        if e <= 0.02:
+            estado, grau = "parado", 0.0
+        elif e > ponto + folga:
+            estado, grau = "incomodada", min(1.0, (e - ponto - folga) / 0.25)
+        elif excitacao >= CURTINDO_EXCITACAO and e >= ponto - ABAIXO:
+            estado, grau = "curtindo", min(1.0, (excitacao - CURTINDO_EXCITACAO) / 0.4)
+        else:
+            estado, grau = "gostando", 0.0
+        rec = dict(ctx, estado=estado, grau=round(grau, 3), e=round(e, 3), ponto=round(ponto, 3),
+                   folga=folga, sensivel=sensivel, cansou=cansou, excitacao=excitacao,
+                   vontade=ciclo * (0.7 + 0.6 * libido))
+        rec["frase"] = _frase(rec)
+        return rec
+
+    def estimular(self, now: datetime, rec: Optional[dict]) -> Optional[float]:
+        """O estímulo soma excitação de verdade (intimacy): mais forte, mais rápido; incomodando, quase nada."""
+        if not rec or rec["e"] <= 0.02:
+            return None
+        taxa = GANHO_TESAO * rec["e"] * (0.25 if rec["estado"] == "incomodada" else 1.0) * rec["vontade"]
+        from intimacy import IntimacyEngine
+        return IntimacyEngine(self.db).estimular(now, taxa)
+
+    def sentir(self, now: datetime, eventos: Iterable[str] = (), atividade: Optional[str] = None) -> Optional[dict]:
         """Os comandos dele (e os eventos da palavra e da bateria) viram o que ela sente: {texto, motivo} pro bot
         transformar em turno, ou None quando ela não sente diferença. Guarda o que ela já sentiu na sessão
-        (`sentido_json`), então a rajada de comandos e o que mudou no intervalo entram juntos no turno seguinte."""
+        (`sentido_json`), então a rajada de comandos e o que mudou no intervalo entram juntos no turno seguinte.
+        Com `atividade` (passo 4), o turno diz como ela está recebendo, e começar a incomodar sem ele mexer (cansou,
+        ficou sensível, chegou na aula) também vira turno."""
         eventos = list(dict.fromkeys(e for e in eventos
                                      if e in EVENTOS_DE_TURNO or e.startswith("bateria_acabou:")))
+        rec = self.recepcao(now, atividade) if atividade is not None else None
         with self.db.get_connection() as conn:
             sessao = self._ativa(conn)
             if not sessao and eventos:            # cortou / bateria: a sessão acabou neste mesmo passo
@@ -579,17 +791,28 @@ class Lovense:
                 elif not mudancas and ult is not None:
                     ligados = [b for b in em_uso if _efetivo(*agora[b]) >= NIVEL_QUE_SENTE]
                     espera = SUSTENTADO_DE_NOVO if snap.get("motivo") == "sustentado" else SUSTENTADO
-                    if ligados and now - ult >= espera:
+                    incomoda = bool(rec and rec["estado"] == "incomodada")
+                    if (ligados and now - ult >= espera
+                            and not (incomoda and snap.get("recepcao") != "incomodada")):
                         ritmo = _dt(snap.get("ritmo_desde")) or ult
                         minutos = max(1, round((now - ritmo).total_seconds() / 60))
                         motivo = "sustentado"
                         partes = [f"faz {minutos} min que " + " e ".join(
                             f"{_NOME[b]} vibra no mesmo ritmo dentro de você ({_sensacao(b, *agora[b], so_ritmo=True)})"
-                            for b in ligados) + "; o tesão vai acumulando"]
+                            for b in ligados) + ("" if incomoda else "; o tesão vai acumulando")]
+                    elif (incomoda and snap.get("recepcao") != "incomodada" and now - ult >= ENTRE_TURNOS):
+                        # Ele não mexeu, mas começou a incomodar: cansou, ficou sensível, chegou num lugar com gente.
+                        motivo = "incomodou"
+                        partes = [f"{_NOME[b]} continua {_sensacao(b, *agora[b])}" for b in em_uso
+                                  if agora[b][0] > 0]
+            if partes and rec and rec["frase"] and motivo != "evento":
+                partes.append(rec["frase"])
             if not partes:
                 return None
             novo = {"em": now.isoformat(), "motivo": motivo, "b": {b: list(v) for b, v in agora.items()},
-                    "ritmo_desde": snap.get("ritmo_desde") if motivo == "sustentado" else now.isoformat()}
+                    "ritmo_desde": (snap.get("ritmo_desde") if motivo in ("sustentado", "incomodou")
+                                    else now.isoformat()),
+                    "recepcao": rec["estado"] if rec else snap.get("recepcao")}
             conn.execute("UPDATE lovense_sessoes SET sentido_json=? WHERE id=?", (json.dumps(novo), sessao["id"]))
             conn.commit()
         texto = "; ".join(partes)

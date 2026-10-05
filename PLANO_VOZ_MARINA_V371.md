@@ -1656,4 +1656,14 @@ a sensação ("vibrando forte (difícil de ignorar), constante"; "o tesão vai a
 entra pelo buffer das mensagens dele (vai junto se ele está escrevendo) e linha entre colchetes não ensina mais o
 estilo dele. Sem o passo 4 a resposta segue o perfil da atividade; sem o 5 o prompt não tem o bloco do brinquedo.
 Detalhe no PLANO_WEBAPP, "passo 3 feito".
+
+**05/10, tarde — Lovense, passo 4 (o que ela sente e quando responde):** mexe no tempo de resposta. Com o
+brinquedo, o celular fica perto a sessão inteira, e quando ela responde sai de **como ela está recebendo** (decisão
+do Patrick: "tudo depende SE ela está gostando"): parada ou gostando, segundos (com gente perto, curtinho e
+escondido); incomodada, reclama na hora (no banho, sai do box e volta); curtindo, some aproveitando e fala quando ele
+para ou quando dá. O turno do brinquedo ganha essa linha ("está gostoso", "está no ponto, delicioso; você está
+entregue ao que sente", "forte demais pra onde você está: está começando a incomodar") — sensação, nunca a fala.
+Dormindo e no casting segue a atividade. **Atenção pro passo 5:** o estímulo agora sobe a excitação do modo íntimo
+de verdade; o bloco do prompt tem que segurar o tom pelo lugar (na aula, escondido e curto). Detalhe no
+PLANO_WEBAPP, "passo 4 feito".
 Detalhe em PLANO_WEBAPP, "passo 2 feito".

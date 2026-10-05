@@ -18,6 +18,7 @@ A libido da fase do ciclo (`cycle.py`) multiplica o quanto cada estímulo pesa.
 from __future__ import annotations
 
 import logging
+import math
 import random
 import re
 import unicodedata
@@ -181,6 +182,34 @@ class IntimacyEngine:
         else:
             state = "warming" if st["arousal"] >= ACTIVE_OFF else "off"
         return IntimacyTurn(state, round(st["arousal"], 3), False, glow)
+
+    def estimular(self, now: datetime, taxa_por_min: float, *, max_min: float = 2.0) -> float:
+        """Lovense, passo 4 (05/10): o brinquedo ligado soma excitação continuamente — sobe na taxa do estímulo e
+        esfria na meia-vida de sempre, então ela tende a um patamar (mais forte, mais alto). O relógio chama a cada
+        10 s; um buraco maior que `max_min` só esfria (o estímulo daquele tempo não é conhecido). Depois de gozar
+        custa mais, como na conversa. Não mexe no mundo (o sexting em casa é do `observe`)."""
+        st = self._load()
+        a = float(st.get("arousal") or 0.0)
+        mins = self._minutes(st.get("updated_at"), now) or 0.0
+        estimulo = min(mins, max_min)
+        if mins > estimulo:
+            a *= 0.5 ** ((mins - estimulo) / AROUSAL_HALF_LIFE_MIN)
+        since = self._minutes(st.get("climax_at"), now)
+        if since is not None and since <= POST_CLIMAX_DAMP_MIN:
+            fertile = self._cycle_libido() >= CYCLE_LIBIDO["ovulatoria"]
+            taxa_por_min *= POST_CLIMAX_GAIN_FERTILE if fertile else POST_CLIMAX_GAIN
+        esfria = math.log(2) / AROUSAL_HALF_LIFE_MIN
+        r = max(0.0, taxa_por_min)
+        if estimulo > 0 and r + esfria > 0:
+            patamar = r / (r + esfria)
+            a = patamar + (a - patamar) * math.exp(-(r + esfria) * estimulo)
+        st["arousal"], st["updated_at"] = round(min(1.0, max(0.0, a)), 4), now.isoformat()
+        if st["arousal"] >= ACTIVE_ON and not st.get("mode_since"):
+            st["mode_since"] = now.isoformat()
+        elif st["arousal"] < ACTIVE_OFF:
+            st["mode_since"], st["hot_turns"] = None, 0
+        self._save(st)
+        return st["arousal"]
 
     def observe(self, text: str, plan: Optional[dict] = None,
                 now: Optional[datetime] = None) -> IntimacyTurn:

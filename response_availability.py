@@ -231,9 +231,13 @@ class ResponseAvailabilityPolicy:
             activity_source = 'UNKNOWN'
             can_claim = False
 
-        decision, reason = self._choose_decision(profile, urgency, complexity, activity_type)
         seed_value = seed or self._seed(conversation_key, telegram_message_id, now, message)
-        delay_s = self._pick_delay_seconds(profile, urgency, decision, seed_value)
+        lovense = self._com_brinquedo(now, activity_type, seed_value)
+        if lovense is not None:
+            decision, reason, delay_s, profile = lovense
+        else:
+            decision, reason = self._choose_decision(profile, urgency, complexity, activity_type)
+            delay_s = self._pick_delay_seconds(profile, urgency, decision, seed_value)
         critical_wake = bool(getattr(settings, 'CRITICAL_WAKE_POLICY_ENABLED', False))
         sleep_protected = activity_type == 'SLEEPING' and not critical_wake
         sleep_until = self._routine_sleep_until(snapshot_id, local_naive(now)) if sleep_protected else None
@@ -267,7 +271,7 @@ class ResponseAvailabilityPolicy:
         # respondido quando ela sai e se veste (2–8 min depois de sair), não
         # num atraso sorteado que podia cair no meio do banho.
         shower_until = (self._shower_until(local_naive(now))
-                        if activity_type == 'SHOWER' and urgency != 'CRITICAL' else None)
+                        if activity_type == 'SHOWER' and urgency != 'CRITICAL' and lovense is None else None)
         if shower_until is not None:
             digest = hashlib.sha256(f"dress:{seed_value}".encode()).digest()
             dress_s = 120 + int(360 * int.from_bytes(digest[:8], 'big') / 2**64)
@@ -314,6 +318,73 @@ class ResponseAvailabilityPolicy:
             decision, activity_type, activity_source, urgency, delay_s, shadow,
         )
         return result
+
+    def _com_brinquedo(self, now: datetime, activity_type: str, seed: str) -> Optional[tuple]:
+        """Lovense, passo 4 (Patrick, 05/10): com o brinquedo o celular fica perto a sessão inteira — a ideia sendo
+        dela (expectativa) ou dele (a ansiedade de não saber quando vem). O tempo sai de como ela está recebendo:
+        parado ou gostando, segundos; incomodada, reclama na hora; curtindo, some aproveitando e fala quando ele
+        para (o turno do "parou" refaz a conta) ou quando dá. Com gente perto, curtinho e escondido. Dormindo e com
+        o celular impossível (casting, prova de roupa, job) segue a atividade; no banho ela só sai do box pra
+        reclamar de incômodo leve (o forte ela tira ali, `Lovense.tick`) e volta pro banho.
+        Devolve (decisão, motivo, atraso em s, perfil) ou None sem brinquedo."""
+        if activity_type in ('SLEEPING', 'CASTING'):
+            return None
+        try:
+            from lovense import Lovense
+            rec = Lovense(self.db).recepcao(local_naive(now), activity_type)
+        except Exception:
+            logger.warning('availability.lovense_failed', exc_info=True)
+            return None
+        if not rec:
+            return None
+
+        def frac(tag: str) -> float:
+            return int.from_bytes(hashlib.sha256(f'{tag}:{seed}'.encode()).digest()[:8], 'big') / 2**64
+
+        estado, publico = rec['estado'], rec['publico']
+        if activity_type == 'SHOWER':
+            if estado != 'incomodada' or rec['grau'] >= 0.5:
+                return None
+            delay = 25 + int(35 * frac('banho'))          # molhada, sai do box e pega o celular
+            self._pausa_no_banho(local_naive(now))
+            decision, reason = 'DEFER', 'lovense_sai_do_banho'
+        elif estado == 'curtindo':
+            # Quanto mais entregue (excitação acima do ponto de se entregar), mais tempo ela some: 30 s a ~6 min.
+            delay = 30 + int(270 * rec['grau'] * (0.8 + 0.4 * frac('curtindo')))
+            decision, reason = 'DEFER', 'lovense_curtindo'
+        else:
+            if estado == 'incomodada':
+                delay = 2 + int(8 * frac('reclama'))
+            elif publico:
+                delay = 5 + int(20 * frac('fora'))         # olha escondido, debaixo da mesa
+            else:
+                delay = 2 + int(13 * frac('casa'))
+            decision, reason = ('REPLY_BRIEFLY' if publico else 'REPLY_NOW'), f'lovense_{estado}'
+        profile = {
+            'phone_access': 'LOW' if activity_type == 'SHOWER' else 'HIGH',
+            'attention': 'LOW' if estado == 'curtindo' else 'HIGH',
+            'interruptibility': 'HIGH', 'soft_delay_min_s': 0,      # o atraso já vem certo; urgência ainda corta
+            'soft_delay_max_s': delay, 'guardrail_s': delay + 60,
+            'brief_likelihood': 0.6 if publico else 0.1, 'prefer': decision,
+        }
+        return decision, reason, delay, profile
+
+    def _pausa_no_banho(self, now: datetime) -> None:
+        """Sair do box pra reclamar não acaba o banho (Patrick): é um passo a mais — o fim do banho anda 2 min,
+        uma vez a cada 5 min (a decisão é refeita a cada mensagem do mesmo lote)."""
+        try:
+            raw = self.db.get_estado_relacional("pending_transition_json")
+            data = json.loads(raw) if raw else None
+            if not isinstance(data, dict) or data.get("routine_type") != "shower" or not data.get("end_at"):
+                return
+            ultima = data.get("lovense_pausa_em")
+            if ultima and now - datetime.fromisoformat(ultima) < timedelta(minutes=5):
+                return
+            data["end_at"] = (datetime.fromisoformat(data["end_at"]) + timedelta(minutes=2)).isoformat()
+            data["lovense_pausa_em"] = now.isoformat()
+            self.db.set_estado_relacional("pending_transition_json", json.dumps(data, ensure_ascii=False))
+        except Exception:
+            logger.warning('availability.lovense_banho_failed', exc_info=True)
 
     def _resolve_activity(self, now: datetime) -> tuple[str, str, Optional[int], str, bool]:
         now_naive = local_naive(now)

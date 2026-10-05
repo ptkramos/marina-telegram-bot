@@ -5365,10 +5365,22 @@ async def _lovense_assentou(application: Application) -> None:
     await _lovense_turno(application, eventos)
 
 
+def _lovense_atividade(now: datetime) -> Optional[str]:
+    """Onde ela está (tipo da disponibilidade) pro Lovense: o ponto bom dela e se alcança o celular."""
+    try:
+        act_code, *_ = availability_service.policy._resolve_activity(now)
+        return act_code
+    except Exception:
+        logger.warning("lovense.atividade.erro", exc_info=True)
+        return None
+
+
 async def _lovense_turno(application: Application, eventos: list[str]) -> None:
     from lovense import Lovense
     async with _LOVENSE_LOCK:                    # o gancho e o relógio não criam o mesmo turno duas vezes
-        turno = await asyncio.to_thread(Lovense(memory_manager.db).sentir, datetime.now(), eventos)
+        now = datetime.now()
+        atividade = await asyncio.to_thread(_lovense_atividade, now)
+        turno = await asyncio.to_thread(Lovense(memory_manager.db).sentir, now, eventos, atividade)
     if not turno:
         return
     logger.info("lovense.turno motivo=%s", turno["motivo"])
@@ -5387,21 +5399,16 @@ def _turno_do_app(application: Application, texto: str) -> None:
 
 
 async def lovense_routine(application: Application) -> None:
-    """Relógio do Lovense (10 s, só com sessão aberta): bateria, a escada da palavra (firme, bronca, corte) e o
-    tempo no mesmo ritmo."""
+    """Relógio do Lovense (10 s, só com sessão aberta): bateria, o tesão que o estímulo soma, a escada da palavra
+    (firme, bronca e o fim pelo jeito mais fácil: cortar ou tirar), o banho forte demais e o tempo no mesmo ritmo."""
     try:
         from lovense import Lovense
         lv = Lovense(memory_manager.db)
         if not await asyncio.to_thread(lv.sessao_ativa):
             return
         now = datetime.now()
-        pode = True
-        try:                                     # na aula, no banho…: não consegue cortar pelo celular na hora
-            act_code, *_ = availability_service.policy._resolve_activity(now)
-            pode = availability_service.policy.profiles.get(act_code, {}).get("phone_access") != "LOW"
-        except Exception:
-            pass
-        eventos = await asyncio.to_thread(lv.tick, now, pode_mexer_no_celular=pode)
+        atividade = await asyncio.to_thread(_lovense_atividade, now)
+        eventos = await asyncio.to_thread(lv.tick, now, atividade=atividade)
         if eventos:
             logger.info("lovense.tick eventos=%s", ",".join(eventos))
         await _lovense_turno(application, eventos)

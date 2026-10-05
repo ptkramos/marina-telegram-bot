@@ -2989,3 +2989,45 @@ Detalhe no PLANO_WEBAPP, "passo 3 feito".
   forte, sem ritmo"); "provocando" com 6+ mexidas no intervalo; e os textos da palavra e da bateria.
 - **Ponto de atenção pro passo 4:** o turno do brinquedo passa pela disponibilidade normal; no banho ele espera e sai
   depois (pode chegar "velho"). O perfil "com o brinquedo ligado" resolve.
+
+## Lovense, passo 4: o que ela sente e quando responde (05/10, tarde, frente de apps)
+
+Quarto passo (exceção do Patrick: hoje). Ainda nada chama `colocar`: na produção nada muda até o passo 5. As
+decisões foram uma conversa com ele (mockup + múltipla escolha); detalhe no PLANO_WEBAPP, "passo 4 feito".
+- `lovense.py`: `contexto(atividade)`, `recepcao(now, atividade, feeling=None)` (parado / gostando / curtindo /
+  incomodada, grau, ponto bom, frase), `estimular`, `_feeling` (EmotionEngine.feeling guardado 1 min; a excitação é
+  lida na hora), `tick(now, atividade=…)` (estimula, tira no banho forte demais, fim da escada pelo jeito mais fácil:
+  `cortou` / `tirou_na_bronca` / `tirou_largando`), `_encerrar_tirando`, `_tirar_incomodada` (episódio
+  raiva/irritação com ele, `source_key lovense:tirou:<sessão>`, sem mexer na confiança), `sentir(now, eventos,
+  atividade)` (a frase de como ela recebe entra no turno; motivo novo `incomodou`; `sentido_json` guarda `recepcao`).
+  Sem `atividade`, `tick` e `sentir` fazem o que faziam (compatível com o passo 3).
+- `intimacy.py`: `IntimacyEngine.estimular(now, taxa_por_min)` — sobe pra um patamar r/(r+λ) e esfria na meia-vida de
+  10 min; buraco maior que 2 min só esfria; depois do gozo, o mesmo retorno da conversa; liga `mode_since` no 0,45.
+  Não chama `_no_mundo` (o sexting em casa continua sendo do `observe`).
+- `response_availability.py`: `_com_brinquedo` antes de `_choose_decision` (devolve decisão, motivo `lovense_*`,
+  atraso e perfil; mantém o `activity_type` da atividade), banho fora do `shower_until` quando ela sai pra reclamar,
+  `_pausa_no_banho` (fim do banho +2 min, no máximo uma vez a cada 5 min). Urgência alta continua cortando o
+  "curtindo" (180 s) — achado nos testes: o piso da janela devolvia o atraso inteiro; o perfil do brinquedo não tem
+  piso.
+- `bot.py`: `_lovense_atividade(now)` (tipo da disponibilidade) passa pro `tick` e pro `sentir`; o `phone_access`
+  do relógio saiu (o `contexto` decide quem alcança o celular: banho, dormindo e casting não).
+- `scripts/webapp_preview.py`: `acao=onde&a=…`, `recepcao`, `responde&m=…`; o relógio e o turno usam o lugar simulado.
+- Testes: `RecepcaoTests` (8), `BanhoEFimDaEscadaTests` (5), `SentirComRecepcaoTests` (2) em test_lovense;
+  `tests/test_lovense_disponibilidade.py` (9); test_lovense_turno confere que a atividade chega ao `sentir`.
+- **Números que eu decidi (internos, calibrar no uso):** ponto bom = (0,05 + 0,85 × tesão) × lugar − 0,35 ×
+  desconforto − 0,1 se exausta (energia < 0,35); lugar: aula 0,7, trabalho 0,75, casting 0,6, bar/amigas 0,75,
+  manicure 0,75, comendo fora 0,8, academia 0,8, rua/Uber/sozinha fora 0,85, passeio do Milo 0,9, casa 1; folga acima
+  do ponto 0,20 em casa e 0,12 fora; mais de 0,25 abaixo é "fraco pro tesão"; curtindo pede excitação ≥ 0,45;
+  forte (≥ 0,5) há mais de 15 min desce o ponto 0,01/min (até 0,2); gozou há menos de 20 min: ponto 0,1 e folga 0,05;
+  Lush e Hush juntos somam como 1 − (1−a)(1−b); excitação por minuto = 0,15 × intensidade × vontade (ciclo × (0,7 +
+  0,6 × libido)), um quarto disso incomodando; tempos: parado/gostando 2–15 s em casa, 5–25 s com gente perto;
+  incomodada 2–10 s; curtindo 30 s + até ~5 min pelo grau; banho, sair do box 25–60 s; largar o que fazia: 2 min
+  depois do corte; tirou largando −0,15 e incidente em dobro.
+- **Textos que eu decidi:** internos (turno) — "está gostoso", "está gostoso, mas fraco pro tesão que você está",
+  "está no ponto, delicioso; você está entregue ao que sente", "forte demais agora / pra onde você está: está
+  começando a incomodar / está te incomodando de verdade", "você gozou há pouco e está sensível: até o fraco
+  incomoda", "faz tempo que está forte sem parar e já cansou: está incomodando", "{o Lush} continua vibrando…", e os
+  eventos `tirou_na_bronca`, `tirou_largando`, `tirou_incomodada`. **Visível:** a causa do sentimento "o Patrick
+  exagerou no brinquedo" (aparece nos motivos do Por dentro) — entra no catálogo no passo 7.
+- **Ponto de atenção pro passo 5:** o estímulo sobe a excitação de verdade e pode ligar o modo íntimo (roteado pro
+  modelo íntimo) no meio da aula; o bloco do prompt precisa dizer onde ela está e como ela recebe.

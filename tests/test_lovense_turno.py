@@ -20,6 +20,7 @@ class LovenseTurnoTest(unittest.IsolatedAsyncioTestCase):
                                          "motivo": "mudou"})
         with mock.patch.object(lovense, "JUNTAR", timedelta(seconds=0.05)), \
                 mock.patch.object(lovense.Lovense, "sentir", sentir), \
+                mock.patch.object(bot, "_lovense_atividade", return_value="CLASS"), \
                 mock.patch.object(bot, "_turno_do_app") as turno:
             now = datetime.now()
             for eventos in ([], [], ["respeitou"], []):
@@ -28,12 +29,14 @@ class LovenseTurnoTest(unittest.IsolatedAsyncioTestCase):
             await asyncio.sleep(0.15)
         sentir.assert_called_once()
         self.assertEqual(sentir.call_args.args[1], ["respeitou"])
+        self.assertEqual(sentir.call_args.args[2], "CLASS")      # passo 4: onde ela está decide como ela recebe
         turno.assert_called_once_with(app, "[Brinquedo, pelo app do Patrick: Ele ligou o Lush]")
 
     async def test_sem_diferenca_nao_ha_turno(self):
         app = SimpleNamespace(bot=SimpleNamespace())
         with mock.patch.object(lovense, "JUNTAR", timedelta(seconds=0.01)), \
                 mock.patch.object(lovense.Lovense, "sentir", mock.Mock(return_value=None)), \
+                mock.patch.object(bot, "_lovense_atividade", return_value=None), \
                 mock.patch.object(bot, "_turno_do_app") as turno:
             await bot._webapp_lovense(app, [], datetime.now())
             await asyncio.sleep(0.1)
