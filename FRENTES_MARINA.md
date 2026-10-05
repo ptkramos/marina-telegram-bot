@@ -4,14 +4,16 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 05/10/2026 (soak, dia 6 lido e corrigido, item 28; **o Patrick decidiu o soak contínuo** — seção 0).
-**Próximas conversas:** agora, planejamento (sem código): **"bora na frente do mundo: recalibrar a Marina"** (seção 1);
-**terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o
+_Atualizado em 05/10/2026 (soak, dia 6 lido e corrigido, item 28; **o Patrick decidiu o soak contínuo** — seção 0;
+**"recalibrar a Marina" planejado** — seção 1, PLANO_VOZ "Recalibrar a Marina — plano").
+**Próximas conversas:** **terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o
 código novo volta, um por vez, na fila da seção 0. No lote do dia 7 (conserto, sem esperar): o extrato do Dinheiro
 com "Foi no Agência boutique da Lívia (fictícia)" (`extrato._lugar_do_uber` não tira o "(fictícia)" e erra o artigo);
 o "Rolando agora" do Mundo mostrando toda história aberta sem olhar se ela já contou (`social_news_shared`) nem se é
 segredo (`knowledge_items` CONFIDENTIAL) — nada vazou ainda; o preparo pra dormir que volta de passo (frente do mundo);
-na voz, o modo íntimo desligando no banho do sexting, M4/M5 do dia 5 e os anotados do dia 6. Atenção: ela topou o
+na voz, o modo íntimo desligando no banho do sexting, M4/M5 do dia 5 e os anotados do dia 6; **o ciúme DELE
+registrado como ciuminho DELA** (planner: 29/09, 03/10 e 04/10 viraram `ciume` e o prompt disse "implica de
+brincadeira" — Auditoria, "Recalibrar a Marina, plano", achado 3). Atenção: ela topou o
 Lovense em 04/10 e o mundo não tem o brinquedo — se disser que está usando, é incoerência; na pose do tripé, conferir
 mão a mais (Auditoria, "Lovense, teste de fotos"). **Soak: dia 1 = terça 29/09.**_
 
@@ -24,7 +26,9 @@ diário das 05:10 continua e a conversa "bora no soak, dia N" segue lendo; **có
 abaixo, com **2 dias de observação** (lidos no relatório) antes do próximo; bug grave passa na frente de tudo.
 Planejamento (sem código) já está liberado. **Fila do código depois do dia 7:** 1) o lote de consertos (topo do
 painel); 2) Lovense pelo Mini App ("bora na frente de apps: Lovense, passo 1"); 3) Hoje com bloco "Em casa"; 4) banco
-dela e iFood da Ma; 5) redesenho dos Bastidores (10 passos, o Mundo junto); 6) o que sair do "recalibrar a Marina".
+dela e iFood da Ma; 5) redesenho dos Bastidores (10 passos, o Mundo junto); 6) recalibrar a Marina (planejado em
+05/10, 4 passos: vínculo → corpo → ciúme → amigos, cada um com seus 2 dias; "bora na frente do mundo: recalibrar,
+passo 1").
 A ordem pode mudar se ele pedir.
 
 **Como era (28/09, 19:40) — nada de funcionalidade nova até o soak fechar:**
@@ -134,7 +138,8 @@ junto o degrau explícito, que só liga com tesão 0,70); **recalibrar o víncul
 ~1h30, sem mágoa nem Segurança, e não acumula; menstruada ela só negou sexo; Carinho/Desejo/Segurança grudados em
 92–94% com a conversa diária; frente do mundo e da voz, junto com a confiança do Lovense; achados do Mundo na
 mesma leva: em `social_relationships` a confiança é sempre igual à proximidade, a tensão é zero pra todo mundo
-mesmo depois de ela se estranhar com a Bia, e o "N vezes no mês" é a contagem desde o reset de 26/09, não do mês).
+mesmo depois de ela se estranhar com a Bia, e o "N vezes no mês" é a contagem desde o reset de 26/09, não do mês)
+— **planejado em 05/10 ✅** (seção 1; fila, item 6).
 **Catálogo leva 2, o que é redesenho** (04/10): aba Dinheiro vira o extrato do banco dela (junto com o banco dela);
 Planos do Mundo e saídas por vontade do Na cabeça no infinitivo, na origem, com "por volta das" na hora; abas dos
 Bastidores com ícones e telas separadas; Sentindo agora (quando começou, sentimento por pessoa, motivo padronizado);
@@ -150,15 +155,16 @@ O que era "ver no uso real" (agenda viva, atraso, roupa, Instagram, coerência e
 
 ## 1. Mundo e agenda — skill `frente-mundo`
 **Abertura:** "bora na frente do mundo: fechar pro soak" (freio: só o item 3 da seção 0)
-**Próxima conversa desta frente (05/10, só plano, freio do soak): "bora na frente do mundo: recalibrar a Marina".**
-O Patrick sente ela "um anjo na terra": o ciúme sério dele ("desconfiou") dá chateação 0,2 que passa em ~1h30, sem
-mágoa nem Segurança, e não acumula; menstruada ela só negou sexo (TPM "moderada" por decisão antiga); Carinho,
-Desejo e Segurança grudam em 92–94% com a conversa diária (meia-vida 2–4 dias, +0,01 a +0,03 por evento); em
-`social_relationships` a confiança é cópia da proximidade, a tensão é sempre 0 (nem depois de se estranhar com a
-Bia) e `contact_frequency` conta desde o reset. Juntar com a confiança do Lovense (PLANO_WEBAPP, "Lovense pelo Mini
-App — plano") e a memória "consequência no relacionamento" (desrespeito vira bronca, confiança cai, só volta
-conversando). Decidir com ele, por múltipla escolha: o que acumula, o que o ciclo muda, a nova escala do vínculo e
-como o prompt mostra. Detalhes e números: AUDITORIA, "Redesenho dos Bastidores, plano".
+**Recalibrar a Marina — planejado (05/10) ✅, sem código** (PLANO_VOZ, "Recalibrar a Marina — plano"; achados na
+AUDITORIA). Decisões dele: o normal do vínculo anda com as últimas ~2 semanas; conversa de rotina não sobe nada, só
+o especial, e repetir rende menos; o ruim pesa 5 pra 1; mágoa só sai conversando; barras novas **Confiança** (a
+mesma do Lovense), **Paciência** (filtro do dia), **Admiração** e **Atenção**; desconfiança dele em escada; ciúme
+dela pela Segurança (inclui ele sair e sumir); TPM real que varia por mês e cólica que muda a agenda; o **Caio**
+(conheceu em 27/09, mentiu "rolê fechado", nunca contou) vira omissão pelo ciúme dele, e pega no pulo ela conta na
+defensiva; se ele citar o que só viu nos Bastidores, ela pergunta como ele sabe; amigos com tensão dos dois lados e
+confiança que decide o que ela conta; prompt só com o que foge do normal e as pendências. **Código:** item 6 da
+fila, 4 passos (vínculo → corpo → ciúme → amigos), abertura "bora na frente do mundo: recalibrar, passo 1". O
+ciúme dele classificado como dela vai no lote do dia 7.
 
 **Pronto (26/09):** agenda única (planejado, vontade, convite → mesma agenda com etapas); academia e passeio do
 Milo decididos uma vez por dia; mercado e médico como itens (Bradesco Saúde, Samaritano/Novamed); tempo livre

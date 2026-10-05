@@ -1513,3 +1513,125 @@ seguidos no flerte. Detalhe na Auditoria ("Soak, dia 6").
 **05/10 — soak contínuo (decisão do Patrick):** depois do dia 7 o código novo volta um por vez, com 2 dias de
 observação cada (fila na seção 0 do FRENTES). Da voz, na fila: o lote dos anotados (dias 5 e 6) entra junto com os
 consertos; o modo íntimo enxuto e as técnicas antigas (PLANO_VOZ 13) seguem em "Depois do soak" até ganharem lugar.
+
+## Recalibrar a Marina — plano (05/10, frente do mundo; sem código até a vez dele na fila) 📝
+
+Pedido do Patrick (05/10): "a Marina é um anjo na terra, não sei o quão realista isso está". Decidido com ele por
+múltipla escolha, com mockups (diagnóstico, vínculo novo, mapa do ecossistema). Pedido dele: "o mais importante é que
+todo esse ecossistema converse e se trate bem" — e liberou criar outros sentimentos se derem realismo e contas que
+façam sentido. É o **item 6 da fila** do soak contínuo (FRENTES, seção 0): 4 passos, um por vez, 2 dias de
+observação cada.
+
+**Por que ela parecia um anjo (código de 05/10).** (1) O normal do vínculo é fixo (Carinho 0,85, Desejo e Segurança
+0,80) e tudo volta pra ele em 2–4 dias; (2) elogio, cuidado e flerte sobem um pouco em quase toda conversa, e o
+planner ainda empurra `emotional_deltas`, enquanto o negativo só vem com grosseria/briga ("na dúvida, nenhum") — gruda
+em 92–94%; (3) a mágoa esfria com meia-vida de 36 h e a chateação com ele some em 24 h sem conversa
+(`PATRICK_GRIEVANCE_MAX_HOURS`); (4) o ciúme sério dele (`desconfiou`) é chateação 0,2 de ~1h30, sem vínculo e sem
+contar repetição; (5) TPM é −0,08 no humor e o texto da fase pede "manhosa"; menstruada é desconforto 0,2 e tesão
+menor; (6) no prompt, Carinho ≥ 0,8 escreve "apaixonada e carinhosa" — ela lê isso em quase todo turno; (7) amigos:
+confiança = proximidade, tensão sempre 0.
+
+### Decisões do Patrick
+| Tema | Decidiu |
+|---|---|
+| Normal do vínculo | **Anda devagar**: acompanha as últimas ~2 semanas; fase ruim deixa marca por semanas |
+| Rotina | **Só o que é especial** sobe; conversa normal só mantém; o mesmo tipo repetido no dia rende cada vez menos |
+| Mágoa | **Só conversando**: não esfria pelo relógio; dias bons amolecem; chateação pequena passa sozinha |
+| Barras novas | **Confiança** (ela confia nele; a mesma do Lovense), **Paciência**, **Admiração** e **Atenção** (era "se sente vista"; o nome no padrão das outras) |
+| Peso do ruim | **5 para 1** (pesquisa de casais do Gottman: ~5 interações boas pra cada ruim) |
+| Ciúme dele (desconfiou) | **Escada**: 1ª chateada e Confiança cai; 2ª em 7 dias mágoa e "você não confia em mim?"; 3ª briga e pede conversa séria; só desce com conversa |
+| Ciúme dela | **Pela Segurança**: alta brinca, média pergunta a sério, baixa (ou TPM) fica insegura e seca; nunca controla; repetido na semana acumula |
+| TPM | **Real e varia por mês** (leve, média, forte) |
+| Menstruada | **Corpo de verdade**: cólica forte nos dias 1–2 pode mudar a agenda; cuidado dele pesa mais, ignorar pesa mais; sexo pelo tesão |
+| Caio | **Omissão pelo ciúme dele** (ver abaixo) |
+| Pega no pulo | **Conta, na defensiva**; se ele reage com calma a Confiança sobe e ela passa a contar mais; se explode, esconde mais |
+| Ele cita o que ela não contou | **Ela pergunta como ele sabe** (na história só dá por story, Bia ou alguém que viu) |
+| Amigos, tensão | **Real, dos dois lados**: o amigo também fica chateado com ela (furo, sumiço) e cobra |
+| Amigos, confiança | **Separada e decide o que conta**: segredo só pra quem ela confia |
+| Prompt | **O que foge do normal + pendências** (o texto eu escrevo) |
+| Ordem | **Vínculo → corpo → ciúme → amigos** |
+| Erro do ciúme dele | **No lote de consertos do dia 7** (não espera a recalibração) |
+
+### O caso do Caio (banco da produção, leitura de 05/10)
+Caio Menezes, "amigo da Bia das festas" (`social_day.NPC_POOLS`). Ela o conheceu em **27/09, 15:40** (Shopping da
+Gávea, no rolê com a Bia) e o reviu em **03/10, 21:40** (Quartinho); a Bia falou dele em 5 trocas de mensagem. Em
+27/09, 23:00, o Patrick perguntou "conheceram ninguém lá?" e ela respondeu "não, foi rolê fechado" — mentira sem
+motivo no mundo (saiu do modelo). Ao Patrick ela nunca disse o nome. **Cânone novo (com OK dele no passo 3, originais
+em `soak/originais-*.json`):** ela não contou porque não achou importante e ele já estava desconfiado naquela noite;
+sabe que disse "rolê fechado" e guarda isso com culpa; se ele trouxer o Caio, conta o essencial na defensiva.
+
+### O modelo (números que eu decidi — calibrar no uso)
+**Barras com o Patrick** (`estado_emocional`): Carinho (`affection`), Desejo (`romantic_intensity`), Segurança
+(`security`), **Confiança** (`trust`, criada pelo Lovense, que vem antes na fila), **Admiração** (`admiration`),
+**Atenção** (`attention`), Mágoa (`hurt`), **Paciência** (`patience`, do dia) e Saudade (calculada, como hoje).
+- **Normal que anda:** cada barra ganha um `normal` (média exponencial do valor de cada dia, fechada às 05:00, janela de
+  ~14 dias, limitada a 0,45–0,90). Começa nos baselines de hoje; as novas em Confiança 0,80, Admiração 0,75, Atenção
+  0,75. O agora relaxa até o normal com as meias-vidas de hoje (Carinho 72 h, Desejo 48 h, Segurança 96 h; Admiração
+  7 dias, Atenção 48 h). **Confiança** não relaxa pra cima com pendência aberta (degrau da escada, mágoa, Lovense);
+  sem pendência volta com meia-vida de 14 dias. Os 0,92–0,94 de hoje ficam e descem sozinhos até o normal.
+- **Rotina zero:** sai o empurrão de `emotional_deltas` no vínculo (fica só a bateria social); só `patrick_event` mexe.
+- **Habituação:** o k-ésimo evento do mesmo tipo em 24 h vale 1/k.
+- **5 para 1:** positivo típico +0,02 numa barra; o negativo da mesma barra ≈ −0,10.
+
+| Evento do planner | Mexe em |
+|---|---|
+| elogio | Carinho +0,02, Segurança +0,01 |
+| cuidado | Carinho +0,02, Segurança +0,02, Atenção +0,02 |
+| flerte | Desejo +0,02 |
+| **lembrou** (novo: lembrou do que ela contou, perguntou da prova) | Atenção +0,04, Carinho +0,01 |
+| **conquista** (novo: conquista dele, maturidade numa briga) | Admiração +0,03 |
+| **passou_reto** (novo: ela contou algo dela e ele respondeu seco ou ignorou) | Atenção −0,05 |
+| grosseria | Mágoa +0,25, Carinho −0,05, Segurança −0,05, Admiração −0,03 |
+| esqueceu_importante | Mágoa +0,20, Atenção −0,10 |
+| briga | Mágoa +0,30, Segurança −0,08, Desejo −0,05 |
+| desconfiou (escada, 7 dias) | 1º: chateação 0,3 e Confiança −0,04; 2º: Mágoa +0,15 e Confiança −0,08; 3º+: briga, Confiança −0,10, Desejo −0,05, pede conversa séria. Se ela de fato escondeu algo: culpa e defensiva, Confiança cai menos |
+| **controlou** (novo: ciúme dele que controla — roupa, varanda) | irritação 0,25 (com Segurança alta e tom carinhoso pode virar graça), Admiração −0,02; conta como "ciúme recente dele" |
+| **pegou_omissao** (novo) | culpa 0,4 e defensiva; ele calmo: Confiança +0,03 e ela conta mais sozinha; ele explode: vale como desconfiou |
+| desculpa | Mágoa amolece −0,15 (não zera) |
+| **conversa_boa** (novo: conversaram e fecharam a pendência) | Mágoa → 0, desce um degrau da escada, Confiança +0,04 (até o normal), Segurança +0,02 |
+
+- **Mágoa:** sem relógio; cada dia bom sem incidente (Carinho ≥ normal) amolece 10%, até a metade do valor de quando
+  nasceu; zera só com `conversa_boa`. Chateação sem pendência segue com meia-vida.
+- **Paciência (0–1):** nasce ao acordar em 0,80 − 0,10 (dormiu < 6,5 h) − TPM (leve 0,10, média 0,20, forte 0,30) −
+  cólica dos dias 1–2 (0,10–0,20); fome > 0,6 tira 0,10 enquanto durar. Gasta com episódio negativo de qualquer alvo
+  (intensidade × 0,5); volta 0,05/h sem irritação e +0,05 com carinho dele. **Filtro:** abaixo de 0,6, todo episódio
+  negativo nasce × (1 + 0,6 − paciência); abaixo de 0,3 o prompt diz pavio curto.
+- **Ciclo:** a intensidade (leve 40%, média 40%, forte 20%) é do ciclo, com semente na data de início — é corpo, não
+  decisão. TPM: Paciência menor, negativo × 1,2 / 1,35 / 1,5, `passou_reto` × 1,5, ciúme dela um degrau mais fácil,
+  vontade de doce no belisco. Menstruada: cólica nos dias 1–2 (desconforto 0,35 / 0,50 / 0,65), dias 3–5 0,15; com
+  cólica ≥ 0,5 a agenda viva pesa faltar academia e aula; bolsa quente e remédio viram acontecimento; cuidado dele
+  × 1,5 em Carinho e Atenção, `passou_reto` × 1,5; sexo pelo tesão (a recusa automática já saiu em 03/10).
+- **Ciúme dela:** gatilho é ele falar de outra mulher (`ciume`) ou sair à noite com gente que ela não conhece e sumir
+  (04/10: "casa de um amigo" até 00:39 e ela só disse "aproveita aí"). Pela Segurança (um degrau mais fácil na TPM):
+  ≥ 0,75 implica de brincadeira; 0,55–0,75 pergunta a sério; < 0,55 insegura e seca, pode cobrar; nunca controla
+  (não proíbe, não pede senha). Do 2º em 7 dias, cada um tira 0,02 de Segurança.
+- **Omissão:** acontecimento sensível (homem fora do círculo que ele conhece, festa). Conta sozinha pelo sentimento:
+  Confiança alta e sem ciúme dele nos últimos 14 dias → conta; com `desconfiou`/`controlou` recente → omite, e a
+  omissão fica guardada com o motivo. Perguntada direto, não inventa mentira: minimiza ("tinha um amigo da Bia lá,
+  nada demais"). Pega no pulo: defensiva, como decidido.
+- **"Como você sabe?":** o que ela não contou e não postou fica marcado; se ele citar, ela estranha e pergunta (story,
+  Bia, alguém que viu) e pode desconfiar da Bia.
+- **Amigos (`social_relationships`):** `trust` separado da proximidade: segredo guardado +0,03, apoio num dia ruim
+  +0,02, fofoca vazada −0,10, furo repetido −0,05. Tensão dos dois lados (`tension` dela, `tension_them` do amigo):
+  estranhamento +0,2 a +0,4, furo dela com a pessoa sobe a do amigo; esfria com meia-vida de 3 dias ou some num
+  encontro bom. Pesa contra o convite da pessoa na agenda viva e no humor quando ela aparece; amigo chateado cobra numa
+  mensagem. Segredo só pra quem tem confiança ≥ 0,7. `contact_frequency` passa a ser os últimos 30 dias de verdade.
+- **Prompt:** "Com o Patrick:" só barras ≥ 0,08 fora do normal (com o motivo mais recente), as pendências (mágoa,
+  degrau da escada, omissões, Lovense) e a Paciência quando < 0,4; sai o "apaixonada e carinhosa" de fundo.
+
+### Os 4 passos (fila, item 6; cada um com testes, prompt e 2 dias de observação)
+1. **Vínculo:** normal que anda (migration), rotina zero, habituação, 5:1, Mágoa só conversando, Confiança (já vinda
+   do Lovense), Admiração e Atenção, eventos novos do planner (`lembrou`, `conquista`, `passou_reto`, `conversa_boa`),
+   prompt "fora do normal", relatório do soak com as barras e o normal de hora em hora.
+2. **Corpo:** Paciência como filtro, TPM e cólica por ciclo, agenda viva com cólica, cuidado/descaso × 1,5.
+3. **Ciúme:** escada da desconfiança, `controlou`, `pegou_omissao`, ciúme dela pela Segurança (inclui ele sair e
+   sumir), omissão e "como você sabe", o Caio no banco (com OK).
+4. **Amigos:** confiança separada, tensão dos dois lados, amigo que cobra, segredo só pra quem confia, 30 dias.
+
+**Bastidores (vai junto do redesenho, PLANO_WEBAPP):** Relacionamento ganha Confiança, Admiração e Atenção (Mágoa
+quando houver) com o tracinho de ontem; Paciência fica em Sentimentos (é do dia); Pessoas do Mundo mostra
+proximidade, confiança e tensão — nada de segredo nem do que ela omitiu do Patrick.
+
+**Textos que eu decidi (revisar):** o nome "Atenção" (era "se sente vista"); os nomes internos dos eventos novos; todos
+os números acima; "perguntada direto, minimiza, não inventa mentira"; Paciência em Sentimentos e não em
+Relacionamento.

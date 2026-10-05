@@ -893,7 +893,9 @@ manda uma mensagem a cada mexida na barra: fala quando sente diferença.
 **Plano de implementação (depois do soak), na ordem:**
 1. **Estado (`lovense.py` + `migrations/034_lovense.sql`):** sessão (brinquedos, desde, onde colocou, palavra,
    estado conectada/pausada/cortada, motivo do fim), bateria de cada um (gasta pelo nível, carrega em casa), linha do
-   tempo dos comandos, confiança (cai com desrespeito, sobe quando ele para; volta só com conversa), bolsa. Testes
+   tempo dos comandos, confiança (cai com desrespeito, sobe quando ele para; volta só com conversa), bolsa. **A
+   confiança é a barra geral `trust` em `estado_emocional`** (decisão do Patrick no "recalibrar a Marina", 05/10:
+   a mesma Confiança do relacionamento, não uma só do brinquedo; PLANO_VOZ, "Recalibrar a Marina — plano"). Testes
    `tests/test_lovense.py`: bateria, prazo de 30 s, escalada, cortar, confiança só volta conversando.
 2. **Rotas + tela:** `GET /api/lovense` e `POST /api/lovense/comando` (nível, modo, padrão, parar) em
    `webapp_server.py`; `webapp/index.html` (ícone + `v-lovense` com as três abas), `webapp/app.js` (estado a cada
@@ -1096,6 +1098,11 @@ curta centralizada embaixo, como a faixa do ciclo, que ele chamou de "revoluçã
   centralizado. **Visto na produção (05/10, só leitura):** as barras mexem (+0,01 a +0,03 por elogio/cuidado, meia-
   vida de 2 a 4 dias; a Mágoa subiu em 03/10 e voltou a zero), mas com a conversa de todo dia ficam em 92–94%
   (Carinho 0,94, Desejo 0,92, Segurança 0,92). Recalibrar é comportamento: foi pro "Depois do soak" (FRENTES).
+  **Recalibrar planejado (05/10, frente do mundo; PLANO_VOZ, "Recalibrar a Marina — plano"):** o Relacionamento
+  ganha **Confiança**, **Admiração** e **Atenção** (mesmo desenho: tracinho de ontem, variação e motivo), e a
+  **Paciência** vai pra Sentimentos (é do dia, zera ao dormir); ícones a decidir no redesenho (o `hourglass` já é da
+  Saudade). Pendente entre vocês ganha as pendências novas (degrau da desconfiança, conversa que ela espera). Pessoas
+  do Mundo: proximidade, confiança e tensão de cada um — nunca o que ela omitiu do Patrick nem segredo.
 - **Por fora:**
   - **Roupa em croqui:** a bonequinha com as peças pintadas na cor de cada uma e **o cabelo de agora** (penteado, cor
     e luzes); ao lado, a legenda com a cor, o nome e a parte embaixo (Parte de cima, Parte de baixo, Acessório, Por

@@ -2893,3 +2893,27 @@ Os 3 dias limpos nunca vieram (dias 1–6, todo dia ao menos um grave) e cada fu
 O dia 7 (seg 05/10, lido na terça) fecha o soak formal; o relatório diário das 05:10 continua. Código novo entra um
 por vez (fila na seção 0 do FRENTES: consertos → Lovense → bloco "Em casa" → banco dela/iFood da Ma → redesenho dos
 Bastidores → recalibrar a Marina), com 2 dias de observação no relatório antes do próximo; bug grave passa na frente.
+
+## Recalibrar a Marina, plano (05/10, frente do mundo; sem código)
+
+Só planejamento ("a Marina é um anjo na terra"). Decisões do Patrick, o modelo com os números e os 4 passos no
+PLANO_VOZ, "Recalibrar a Marina — plano"; item 6 da fila do soak contínuo. Leitura no código e no banco da produção
+(`sqlite3 -readonly` na VPS, nada veio pro PC). **Achados:**
+1. **O vínculo não tem memória:** baselines fixos (`emotion.BOND_BASELINES`), meia-vida de 2–4 dias, e o planner
+   ainda empurra `emotional_deltas` no Carinho/Desejo a cada turno (`apply_planner_deltas`, × 0,4) — com a conversa
+   diária as barras grudam em 92–94% e só grosseria/briga puxam pra baixo.
+2. **A mágoa esfria sozinha** (meia-vida 36 h; episódio pendente some em 24 h) — contra a regra do Patrick de 04/10
+   (consequência só se resolve conversando).
+3. **O ciúme DELE vira ciuminho DELA:** os três episódios `ciume` com alvo o Patrick na produção (29/09 "revelou que
+   sente ciúmes dela", 03/10 "quis controlar o comprimento do look", 04/10 "pediu que ela saísse da varanda") eram
+   dele; o prompt recebeu "Ciuminho: implica de brincadeira". A regra do planner existe e falha. **Vai no lote de
+   consertos do dia 7** (decisão do Patrick).
+4. **A mentira do Caio:** em 27/09, 23:00, "conheceram ninguém lá?" → "não, foi rolê fechado", com o encontro com o
+   Caio (15:40, Gávea) no mundo; reviu o Caio em 03/10 e nunca citou. Não havia motivo no mundo — saiu do modelo. Vira
+   cânone no passo 3 (omissão pelo ciúme dele, com OK pro banco); conferir no passo 3 se o encontro estava no prompt
+   daquela noite.
+5. **Ela não reage quando ele sai:** 04/10, "casa de um amigo" até 00:39, ela só disse "aproveita aí". Entra no ciúme
+   dela pela Segurança (passo 3).
+6. **Ciclo raso:** TPM −0,08 no humor; o texto da fase (`cycle.PHASES`) pede "manhosa", nunca irritada.
+7. **Amigos:** `social_world.record` grava confiança = proximidade (0,75 + 0,02 por dia bom) e a tensão só sai de
+   evidência com valência negativa, que ninguém grava; nada lê `trust` nem `tension` pra decidir.
