@@ -1643,3 +1643,8 @@ Relacionamento.
 de 14 dias), com a trava genérica `emocao_travas` que o passo 1 do recalibrar reaproveita pro degrau da escada e pra
 mágoa (`db.travar_emocao`/`destravar_emocao`: travada abaixo do normal, não volta sozinha). Ainda não entra no prompt
 nem nos Bastidores; por enquanto só o Lovense mexe nela (PLANO_WEBAPP, "passo 1 feito").
+
+**05/10, tarde — Lovense, passo 2 (rotas + tela do Mini App):** não muda a voz nem o chat ainda. Os comandos dele
+devolvem eventos (`respeitou`, `parou_tarde`, `religou`, `bateria_acabou:…`) por um gancho novo
+(`Hooks.lovense`), hoje só no log; o passo 3 transforma isso em turno (o que ela sente, nunca a fala dela).
+Detalhe em PLANO_WEBAPP, "passo 2 feito".

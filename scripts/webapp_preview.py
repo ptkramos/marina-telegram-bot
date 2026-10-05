@@ -125,11 +125,15 @@ async def _serve(db, port: int, status, fixo) -> None:
     async def story_reply(story: dict, texto: str, query_id) -> None:
         print("resposta ao story:", story["id"], texto)
 
-    relogio = {"t": fixo}                      # /dev/agora?t=2026-09-25T21:20 troca o horário sem reiniciar
+    async def lovense_eventos(eventos: list, now) -> None:
+        print("lovense:", now.strftime("%H:%M:%S"), eventos)
+
+    relogio = {"t": fixo}                     # /dev/agora?t=2026-09-25T21:20 troca o horário sem reiniciar
     hooks = webapp_server.Hooks(db=db, bot_token=TOKEN, allowed_user_id=USER, status=status, pix=pix,
                                 post_receipt=post_receipt, public_url=f"http://127.0.0.1:{port}",
                                 now=lambda: relogio["t"] or datetime.now(),
-                                ig_texto=lambda prompt: "kkkk tá de olho hein", ig_story_reply=story_reply)
+                                ig_texto=lambda prompt: "kkkk tá de olho hein", ig_story_reply=story_reply,
+                                lovense=lovense_eventos)
     original_make = webapp_server.make_app
 
     async def dev_agora(request):
@@ -143,9 +147,26 @@ async def _serve(db, port: int, status, fixo) -> None:
             info["atividade"] = snap.get("activity")
         return web.json_response(info)
 
+    async def dev_lovense(request):
+        """05/10 (Lovense, passo 2): o que ela faz, simulado — /dev/lovense?acao=colocar&b=lush,hush | palavra |
+        pedir_parar | liberar | cortar | tirar | tick (anda o relógio da escada) | conversar."""
+        from lovense import Lovense
+        lv, now = Lovense(db), hooks.now()
+        acao, bs = request.query.get("acao", ""), [b for b in request.query.get("b", "lush").split(",") if b]
+        try:
+            res = {"colocar": lambda: lv.colocar(now, bs, lugar="quarto"),
+                   "palavra": lambda: lv.combinar_palavra(now, request.query.get("p", "abacaxi")),
+                   "pedir_parar": lambda: lv.pedir_parar(now), "liberar": lambda: lv.liberar(now),
+                   "cortar": lambda: lv.cortar(now), "tirar": lambda: lv.tirar(now, bs),
+                   "tick": lambda: lv.tick(now), "conversar": lambda: lv.conversar(now)}[acao]()
+        except (KeyError, ValueError) as e:
+            return web.json_response({"erro": str(e)}, status=400)
+        return web.json_response({"res": res, "estado": lv.estado(now)}, dumps=lambda d: json.dumps(d, default=str))
+
     def make_app(h):
         app = original_make(h)
         app.router.add_get("/dev/agora", dev_agora)
+        app.router.add_get("/dev/lovense", dev_lovense)
         return app
 
     webapp_server.make_app = make_app

@@ -81,6 +81,9 @@ class Hooks:
     # 27/09 (Instagram): texto das amigas (sync, roda numa thread) e a resposta dele a um story (vira chat)
     ig_texto: Optional[Callable[[str], str]] = None
     ig_story_reply: Optional[Callable[[dict, str, Optional[str]], Awaitable[None]]] = None
+    # 05/10 (Lovense, passo 2): os eventos dos comandos dele (ligou, parou depois da palavra…). O passo 3 liga
+    # no bot pra virar turno; até lá fica None e os eventos só vão pro log.
+    lovense: Optional[Callable[[list[str], datetime], Awaitable[None]]] = None
 
 
 # Comprovantes (opção B): a imagem fica aqui alguns minutos, num endereço impossível de adivinhar,
@@ -149,7 +152,7 @@ async def _auth(request: web.Request, handler):
 # -------------------------------------------------------------------- estáticos --
 async def _index(request: web.Request) -> web.StreamResponse:
     # O webview do Telegram guarda app.js/app.css em cache: a versão no link força o novo após um deploy.
-    version = str(int(max((STATIC_DIR / f).stat().st_mtime for f in ("app.js", "app.css", "insta.js"))))
+    version = str(int(max((STATIC_DIR / f).stat().st_mtime for f in ("app.js", "app.css", "insta.js", "lovense.js"))))
     html = (STATIC_DIR / "index.html").read_text(encoding="utf-8").replace("__V__", version)
     return web.Response(text=html, content_type="text/html", headers={"Cache-Control": "no-cache"})
 
@@ -279,9 +282,11 @@ async def api_inicio(request: web.Request) -> web.Response:
     import pedido_dela
     # 26/09 (Patrick): o pedido dele não aparece na tela inicial, só no iFood (Pedidos).
     import instagram
+    lv = await asyncio.to_thread(_lovense_estado, hooks.db, now)
     return _json({"agora": {k: snap.get(k) for k in ("now", "atividade", "local", "disponivel")},
                   "pra_voce": gift_to_him_view(hooks.db, now),
-                  "insta_novo": instagram.feed_novo(hooks.db, now)})   # 27/09: bolinha no ícone
+                  "insta_novo": instagram.feed_novo(hooks.db, now),    # 27/09: bolinha no ícone
+                  "lovense": {"conectada": lv["conectada"]}})          # 05/10: ícone aceso ou apagado
 
 
 # --------------------------------------------- Bastidores: textos (Patrick, 26/09) --
@@ -965,6 +970,82 @@ async def _ig_file(request: web.Request) -> web.StreamResponse:
     return web.FileResponse(p, headers={"Cache-Control": "public, max-age=604800"})
 
 
+# ------------------------------------------------- Lovense (05/10, passo 2) --
+# Igual ao Lovense Remote (Patrick, 04/10): abas Clássico, Toque e Padrões, os brinquedos que ela está usando com a
+# bateria, e o Parar. A tela só sabe o que o app de verdade saberia: conectada, bateria e nível — nunca onde ela
+# está nem a palavra combinada (isso é do chat).
+LOVENSE_NOMES = {"lush": "Lush", "hush": "Hush"}
+LOVENSE_PADROES = (("pulso", "Pulso"), ("onda", "Onda"), ("fogos", "Fogos"), ("terremoto", "Terremoto"))
+LOVENSE_ERROS = {"desconectada": "Marina desconectada", "brinquedo": "Esse brinquedo não está com ela",
+                 "sem_bateria": "Sem bateria", "modo": "Comando inválido", "padrao": "Comando inválido"}
+
+
+def _lovense_estado(db, now: datetime) -> dict:
+    from lovense import Lovense
+    return Lovense(db).estado(now)
+
+
+def lovense_view(est: dict) -> dict:
+    """A tela do Lovense a partir do `Lovense.estado`."""
+    desde = datetime.fromisoformat(est["desde"]) if est.get("desde") else None
+    aviso = {"pediu_parar": "Marina pediu pra parar", "cortou": "Marina encerrou o controle"}.get(est.get("aviso"))
+    return {"conectada": est["conectada"], "titulo": "Marina conectada" if est["conectada"] else "Marina desconectada",
+            "desde": f"{desde:%H:%M}" if desde else None, "aviso": aviso, "aviso_tipo": est.get("aviso"),
+            "brinquedos": [{"id": b["nome"], "nome": LOVENSE_NOMES[b["nome"]], "bateria": round(b["bateria"] * 100),
+                            "nivel": b["nivel"], "modo": b["modo"], "padrao": b["padrao"]}
+                           for b in est["brinquedos"] if b["em_uso"]],
+            "padroes": [{"id": k, "nome": n} for k, n in LOVENSE_PADROES]}
+
+
+async def _lovense_eventos(hooks: Hooks, eventos: list[str], now: datetime) -> None:
+    if not eventos:
+        return
+    logger.info("webapp.lovense eventos=%s", ",".join(eventos))
+    if hooks.lovense:
+        try:
+            await hooks.lovense(eventos, now)
+        except Exception:
+            logger.exception("webapp.lovense.hook")
+
+
+async def api_lovense(request: web.Request) -> web.Response:
+    hooks: Hooks = request.app["hooks"]
+    now = hooks.now()
+    est = await asyncio.to_thread(_lovense_estado, hooks.db, now)
+    await _lovense_eventos(hooks, est["eventos"], now)          # a bateria pode ter acabado desde a última olhada
+    return _json(lovense_view(est))
+
+
+async def api_lovense_comando(request: web.Request) -> web.Response:
+    """{acao: "parar"} ou {brinquedos: ["lush", "hush"] | "todos", nivel: 0–20, modo, padrao}."""
+    hooks: Hooks = request.app["hooks"]
+    from lovense import BRINQUEDOS, Lovense
+    body = await request.json()
+    now = hooks.now()
+    lv = Lovense(hooks.db)
+    try:
+        nivel = int(body.get("nivel") or 0)
+    except (TypeError, ValueError):
+        return _error("Comando inválido", 400)
+    alvos = body.get("brinquedos") or "todos"
+    if alvos != "todos" and (not isinstance(alvos, list) or any(b not in BRINQUEDOS for b in alvos)):
+        return _error("Comando inválido", 400)
+
+    def run():
+        if body.get("acao") == "parar":
+            return [lv.parar(now)]
+        modo, padrao = str(body.get("modo") or "classico"), body.get("padrao")
+        return [lv.comando(now, b, nivel, modo, padrao) for b in (["todos"] if alvos == "todos" else alvos)]
+
+    res = await asyncio.to_thread(run)
+    eventos = [e for r in res for e in r["eventos"]]
+    est = await asyncio.to_thread(_lovense_estado, hooks.db, now)
+    await _lovense_eventos(hooks, eventos + est["eventos"], now)
+    if not any(r["ok"] for r in res):
+        return _json({**lovense_view(est), "erro": LOVENSE_ERROS.get(res[0]["erro"], "Não deu certo agora")}, 409)
+    return _json(lovense_view(est))
+
+
 def make_app(hooks: Hooks) -> web.Application:
     app = web.Application(middlewares=[_auth], client_max_size=64 * 1024)
     app["hooks"] = hooks
@@ -986,6 +1067,8 @@ def make_app(hooks: Hooks) -> web.Application:
     app.router.add_post("/api/ig/comentar", api_ig_comentar)
     app.router.add_post("/api/ig/story", api_ig_story)
     app.router.add_get("/ig/{nome}", _ig_file)                  # fotos: nome impossível de adivinhar
+    app.router.add_get("/api/lovense", api_lovense)             # 05/10: o brinquedo dela, ele controla
+    app.router.add_post("/api/lovense/comando", api_lovense_comando)
     app.router.add_static("/static/", STATIC_DIR, show_index=False)
     return app
 

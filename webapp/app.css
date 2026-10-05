@@ -566,3 +566,76 @@ body.sem-rolar { overflow: hidden; }
 .igs-blur { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(40px) brightness(.55);
   transform: scale(1.2); }
 .igs-musica { position: relative; z-index: 1; }
+
+/* ------------------------------------------------ Lovense (05/10, passo 2) -- */
+/* Igual ao Lovense Remote (Patrick, 04/10): branco com o rosa da marca, modos na barra de baixo */
+:root { --lv: #ff2e86; --lv-claro: color-mix(in srgb, var(--lv) 14%, transparent); }
+.lv-tile .lv-logo { width: 34px; height: 34px; border-radius: 10px; background: var(--lv); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 22px; }
+.lv-tile.apagado .lv-logo { background: var(--muted); opacity: .55; }
+.lv-tile.apagado > span:nth-child(2) { color: var(--muted); }
+.lv-tile:not(.apagado) .soon { color: var(--lv); }
+.view.lv { padding-bottom: calc(150px + env(safe-area-inset-bottom)); user-select: none; -webkit-user-select: none; }
+.lv-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.lv-av { position: relative; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; flex: none; background: var(--lv-claro);
+  color: var(--lv); display: inline-flex; align-items: center; justify-content: center; font-weight: 600; }
+.lv-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lv-status { display: flex; align-items: center; gap: 6px; }
+.lv-ponto { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.lv-aviso { display: flex; align-items: center; gap: 10px; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px;
+  font-weight: 600; background: var(--lv-claro); color: var(--lv); }
+.lv-aviso[hidden] { display: none; }
+.lv-aviso .ti { font-size: 20px; }
+.lv-brinqs { display: flex; gap: 8px; margin-bottom: 18px; }
+.lv-brinq { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--bg2);
+  color: var(--fg); border: 2px solid transparent; border-radius: 12px; padding: 10px 12px; font: inherit; cursor: pointer; }
+.lv-brinq:disabled { cursor: default; opacity: 1; }
+.lv-brinq.on { border-color: var(--lv); }
+.lv-bn { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.lv-bn .ti { font-size: 18px; color: var(--muted); }
+.lv-brinq.on .lv-bn .ti { color: var(--lv); }
+.lv-bat { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lv-bat .ti { font-size: 20px; }
+.lv-bat.fraca { color: #d9822b; }
+.lv-num { text-align: center; font-size: 34px; font-weight: 700; color: var(--lv); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.lv-barras { display: flex; justify-content: center; gap: 48px; }
+.lv-col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.lv-trilho { position: relative; width: 84px; height: min(46vh, 340px); border-radius: 22px; background: var(--bg2);
+  overflow: hidden; touch-action: none; cursor: pointer; }
+.lv-trilho i { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(to top, var(--lv), #ff7ab3);
+  border-radius: 0 0 22px 22px; }
+.lv-nome { font-weight: 600; }
+.lv-num.toque { margin-bottom: 10px; }
+.lv-pad { position: relative; height: min(46vh, 340px); border-radius: 18px; touch-action: none; cursor: crosshair; overflow: hidden;
+  background: linear-gradient(to top, var(--bg2), var(--lv-claro)); }
+.lv-pad::before { content: ""; position: absolute; inset: 0;
+  background-image: radial-gradient(color-mix(in srgb, var(--muted) 35%, transparent) 1.2px, transparent 1.4px); background-size: 22px 22px; }
+.lv-dedo { position: absolute; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(var(--lv) 30%, color-mix(in srgb, var(--lv) 25%, transparent) 70%); }
+.lv-dedo[hidden] { display: none; }
+.lv-padroes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lv-pd { display: flex; flex-direction: column; align-items: stretch; gap: 8px; background: var(--bg2); color: var(--fg);
+  border: 2px solid transparent; border-radius: 14px; padding: 14px 12px 10px; font: inherit; font-weight: 600; cursor: pointer; }
+.lv-pd svg { width: 100%; height: 34px; overflow: visible; }
+.lv-pd path { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.lv-pd.on { border-color: var(--lv); color: var(--lv); }
+.lv-pd.on path { stroke: var(--lv); stroke-dasharray: 6 4; animation: lvanda 0.8s linear infinite; }
+@keyframes lvanda { to { stroke-dashoffset: -20; } }
+.lv-forca { display: grid; grid-template-columns: auto 1fr 28px; align-items: center; gap: 12px; margin-top: 18px; }
+.lv-forca input { accent-color: var(--lv); margin: 0; }
+.lv-forca b { text-align: right; color: var(--lv); font-variant-numeric: tabular-nums; }
+.lv-vazio { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 70px 0; color: var(--muted); }
+.lv-vazio .ti { font-size: 48px; opacity: .6; }
+.lv-vazio.cortou .t { color: var(--fg); }
+.lv-rodape { position: fixed; left: 0; right: 0; bottom: calc(62px + env(safe-area-inset-bottom)); z-index: 6;
+  display: flex; justify-content: center; padding: 10px 16px; background: var(--bg); }
+.lv-rodape[hidden] { display: none; }
+.lv-parar { width: 100%; max-width: 528px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--lv); color: #fff; border: 0; border-radius: 999px; padding: 14px; font: inherit; font-weight: 700; cursor: pointer; }
+.lv-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: grid; grid-template-columns: repeat(3, 1fr);
+  background: var(--bg); border-top: 1px solid var(--line); padding: 6px 0 calc(6px + env(safe-area-inset-bottom)); }
+.lv-nav[hidden] { display: none; }
+.lv-nav button { display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: 0;
+  color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; padding: 4px 0; }
+.lv-nav button.on { color: var(--lv); font-weight: 600; }
+.lv-nav .ti { font-size: 24px; }

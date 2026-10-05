@@ -47,6 +47,7 @@ function show(view, push = true) {
   document.querySelectorAll(".view").forEach((v) => (v.hidden = v.id !== "v-" + view));
   $("if-nav").hidden = !IF_TABS.includes(view);
   $("ig-nav").hidden = !IG_TABS.includes(view);
+  $("lv-nav").hidden = view !== "lovense";          // 05/10: os modos do Lovense embaixo, como no app real
   document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === view));
   if (push) stack.push(view);
   if (nativeBack) (stack.length > 1 ? tg.BackButton.show() : tg.BackButton.hide());
@@ -123,6 +124,7 @@ const loaders = {
       const d = await api("/api/inicio");
       $("inicio-presente").innerHTML = pedidoCard(d.pra_voce, "Presente da Ma");
       $("ig-bolinha").hidden = !d.insta_novo;
+      LV.tile(d.lovense);
     } catch (e) { failIn($("inicio-presente"), e); }
   },
 

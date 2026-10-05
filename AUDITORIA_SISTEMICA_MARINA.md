@@ -2943,3 +2943,24 @@ pelo Mini App ainda, então o comportamento dela não muda até os passos 2–5.
 - `lovense.py` + `tests/test_lovense.py` (26): bateria gasta pelo nível e acaba a sessão na hora certa, carrega em
   casa; prazo de 30 s; escada firme → bronca → corte (sem celular na mão não corta); religar depois da palavra;
   confiança presa com pendência, volta só conversando, dois incidentes pedem duas conversas.
+
+## Lovense, passo 2: rotas + tela (05/10, tarde, frente de apps)
+
+Segundo passo do Lovense (exceção do Patrick: hoje). Nada no bot chama `colocar` ainda, então na produção o ícone
+fica apagado e o comportamento dela não muda até os passos 3–5. Detalhe no PLANO_WEBAPP, "passo 2 feito".
+- `webapp_server.py`: `GET /api/lovense`, `POST /api/lovense/comando`, `lovense` no `/api/inicio`, gancho
+  `Hooks.lovense` (None até o passo 3; os eventos vão pro log `webapp.lovense`). A tela não recebe a palavra nem o
+  lugar (o app de verdade não saberia).
+- `webapp/lovense.js` (novo, entra na versão do cache do `_index`), `index.html` (ícone + `v-lovense` + `lv-nav`),
+  `app.css` (bloco Lovense, rosa `#ff2e86`), `app.js` (esconde a barra de baixo fora do Lovense e acende o ícone).
+- Conferido na pré-visualização (celular, claro e escuro): arrastar a barra grava o nível; o Toque zera ao soltar;
+  padrão liga e desliga; Parar zera os dois; palavra → faixa; corte → "Marina encerrou o controle" no meio; comando
+  com ela desconectada → 409 e o toast. `tests/test_webapp` + `tests/test_lovense`: 47 OK.
+- **Decidido pelo Patrick (mockup + múltipla escolha):** ícone com o texto, nível 0–20 em cima da barra, "Conectada
+  desde 14:48", o corte só no meio da tela.
+- **Textos que eu decidi (rascunho, passam pelo catálogo no passo 7):** "Conectada desde 14:48" / "Desconectada",
+  "Intensidade", "Parar", e os erros "Esse brinquedo não está com ela", "Sem bateria", "Comando inválido", "Não deu
+  certo agora". Ícones Tabler: `wave-sine` (o app e Padrões), `adjustments` (Clássico), `hand-finger` (Toque),
+  `hand-stop` (faixa da palavra), `plug-connected-x` (corte), `battery-1..4`.
+- **Deploy:** não feito. Sem os passos 3–5 a tela só mostra "Marina desconectada"; subir junto com o que faz ela
+  colocar, pra hora do deploy cortar o relatório do dia 7 com o Lovense funcionando de verdade.

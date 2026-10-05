@@ -19,6 +19,7 @@
       <button class="tile" data-go="nubank"><img src="/static/marcas/nubank.svg" alt="" class="logo"><span>Nubank</span></button>
       <button class="tile" data-go="ifood"><img src="/static/marcas/ifood.svg" alt="" class="logo"><span>iFood</span></button>
       <button class="tile" data-go="ig"><span class="ig-tile"><img src="/static/marcas/instagram.svg" alt="" class="logo"><span class="bolinha" id="ig-bolinha" hidden></span></span><span>Instagram</span></button>
+      <button class="tile lv-tile apagado" data-go="lovense" id="lv-tile"><span class="lv-logo"><i class="ti ti-wave-sine"></i></span><span>Lovense</span><span class="soon" id="lv-tile-sub">Marina desconectada</span></button>
       <button class="tile off" disabled><span>Amazon</span><span class="soon">em breve</span></button>
       <button class="tile off" disabled><span>Calendário</span><span class="soon">em breve</span></button>
     </div>
@@ -191,6 +192,26 @@
       <button id="igs-cor" aria-label="Curtir"><i class="ti ti-heart"></i></button><button id="igs-enviar" aria-label="Enviar"><i class="ti ti-send"></i></button></div>
   </div>
 
+  <!-- 05/10 (Lovense, passo 2): igual ao Lovense Remote — quem está conectada, os brinquedos com a bateria,
+       as abas Clássico / Toque / Padrões e o Parar -->
+  <section id="v-lovense" class="view lv" hidden>
+    <header class="lv-top">
+      <span class="lv-av"><img src="/ig/avatar_marina.jpg" alt="" onerror="this.remove()">MS</span>
+      <div><div class="t">Marina</div><div class="d lv-status" id="lv-status"></div></div>
+    </header>
+    <div class="lv-aviso" id="lv-aviso" hidden></div>
+    <div class="lv-brinqs" id="lv-brinqs"></div>
+    <div class="lv-painel" id="lv-painel"></div>
+    <div class="lv-rodape" id="lv-rodape" hidden>
+      <button class="lv-parar" id="lv-parar"><i class="ti ti-player-stop-filled"></i>Parar</button>
+    </div>
+  </section>
+  <nav class="lv-nav" id="lv-nav" hidden>
+    <button data-lvmodo="classico"><i class="ti ti-adjustments"></i><span>Clássico</span></button>
+    <button data-lvmodo="toque"><i class="ti ti-hand-finger"></i><span>Toque</span></button>
+    <button data-lvmodo="padrao"><i class="ti ti-wave-sine"></i><span>Padrões</span></button>
+  </nav>
+
   <!-- 26/09 (Patrick): Bastidores em abas; rótulos falam como painel, sentimento fala do jeito dela -->
   <section id="v-bastidores" class="view" hidden>
     <header class="top"><h1>Bastidores</h1><p class="sub">Só o Patrick vê isso</p></header>
@@ -233,5 +254,6 @@
 </main>
 <script src="/static/app.js?v=__V__"></script>
 <script src="/static/insta.js?v=__V__"></script>
+<script src="/static/lovense.js?v=__V__"></script>
 </body>
 </html>

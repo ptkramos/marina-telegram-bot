@@ -942,6 +942,26 @@ depois da outra; conversa que não fecha +0,02, a que fecha +0,04; incidente nov
 mostra "Marina encerrou o controle" por 12 h depois do corte. Próximo: **"bora na frente de apps: Lovense, passo 2"**
 (rotas + tela, com dados falsos).
 
+**05/10, tarde — passo 2 feito ✅ (rotas + tela; nada no bot chama `colocar` ainda, então na produção o ícone fica
+apagado até os passos 3–5):** `webapp_server.py`: `GET /api/lovense` (`lovense_view`: conectada, "desde", aviso,
+brinquedos em uso com bateria em % e nível, os padrões) e `POST /api/lovense/comando` (`{acao: "parar"}` ou
+`{brinquedos: [...] | "todos", nivel, modo, padrao}`; desconectada/brinquedo fora → 409 com o erro, alvo inventado →
+400). A tela só sabe o que o app de verdade saberia: nunca a palavra combinada nem onde ela está (teste confere).
+`/api/inicio` ganha `lovense.conectada` pro ícone. Gancho novo `Hooks.lovense(eventos, now)`: os eventos dos comandos
+(`respeitou`, `parou_tarde`, `religou`, `bateria_acabou:…`) vão pro log e, no passo 3, pro bot virar turno.
+Front: ícone na tela inicial (rosa aceso com "Marina conectada"; cinza com "Marina desconectada"), `v-lovense` em
+`webapp/lovense.js` (separado, como o `insta.js`): topo com a foto e "Conectada desde 14:48"; os brinquedos com a
+bateria (amarela até 15%); **Clássico** com uma barra vertical por brinquedo e o nível 0–20 em cima; **Toque** (o
+dedo sobe e desce, soltou → 0; marca Lush/Hush/os dois); **Padrões** (Pulso, Onda, Fogos, Terremoto, com o desenho
+da onda e a barra de Intensidade; tocar no que está ligado para); **Parar** fixo embaixo; modos na barra de baixo.
+Estado a cada 3 s; comando ao soltar e no máximo 1 por segundo arrastando; vibração leve do Telegram a cada nível.
+Faixa "Marina pediu pra parar" em cima enquanto a palavra vale; o corte aparece **no meio da tela** ("Marina encerrou o
+controle", sem a faixa). Pré-visualização: `scripts/webapp_preview.py` ganhou `/dev/lovense?acao=colocar&b=lush,hush`
+(e `palavra`, `pedir_parar`, `liberar`, `cortar`, `tirar`, `tick`, `conversar`). **Decidido pelo Patrick (mockup +
+múltipla escolha):** ícone com o texto, nível 0–20, "Conectada desde 14:48", corte só no meio. Teste
+`test_lovense_tela_comandos_e_eventos` (test_webapp). Próximo: **"bora na frente de apps: Lovense, passo 3"** (o que
+ela sente vira turno).
+
 ### Hoje com o bloco "Em casa" — plano (04/10, noite, frente de apps; sem código até o soak fechar) 📝
 Primeiro da frente de apps depois do soak. Base: respostas dele de 02/10 (`ideias_pos_soak/ideias/em_casa.json`: o
 bloco abre quando ela **chega** em casa e fecha quando ela **sai**; dentro, tudo o que ela faz **dentro do

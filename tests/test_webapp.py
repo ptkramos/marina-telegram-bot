@@ -236,6 +236,44 @@ class ApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(d["status"]["celular"], "Na mão")
         self.assertIn("pessoas", d["mundo"])
 
+    async def test_lovense_tela_comandos_e_eventos(self):
+        """05/10 (Lovense, passo 2): ícone apagado/aceso, a tela só com o que o app real saberia, comandos e os
+        eventos indo pro gancho (o passo 3 transforma em turno)."""
+        from lovense import Lovense
+        eventos = AsyncMock()
+        self.client.server.app["hooks"].lovense = eventos
+        post = lambda body: self.client.post("/api/lovense/comando", headers=self.h, json=body)
+        self.assertFalse((await (await self.client.get("/api/inicio", headers=self.h)).json())["lovense"]["conectada"])
+        r = await post({"brinquedos": ["lush"], "nivel": 5})
+        self.assertEqual(r.status, 409)
+        self.assertEqual((await r.json())["erro"], "Marina desconectada")
+
+        lv = Lovense(self.db)
+        lv.colocar(T, ["lush"], lugar="quarto")
+        lv.combinar_palavra(T, "abacaxi")
+        self.assertTrue((await (await self.client.get("/api/inicio", headers=self.h)).json())["lovense"]["conectada"])
+        d = await (await self.client.get("/api/lovense", headers=self.h)).json()
+        self.assertEqual((d["titulo"], d["desde"], [b["id"] for b in d["brinquedos"]]), ("Marina conectada", "19:00", ["lush"]))
+        self.assertNotIn("abacaxi", json.dumps(d), "a palavra é do chat, não da tela")
+        self.assertNotIn("quarto", json.dumps(d), "o app não sabe onde ela está")
+
+        self.assertEqual((await post({"brinquedos": ["hush"], "nivel": 5})).status, 409, "o Hush está na gaveta")
+        self.assertEqual((await post({"brinquedos": ["outro"], "nivel": 5})).status, 400)
+        d = await (await post({"brinquedos": ["lush"], "nivel": 30, "modo": "padrao", "padrao": "onda"})).json()
+        self.assertEqual((d["brinquedos"][0]["nivel"], d["brinquedos"][0]["padrao"]), (20, "onda"))
+
+        lv.pedir_parar(T)
+        d = await (await self.client.get("/api/lovense", headers=self.h)).json()
+        self.assertEqual(d["aviso"], "Marina pediu pra parar")
+        d = await (await post({"acao": "parar"})).json()
+        self.assertEqual(d["brinquedos"][0]["nivel"], 0)
+        eventos.assert_awaited_once_with(["respeitou"], T)
+
+        lv.liberar(T)
+        lv.cortar(T)
+        d = await (await self.client.get("/api/lovense", headers=self.h)).json()
+        self.assertEqual((d["conectada"], d["aviso"], d["brinquedos"]), (False, "Marina encerrou o controle", []))
+
 
 class ComprovanteTest(unittest.TestCase):
     def test_imagens_sao_jpeg(self):

@@ -12,8 +12,8 @@ ficar pronto e testado entra no ar hoje. **Corte no relatório:** a hora do depl
 formal (Marina de antes), depois = dia 0 da observação do Lovense e do redesenho (anotar a hora do deploy aqui).
 Fila depois: consertos do dia 7 → recalibrar 1 (vínculo; adota a `trust` que o Lovense cria) → recalibrar 2 → 3 → 4
 (as barras novas entram no desenho novo) → Hoje com "Em casa" → banco dela e iFood da Ma.
-**Próximas conversas:** agora, **"bora na frente de apps: Lovense, passo 2"** (passo 1 feito, 05/10); depois, **"bora na frente de apps:
-redesenho dos Bastidores, passo 1"**; **terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o
+**Próximas conversas:** agora, **"bora na frente de apps: Lovense, passo 3"** (passos 1 e 2 feitos, 05/10; o 2 sem deploy:
+sem os passos 3–5 o ícone fica apagado); depois, **"bora na frente de apps: redesenho dos Bastidores, passo 1"**; **terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o
 código novo volta, um por vez, na fila da seção 0. No lote do dia 7 (conserto, sem esperar): o extrato do Dinheiro
 com "Foi no Agência boutique da Lívia (fictícia)" (`extrato._lugar_do_uber` não tira o "(fictícia)" e erra o artigo);
 o "Rolando agora" do Mundo mostrando toda história aberta sem olhar se ela já contou (`social_news_shared`) nem se é
@@ -117,7 +117,7 @@ com hora; o mundo (`world_state`) × card × Hoje × acontecimentos; **contradi�
 journal; custos (Buzz, rotas, LLM) e fotos geradas; iniciativas. Eu leio na conversa "bora no soak, dia N", explico e
 listo os bugs.
 
-**Primeiro da fila depois do soak (Patrick, 04/10, noite): o Lovense pelo Mini App.** **Planejado (04/10, noite) ✅:** todas as decisões, a tela (abas Clássico/Toque/Padrões como o Lovense Remote) e o plano em 8 passos estão no PLANO_WEBAPP, "Lovense pelo Mini App — plano". **Passo 1 (estado) feito em 05/10, tarde ✅** (`lovense.py`, migration 034, a barra `trust`; nada ligado no bot ainda). Próximo: "bora na frente de apps: Lovense, passo 2" (rotas + tela).
+**Primeiro da fila depois do soak (Patrick, 04/10, noite): o Lovense pelo Mini App.** **Planejado (04/10, noite) ✅:** todas as decisões, a tela (abas Clássico/Toque/Padrões como o Lovense Remote) e o plano em 8 passos estão no PLANO_WEBAPP, "Lovense pelo Mini App — plano". **Passo 1 (estado) feito em 05/10, tarde ✅** (`lovense.py`, migration 034, a barra `trust`; nada ligado no bot ainda). **Passo 2 (rotas + tela) feito em 05/10, tarde ✅** (`/api/lovense`, `webapp/lovense.js`; sem deploy). Próximo: "bora na frente de apps: Lovense, passo 3" (o que ela sente vira turno).
 **Depois do soak (congelado):** o Patrick rabisca as ideias pelo celular em https://claude.ai/artifact/64rLbsTa3m5CmdhdtnJgEQ
 ("Ideias pós-soak", respostas no banco da página, coleção `ideias`: ler com ArtifactData quando o soak fechar).
 **Preenchida por ele em 02/10, noite** (6 ideias: banheiro, em_casa, lovense, provocar_saida, roupa_nova, selfies); cópia
