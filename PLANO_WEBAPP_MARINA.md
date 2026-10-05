@@ -1033,6 +1033,59 @@ o gozo pelo brinquedo no mundo, a briga por outra coisa tirando o clima, e — a
 excitação de verdade e pode ligar o modo íntimo no meio da aula**: o bloco do prompt tem que dizer onde ela está
 (escondido, curto). Próximo: **"bora na frente de apps: Lovense, passo 5"**.
 
+**05/10, noite — passo 5a feito ✅ (corpo e mundo: agora ela coloca de verdade; sem deploy ainda):** o passo 5
+foi dividido com o Patrick (mockup + múltipla escolha). Decisões dele:
+- **A palavra ela puxa:** antes de ele ligar, ela pergunta ou sugere; se ele já sugeriu, ela aceita; se ele liga sem
+  combinar, ela combina primeiro.
+- **O gozo é do corpo e da fala:** o tesão subindo com o estímulo chega lá e ela goza de verdade, até sumida ou na
+  aula (o turno avisa, ela conta ou disfarça); escrever que gozou também vale.
+- **O Lush dentro dela não incomoda** (Patrick: "o que incomoda seria a falta de respeito ou errar/passar o ponto"):
+  se combinaram o dia inteiro e ele respeita, ela fica. Tira sozinha só por motivo de verdade: academia, dormir,
+  bateria, briga com ele por outra coisa (perdeu o clima), o Hush cansar — e o que já existia (bronca, banho forte).
+- **App parado, pela origem:** a ideia foi dela → expectativa, e se ele some vira impaciência e ela cutuca (até 2
+  vezes); pedido dele → a ansiedade gostosa de não saber quando vem, sem cutucar.
+- **O Hush é descoberta dela** (Patrick: "vai ser dela a decisão e a opinião… a exploração sexual dela com o próprio
+  corpo também vai ser construída com o tempo, assim como nosso relacionamento"): receio (nunca usou, curiosa e com
+  medo) → descobrindo → gostando → adora, ou **"não é pra mim"** (não usa nem sugere). Anda com a experiência de
+  cada vez: tempo gostoso, gozar com ele, ele respeitar; incomodar e desrespeito descem, e o ruim pesa mais no
+  começo. Enquanto ela descobre, o Hush é mais intenso e ela aguenta menos (10 min no receio, 25 descobrindo, 1 h
+  gostando). Ela forma a opinião e conta se quiser ("gostei mais do que achei", "ainda não sei").
+- **Propor pela curiosidade (5b):** o Patrick discordou de travar a proposta no receio/descobrindo ("se eu tiver que
+  ficar pedindo vai parecer muito forçado… a gente tá dando esse lush/hush pra ela usar inclusive sozinha"). Fica:
+  receio → curiosidade + tesão alto + confiança; descobrindo → a curiosidade é o motor; gostando/adora → pelo prazer,
+  e os dois juntos; não é pra mim → nunca, até mudar de opinião conversando com ele ou com amiga (a Bia).
+- **Fora de casa é ousadia:** as primeiras vezes com gente perto ela fica mais nervosa (ponto bom mais baixo, topa
+  menos); cada vez boa e sem susto, mais solta.
+
+Código (lista técnica na Auditoria, "Lovense, passo 5a"): `Lovense.disposicao` (topa ou não, e por quê), `prompt`
+(o bloco), `observe_conversa` (a palavra pela fala; colocar, tirar, combinar, liberar e a conversa da confiança
+pelo modelo barato só quando o assunto é o brinquedo), `pendentes`, `_gozar`, `_motivo_pra_tirar`, descoberta
+(`_experimentar`, `_fechar_experiencias`, `_descobrir`, estado em `estado_relacional[lovense_descoberta_json]`) e o
+cutucão do app parado. Migration 036 (`experiencia_json`). Fora de casa, sem o brinquedo na bolsa, ela não coloca
+(o prompt já diz que ficou em casa); com sessão aberta e saindo, a sessão continua fora, e tirar lá é no banheiro do
+lugar (pausa da agenda reativa).
+**O bloco do prompt (texto interno, eu decidi):** sem sessão — "Você tem dois brinquedos Lovense que o Patrick
+controla pelo app dele, de onde ele estiver: o Lush (vibrador que vai dentro) e o Hush (plug anal vibratório)."; "Onde
+estão: Lush no carregador (80%); Hush na gaveta (100%)."; "Hush: você nunca usou: curiosa e com medo. A opinião sobre
+ele é sua e vai se formando com as vezes que você usa."; "Se ele pedir pra você usar o Lush agora: você topa (com
+tesão) / você não quer (sem clima)."; "Se topar: antes de ele ligar, combine a palavra de segurança desta vez — você
+puxa… Em casa você coloca na hora e conta pra ele quando colocou; fora de casa, só se o brinquedo estiver na sua
+bolsa. Só diga que colocou se colocou mesmo." Com sessão — com qual e desde quando; "Quem mexe é ele, pelo app dele;
+o que ele faz chega pra você como [Brinquedo…] e você sente no corpo. Você não vê o app."; agora e como recebe;
+bateria; a palavra ("Só ela faz ele parar de verdade: não use a palavra pra provocar… Se estiver incomodando, reclame;
+se ele não ajustar, diga a palavra.") ou "ainda não combinaram… combine agora, você puxa"; pausada ("ligar de novo é
+desrespeito"); onde está ("com gente perto (no meio da aula): escondido, curtinho, às vezes com erro de digitação;
+ninguém pode perceber. O tesão é de verdade, mas nada de cama, gaveta, se tocar ou tirar a roupa"; na rua
+"disfarçando, corada"; no banho "o celular ficou fora do box"; em casa "pode ser solta"); como tirar; pendência.
+**Conferido:** testes (`tests/test_lovense_corpo.py`, 23) e, com o modelo barato de verdade, a conversa inteira
+(combinar → "pronto. tá dentro" acende → a palavra para → "pode voltar" → "tirei" apaga → a conversa da confiança
+fecha a pendência; "imagina se eu colocasse" não faz nada). Na pré-visualização, a saudade dele contava como briga
+e ela tirava — corrigido.
+**Fica pro 5b:** ela propor (tesão + ocasião + confiança + curiosidade; a novidade cansa), levar o Lush na bolsa
+quando sai sabendo que pode rolar, usar sozinha (o `tempo_livre` com o brinquedo), mudar de opinião sobre o Hush
+conversando (com ele ou com a Bia) e a amiga perceber quando ela goza perto. Depois: passo 6 (fotos e áudio) e 7
+(Bastidores e catálogo de textos).
+
 ### Hoje com o bloco "Em casa" — plano (04/10, noite, frente de apps; sem código até o soak fechar) 📝
 Primeiro da frente de apps depois do soak. Base: respostas dele de 02/10 (`ideias_pos_soak/ideias/em_casa.json`: o
 bloco abre quando ela **chega** em casa e fecha quando ela **sai**; dentro, tudo o que ela faz **dentro do

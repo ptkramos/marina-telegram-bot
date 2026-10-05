@@ -3604,6 +3604,9 @@ async def process_incoming_batch(
         messages.append({"role": "system", "content": intimacy_hint})
     elif photo_ok and intimacy_turn.state in ("off", "warming", "afterglow"):
         messages.append({"role": "system", "content": photo_director.SELF_PHOTO_HINT_CASUAL})
+    lovense_hint = _lovense_prompt(texto_usuario)
+    if lovense_hint:                 # depois do modo íntimo: na aula, o "escondido, curto" vale por cima da cama
+        messages.append({"role": "system", "content": lovense_hint})
     if plan and plan.get("should_offer_reminder"):
         event_desc = plan.get("event_details", {}).get("description") or "compromisso"
         messages.append({
@@ -4152,6 +4155,12 @@ async def process_incoming_batch(
             # 24/09 (Patrick): o gozo segue o que ela escreve, não uma contagem de turnos.
             from intimacy import observe_marina_line as intimacy_observe_marina
             if intimacy_observe_marina(memory_manager.db, fala_limpa, datetime.now()):
+                try:
+                    # Lovense, passo 5a: gozou com o brinquedo nela — vale no mundo também.
+                    from lovense import Lovense
+                    Lovense(memory_manager.db).gozou_pela_fala(datetime.now(), _lovense_atividade(datetime.now()))
+                except Exception:
+                    logger.exception("lovense.gozou_pela_fala.error")
                 # Patrick, 24/09: quando ela goza, avisa e geralmente manda foto do depois.
                 if (not pediu_foto and not getattr(settings, 'PHOTO_PROVIDER_MAINTENANCE', False)
                         and random.random() < photo_director.CLIMAX_PHOTO_CHANCE):
@@ -4164,6 +4173,18 @@ async def process_incoming_batch(
             TempoLivre(memory_manager.db).promessa_de_se_tocar(fala_limpa, texto_usuario, datetime.now())
         except Exception:
             logger.exception("tempo_livre.promessa_de_se_tocar.error")
+        try:
+            # Lovense, passo 5a (05/10): a palavra dita, e o que ela disse que fez com o brinquedo (colocou, tirou,
+            # combinou a palavra, liberou) e a conversa que reconstrói a confiança — modelo barato, fora do loop,
+            # só quando a conversa é sobre o brinquedo.
+            from lovense import Lovense
+
+            def _lovense_conversa(fala=fala_limpa, dele=texto_usuario):
+                now = datetime.now()
+                return Lovense(memory_manager.db).observe_conversa(fala, dele, now, atividade=_lovense_atividade(now))
+            asyncio.create_task(asyncio.to_thread(_lovense_conversa))
+        except Exception:
+            logger.exception("lovense.observe.error")
         try:
             # 26/09 (agenda reativa): o que ela topa/anuncia/desiste na conversa vira agenda de verdade.
             # Modelo barato, fora do loop (só quando a fala tem cara de plano).
@@ -4433,6 +4454,9 @@ async def handle_photo_message(update: Update, context: ContextTypes.DEFAULT_TYP
             if getattr(memory_manager, "cycle_mgr", None) else None)
         if intimacy_hint:
             messages.append({"role": "system", "content": intimacy_hint})
+        lovense_hint = _lovense_prompt(caption or "")
+        if lovense_hint:
+            messages.append({"role": "system", "content": lovense_hint})
         messages.append({"role": "user", "content": user_message_repr})
 
         # Gera resposta dinâmica da Marina com proteção contra None e fallback
@@ -5375,6 +5399,18 @@ def _lovense_atividade(now: datetime) -> Optional[str]:
         return None
 
 
+def _lovense_prompt(texto_usuario: str) -> Optional[str]:
+    """Bloco do Lovense no prompt (passo 5a): com sessão, tudo; sem, só quando a conversa fala de brinquedo."""
+    try:
+        from lovense import Lovense
+        now = datetime.now()
+        recentes = " ".join(m.get("content", "") for m in memory_manager.get_historico_recente(limit=6))
+        return Lovense(memory_manager.db).prompt(now, _lovense_atividade(now), f"{texto_usuario or ''} {recentes}")
+    except Exception:
+        logger.exception("lovense.prompt.error")
+        return None
+
+
 async def _lovense_turno(application: Application, eventos: list[str]) -> None:
     from lovense import Lovense
     async with _LOVENSE_LOCK:                    # o gancho e o relógio não criam o mesmo turno duas vezes
@@ -5404,6 +5440,12 @@ async def lovense_routine(application: Application) -> None:
     try:
         from lovense import Lovense
         lv = Lovense(memory_manager.db)
+        if await asyncio.to_thread(lv.tem_pendente):
+            # Passo 5a: o que ela disse que ia fazer daqui a pouco ("peraí que vou colocar", banheiro do lugar).
+            now = datetime.now()
+            feito = await asyncio.to_thread(lv.pendentes, now, await asyncio.to_thread(_lovense_atividade, now))
+            if feito:
+                logger.info("lovense.pendente %s", ",".join(feito))
         if not await asyncio.to_thread(lv.sessao_ativa):
             return
         now = datetime.now()

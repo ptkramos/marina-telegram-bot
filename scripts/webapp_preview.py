@@ -163,6 +163,8 @@ async def _serve(db, port: int, status, fixo) -> None:
             while True:
                 await asyncio.sleep(10)
                 lv = Lovense(db)
+                if await asyncio.to_thread(lv.tem_pendente):
+                    await asyncio.to_thread(lv.pendentes, hooks.now(), lv_onde["a"])
                 if await asyncio.to_thread(lv.sessao_ativa):
                     await lovense_sentir(await asyncio.to_thread(lv.tick, hooks.now(), atividade=lv_onde["a"]))
         app["lv_relogio"] = asyncio.create_task(laco())
@@ -214,7 +216,14 @@ async def _serve(db, port: int, status, fixo) -> None:
                    "pedir_parar": lambda: lv.pedir_parar(now), "liberar": lambda: lv.liberar(now),
                    "cortar": lambda: lv.cortar(now), "tirar": lambda: lv.tirar(now, bs),
                    "tick": lambda: lv.tick(now, atividade=lv_onde["a"]), "conversar": lambda: lv.conversar(now),
-                   "turnos": lambda: lv_turnos}[acao]()
+                   "turnos": lambda: lv_turnos,
+                   # passo 5a: a fala dela (modelo barato de verdade), o bloco do prompt, se ela toparia agora
+                   "fala": lambda: lv.observe_conversa(request.query.get("f", ""), request.query.get("m", ""), now,
+                                                       atividade=lv_onde["a"]),
+                   "pendentes": lambda: lv.pendentes(now, lv_onde["a"]),
+                   "prompt": lambda: lv.prompt(now, lv_onde["a"], request.query.get("c", "")),
+                   "disposicao": lambda: lv.disposicao(now, bs, lv_onde["a"]),
+                   "descoberta": lambda: lv._descoberta()}[acao]()
         except (KeyError, ValueError) as e:
             return web.json_response({"erro": str(e)}, status=400)
         return web.json_response({"res": res, "estado": lv.estado(now)}, dumps=lambda d: json.dumps(d, default=str))

@@ -26,7 +26,10 @@ class LovenseTurnoTest(unittest.IsolatedAsyncioTestCase):
             for eventos in ([], [], ["respeitou"], []):
                 await bot._webapp_lovense(app, eventos, now)
                 await asyncio.sleep(0.01)
-            await asyncio.sleep(0.15)
+            for _ in range(100):                     # máquina carregada: espera o turno até 2 s
+                await asyncio.sleep(0.02)
+                if turno.called:
+                    break
         sentir.assert_called_once()
         self.assertEqual(sentir.call_args.args[1], ["respeitou"])
         self.assertEqual(sentir.call_args.args[2], "CLASS")      # passo 4: onde ela está decide como ela recebe

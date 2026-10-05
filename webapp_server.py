@@ -311,12 +311,13 @@ FASES = {"fase menstrual": "Menstruada", "fase folicular": "Fase folicular",    
 DE_ALGUEM = {"com saudade", "orgulhosa", "com vergonha", "com ciuminho"}
 A_ALGUEM = {"grata"}
 POR_ALGUEM = {"carinhosa", "derretida", "admirada"}
-SEM_ALGUEM = {"com culpa", "com saudade de casa"}   # o motivo embaixo já diz com quem ("Falou com o pai")
+SEM_ALGUEM = {"com culpa", "com saudade de casa",   # o motivo embaixo já diz com quem ("Falou com o pai")
+              "na expectativa"}                    # Lovense: "Colocou o brinquedo esperando o Patrick ligar"
 # 04/10 (catálogo, leva 2, regra 11): na tela o sentimento é substantivo; o prompt dela segue com a palavra dela
 SENTIMENTO_TELA = {
     "empolgada": "Empolgação", "se divertindo": "Diversão", "orgulhosa": "Orgulho", "aliviada": "Alívio",
     "grata": "Gratidão", "contente": "Satisfação", "carinhosa": "Carinho", "com saudade": "Saudade",
-    "derretida": "Ternura", "admirada": "Admiração",
+    "derretida": "Ternura", "admirada": "Admiração", "na expectativa": "Expectativa",
     "desanimada": "Desânimo", "decepcionada": "Decepção", "sozinha": "Solidão", "com saudade de casa": "Saudade",
     "irritada": "Irritação", "frustrada": "Frustração", "impaciente": "Impaciência", "chateada": "Aborrecimento",
     "ansiosa": "Ansiedade", "preocupada": "Preocupação", "insegura": "Insegurança", "com vergonha": "Vergonha",

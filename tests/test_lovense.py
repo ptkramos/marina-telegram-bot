@@ -41,7 +41,7 @@ class LovenseBase(unittest.TestCase):
 
 class EstadoTests(LovenseBase):
     def test_migration_cria_brinquedos_e_confianca(self):
-        self.assertEqual(self.db.get_schema_version(), 35)
+        self.assertEqual(self.db.get_schema_version(), 36)
         est = self.lv.estado(T0)
         self.assertFalse(est["conectada"])
         self.assertEqual(est["estado"], "desconectada")
@@ -513,7 +513,7 @@ class BanhoEFimDaEscadaTests(LovenseBase):
         self.assertAlmostEqual(self.trust(s(21)), 0.8, places=2)
         self.assertIsNone(self.lv.pendencia(s(21)))
         with self.db.get_connection() as conn:
-            ep = conn.execute("SELECT family, kind, target FROM emotion_episodes WHERE source_key LIKE 'lovense:%'"
+            ep = conn.execute("SELECT family, kind, target FROM emotion_episodes WHERE source_key LIKE 'lovense:tirou:%'"
                               ).fetchone()
         self.assertEqual((ep["family"], ep["kind"], ep["target"]), ("raiva", "irritacao", "o Patrick"))
         t = self.lv.sentir(s(22), eventos)

@@ -1667,3 +1667,13 @@ Dormindo e no casting segue a atividade. **Atenção pro passo 5:** o estímulo 
 de verdade; o bloco do prompt tem que segurar o tom pelo lugar (na aula, escondido e curto). Detalhe no
 PLANO_WEBAPP, "passo 4 feito".
 Detalhe em PLANO_WEBAPP, "passo 2 feito".
+
+**05/10, noite — Lovense, passo 5a (corpo e mundo):** mexe no prompt e no que ela faz pela fala. Bloco novo
+`[BRINQUEDO — LOVENSE, controlado pelo app do Patrick]` depois do modo íntimo (com sessão: com qual, desde quando,
+como está recebendo, bateria, a palavra desta vez — "só ela faz ele parar de verdade; não use pra provocar; se
+incomodar, reclame; se ele não ajustar, diga a palavra" —, onde ela está e o tom: com gente perto "escondido,
+curtinho… nada de cama, gaveta, se tocar ou tirar a roupa"; sem sessão, só quando falam de brinquedo: onde estão os
+dois, se ela toparia agora e por quê, e "a palavra você puxa"). A fala dela vira mundo: "pronto, coloquei" acende o
+app, a palavra dita faz ele ter que parar, "pode voltar" libera, "tirei" desliga, e a conversa sobre a vez em que ele
+não respeitou reconstrói a confiança. Ela goza pelo corpo (o turno avisa) ou pela fala; com a ideia sendo dela e ele
+sumido do app, ela cutuca. Detalhe no PLANO_WEBAPP, "passo 5a feito".

@@ -3031,3 +3031,57 @@ decisões foram uma conversa com ele (mockup + múltipla escolha); detalhe no PL
   exagerou no brinquedo" (aparece nos motivos do Por dentro) — entra no catálogo no passo 7.
 - **Ponto de atenção pro passo 5:** o estímulo sobe a excitação de verdade e pode ligar o modo íntimo (roteado pro
   modelo íntimo) no meio da aula; o bloco do prompt precisa dizer onde ela está e como ela recebe.
+
+## Lovense, passo 5a: corpo e mundo (05/10, noite, frente de apps)
+
+Quinto passo, dividido com o Patrick (mockup + múltipla escolha): **5a** liga o brinquedo de verdade (pedido dele,
+palavra, colocar e tirar pelo chat, gozo, tirar por motivo, descoberta do Hush, ousadia fora, app parado, bloco do
+prompt); **5b** fica pra ela propor sozinha (pela curiosidade também), levar o Lush na bolsa, usar sozinha e mudar
+de opinião sobre o Hush conversando (com ele ou com a Bia). Detalhe no PLANO_WEBAPP, "passo 5a feito".
+- `lovense.py`: `disposicao(now, brinquedos, atividade)` (agenda_viva.Disposicao tipo "lovense" + tesão, confiança,
+  pendência, sensível, novidade, ousadia, estágio do Hush; a saudade dele vira a favor), `prompt(now, atividade,
+  conversa)` (bloco `[BRINQUEDO — LOVENSE…]`: com sessão sempre; sem, só quando a conversa fala de brinquedo),
+  `observe_conversa(fala, msg_dele, now, atividade)` (a palavra dita pela fala, sem modelo — `_tem_palavra` ignora
+  falar DA palavra; o resto por modelo barato com gate `BRINQUEDO_RE` / `ACAO_RE` no assunto dos últimos 30 min /
+  `CONVERSA_RE` com pendência; "colocou" só vale com verbo na fala de agora, `COLOCOU_RE`, e "tirou" com `TIROU_RE`),
+  `pendentes` (o "peraí que vou colocar" em 2 min; fora, no fim da pausa do banheiro), `_gozar` / `gozou_pela_fala`,
+  `_motivo_pra_tirar` (academia, dormir, briga com ele por outra coisa, o Hush cansar), `_experimentar` +
+  `_fechar_experiencias` + `_descobrir` (o Hush e a ousadia), app parado em `sentir` (motivo `parado`).
+  `contexto` ganhou a ousadia; `recepcao` deixa o Hush mais intenso enquanto ela descobre.
+- `migrations/036_lovense_experiencia.sql` (`experiencia_json`); `db.py` (replay da 36).
+- `agenda_reativa.pausar(…, motivo="lovense", texto=…, minutos=…)`: trancada no banheiro do lugar colocando/tirando.
+- `emotion.py`: sentimento novo `expectativa` ("na expectativa", família alegria).
+- `bot.py`: `_lovense_prompt` (depois do bloco íntimo, no texto e na foto), `observe_conversa` em segundo plano
+  depois de cada fala, `gozou_pela_fala` quando o intimacy registra o clímax, `pendentes` no relógio.
+- `scripts/webapp_preview.py`: `acao=fala&f=…&m=…` (modelo barato de verdade), `pendentes`, `prompt&c=…`,
+  `disposicao&b=…`, `descoberta`.
+- `webapp_server.py`: "na expectativa" → **"Expectativa"** na tela do Por dentro, sem "com o Patrick" (o motivo
+  embaixo já diz) — texto visível, eu decidi; entra no catálogo.
+- Testes: `tests/test_lovense_corpo.py` (24); schema 36 em test_bootstrap_v36, test_infra_audit7, test_lovense,
+  test_social_world e test_world_repository; a espera do test_lovense_turno virou até 2 s (falhava com a máquina
+  carregada). Suíte inteira: 1745 testes, as 3 falhas eram essas (versão 36 e a palavra da tela), corrigidas; os
+  módulos tocados de novo: 157 OK.
+- **Achado na pré-visualização:** a saudade dele (família tristeza, alvo o Patrick) contava como briga e ela tirava
+  "porque perdeu o clima". Briga agora é raiva com ele, ou decepção/chateação com ele, e nunca sobre o brinquedo.
+- **Conferido com o modelo barato de verdade (centavos):** "imagina se eu colocasse…" → nada; "palavra: girassol" →
+  combinada; "pronto. tá dentro" → colocou (ícone aceso, palavra valendo); "girassol" → pediu pra parar; "pode
+  voltar" → liberou; "tirei, vou tomar banho" → tirou; pendência + "tá" → nada; conversa de verdade → fechou. Antes
+  do `COLOCOU_RE`, o modelo repetia "colocou" olhando o trecho de antes.
+- **Números que eu decidi (internos, calibrar no uso):** vontade = 0,5 + fatores (topa ≥ 0,55); tesão (t − 0,5) ×
+  0,8; confiança (trust − 0,8); sensível −0,3; mais de 3 vezes na semana −0,05 cada; fora, −0,2 × (1 − ousadia) +
+  0,05; Hush receio −0,25, descobrindo −0,1, adora +0,05; saudade dele + metade do peso. Hush: gosto começa 0,2;
+  estágios < 0,45 descobrindo, < 0,75 gostando; "não é pra mim" com 2+ vezes e gosto < 0,12; mais intenso 1,6×
+  (receio) e 1,35× (descobrindo); aguenta 10 / 25 / 60 min / sem limite. Nota de cada vez = (bom − 1,5 × ruim) /
+  ligado + 0,3 por gozo (até 2) − 0,6 se ele desrespeitou; peso 0,2 / (1 + 0,2 × vezes) (ousadia 0,15 / (1 + 0,15
+  × vezes)), ruim pesa 1,5× nas 3 primeiras. Ousadia começa 0; sem ela, com gente perto o ponto bom cai mais 20%.
+  Gozo com excitação ≥ 0,9, gostando ou curtindo, não sensível. Briga ≥ 0,45. App parado: cutuca em 25 − 15 × tesão
+  min, de novo 30 min depois, no máximo 2. "Daqui a pouco" = 2 min; banheiro 5 min; assunto do brinquedo vale 30
+  min; palavra combinada antes de colocar vale 2 h.
+- **Textos que eu decidi:** internos — o bloco do prompt inteiro (lista no PLANO_WEBAPP), os turnos `gozou`,
+  `tirou_academia`, `tirou_dormir`, `tirou_briga`, `tirou_hush`, `parado`, o prompt do classificador. Visíveis (Por
+  dentro, motivos dos sentimentos): "colocou o brinquedo esperando o Patrick ligar pelo app", "com o brinquedo que
+  o Patrick pediu, sem saber quando ele vai ligar", "o Patrick sumiu do app com o brinquedo nela", "gozou com o
+  brinquedo", "gozou {no meio da aula} com o brinquedo"; Hoje/Mundo (life_events): "Gozou com o Lush que o Patrick
+  controlava pelo app[, no meio da aula, tentando disfarçar (ficou vermelha)].", "Usou o Hush pela primeira vez…
+  e gostou mais do que esperava / ainda não sabe se gosta… / não curtiu desta vez… / concluiu que o Hush não é pra
+  ela", "Foi no banheiro da PUC uns minutos, colocando o brinquedo escondida." — entram no catálogo no passo 7.

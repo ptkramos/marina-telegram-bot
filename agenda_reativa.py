@@ -307,18 +307,22 @@ class AgendaReativa:
         return mexeu
 
     # ------------------------------------------------------------ pausa --
-    def pausar(self, now: datetime, motivo: str, *, c: Optional[dict] = None, chama_ele: bool = False) -> Optional[dict]:
-        """Se tranca num lugar reservado por ali (tesão ou banheiro) e volta pro que fazia."""
+    def pausar(self, now: datetime, motivo: str, *, c: Optional[dict] = None, chama_ele: bool = False,
+               texto: str = "", minutos: Optional[int] = None) -> Optional[dict]:
+        """Se tranca num lugar reservado por ali (tesão, banheiro ou, com o Lovense, colocar/tirar o brinquedo:
+        `texto` diz o que ela faz lá, `minutos` quanto demora) e volta pro que fazia."""
         c = c or self._atual(now)
         if not c or c["tipo"] in SEM_PAUSA or self.pausa(now):
             return None
         rng = _rng(f"pausa:{c['key']}:{now:%H%M}")
         onde = RESERVADO.get(c["tipo"], "no banheiro")
-        fim = now + timedelta(minutes=rng.randint(8, 15) if motivo == "tesao" else rng.randint(5, 10))
+        fim = now + timedelta(minutes=minutos or (rng.randint(8, 15) if motivo == "tesao" else rng.randint(5, 10)))
         if fim >= (c["volta"].start if c.get("volta") else c["fim"]):
             return None
         if motivo == "tesao":
             atividade = f"trancada {onde}, se tocando" + (" e chamando o Patrick pro sexting" if chama_ele else "")
+        elif motivo == "lovense":
+            atividade = f"trancada {onde}, {texto or 'mexendo no brinquedo escondida'}"
         else:
             atividade = f"trancada {onde}, passando mal"
         p = {"inicio": now.isoformat(), "fim": fim.isoformat(), "chave": c["key"], "place": c["place"],
@@ -328,6 +332,9 @@ class AgendaReativa:
         self._save(st, now)
         if motivo == "tesao":
             self._alivio(now, fim, onde, chama_ele, key=f"pausa:{c['key']}:{now:%H%M}")
+        elif motivo == "lovense":
+            self._registra(f"pausa:{c['key']}:{now:%H%M}", now,
+                           f"Foi {onde} uns minutos, {texto or 'mexer no brinquedo escondida'}.", share=0.3)
         else:
             self._registra(f"pausa:{c['key']}:{now:%H%M}", now,
                            f"Teve uma emergência de banheiro e ficou {onde} uns minutos.", share=0.3)

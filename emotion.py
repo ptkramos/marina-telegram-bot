@@ -47,6 +47,7 @@ FAMILIES = {
 KIND_WORDS = {
     "empolgacao": "empolgada", "diversao": "se divertindo", "orgulho": "orgulhosa",
     "alivio": "aliviada", "gratidao": "grata", "contentamento": "contente",
+    "expectativa": "na expectativa",                       # Lovense, passo 5a (05/10)
     "carinho": "carinhosa", "saudade": "com saudade", "ternura": "derretida", "admiracao": "admirada",
     "desanimo": "desanimada", "decepcao": "decepcionada", "solidao": "sozinha", "saudade_casa": "com saudade de casa",
     "irritacao": "irritada", "frustracao": "frustrada", "impaciencia": "impaciente", "chateacao": "chateada",
