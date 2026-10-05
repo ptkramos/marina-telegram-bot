@@ -107,7 +107,7 @@ Hoje o `delivery.py` só abre pedido quando **ela** diz que vai pedir. O que ent
 | 2 Banco | ✅ 25/09 |
 | 3 Delivery pra ela | ✅ 25/09 |
 | 4 Presentes, datas, aposentar comandos | ⬜ |
-| iFood realista (layout do app real + cardápio com lojas reais) | 🟡 26/09: **64 lojas reais, todas com logo real** (43 Botafogo, 21 Campo Grande). Restaurantes de bairro voltaram com logo pelo Google Imagens; 3 saíram (Galeteria Botafogo, Ben Ali, Tacos & Wraps: o Google só trazia outras lojas) e 3 ficam marcadas pra conferir (Cake & Co., Mr. Wong, Rei da Picanha: nome repetido em outras cidades). Logos do Wikimedia, dos sites, recortados dos prints dele e, pros mercados e farmácias dela (Zona Sul, Hortifruti, Pão de Açúcar, Mundial, Droga Raia), do Google Imagens. **Cardápios feitos** (`scripts/ifood_cardapios.py`: 212 pratos + 27 produtos de mercado + 14 de farmácia; `scripts/ifood_build.py` → `webapp/catalogo.json`, 567 itens com tempo/taxa pela distância real). **Fotos: 227 de 227** — 28 do Google (produtos oficiais das redes) e o resto do Pexels (API oficial, chave do Patrick, busca em inglês; `scripts/ifood_fotos.py`, créditos em `webapp/fotos/creditos.json`). Itens de marca com foto genérica ficam marcados `provisoria` pra trocar pela oficial devagar pelo Google. **Layout feito (26/09):** lista com filtros e busca, página da loja (capa, nota, aberta/fechada, Destaques, seções), prato (observação 0/140, quantidade), sacola de vários itens (mínimo, Peça também), entrega, pagamento (iFood Pago · Pix, taxa de serviço R$ 0,99) e "Revise o seu pedido"; a observação dos pratos vira o bilhete dela. Conferido em `scripts/webapp_preview.py` (pré-visualização local). **Abas Início/Busca/Pedidos e histórico como o app real (26/09, 07:30).** Faltam: iFood da Ma nos Bastidores, pedidos dela no catálogo novo, farmácia/mercado dela |
+| iFood realista (layout do app real + cardápio com lojas reais) | 🟡 26/09: **64 lojas reais, todas com logo real** (43 Botafogo, 21 Campo Grande). Restaurantes de bairro voltaram com logo pelo Google Imagens; 3 saíram (Galeteria Botafogo, Ben Ali, Tacos & Wraps: o Google só trazia outras lojas) e 3 ficam marcadas pra conferir (Cake & Co., Mr. Wong, Rei da Picanha: nome repetido em outras cidades). Logos do Wikimedia, dos sites, recortados dos prints dele e, pros mercados e farmácias dela (Zona Sul, Hortifruti, Pão de Açúcar, Mundial, Droga Raia), do Google Imagens. **Cardápios feitos** (`scripts/ifood_cardapios.py`: 212 pratos + 27 produtos de mercado + 14 de farmácia; `scripts/ifood_build.py` → `webapp/catalogo.json`, 567 itens com tempo/taxa pela distância real). **Fotos: 227 de 227** — 28 do Google (produtos oficiais das redes) e o resto do Pexels (API oficial, chave do Patrick, busca em inglês; `scripts/ifood_fotos.py`, créditos em `webapp/fotos/creditos.json`). Itens de marca com foto genérica ficam marcados `provisoria` pra trocar pela oficial devagar pelo Google. **Layout feito (26/09):** lista com filtros e busca, página da loja (capa, nota, aberta/fechada, Destaques, seções), prato (observação 0/140, quantidade), sacola de vários itens (mínimo, Peça também), entrega, pagamento (iFood Pago · Pix, taxa de serviço R$ 0,99) e "Revise o seu pedido"; a observação dos pratos vira o bilhete dela. Conferido em `scripts/webapp_preview.py` (pré-visualização local). **Abas Início/Busca/Pedidos e histórico como o app real (26/09, 07:30).** Faltam: iFood da Ma nos Bastidores, pedidos dela no catálogo novo, farmácia/mercado dela (planejados em 05/10, junto com o banco dela: "Banco dela e iFood da Ma na aba Dinheiro — plano") |
 | 5 Redes sociais (Instagram e X) | 🟡 27/09: **Instagram construído** (feed, perfil, post, stories, atividade; ela posta pelo dia dela, amigas comentam e postam; detalhe em "Etapa 5 — Instagram" abaixo). Falta: acervo gerado na VPS e acompanhar no uso real. X fica pra depois |
 
 ### Como ficou (25/09)
@@ -948,6 +948,76 @@ VPS, cópia do banco em /tmp, só o JSON voltou). Decisões do Patrick, todas po
    Hoje antigo aparece uma vez só no novo (nada some, nada duplica).
 5. Textos novos de tela pro catálogo: "Em casa", "Está em casa", "Em casa, N acontecimentos", "Sozinha, com o Milo",
    "Com a Bia", "A Bia chegou", "A Bia foi embora", "Na academia" e as outras continuações.
+
+### Banco dela e iFood da Ma na aba Dinheiro — plano (05/10, frente de apps; sem código até o soak fechar) 📝
+Item 2 do "Próximo" da frente de apps e a regra 17 do catálogo ("a tela inteira vai virar o extrato do banco dela").
+Base: o Dinheiro de 28/09 (topo do mês, extrato agrupado por saída), o 26/09 ("o iFood do Patrick mostra só os pedidos
+dele; o que ela pede fica nos Bastidores, junto com o banco dela"; farmácia e mercado pedidos quando ela não quer
+ir), a conta dela no **Itaú Personnalité** (5b) e as 28 fichas `n.` do catálogo (17 "conversar" por causa do
+redesenho). Mockup com o dinheiro real de 27/09 a 04/10 (tirado na VPS, cópia em /tmp/banco_dela, apagada no fim; só
+o JSON voltou): saldo R$ 1.161, os dois Quartinhos, as farmácias, os dois Pix dele. Decisões do Patrick, todas por
+múltipla escolha com mockup, todas na recomendada:
+
+- **Extrato igual ao app do banco** (regra 15): uma linha por compra com o nome que o banco escreve ("QUARTINHO BAR",
+  "UBER *TRIP", "DROGARIA VENANCIO", "PIX RECEBIDO PATRICK"), a forma embaixo em cinza ("Crédito", "Pix", "Débito
+  automático"), dias por extenso ("sábado, 3 de outubro") e o saldo do dia. Sai o "Foi no Quartinho Bar" agrupado
+  de 28/09.
+- **Conta e cartão de crédito:** chave **Conta | Cartão** no topo do app. Na rua ela paga no crédito (bar, Uber,
+  salão, farmácia, loja, iFood); a fatura fecha num dia e sai da conta no vencimento por débito automático
+  ("PAGTO FATURA CARTAO"). Na conta ficam os Pix (dele, dos cachês, os que ela manda), as contas em débito automático
+  e a fatura. O aperto passa a nascer da fatura que não cabe no saldo (ela pede pro Patrick primeiro, como hoje).
+- **Topo: banco + faixa de bastidor.** Contas e fatura viram **"Lançamentos futuros"** dentro do app, como no banco.
+  Em cima do app, fora dele, uma faixa tracejada "Só o Patrick vê isso" só com o que o banco não sabe: **Próximo
+  cachê**, **Deve ao Patrick** e **Precisa de**; some quando está vazia.
+- **Uma cobrança por visita:** a comanda do bar fecha quando ela vai embora e vira uma compra só ("QUARTINHO BAR
+  124,00" no lugar de cada gin); farmácia e loja, uma por visita; Uber, uma por corrida.
+- **Tocar abre "Detalhes da compra"** igual ao banco (valor, estabelecimento, data e hora, cartão "Black final
+  ….", forma) e embaixo um **quadro tracejado de bastidor** com a comanda ("3 gin tônicas 102,00", "Bolinho de
+  bacalhau 22,00") e com quem ela estava ("Com a Júlia, dividiu o bolinho").
+- **iFood da Ma dentro do Dinheiro:** chave **Itaú | iFood** no topo da aba. O iFood dela é a aba **Pedidos** do iFood
+  de verdade (o mesmo componente do iFood do Patrick: em andamento no topo, histórico por dia com cartões, logo,
+  "Pedido concluído", itens com a quantidade na caixinha): o que ela pede pra ela e o que manda pro Patrick
+  (`pedido_dela`). A compra "IFD*…" no cartão também abre o cartão do pedido no detalhe.
+- **Mercado no cartão adicional do pai:** o pai paga a comida (24/09, D9); o mercado (indo ou pedindo) sai do cartão
+  adicional dele — aparece no iFood dela como pago com o cartão do pai e **não** entra no Itaú dela. Farmácia,
+  rolê, Uber, salão e iFood de comida seguem dela.
+- **Ela pede sozinha, pelo sentimento:** comida no iFood quando a fome vem junto com cansaço, chuva, TPM, doença ou
+  casa sem nada — sem precisar dizer no chat; vira refeição, Hoje e extrato. Farmácia e mercado pelo mesmo caminho
+  (doente, chuva, coisa pouca, tarde). Decisão pela `Disposicao` (`agenda_viva.py`), nunca sorteio.
+
+**Plano de implementação (depois do soak), na ordem:**
+1. **Livro do banco (`banco.py` + `migrations/035_banco.sql`):** tabela de lançamentos (conta ou cartão, data e
+   hora, descritor do banco, forma, valor, chave do acontecimento, grupo da visita, detalhe JSON com a comanda e quem
+   estava junto) e o cartão (dia de fechamento, vencimento, final, limite). O `financas.py` passa a lançar por aqui
+   (o `financas_json` fica com saldo, pedido, empréstimos e presente; `movs` sai, `meses` vira consulta). Migração dos
+   30 movimentos que existem, com descritor e forma. Histórico de 90 dias (o banco filtra 7/15/30/60/90).
+   Testes `tests/test_banco.py`: fatura fecha e vence, débito automático, aperto pela fatura, comanda única por
+   visita, saldo do dia, migração dos antigos sem mudar o saldo.
+2. **Comanda por visita (`consumo.py`):** os itens de uma saída continuam no mundo um a um (Hoje, fome, bebida); o
+   banco junta os do mesmo lugar numa cobrança na hora em que ela sai de lá (dividido entra só a parte dela). Uber
+   por corrida (`transporte:`), salão e livro como hoje.
+3. **Contas por nome:** os R$ 189 viram Vivo (débito automático na conta) e os streamings (no cartão); o
+   `extrato._contas` passa a ler os lançamentos futuros.
+4. **iFood da Ma (`ifood_dela.py`, histórico como o `ifood_pedidos_json` do Patrick):** o `delivery.py` grava o
+   pedido dela com loja, itens e foto do `webapp/catalogo.json` (o que ela diz, "açaí", acha a loja real de
+   Botafogo); o `pedido_dela.py` troca o `cardapio.json` antigo (lojas inventadas) pelo catálogo novo, com as lojas
+   de Campo Grande perto do Patrick; mercado marca "cartão do pai" e não lança no banco.
+5. **Pedir sozinha (frente do mundo):** tipo novo na `Disposicao` (pedir × ir × deixar pra lá) para comida, farmácia e
+   mercado; o pedido chega pela portaria como hoje (`delivery.materialize`), vira refeição e acontecimento; o prompt
+   dela sabe o que pediu e quando chega.
+6. **Tela (`webapp_server.api_banco` + `webapp/app.js` + `app.css`):** chave Itaú | iFood; no Itaú, cabeçalho
+   Personnalité (azul-marinho com o dourado), saldo em conta com o olho, chave Conta | Cartão, lançamentos futuros,
+   dias com saldo do dia, filtro de período, "Detalhes da compra" com o quadro de bastidor; faixa "Só o Patrick vê
+   isso" fora do app. O iFood reaproveita os cartões da aba Pedidos. Conferir o desenho com as telas do app oficial
+   (prints da loja de apps ou do Patrick) antes de fechar. Pré-visualização com o banco real (miniapp-real).
+7. **Prompt dela (`financas.prompt_lines`):** saldo em conta + fatura aberta (quanto, quando fecha e vence) + o que
+   deve; o aperto da fatura com o mesmo jeitinho de hoje.
+8. **Catálogo de textos:** as 17 fichas `n.` "conversar" fecham com esta tela (a maioria vira descritor de banco ou
+   some); textos novos de tela (faixa, detalhe, iFood da Ma, lançamentos futuros) entram como leva nova pra ele.
+
+**A decidir no código (texto interno ou dado do mundo, eu decido e listo):** fechamento dia 3 e vencimento dia 10,
+limite do cartão, final do cartão, divisão dos R$ 189 entre Vivo e streamings, descritor de cada tipo (Pix do cachê
+com o nome da agência), a janela de "pedir em vez de ir".
 
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):

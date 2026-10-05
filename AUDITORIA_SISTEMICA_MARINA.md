@@ -2796,3 +2796,19 @@ bloco: **as saídas também se partem na virada do período**, com "Na academia"
 sozinho: ícones dentro do bloco de casa (nas saídas os filhos seguem sem), a chave de lembrar o bloco aberto, a
 linha cinza com todos que passaram por lá quando a visita chega no segundo pedaço. Achado: o mundo não tem visita em
 casa (`social_day.py`), então "Com a Bia" só aparece quando isso existir.
+
+## Banco dela e iFood da Ma, plano (05/10, frente de apps; sem código)
+
+Só planejamento. Mockup com o dinheiro real de 27/09 a 04/10, tirado na VPS (cópia em /tmp/banco_dela, apagada no
+fim; só o JSON voltou). Decisões do Patrick no PLANO_WEBAPP, "Banco dela e iFood da Ma na aba Dinheiro — plano": a
+aba Dinheiro vira o Itaú Personnalité igual ao app (descritor de banco, saldo do dia, lançamentos futuros), com
+**conta e cartão de crédito** (fatura em débito automático; o aperto passa a nascer da fatura), uma cobrança por
+visita (a comanda do bar), detalhe da compra com quadro de bastidor, faixa "Só o Patrick vê isso" (cachê, dívida,
+precisa de), chave Itaú | iFood com a aba Pedidos do iFood dela, mercado no cartão adicional do pai e ela pedindo
+sozinha pelo sentimento. O que eu decidi sozinho: a forma do plano, o módulo `banco.py` com migration 035 (a 034 é
+do Lovense), histórico de 90 dias, fechamento dia 3 e vencimento dia 10 (rascunho), Vivo na conta e streamings no
+cartão, iFood de comida pago por ela (só o mercado vai pro pai). Achados: (1) o extrato de hoje mostra "Foi no
+Agência boutique da Lívia (fictícia)" (Uber do casting, 01/10) — `extrato._lugar_do_uber` não limpa o "(fictícia)"
+e o artigo sai errado; texto feio pro lote do soak. (2) Desde 26/09 ela não fez nenhum pedido de iFood pra ela (só
+recebeu os do Patrick); o iFood da Ma só enche com o "pedir sozinha". (3) O mercado da semana não lança no saldo
+dela (certo pela regra do pai), mas nada na tela diz quem pagou — resolvido pelo cartão do pai no plano.

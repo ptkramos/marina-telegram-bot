@@ -4,8 +4,10 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 04/10/2026, noite (planejados na frente de apps, sem código: o Lovense e o bloco "Em casa" do Hoje — decisões e plano no PLANO_WEBAPP).
-**Próximas conversas: segunda de manhã, "bora no soak, dia 6"** (relatório `soak/dia-2026-10-04.md`; atenção: em 04/10 ela topou o Lovense na conversa, mas o mundo não tem o
+_Atualizado em 05/10/2026, madrugada (planejados na frente de apps, sem código: o Lovense, o bloco "Em casa" do Hoje e o banco dela com o iFood da Ma — decisões e plano no PLANO_WEBAPP).
+**Próximas conversas: segunda de manhã, "bora no soak, dia 6"** (relatório `soak/dia-2026-10-04.md`; texto feio
+achado na frente de apps pra entrar no lote: o extrato do Dinheiro mostra "Foi no Agência boutique da Lívia
+(fictícia)" no Uber do casting de 01/10 — o `extrato._lugar_do_uber` não tira o "(fictícia)" e o artigo sai errado; atenção: em 04/10 ela topou o Lovense na conversa, mas o mundo não tem o
 brinquedo — se ela disser que está usando, é incoerência a anotar; nas fotos da pose do tripé, conferir se sai mão a mais — ver Auditoria, "Lovense, teste de fotos"). **Soak: dia 1 = terça 29/09.** Aberto
 pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente da voz: o modo íntimo desliga durante o banho
 no meio do sexting; ela sumir 2h30 depois de "vou te prender aqui a tarde toda" (M4 do dia 5); o Silo (M5)._
@@ -222,6 +224,11 @@ círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
    soak: "bora na frente de apps: bloco Em casa".
 1. Instagram no uso real: o próximo post de rolê da noite (luz e cabelo) e os textos ao vivo (tipo por pessoa, sem molde).
 2. iFood da Ma e o banco dela nos Bastidores; `pedido_dela` no catálogo novo; pedidos dela de farmácia/mercado.
+   **Planejado (05/10) ✅:** a aba Dinheiro vira o Itaú dela igual ao app (descritor de banco, saldo do dia), com
+   conta e cartão de crédito (fatura em débito automático), lançamentos futuros, uma cobrança por visita, detalhe
+   da compra com quadro de bastidor, faixa "Só o Patrick vê isso" (cachê, dívida); chave Itaú | iFood com a aba
+   Pedidos do iFood dela; mercado no cartão adicional do pai; ela pede sozinha pelo sentimento — PLANO_WEBAPP,
+   "Banco dela e iFood da Ma na aba Dinheiro — plano". Código depois do soak: "bora na frente de apps: banco dela".
 3. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).
 
 ## 3. Voz e chat — skill `frente-voz`

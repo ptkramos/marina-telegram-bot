@@ -89,6 +89,11 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
 
+**05/10 — banco dela e iFood da Ma planejados (frente de apps, sem código):** quando entrar, o prompt dela muda
+um pouco: saldo em conta + fatura aberta do cartão (quanto, quando fecha e vence), o aperto pela fatura (pede pro
+Patrick com o mesmo jeitinho) e o que ela pediu sozinha no iFood (o quê, quando chega). Plano no PLANO_WEBAPP,
+"Banco dela e iFood da Ma na aba Dinheiro — plano" (passo 7).
+
 **04/10, noite — bloco "Em casa" do Hoje planejado (frente de apps, sem código):** só tela (o Hoje não entra no
 prompt dela); nada muda na voz. Plano no PLANO_WEBAPP, "Hoje com o bloco Em casa — plano".
 
