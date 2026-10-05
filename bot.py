@@ -5698,7 +5698,7 @@ async def _lovense_entrega_tick(application: Application, now: datetime) -> None
     e = await asyncio.to_thread(lv.entrega_a_anunciar)
     if not e:
         return
-    detail = ("O Lovense que o Patrick encomendou pra você chegou: o Lush e o Hush, rosa"
+    detail = ("O Lovense que o Patrick encomendou pra você chegou: o Lush, rosa, e o Hush, preto"
               + ({"fora": "; chegou quando você estava fora e ficou na portaria com o Seu Jorge, você pegou agora "
                           "que chegou em casa",
                   "banho": "; chegou quando você estava no banho e ficou na portaria com o Seu Jorge, você desceu "

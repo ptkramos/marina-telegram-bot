@@ -3111,3 +3111,5 @@ chegando", 19:17), e o deploy pôs os dois direto na gaveta. Agora a encomenda �
   carregar (vieram com a carga de fábrica)."; Por dentro — "chegou o Lovense que o Patrick encomendou"; internos — o
   bloco "a encomenda do Patrick" e a instrução da iniciativa `lovense_chegou` (fala dela gerada, com a frase de
   reserva "Chegou, amor 👀 tô abrindo aqui").
+
+- **Cor do Hush (Patrick, 05/10, noite): o Lush é rosa, o Hush é PRETO** (o "os dois rosa" de 04/10 estava errado). Corrigido no texto da entrega, no bloco do prompt e na mensagem de quando chega. Ele recarregou o Civitai (membro de US$ 10 e ~5 mil Buzz amarelo): a foto do Hush (preto) fica pra frente de imagens.

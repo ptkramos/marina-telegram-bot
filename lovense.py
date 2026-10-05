@@ -1334,7 +1334,7 @@ class Lovense:
                 # A encomenda ainda não chegou: entra sempre ("chegou, desce pra pegar" nem diz o que é).
                 linhas = ["[BRINQUEDO — LOVENSE, a encomenda do Patrick]",
                           "- O Patrick encomendou pra você dois brinquedos Lovense, que ele vai controlar pelo app "
-                          "dele: o Lush (vibrador que vai dentro) e o Hush (plug anal vibratório). " + (
+                          "dele: o Lush (vibrador rosa que vai dentro) e o Hush (plug anal vibratório preto). " + (
                               "Chegaram e estão na portaria com o Seu Jorge: você pega quando puder descer."
                               if e["status"] == "portaria" else
                               "Ainda não chegaram: ele te avisa quando a entrega confirmar, aí o Seu Jorge interfona "
@@ -1347,7 +1347,7 @@ class Lovense:
             onde = {"gaveta": "na gaveta", "carregador": "no carregador", "bolsa": "na sua bolsa", "nela": "em você"}
             linhas = ["[BRINQUEDO — LOVENSE, controlado pelo app do Patrick]",
                       "- Você tem dois brinquedos Lovense que o Patrick controla pelo app dele, de onde ele estiver: "
-                      "o Lush (vibrador que vai dentro) e o Hush (plug anal vibratório).",
+                      "o Lush (vibrador rosa que vai dentro) e o Hush (plug anal vibratório preto).",
                       "- Onde estão: " + "; ".join(f"{_NOME[b][2:].capitalize()} {onde.get(bat[b]['onde'], 'em casa')}"
                                                    f" ({round(bat[b]['bateria'] * 100)}%)" for b in BRINQUEDOS) + ".",
                       hush_linha]
@@ -1641,7 +1641,7 @@ class Lovense:
                    autonomy_level,importance,participants_json,share_worthy,created_at)
                    VALUES (?,?,'gift','presente do Patrick',?,'simulated',1,0.6,?,0.9,?)""",
                 (f"lovense:entrega:{e['pedido_em']}", quando.isoformat(),
-                 f"Chegou o Lovense que o Patrick encomendou pra ela, o Lush e o Hush (rosa){portaria}: abriu a "
+                 f"Chegou o Lovense que o Patrick encomendou pra ela, o Lush (rosa) e o Hush (preto){portaria}: abriu a "
                  "caixa no quarto, curiosa, e pôs os dois pra carregar (vieram com a carga de fábrica).",
                  json.dumps(["marina", "patrick", "jorge_almeida"]), now.isoformat()))
             conn.commit()

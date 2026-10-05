@@ -825,7 +825,7 @@ franja", "A cortar", "cerca de 3 semanas", Estado e "Feita em" nas unhas); Dinhe
 comprovantes "04 OUT 2026, 19:02" e "Itaú Unibanco S.A. (Personnalité)". Coluna do rótulo das linhas com 114 px.
 Detalhe e o que eu decidi sozinho na Auditoria ("Catálogo de textos, lote 2 aplicado").
 
-**04/10, noite — Lovense pelo Mini App (depois do soak), teste de fotos feito:** o controle no app ainda não existe (freio). A frente de imagens confirmou que a foto dá conta só pelo texto: os dois brinquedos dela (Lush e Hush, rosa), com o Lush aprovado. Detalhe em PLANO_VOZ, "Fotos pelo Civitai".
+**04/10, noite — Lovense pelo Mini App (depois do soak), teste de fotos feito:** o controle no app ainda não existe (freio). A frente de imagens confirmou que a foto dá conta só pelo texto: os dois brinquedos dela (o Lush rosa e o Hush **preto** — correção do Patrick em 05/10), com o Lush aprovado. Detalhe em PLANO_VOZ, "Fotos pelo Civitai".
 
 ### Lovense pelo Mini App — plano (04/10, noite, frente de apps; sem código até o soak fechar) 📝
 Primeiro da fila depois do soak. Base: respostas dele de 02/10 (`data/feedback/ideias_pos_soak/ideias/lovense.json`:
