@@ -1635,3 +1635,6 @@ proximidade, confiança e tensão — nada de segredo nem do que ela omitiu do P
 **Textos que eu decidi (revisar):** o nome "Atenção" (era "se sente vista"); os nomes internos dos eventos novos; todos
 os números acima; "perguntada direto, minimiza, não inventa mentira"; Paciência em Sentimentos e não em
 Relacionamento.
+
+**05/10, tarde — ordem:** o Lovense (que cria a `trust`) e o redesenho dos Bastidores entram antes do recalibrar
+(decisão do Patrick); o passo 1 do recalibrar adota a `trust` do Lovense, e as barras novas entram no desenho novo.

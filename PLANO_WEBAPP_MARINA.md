@@ -1223,3 +1223,7 @@ Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha,
 um por vez, com 2 dias de observação cada: Lovense (passo 1) → Hoje com bloco "Em casa" → banco dela e iFood da Ma →
 redesenho dos Bastidores (10 passos). O extrato com "(fictícia)" e o filtro do "Rolando agora" entram antes, no lote
 de consertos.
+
+**05/10, tarde — Lovense e redesenho dos Bastidores adiantados pra hoje (Patrick):** um depois do outro, cada um na
+sua conversa; o redesenho usa os dados de hoje e recebe depois as barras do recalibrar (Confiança, Paciência,
+Admiração, Atenção, tensão dos amigos). Corte do relatório do dia 7 na hora do deploy (FRENTES, topo).

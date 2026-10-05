@@ -6,7 +6,14 @@ O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_M
 
 _Atualizado em 05/10/2026 (soak, dia 6 lido e corrigido, item 28; **o Patrick decidiu o soak contínuo** — seção 0;
 **"recalibrar a Marina" planejado** — seção 1, PLANO_VOZ "Recalibrar a Marina — plano").
-**Próximas conversas:** **terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o
+**Mudança de 05/10, tarde (Patrick):** o Lovense e o redesenho dos Bastidores adiantam **pra hoje**, um depois do
+outro, cada um na sua conversa da frente de apps (mexem nos mesmos arquivos do Mini App; não em paralelo); o que
+ficar pronto e testado entra no ar hoje. **Corte no relatório:** a hora do deploy divide o dia 7 — antes = soak
+formal (Marina de antes), depois = dia 0 da observação do Lovense e do redesenho (anotar a hora do deploy aqui).
+Fila depois: consertos do dia 7 → recalibrar 1 (vínculo; adota a `trust` que o Lovense cria) → recalibrar 2 → 3 → 4
+(as barras novas entram no desenho novo) → Hoje com "Em casa" → banco dela e iFood da Ma.
+**Próximas conversas:** agora, **"bora na frente de apps: Lovense, passo 1"**; depois, **"bora na frente de apps:
+redesenho dos Bastidores, passo 1"**; **terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o
 código novo volta, um por vez, na fila da seção 0. No lote do dia 7 (conserto, sem esperar): o extrato do Dinheiro
 com "Foi no Agência boutique da Lívia (fictícia)" (`extrato._lugar_do_uber` não tira o "(fictícia)" e erra o artigo);
 o "Rolando agora" do Mundo mostrando toda história aberta sem olhar se ela já contou (`social_news_shared`) nem se é
@@ -24,11 +31,11 @@ mão a mais (Auditoria, "Lovense, teste de fotos"). **Soak: dia 1 = terça 29/09
 funcionalidade nova pediria outro soak. Então: **o dia 7 (seg 05/10, lido na terça) fecha o soak formal**; o relatório
 diário das 05:10 continua e a conversa "bora no soak, dia N" segue lendo; **código novo entra um por vez**, na fila
 abaixo, com **2 dias de observação** (lidos no relatório) antes do próximo; bug grave passa na frente de tudo.
-Planejamento (sem código) já está liberado. **Fila do código depois do dia 7:** 1) o lote de consertos (topo do
-painel); 2) Lovense pelo Mini App ("bora na frente de apps: Lovense, passo 1"); 3) Hoje com bloco "Em casa"; 4) banco
-dela e iFood da Ma; 5) redesenho dos Bastidores (10 passos, o Mundo junto); 6) recalibrar a Marina (planejado em
-05/10, 4 passos: vínculo → corpo → ciúme → amigos, cada um com seus 2 dias; "bora na frente do mundo: recalibrar,
-passo 1").
+Planejamento (sem código) já está liberado. **Fila do código (refeita em 05/10, tarde, pelo Patrick):** 0) **hoje**,
+Lovense pelo Mini App e redesenho dos Bastidores (10 passos, o Mundo junto), com corte no relatório na hora do deploy
+(topo do painel); 1) o lote de consertos (topo do painel); 2) recalibrar a Marina (planejado em 05/10), 4 passos —
+vínculo → corpo → ciúme → amigos, cada um com seus 2 dias ("bora na frente do mundo: recalibrar, passo 1"); 3) Hoje
+com bloco "Em casa"; 4) banco dela e iFood da Ma.
 A ordem pode mudar se ele pedir.
 
 **Como era (28/09, 19:40) — nada de funcionalidade nova até o soak fechar:**

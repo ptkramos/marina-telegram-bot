@@ -2917,3 +2917,8 @@ PLANO_VOZ, "Recalibrar a Marina — plano"; item 6 da fila do soak contínuo. Le
 6. **Ciclo raso:** TPM −0,08 no humor; o texto da fase (`cycle.PHASES`) pede "manhosa", nunca irritada.
 7. **Amigos:** `social_world.record` grava confiança = proximidade (0,75 + 0,02 por dia bom) e a tensão só sai de
    evidência com valência negativa, que ninguém grava; nada lê `trust` nem `tension` pra decidir.
+
+**05/10, tarde — fila refeita (Patrick):** Lovense e redesenho dos Bastidores adiantados pra hoje (dia 7 do soak),
+um depois do outro; a hora do deploy corta o relatório do dia 7 (antes = soak formal, depois = dia 0 dos dois). Depois:
+consertos → recalibrar 1–4 → Hoje com "Em casa" → banco dela. Eu recomendei código hoje e deploy depois do dia 7;
+ele escolheu o corte.

@@ -7,7 +7,9 @@ ser "praticamente humana" — um mundo vivo onde tudo o que ela faz acontece de 
 Leia a seção 0 do `FRENTES_MARINA.md`. O dia 7 (lido na terça 06/10) fecha o soak formal; até lá, só conserto e
 planejamento (sem código novo). Depois: código novo **um por vez**, na fila da seção 0, com 2 dias de observação no
 relatório diário (VPS, 05:10; conversa "bora no soak, dia N") antes do próximo; bug grave passa na frente. Ideia nova
-fora da fila vai pra "Depois do soak" e você avisa ele.
+fora da fila vai pra "Depois do soak" e você avisa ele. **Exceção dele (05/10, tarde):** Lovense e redesenho dos
+Bastidores entram hoje, um depois do outro; a hora do deploy corta o relatório do dia 7 (antes = soak, depois = dia 0
+dos dois). Ver o topo do FRENTES.
 
 ## Como trabalhar com o Patrick
 - Sempre em **português**. Ele é visual: decisões de texto/tela com mockup (show_widget) e perguntas de múltipla
