@@ -1019,6 +1019,137 @@ múltipla escolha com mockup, todas na recomendada:
 limite do cartão, final do cartão, divisão dos R$ 189 entre Vivo e streamings, descritor de cada tipo (Pix do cachê
 com o nome da agência), a janela de "pedir em vez de ir".
 
+### Redesenho dos Bastidores — plano (05/10, frente de apps; sem código até o soak fechar) 📝
+Fecha as 29 fichas "conversar" da leva 2 que não são do Dinheiro (`b.abas`, 20 `d.`, 7 `f.`, `m.planos`; as 19 `n.`
+fecham com o banco dela, acima) e a lista "Catálogo leva 2, o que é redesenho" do FRENTES. Mockups no chat, decisões
+do Patrick por múltipla escolha. Regra que nasceu aqui (Patrick): **nada de "rótulo à esquerda, texto à direita"**
+("Dormiu      Por volta das 23:25"): cada informação vira desenho (faixa, grade, medidor, calendário) com uma linha
+curta centralizada embaixo, como a faixa do ciclo, que ele chamou de "revolução".
+
+- **Navegação:** barra fixa embaixo com 5 ícones Tabler (Agora `map-pin`, Por dentro `heartbeat`, Por fora `hanger`,
+  Dinheiro `building-bank`, Mundo `users`); dentro do Por dentro e do Mundo, sub-abas em pílula.
+- **Por dentro em 4 telas:** Corpo / Sentimentos / Pensando / Relacionamento (títulos da regra 13).
+- **Corpo**, em seções:
+  - **Agora:** barras Energia, Saciedade e **Mal-estar** (barra âmbar com a palavra, ex. "Inchada"; vem do
+    `discomfort` que já existe). Barras mais grossas (10 px) em toda a tela.
+  - **Sono:** faixa do dia de 18:00 a 18:00 com o trecho dormido pintado (a noite e o cochilo, cada um com a hora
+    em cima) e uma linha só embaixo: "Dormiu por volta de 7 horas e 45 minutos" (só a noite); dormindo, o trecho vai
+    até "agora" e a linha é "Dormindo há 5 horas e 10 minutos".
+  - **Ciclo:** fase em cima ("Pré-menstrual", no lugar de "TPM"), "Dia 24 de 28" na direita, faixa de 28
+    quadradinhos (menstruação vermelha, dias azuis, fértil rosa, hoje marcado) e "Menstruação em 4 dias"
+    centralizado embaixo.
+  - **Intimidade:** **velocímetro**: o ponteiro é a **vontade** (a libido de hoje, que a tela chamava de
+    "Excitação"), palavra no centro: **Sem vontade / Aberta / Querendo / Precisando / Desesperada**; o arco de dentro
+    é a **excitação** do momento (`intimacy.arousal`), palavra embaixo: **Aquecendo / Excitada / Molhada / No limite
+    / Quase lá**, com ícone de mensagem e "desde 21:40" (some quando é zero). Embaixo, **etiquetas do que puxa** a
+    vontade (↑ "2 dias sem gozar", ↑ "Saudade do Patrick", ↑ "Fase fértil", ↓ "Cansaço"; saem dos termos da conta do
+    `EmotionEngine._libido`). Depois, **calendário do mês** como app de ciclo: coração = com o Patrick, bolinha =
+    sozinha, menstruação pintada, prevista tracejada, hoje com borda; topo "Último orgasmo: dia 3, sozinha"; toca no
+    dia e mostra hora e como foi. **Precisa de histórico novo** (hoje só existe a última vez: `climax_at` e
+    `libido_release_at`; o "sozinha" antes de dormir já fica em `life_events`), só pra tela.
+- **Sentimentos:**
+  - **Humor em grade 3×3** (eixos que já existem: `valence` = mal↔bem, `arousal` = calma↔agitada), uma palavra por
+    casa com carinha Tabler: Irritada `mood-angry`, Inquieta `mood-nervous`, Animada `mood-crazy-happy` / Chateada
+    `mood-sad`, Normal `mood-neutral`, Feliz `mood-happy` / Desanimada `mood-empty`, Preguiçosa `zzz`, Relaxada
+    `mood-smile-beam` (cortes 0,45/0,62 no bem-estar e 0,40/0,62 na agitação; só na tela, o prompt segue com as
+    frases do `mood_words`). Casa de agora pintada ("desde 17:30"), casas do dia clarinhas com a hora; o caminho em
+    **setinhas pequenas nos vãos** (círculo escuro, seta clara). Diagonal: seta no cruzamento das quatro casas; salto
+    de várias casas, uma seta por casa; volta a uma casa, vale a hora mais nova; só os últimos 4 passos. O caminho do
+    dia sai do `EmotionEngine.feeling` refeito de hora em hora (como o relatório do soak).
+  - Barras **Brincadeira** (`playfulness`; era "Humor") e **Bateria social**, do mesmo tamanho, com ícone no rótulo
+    (`mood-tongue`, `battery-3`).
+  - **Sentindo agora por pessoa:** grupos Patrick / Bia / … / Dela, com iniciais como no Mundo; o sentimento só com
+    o substantivo ("Saudade"). Cada um: nome, **5 bolinhas + força** (Leve / Moderada / Forte / Muito forte /
+    Intensa), o **motivo em frase**, "Desde 14:10" / "Desde ontem, 21:30" na esquerda e, na direita, a tendência com
+    ícone (**Crescendo** `trending-up`, **Estável** `minus`, **Passando** `trending-down`) ou **"Até resolver"** em
+    âmbar com cadeado. Azul pros bons, coral pros ruins.
+  - **Padrão do motivo (na origem, com cuidado: o prompt dela lê):** quem fez + verbo no passado + o quê ("O Patrick
+    mandou comida de surpresa", "A Bia respondeu seca por mensagem"); coisa dela sem sujeito ("Furou o rolê com a
+    Bia"); o que vai acontecer com "Tem" ("Tem casting amanhã"); sem parênteses nem "·". Catálogo dos motivos pra
+    ele revisar no código.
+  - **"Hoje por dentro" vira "Já passou hoje":** só o que já esfriou, cinza, no fim, sem repetir o de cima.
+- **Pensando** (era "Na cabeça"): **cartões agrupados por dia** ("Hoje", "Amanhã", "Quarta"). Cada cartão: título
+  **no infinitivo** ("Passear com o Milo", "Ir à aula de Projeto", "Treinar na academia", "Sair com a Bia no
+  Quartinho Bar", "Passar na farmácia", "Entregar o trabalho de Projeto"); quando, sem repetir o dia: **"Por volta
+  das 17:45"** no que tem hora solta e **"Às 14:00, na PUC"** no que tem hora marcada (aula, casting, médico);
+  **etiquetas ↑↓ do que pesa** (os fatores do `Disposicao.avaliar`, como na Intimidade); na direita, **anel com a
+  chance de ir** (a folga vontade − peso da agenda viva levada pra 0–100%, não é dado: muda com o que ela sente) e o
+  **estado em uma palavra** embaixo: Animada / Confirmada / Indecisa / **Relutante** (no lugar de "Quer faltar /
+  pular / adiar / desmarcar / desistir") / Desistiu. Trabalho e ideia dela levam ícone no lugar do anel (`briefcase`,
+  `bulb`): Nervosa / Marcado / Ideia dela. Entrega: Adiantado / Em dia / Apertado / Atrasado. **Freela pelo tipo:**
+  "Participar de um casting", "Fazer prova de roupa", "Fazer um ensaio fotográfico" (catálogo, campanha, fotos pra
+  marca, ensaio, editorial) e "Gravar um vídeo" (cosméticos); o job vai na linha de baixo. Não existe desfile no
+  `freela.JOBS`. A regra dos títulos nasce **na origem** (o texto do plano é lido por ela e pelo Hoje), junto com os
+  **Planos do Mundo** (`m.planos`), que seguem o mesmo padrão.
+- **Relacionamento** (era "Vocês dois"): barras com ícone (Carinho `heart`, Desejo `flame`, Segurança `shield-check`,
+  Saudade `hourglass`, Mágoa `heart-broken`, que some depois de 3 dias zerada), um **tracinho onde a barra estava
+  ontem neste horário** e, embaixo de **cada** barra, uma linha centralizada: **etiqueta da variação** (verde quando
+  melhora, coral quando piora, cinza "Igual") + o motivo enxuto que mais mexeu ("Comida de surpresa", "Flerte de
+  noite", "4 horas sem notícias", "Pedido de desculpa"; sem mudança: "Desde sábado"). Depois, **Pendente entre
+  vocês** em lista com ícone (Resposta dela, Foto das unhas, Pix de R$ 200, Mágoa) e "Última mensagem às 14:10"
+  centralizado. **Visto na produção (05/10, só leitura):** as barras mexem (+0,01 a +0,03 por elogio/cuidado, meia-
+  vida de 2 a 4 dias; a Mágoa subiu em 03/10 e voltou a zero), mas com a conversa de todo dia ficam em 92–94%
+  (Carinho 0,94, Desejo 0,92, Segurança 0,92). Recalibrar é comportamento: foi pro "Depois do soak" (FRENTES).
+- **Por fora:**
+  - **Roupa em croqui:** a bonequinha com as peças pintadas na cor de cada uma e **o cabelo de agora** (penteado, cor
+    e luzes); ao lado, a legenda com a cor, o nome e a parte embaixo (Parte de cima, Parte de baixo, Acessório, Por
+    baixo, ela contou). Título = pra quê ("Sair à noite", "desde 20:30" na direita). Centralizado e alinhado (pedido
+    dele). Cada tipo de peça (regata, camiseta, camisa, moletom, top, vestido, saia, short, jeans, legging, conjuntos
+    de pijama, biquíni, lingerie) vira um molde SVG pintável; o `roupa.PECAS`/`INTIMO`/`ACESSORIOS` ganha parte, molde
+    e cor. Antes de desenhar os moldes: testar a biblioteca **Humaaans** (corpo e roupa em peças trocáveis, CC BY
+    4.0; baixar só com OK dele) e mostrar lado a lado com o desenho próprio.
+  - **Maquiagem:** 4 degraus pelo nível (Leve / Completa / De festa / De ensaio) e a linha "Completa, feita às 20:10,
+    intacta" (o desgaste vai pra palavra no fim).
+  - **Cabelo:** penteado no título e o estado **Molhado / Úmido / Seco** como etiqueta (separa penteado de estado;
+    "Como secou" entra na linha da lavagem). Cuidados em **contagem até o próximo**, faixas como a do ciclo:
+    Lavagem (3 dias, "Lavar amanhã"), Hidratação ("Hidratar em 9 dias"), Pontas ("Cortar em 6 semanas"), Luzes
+    ("Retocar em 1 semana"); o estado na direita (3º dia, Em dia, Boas, Desbotando). Embaixo, a **ficha das
+    características** em três blocos: Corte (Reto), Cor (Castanho, com a amostra), Luzes (Douradas / Platinadas /
+    Rosadas, com a amostra). A linha "Rosa" separada some.
+  - **Unhas:** cor com a amostra, "Em gel" como etiqueta, faixa dos dias até refazer, "Feitas na Ophicina há 17 dias,
+    refazer em 4".
+  - **Peso:** linha dos últimos 30 dias com a faixa do limite da agência (56 kg) em vermelho, a pesagem da balança
+    como bolinha vazia e "Folga de 1,6 kg; na balança, 54,0 kg há 9 dias"; altura ao lado do número.
+- **Mundo:** sub-abas **Pessoas / Agenda / Lugares**. Agenda junta Acontecendo agora e Planos (cartões por dia, como o
+  Pensando). O desenho das pessoas e dos lugares fica.
+
+**Dados novos que o redesenho pede (só tela; ela não lê):** histórico de orgasmos (com o Patrick e sozinha), retrato
+diário do vínculo (pro tracinho e a variação), peso de cada dia, hora em que a excitação acendeu, caminho do humor
+(refeito de hora em hora pelo `EmotionEngine.feeling`, guardado no fim do dia). Tudo numa tabela `bastidores_hist`
+(chave, data e hora, valor JSON), migração nova.
+
+**Plano de implementação (depois do soak), na ordem:**
+1. **Histórico** (`migrations/0NN_bastidores_hist.sql` + `bastidores_hist.py`): gravar orgasmo, vínculo do dia, peso do
+   dia e o início da excitação; testes.
+2. **Moldura:** barra de baixo com os 5 ícones, sub-abas em pílula, cada tela com o seu loader (`webapp/app.js`,
+   `index.html`, `app.css`); a recarga de 30 s só da tela aberta.
+3. **Corpo:** `webapp_server.emocao_view` devolve as seções (agora, sono com os trechos do dia, ciclo com os 28 dias,
+   intimidade com vontade, excitação, fatores e calendário); componentes faixa, velocímetro e calendário.
+4. **Sentimentos:** grade 3×3 + caminho, Brincadeira e Bateria social, Sentindo agora por pessoa com força,
+   tendência e "Até resolver"; "Já passou hoje".
+5. **Motivos na origem:** catálogo dos motivos no padrão novo pra ele revisar (`emotion.DEFAULT_CAUSES`,
+   `appraise_event`, agenda viva, mundo), aplicado com teste comparando o prompt antes e depois.
+6. **Pensando + Planos do Mundo na origem:** títulos no infinitivo e "por volta das" em `agenda_viva`/`vontade`/
+   `calendar_world` (o Hoje e o prompt leem; conferir os dois), chance e etiquetas pelo `Disposicao.avaliar`, freela
+   pelo tipo.
+7. **Relacionamento:** variação e motivo pelo retrato diário e pelos episódios do Patrick; Pendente em lista.
+8. **Por fora:** teste da Humaaans × desenho próprio (mockup pra ele), moldes das peças, croqui, contagens do cabelo
+   e das unhas, linha do peso.
+9. **Mundo:** sub-abas e Agenda em cartões.
+10. **Catálogo:** textos novos de tela entram como leva nova pra ele; conferir no celular com o banco real
+    (miniapp-real) tela por tela.
+
+**Textos que eu decidi (pra ele revisar):** "Dormiu por volta de 7 horas e 45 minutos" / "Dormindo há 5 horas e 10
+minutos" (o cochilo só na faixa); "Menstruação em 4 dias"; "Último orgasmo: dia 3, sozinha"; "Excitada desde 21:40";
+etiquetas da vontade ("2 dias sem gozar", "Saudade do Patrick", "Fase fértil", "Cansaço", "Cólica", "Mágoa");
+"Já passou hoje"; "Desde 14:10" / "Desde ontem, 21:30"; Crescendo / Estável / Passando; "Relutante", "Desistiu";
+"Gravar um vídeo", "Fazer um ensaio fotográfico"; "Igual", "Desde sábado", "4 horas sem notícias"; "Pendente entre
+vocês"; "Molhado / Úmido / Seco"; "Lavar amanhã", "Hidratar em 9 dias", "Cortar em 6 semanas", "Retocar em 1
+semana", "refazer em 4"; "Folga de 1,6 kg; na balança, 54,0 kg há 9 dias"; Parte de cima / Parte de baixo /
+Acessório / Por baixo; sub-aba "Agenda" do Mundo; ícones `map-pin`, `heartbeat`, `hanger`, `building-bank`, `users`,
+`mood-*`, `zzz`, `mood-tongue`, `battery-3`, `heart`, `flame`, `shield-check`, `hourglass`, `heart-broken`,
+`briefcase`, `bulb`, `trending-up`, `minus`, `trending-down`, `lock`.
+
 ### Mundo fechado pro soak (28/09, noite, frente do mundo) ✅
 Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha, todas na recomendada):
 - **Lista de compras** (`lista_compras.py`): "vou colocar barrinhas na lista da semana" (08:52) passa a existir. O que

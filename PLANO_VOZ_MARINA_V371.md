@@ -89,6 +89,13 @@ Legenda: ✅ feito · 🟡 parcial · ⬜ pendente · ➖ superado
 
 ### Feito fora deste plano (auditorias sistêmicas — detalhes em `AUDITORIA_SISTEMICA_MARINA.md`)
 
+**05/10 — redesenho dos Bastidores planejado (frente de apps, sem código):** quase tudo é só tela. Duas mudanças
+nascem na origem e o prompt dela lê: os **motivos dos sentimentos** num padrão só (quem fez + verbo no passado + o
+quê; coisa dela sem sujeito; futuro com "Tem"; sem parênteses) e os **títulos dos planos no infinitivo** com "por
+volta das". Os dois entram com teste comparando o prompt antes e depois. Achado pra depois do soak (mundo e voz): ela
+está "um anjo" — ciúme sério dele passa em 1h30 sem mágoa e não acumula, TPM moderada, vínculo grudado em 92–94%.
+Plano no PLANO_WEBAPP, "Redesenho dos Bastidores — plano" (passos 5 e 6).
+
 **05/10 — banco dela e iFood da Ma planejados (frente de apps, sem código):** quando entrar, o prompt dela muda
 um pouco: saldo em conta + fatura aberta do cartão (quanto, quando fecha e vence), o aperto pela fatura (pede pro
 Patrick com o mesmo jeitinho) e o que ela pediu sozinha no iFood (o quê, quando chega). Plano no PLANO_WEBAPP,

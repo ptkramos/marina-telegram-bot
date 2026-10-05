@@ -2812,3 +2812,21 @@ Agência boutique da Lívia (fictícia)" (Uber do casting, 01/10) — `extrato._
 e o artigo sai errado; texto feio pro lote do soak. (2) Desde 26/09 ela não fez nenhum pedido de iFood pra ela (só
 recebeu os do Patrick); o iFood da Ma só enche com o "pedir sozinha". (3) O mercado da semana não lança no saldo
 dela (certo pela regra do pai), mas nada na tela diz quem pagou — resolvido pelo cartão do pai no plano.
+
+## Redesenho dos Bastidores, plano (05/10, frente de apps; sem código)
+
+Só planejamento. Fecha as 29 fichas "conversar" da leva 2 que não são do Dinheiro (abas, Por dentro, Por fora, Planos
+do Mundo). Mockups no chat, com a pré-visualização da cópia de 28/09 pra ver o desenho de hoje; nenhum banco novo
+veio pro PC. Decisões do Patrick no PLANO_WEBAPP, "Redesenho dos Bastidores — plano": barra de baixo com 5 ícones e
+sub-abas; Por dentro em Corpo / Sentimentos / Pensando / Relacionamento; **nada de "rótulo à esquerda, texto à
+direita"**, cada informação vira desenho com uma linha centralizada embaixo (faixa do sono e do ciclo, velocímetro da
+vontade e da excitação, calendário de orgasmos, grade 3×3 do humor com o caminho do dia, cartões do Pensando por dia
+com a chance de ir, barras do casal com o tracinho de ontem e a variação, croqui da roupa, contagens do cabelo e das
+unhas, linha do peso). O que eu decidi sozinho está na lista "Textos que eu decidi" do plano, mais a tabela
+`bastidores_hist` e a ordem dos 10 passos. **Achados no código:** (1) a barra "Excitação" do Corpo mostra a libido (a
+vontade de fundo); a excitação do momento (`intimacy.arousal`, o "No clima") é outro número e só aparecia como linha
+solta. (2) O mundo só guarda o último orgasmo (`climax_at`, `libido_release_at`); não há histórico. (3) Vínculo na
+produção (05/10, leitura): Carinho 0,94, Desejo 0,92, Segurança 0,92, Mágoa 0 (subiu em 03/10 e voltou): as barras
+mexem, mas grudam no alto com a conversa diária. (4) O ciúme sério dele ("desconfiou") dá chateação 0,2 que passa
+em ~1h30, sem mágoa nem Segurança, e não acumula; a TPM é "moderada" por decisão antiga. O Patrick sente ela "um anjo"
+— recalibrar foi pro "Depois do soak" (FRENTES). (5) Não existe desfile no `freela.JOBS` (o Patrick perguntou).

@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 05/10/2026, madrugada (planejados na frente de apps, sem código: o Lovense, o bloco "Em casa" do Hoje e o banco dela com o iFood da Ma — decisões e plano no PLANO_WEBAPP).
+_Atualizado em 05/10/2026 (planejados na frente de apps, sem código: o Lovense, o bloco "Em casa" do Hoje, o banco dela com o iFood da Ma e o **redesenho dos Bastidores** — decisões e plano no PLANO_WEBAPP).
 **Próximas conversas: segunda de manhã, "bora no soak, dia 6"** (relatório `soak/dia-2026-10-04.md`; texto feio
 achado na frente de apps pra entrar no lote: o extrato do Dinheiro mostra "Foi no Agência boutique da Lívia
 (fictícia)" no Uber do casting de 01/10 — o `extrato._lugar_do_uber` não tira o "(fictícia)" e o artigo sai errado; atenção: em 04/10 ela topou o Lovense na conversa, mas o mundo não tem o
@@ -113,7 +113,10 @@ bêbada** (/feedback de 30/09); **esquecer o aviso pelo sentimento** (03/10: o
 sorteio de 5% saiu e ela sempre cumpre; esquecer de verdade — empolgada com a amiga, bateria lá embaixo — é
 comportamento novo); **modo íntimo enxuto** (frente da voz, 03/10: no sexting, prompt sem o mundo inteiro — só onde
 ela está, roupa e ciclo —, sem as três listas de exemplos, e com o estado da cena guardado, como a Lilith; rever
-junto o degrau explícito, que só liga com tesão 0,70).
+junto o degrau explícito, que só liga com tesão 0,70); **recalibrar o vínculo, o ciúme e o ciclo** (Patrick, 05/10:
+"a Marina é um anjo na terra, não sei o quão realista isso está" — o ciúme sério dele dá chateação 0,2 que passa em
+~1h30, sem mágoa nem Segurança, e não acumula; menstruada ela só negou sexo; Carinho/Desejo/Segurança grudados em
+92–94% com a conversa diária; frente do mundo e da voz, junto com a confiança do Lovense).
 **Catálogo leva 2, o que é redesenho** (04/10): aba Dinheiro vira o extrato do banco dela (junto com o banco dela);
 Planos do Mundo e saídas por vontade do Na cabeça no infinitivo, na origem, com "por volta das" na hora; abas dos
 Bastidores com ícones e telas separadas; Sentindo agora (quando começou, sentimento por pessoa, motivo padronizado);
@@ -122,6 +125,7 @@ características, cor do cabelo × cor das luzes (as pontas rosa viram "Rosada" 
 texto maior** (Patrick, 04/10: "posicionar textos maiores nos locais certos" — ex.: "Aula de Projeto | e +2", sono
 em três linhas); barras do casal (texto e se estão mexendo); "No clima" e o lugar das
 barras (maquiagem perto do estado, chance de ir à aula). As 28 fichas "conversar" do banco têm a nota dele.
+**Planejado em 05/10 ✅** (seção 2, item 2b; PLANO_WEBAPP, "Redesenho dos Bastidores — plano").
 O que era "ver no uso real" (agenda viva, atraso, roupa, Instagram, coerência entre turnos) **é o próprio soak**.
 
 ---
@@ -229,6 +233,14 @@ círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
    da compra com quadro de bastidor, faixa "Só o Patrick vê isso" (cachê, dívida); chave Itaú | iFood com a aba
    Pedidos do iFood dela; mercado no cartão adicional do pai; ela pede sozinha pelo sentimento — PLANO_WEBAPP,
    "Banco dela e iFood da Ma na aba Dinheiro — plano". Código depois do soak: "bora na frente de apps: banco dela".
+2b. **Redesenho dos Bastidores** (as 48 fichas "conversar" da leva 2; as 19 do Dinheiro fecham com o banco dela).
+   **Planejado (05/10) ✅:** barra de baixo com 5 ícones; Por dentro em Corpo / Sentimentos / Pensando /
+   Relacionamento; nada de "rótulo à esquerda, texto à direita" — desenho + linha centralizada (sono e ciclo em
+   faixa, velocímetro da vontade e da excitação, calendário de orgasmos, humor em grade 3×3 com o caminho do dia,
+   sentimentos por pessoa com força e tendência, Pensando em cartões por dia com a chance de ir, barras do casal com
+   o tracinho de ontem, croqui da roupa, contagens do cabelo e das unhas, linha do peso); Mundo com Pessoas /
+   Agenda / Lugares — PLANO_WEBAPP, "Redesenho dos Bastidores — plano" (10 passos). Código depois do soak: "bora na
+   frente de apps: redesenho dos Bastidores, passo 1".
 3. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).
 
 ## 3. Voz e chat — skill `frente-voz`
