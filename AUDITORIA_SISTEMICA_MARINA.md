@@ -2830,3 +2830,10 @@ produção (05/10, leitura): Carinho 0,94, Desejo 0,92, Segurança 0,92, Mágoa 
 mexem, mas grudam no alto com a conversa diária. (4) O ciúme sério dele ("desconfiou") dá chateação 0,2 que passa
 em ~1h30, sem mágoa nem Segurança, e não acumula; a TPM é "moderada" por decisão antiga. O Patrick sente ela "um anjo"
 — recalibrar foi pro "Depois do soak" (FRENTES). (5) Não existe desfile no `freela.JOBS` (o Patrick perguntou).
+**Mundo (mesma conversa, rodada a pedido dele):** Pessoas em órbita pela proximidade, Agenda (Acontecendo agora +
+Planos por dia) e Lugares em mapa (Leaflet/OpenStreetMap; os lugares não têm coordenada no mundo). Leitura na
+produção (05/10): `social_relationships` com confiança sempre igual à proximidade (Bia 0,93/0,93, pai 0,93/0,93),
+tensão zero pra todo mundo e `contact_frequency` contando desde o reset (o "28 vezes no mês" da Bia não é do mês) —
+pro "Depois do soak". **Bug latente:** o "Rolando agora" mostra o título de toda história aberta sem olhar o que ela
+já contou nem o que é segredo; na produção só existe 1 história, fechada (nada vazou) — o filtro entra no lote do
+soak. Regra do Patrick pro redesenho: nada de fofoca não contada nem segredo na tela.

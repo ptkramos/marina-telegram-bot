@@ -1110,8 +1110,20 @@ curta centralizada embaixo, como a faixa do ciclo, que ele chamou de "revoluçã
     refazer em 4".
   - **Peso:** linha dos últimos 30 dias com a faixa do limite da agência (56 kg) em vermelho, a pesagem da balança
     como bolinha vazia e "Folga de 1,6 kg; na balança, 54,0 kg há 9 dias"; altura ao lado do número.
-- **Mundo:** sub-abas **Pessoas / Agenda / Lugares**. Agenda junta Acontecendo agora e Planos (cartões por dia, como o
-  Pensando). O desenho das pessoas e dos lugares fica.
+- **Mundo:** sub-abas **Pessoas / Agenda / Lugares** (rodada própria no fim da mesma conversa, ele perguntou "em
+  mundo a gente não mexeu?").
+  - **Pessoas em órbita:** a Marina no centro e as pessoas em anéis pela **proximidade** (`social_relationships.
+    closeness`, que existia e nunca apareceu); cor pela última conversa (hoje/ontem forte, na semana clara, faz tempo
+    só contorno); borda rosa quando ela tem sentimento ativo pela pessoa; foto (`webapp/avatars/`) ou iniciais. Toca
+    na bolinha e abre o cartão embaixo: nome, quem é e a linha centralizada ("Falaram ontem às 19:05, aborrecida com
+    ela").
+  - **Agenda:** "Acontecendo agora" em cartões com quem está envolvido em bolinhas e "Desde sábado" / "Até quarta";
+    os Planos em cartões por dia, como o Pensando. **Regra do Patrick: nada de fofoca não contada nem segredo** — só
+    entra história que ela já contou pra ele (`social_news_shared`) e nunca o que é `CONFIDENTIAL` no
+    `knowledge_items`.
+  - **Lugares em mapa:** Leaflet com OpenStreetMap (grátis), a casa marcada e um alfinete por lugar do mês com o
+    número de vezes; toca e abre o cartão ("2 vezes, a última ontem com a Júlia"). Pede cadastrar a coordenada de
+    cada lugar uma vez (`world_places` não tem).
 
 **Dados novos que o redesenho pede (só tela; ela não lê):** histórico de orgasmos (com o Patrick e sozinha), retrato
 diário do vínculo (pro tracinho e a variação), peso de cada dia, hora em que a excitação acendeu, caminho do humor
@@ -1135,7 +1147,8 @@ diário do vínculo (pro tracinho e a variação), peso de cada dia, hora em que
 7. **Relacionamento:** variação e motivo pelo retrato diário e pelos episódios do Patrick; Pendente em lista.
 8. **Por fora:** teste da Humaaans × desenho próprio (mockup pra ele), moldes das peças, croqui, contagens do cabelo
    e das unhas, linha do peso.
-9. **Mundo:** sub-abas e Agenda em cartões.
+9. **Mundo:** sub-abas; órbita (`SocialDay.world_panel` passa a mandar a proximidade); Agenda em cartões com o
+   filtro do contado/segredo; coordenadas dos lugares (cadastro único, sem API paga) e o mapa com Leaflet.
 10. **Catálogo:** textos novos de tela entram como leva nova pra ele; conferir no celular com o banco real
     (miniapp-real) tela por tela.
 

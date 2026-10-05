@@ -95,6 +95,8 @@ quê; coisa dela sem sujeito; futuro com "Tem"; sem parênteses) e os **títulos
 volta das". Os dois entram com teste comparando o prompt antes e depois. Achado pra depois do soak (mundo e voz): ela
 está "um anjo" — ciúme sério dele passa em 1h30 sem mágoa e não acumula, TPM moderada, vínculo grudado em 92–94%.
 Plano no PLANO_WEBAPP, "Redesenho dos Bastidores — plano" (passos 5 e 6).
+No Mundo, a regra dele vale pra tela e pra fala: o que é segredo de amiga ou fofoca que ela não contou não aparece
+nos Bastidores (o prompt já trata o segredo com o `SECRET_NOTE`).
 
 **05/10 — banco dela e iFood da Ma planejados (frente de apps, sem código):** quando entrar, o prompt dela muda
 um pouco: saldo em conta + fatura aberta do cartão (quanto, quando fecha e vence), o aperto pela fatura (pede pro

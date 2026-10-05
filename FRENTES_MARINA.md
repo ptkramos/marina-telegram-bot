@@ -7,7 +7,9 @@ O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_M
 _Atualizado em 05/10/2026 (planejados na frente de apps, sem código: o Lovense, o bloco "Em casa" do Hoje, o banco dela com o iFood da Ma e o **redesenho dos Bastidores** — decisões e plano no PLANO_WEBAPP).
 **Próximas conversas: segunda de manhã, "bora no soak, dia 6"** (relatório `soak/dia-2026-10-04.md`; texto feio
 achado na frente de apps pra entrar no lote: o extrato do Dinheiro mostra "Foi no Agência boutique da Lívia
-(fictícia)" no Uber do casting de 01/10 — o `extrato._lugar_do_uber` não tira o "(fictícia)" e o artigo sai errado; atenção: em 04/10 ela topou o Lovense na conversa, mas o mundo não tem o
+(fictícia)" no Uber do casting de 01/10 — o `extrato._lugar_do_uber` não tira o "(fictícia)" e o artigo sai errado; **bug latente pro mesmo lote** (achado em 05/10 no redesenho): o "Rolando agora" do Mundo
+mostra o título de toda história aberta sem olhar se ela já contou (`social_news_shared`) nem se é segredo
+(`knowledge_items` CONFIDENTIAL) — hoje não há nenhuma aberta, então nada vazou; filtrar antes que abra a próxima; atenção: em 04/10 ela topou o Lovense na conversa, mas o mundo não tem o
 brinquedo — se ela disser que está usando, é incoerência a anotar; nas fotos da pose do tripé, conferir se sai mão a mais — ver Auditoria, "Lovense, teste de fotos"). **Soak: dia 1 = terça 29/09.** Aberto
 pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente da voz: o modo íntimo desliga durante o banho
 no meio do sexting; ela sumir 2h30 depois de "vou te prender aqui a tarde toda" (M4 do dia 5); o Silo (M5)._
@@ -116,7 +118,9 @@ ela está, roupa e ciclo —, sem as três listas de exemplos, e com o estado da
 junto o degrau explícito, que só liga com tesão 0,70); **recalibrar o vínculo, o ciúme e o ciclo** (Patrick, 05/10:
 "a Marina é um anjo na terra, não sei o quão realista isso está" — o ciúme sério dele dá chateação 0,2 que passa em
 ~1h30, sem mágoa nem Segurança, e não acumula; menstruada ela só negou sexo; Carinho/Desejo/Segurança grudados em
-92–94% com a conversa diária; frente do mundo e da voz, junto com a confiança do Lovense).
+92–94% com a conversa diária; frente do mundo e da voz, junto com a confiança do Lovense; achados do Mundo na
+mesma leva: em `social_relationships` a confiança é sempre igual à proximidade, a tensão é zero pra todo mundo
+mesmo depois de ela se estranhar com a Bia, e o "N vezes no mês" é a contagem desde o reset de 26/09, não do mês).
 **Catálogo leva 2, o que é redesenho** (04/10): aba Dinheiro vira o extrato do banco dela (junto com o banco dela);
 Planos do Mundo e saídas por vontade do Na cabeça no infinitivo, na origem, com "por volta das" na hora; abas dos
 Bastidores com ícones e telas separadas; Sentindo agora (quando começou, sentimento por pessoa, motivo padronizado);
@@ -238,8 +242,8 @@ círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
    Relacionamento; nada de "rótulo à esquerda, texto à direita" — desenho + linha centralizada (sono e ciclo em
    faixa, velocímetro da vontade e da excitação, calendário de orgasmos, humor em grade 3×3 com o caminho do dia,
    sentimentos por pessoa com força e tendência, Pensando em cartões por dia com a chance de ir, barras do casal com
-   o tracinho de ontem, croqui da roupa, contagens do cabelo e das unhas, linha do peso); Mundo com Pessoas /
-   Agenda / Lugares — PLANO_WEBAPP, "Redesenho dos Bastidores — plano" (10 passos). Código depois do soak: "bora na
+   o tracinho de ontem, croqui da roupa, contagens do cabelo e das unhas, linha do peso); Mundo com Pessoas em
+   órbita pela proximidade, Agenda sem fofoca não contada nem segredo, Lugares em mapa — PLANO_WEBAPP, "Redesenho dos Bastidores — plano" (10 passos). Código depois do soak: "bora na
    frente de apps: redesenho dos Bastidores, passo 1".
 3. Fotos provisórias de marca e logos marcados "conferir"; o X dela (Etapa 5, depois do Instagram).
 
