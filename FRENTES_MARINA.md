@@ -4,8 +4,8 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 05/10/2026 (planejados na frente de apps, sem código: o Lovense, o bloco "Em casa" do Hoje, o banco dela com o iFood da Ma e o **redesenho dos Bastidores** — decisões e plano no PLANO_WEBAPP).
-**Próximas conversas: segunda de manhã, "bora no soak, dia 6"** (relatório `soak/dia-2026-10-04.md`; texto feio
+_Atualizado em 05/10/2026 (planejados na frente de apps, sem código: o Lovense, o bloco "Em casa" do Hoje, o banco dela com o iFood da Ma e o **redesenho dos Bastidores**, Mundo incluído — decisões e plano no PLANO_WEBAPP).
+**Próximas conversas: segunda de manhã, "bora no soak, dia 6"**; depois, planejamento liberado (só plano, sem código): **"bora na frente do mundo: recalibrar a Marina"** (seção 1) (relatório `soak/dia-2026-10-04.md`; texto feio
 achado na frente de apps pra entrar no lote: o extrato do Dinheiro mostra "Foi no Agência boutique da Lívia
 (fictícia)" no Uber do casting de 01/10 — o `extrato._lugar_do_uber` não tira o "(fictícia)" e o artigo sai errado; **bug latente pro mesmo lote** (achado em 05/10 no redesenho): o "Rolando agora" do Mundo
 mostra o título de toda história aberta sem olhar se ela já contou (`social_news_shared`) nem se é segredo
@@ -136,6 +136,15 @@ O que era "ver no uso real" (agenda viva, atraso, roupa, Instagram, coerência e
 
 ## 1. Mundo e agenda — skill `frente-mundo`
 **Abertura:** "bora na frente do mundo: fechar pro soak" (freio: só o item 3 da seção 0)
+**Próxima conversa desta frente (05/10, só plano, freio do soak): "bora na frente do mundo: recalibrar a Marina".**
+O Patrick sente ela "um anjo na terra": o ciúme sério dele ("desconfiou") dá chateação 0,2 que passa em ~1h30, sem
+mágoa nem Segurança, e não acumula; menstruada ela só negou sexo (TPM "moderada" por decisão antiga); Carinho,
+Desejo e Segurança grudam em 92–94% com a conversa diária (meia-vida 2–4 dias, +0,01 a +0,03 por evento); em
+`social_relationships` a confiança é cópia da proximidade, a tensão é sempre 0 (nem depois de se estranhar com a
+Bia) e `contact_frequency` conta desde o reset. Juntar com a confiança do Lovense (PLANO_WEBAPP, "Lovense pelo Mini
+App — plano") e a memória "consequência no relacionamento" (desrespeito vira bronca, confiança cai, só volta
+conversando). Decidir com ele, por múltipla escolha: o que acumula, o que o ciclo muda, a nova escala do vínculo e
+como o prompt mostra. Detalhes e números: AUDITORIA, "Redesenho dos Bastidores, plano".
 
 **Pronto (26/09):** agenda única (planejado, vontade, convite → mesma agenda com etapas); academia e passeio do
 Milo decididos uma vez por dia; mercado e médico como itens (Bradesco Saúde, Samaritano/Novamed); tempo livre
