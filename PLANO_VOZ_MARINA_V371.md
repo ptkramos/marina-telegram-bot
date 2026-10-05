@@ -1678,3 +1678,7 @@ app, a palavra dita faz ele ter que parar, "pode voltar" libera, "tirei" desliga
 não respeitou reconstrói a confiança. Ela goza pelo corpo (o turno avisa) ou pela fala; com a ideia sendo dela e ele
 sumido do app, ela cutuca. Detalhe no PLANO_WEBAPP, "passo 5a feito".
 No ar desde seg 05/10, 19:28 (corte do relatório do dia 7).
+
+**05/10, noite — a encomenda do Lovense:** até chegar, o prompt diz que o Patrick encomendou e que ela ainda não está
+com eles (não diz que abriu, colocou ou testou); quando ele avisa "chegou", o Seu Jorge interfona e ela manda uma
+iniciativa nova (`lovense_chegou`) contando que pegou e pôs pra carregar. Detalhe na Auditoria, "a encomenda chega".

@@ -4209,6 +4209,13 @@ async def process_incoming_batch(
         except Exception:
             logger.exception("unhas.observe.error")
         try:
+            # 05/10 (Patrick): "quando confirmarem a entrega eu te aviso pra vc ir pegar lá embaixo" — o aviso dele
+            # faz o Seu Jorge interfonar com o Lovense em uns minutos.
+            from lovense import Lovense
+            Lovense(memory_manager.db).observe_patrick(texto_usuario, datetime.now())
+        except Exception:
+            logger.exception("lovense.entrega.observe.error")
+        try:
             # 26/09 (Patrick): ele respondeu o penteado/corte, ou sugeriu mudança no cabelo ("fica linda de franja").
             from cabelo import Cabelo
             Cabelo(memory_manager.db).observe_patrick(texto_usuario, datetime.now())
@@ -4646,6 +4653,10 @@ _PROACTIVE_INSTRUCTIONS = {
                                   "conte que chegou e reaja à comida do seu jeito (gratidão, dengo, fome). Se ele "
                                   "escolheu diferente do que você pediu, pode comentar. Não invente detalhe além "
                                   "do que está aqui."),
+    # 05/10: chegou o Lovense que ele encomendou (ele sabia que vinha; ela estava curiosa).
+    'lovense_chegou': ("{detail} Ele sabia que ia chegar hoje e você estava curiosa (e com vontade de testar). Conte "
+                       "pra ele do seu jeito, numa mensagem curtinha (curiosidade, malícia, provocação). Não diga que "
+                       "já colocou nem testou. Não invente detalhe além do que está aqui."),
     # 25/09: ela mandou algo de surpresa pro Patrick (pedido_dela.py); a mensagem leva o link de acompanhar.
     'surpresa_pra_ele': ("{detail} Conte pra ele numa mensagem curtinha, do seu jeito (carinho, um pouco de marra, "
                          "mistério: 'fiz uma coisinha pra você', 'acompanha aí', 'abre a porta daqui a pouco'). "
@@ -5663,6 +5674,47 @@ async def _promessa_foto_tick(application: Application, now: datetime) -> None:
         logger.info("promessa_foto.cumprida kind=%s fotos=%s", p["kind"], len(images))
 
 
+def _pode_receber_entrega(now: datetime) -> tuple[bool, str]:
+    """Ela consegue descer pra pegar agora? (em casa, acordada, fora do banho) — o mesmo do presente do iFood."""
+    from meals import Meals
+    from sleep_plan import SleepPlan
+    from world_repository import WorldStateRepository
+    asleep = SleepPlan(memory_manager.db).is_asleep(now)
+    activity = ((WorldStateRepository(memory_manager.db).latest() or {}).get("activity") or "").casefold()
+    shower = any(w in activity for w in ("banho", "chuveiro"))
+    home = Meals(memory_manager.db)._at_home()
+    why = "dormindo" if asleep else "banho" if shower else "" if home else "fora"
+    return home and not asleep and not shower, why
+
+
+async def _lovense_entrega_tick(application: Application, now: datetime) -> None:
+    """05/10: a encomenda do Lovense chega (o Seu Jorge interfona) e ela conta pra ele quando pega."""
+    from lovense import Lovense
+    lv = Lovense(memory_manager.db)
+    e = await asyncio.to_thread(lv.entrega)
+    if e.get("status") in ("a_caminho", "portaria") and datetime.fromisoformat(e["chega_em"]) <= now:
+        pode, why = await asyncio.to_thread(_pode_receber_entrega, now)
+        await asyncio.to_thread(lv.entrega_tick, now, pode_pegar=pode, por_que=why)
+    e = await asyncio.to_thread(lv.entrega_a_anunciar)
+    if not e:
+        return
+    detail = ("O Lovense que o Patrick encomendou pra você chegou: o Lush e o Hush, rosa"
+              + ({"fora": "; chegou quando você estava fora e ficou na portaria com o Seu Jorge, você pegou agora "
+                          "que chegou em casa",
+                  "banho": "; chegou quando você estava no banho e ficou na portaria com o Seu Jorge, você desceu "
+                           "pra pegar agora",
+                  "dormindo": "; chegou enquanto você dormia e ficou na portaria, você pegou agora"}.get(
+                  e.get("esperou") or "", "; o Seu Jorge interfonou e você desceu pra pegar"))
+              + ". Você abriu a caixa no quarto e pôs os dois pra carregar (vieram com a carga de fábrica, dá pra "
+                "usar já). O app dele ainda não conecta: só quando você colocar.")
+    text = await asyncio.to_thread(_proactive_text, 'lovense_chegou', detail, "Chegou, amor 👀 tô abrindo aqui")
+    sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
+    if isinstance(getattr(sent, 'message_id', None), int) and sent.message_id > 0:
+        memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
+        lv.marcar_anunciada()
+        logger.info("lovense.entrega.anunciada")
+
+
 async def delivery_gift_routine(application: Application):
     async with INITIATIVE_LOCK:
         await _delivery_gift_routine(application)
@@ -5677,6 +5729,10 @@ async def _delivery_gift_routine(application: Application):
         await _pedido_dela_tick(application, datetime.now())
     except Exception as exc:
         logger.error('Erro no pedido da Marina pro Patrick: %s', exc, exc_info=True)
+    try:
+        await _lovense_entrega_tick(application, datetime.now())
+    except Exception as exc:
+        logger.error('Erro na entrega do Lovense: %s', exc, exc_info=True)
     try:
         await _promessa_foto_tick(application, datetime.now())
     except Exception as exc:

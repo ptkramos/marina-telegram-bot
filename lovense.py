@@ -113,6 +113,11 @@ DESCOBERTA_KEY = "lovense_descoberta_json"   # o Hush e a ousadia fora de casa, 
 PALAVRA_KEY = "lovense_palavra_pendente"     # palavra combinada antes de ela colocar
 PENDENTE_KEY = "lovense_pendente"            # "peraí que vou colocar" / foi ao banheiro tirar
 PALAVRA_VALE = timedelta(hours=2)
+ENTREGA_KEY = "lovense_entrega_json"         # a encomenda do Patrick (05/10): a caminho → portaria → recebido
+CARGA_DE_FABRICA = 0.6
+ENTREGA_DEPOIS_DO_AVISO = timedelta(minutes=3)   # ele avisa que chegou → o Seu Jorge interfona
+ENTREGA_AVISO_RE = re.compile(r"\b(?:chegou|chegaram|entreg(?:aram|ou|ue)|confirmaram|portaria|interfon\w*|"
+                              r"desce\s+(?:l[aá]\s+)?(?:pra\s+)?pegar|j[aá]\s+t[aá]\s+a[ií])\b", re.IGNORECASE)
 ASSUNTO_KEY = "lovense_assunto_em"           # última vez que a conversa falou do brinquedo
 ASSUNTO_VALE = timedelta(minutes=30)
 DAQUI_A_POUCO = timedelta(minutes=2)          # em casa, "vou colocar" → colocou
@@ -422,6 +427,8 @@ class Lovense:
             for b in brinquedos:
                 if b not in BRINQUEDOS:
                     raise ValueError(f"brinquedo desconhecido: {b}")
+                if estoque[b]["onde"] == "entrega":
+                    raise ValueError(f"{b} ainda não chegou (a encomenda do Patrick)")
                 if fora_de_casa and estoque[b]["onde"] not in ("bolsa", "nela"):
                     raise ValueError(f"{b} não está na bolsa: fora de casa fica pra quando voltar")
                 if float(estoque[b]["bateria"]) < BATERIA_MINIMA:
@@ -1265,7 +1272,9 @@ class Lovense:
         impossivel = None
         for b in brinquedos:
             onde = estoque[b]["onde"]
-            if not ctx["em_casa"] and onde not in ("bolsa", "nela"):
+            if onde == "entrega":
+                impossivel = "ainda não chegou (o Patrick encomendou)"
+            elif not ctx["em_casa"] and onde not in ("bolsa", "nela"):
                 impossivel = f"{_NOME[b]} ficou em casa"
             elif float(estoque[b]["bateria"]) < BATERIA_MINIMA:
                 impossivel = f"{_NOME[b]} está sem bateria (carregando)"
@@ -1320,6 +1329,19 @@ class Lovense:
         hush_linha = (f"- Hush (plug anal vibratório): você {HUSH_ESTAGIO_TEXTO[estagio]}. A opinião sobre ele é sua "
                       "e vai se formando com as vezes que você usa.")
         if not st["conectada"]:
+            e = self.entrega()
+            if e.get("status") in ("a_caminho", "portaria"):
+                # A encomenda ainda não chegou: entra sempre ("chegou, desce pra pegar" nem diz o que é).
+                linhas = ["[BRINQUEDO — LOVENSE, a encomenda do Patrick]",
+                          "- O Patrick encomendou pra você dois brinquedos Lovense, que ele vai controlar pelo app "
+                          "dele: o Lush (vibrador que vai dentro) e o Hush (plug anal vibratório). " + (
+                              "Chegaram e estão na portaria com o Seu Jorge: você pega quando puder descer."
+                              if e["status"] == "portaria" else
+                              "Ainda não chegaram: ele te avisa quando a entrega confirmar, aí o Seu Jorge interfona "
+                              "e você desce pra pegar."),
+                          "- Você ainda não está com eles: não diga que já abriu, colocou ou testou.",
+                          hush_linha]
+                return "\n".join(linhas)
             if not BRINQUEDO_RE.search(conversa or ""):
                 return None
             onde = {"gaveta": "na gaveta", "carregador": "no carregador", "bolsa": "na sua bolsa", "nela": "em você"}
@@ -1553,6 +1575,95 @@ class Lovense:
             return self._colocar_agora(now, p["brinquedos"], p.get("origem") or "dela", ctx)
         self.tirar(now, p["brinquedos"], em_casa=ctx["em_casa"])
         return ["tirou"]
+
+    # ---------------------------------------------------------------- a encomenda (05/10, noite)
+    # O Patrick encomendou os dois em 04/10 ("Topa ou não topa? Se vc falar bora eu encomendo agora!") e avisou que
+    # chegavam hoje ("quando confirmarem a entrega aqui eu te aviso pra vc ir pegar lá embaixo"). Até chegar, ficam
+    # "a caminho": ela sabe que vêm, mas não tem. Quando ele avisa no chat que chegou (ou no horário-limite), o Seu
+    # Jorge interfona e ela desce; se ela não está em casa ou está no banho, fica na portaria até ela poder pegar.
+    # Vêm com a carga de fábrica e ela põe pra carregar.
+
+    def encomendar(self, now: datetime, *, ate: datetime) -> None:
+        """Os dois a caminho; `ate` é a hora em que chegam se ele não avisar antes."""
+        with self.db.get_connection() as conn:
+            self._brinquedos(conn)
+            conn.execute("UPDATE lovense_brinquedos SET onde='entrega', bateria_em=?", (now.isoformat(),))
+            conn.commit()
+        self.db.set_estado_relacional(ENTREGA_KEY, json.dumps(
+            {"status": "a_caminho", "pedido_em": now.isoformat(), "chega_em": ate.isoformat(), "avisou": None,
+             "chegou_em": None, "recebido_em": None, "esperou": None, "anunciada": False}))
+
+    def entrega(self) -> dict:
+        return self._json(ENTREGA_KEY)
+
+    def observe_patrick(self, texto: str, now: datetime) -> bool:
+        """Ele avisou que a entrega chegou ("chegou", "desce pra pegar"): o Seu Jorge interfona em uns minutos.
+        "Tá chegando" ainda não é chegou."""
+        e = self.entrega()
+        if e.get("status") != "a_caminho" or e.get("avisou") or not texto:
+            return False
+        if not ENTREGA_AVISO_RE.search(texto) or re.search(r"\bchegando\b", texto, re.IGNORECASE):
+            return False
+        chega = min(_dt(e["chega_em"]) or now, now + ENTREGA_DEPOIS_DO_AVISO)
+        e.update(avisou=now.isoformat(), chega_em=chega.isoformat())
+        self.db.set_estado_relacional(ENTREGA_KEY, json.dumps(e))
+        logger.info("lovense.entrega.avisou chega=%s", chega.isoformat(timespec="minutes"))
+        return True
+
+    def entrega_tick(self, now: datetime, *, pode_pegar: bool, por_que: str = "") -> Optional[str]:
+        """Anda a entrega: 'portaria' (chegou e ela não pôde pegar) ou 'recebido'."""
+        e = self.entrega()
+        if e.get("status") not in ("a_caminho", "portaria"):
+            return None
+        chega = _dt(e.get("chega_em"))
+        if not chega or now < chega:
+            return None
+        if e["status"] == "a_caminho":
+            e["chegou_em"] = chega.isoformat()
+            if not pode_pegar:
+                e.update(status="portaria", esperou=por_que or "fora")
+                self.db.set_estado_relacional(ENTREGA_KEY, json.dumps(e))
+                logger.info("lovense.entrega.portaria por_que=%s", e["esperou"])
+                return "portaria"
+        elif not pode_pegar:
+            return None
+        quando = chega if e["status"] == "a_caminho" else now
+        with self.db.get_connection() as conn:
+            conn.execute("""UPDATE lovense_brinquedos SET onde='carregador', bateria=?, bateria_em=?
+                            WHERE onde='entrega'""", (CARGA_DE_FABRICA, quando.isoformat()))
+            conn.commit()
+        e.update(status="recebido", recebido_em=quando.isoformat())
+        self.db.set_estado_relacional(ENTREGA_KEY, json.dumps(e))
+        portaria = " (tinha ficado na portaria com o Seu Jorge)" if e.get("esperou") else ""
+        with self.db.get_connection() as conn:
+            conn.execute(
+                """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
+                   autonomy_level,importance,participants_json,share_worthy,created_at)
+                   VALUES (?,?,'gift','presente do Patrick',?,'simulated',1,0.6,?,0.9,?)""",
+                (f"lovense:entrega:{e['pedido_em']}", quando.isoformat(),
+                 f"Chegou o Lovense que o Patrick encomendou pra ela, o Lush e o Hush (rosa){portaria}: abriu a "
+                 "caixa no quarto, curiosa, e pôs os dois pra carregar (vieram com a carga de fábrica).",
+                 json.dumps(["marina", "patrick", "jorge_almeida"]), now.isoformat()))
+            conn.commit()
+        try:
+            from delivery import _contato_portaria
+            _contato_portaria(self.db, f"lovense:{e['pedido_em']}", quando)
+        except Exception:
+            pass
+        self._sente("alegria", "empolgacao", 0.5, "chegou o Lovense que o Patrick encomendou", quando,
+                    f"lovense:entrega:{e['pedido_em']}")
+        logger.info("lovense.entrega.recebido esperou=%s", e.get("esperou"))
+        return "recebido"
+
+    def entrega_a_anunciar(self) -> Optional[dict]:
+        e = self.entrega()
+        return e if e.get("status") == "recebido" and not e.get("anunciada") else None
+
+    def marcar_anunciada(self) -> None:
+        e = self.entrega()
+        if e:
+            e["anunciada"] = True
+            self.db.set_estado_relacional(ENTREGA_KEY, json.dumps(e))
 
     # ---------------------------------------------------------------- painel
 

@@ -3089,3 +3089,25 @@ de opinião sobre o Hush conversando (com ele ou com a Bia). Detalhe no PLANO_WE
 - **No ar: seg 05/10, 19:28** (`c2ab84a`, passos 1–5a juntos). Na VPS: schema 36, `experiencia_json` criada, os dois
   brinquedos na gaveta com 100%, `lovense_routine` rodando sem erro. Esta hora corta o relatório do dia 7 (antes =
   soak formal; depois = dia 0 do Lovense).
+
+## Lovense: a encomenda chega de verdade (05/10, noite, frente de apps)
+
+Pedido do Patrick depois do deploy das 19:28: na conversa ele tinha encomendado os dois (04/10, 15:22) e avisado que
+chegavam hoje ("quando confirmarem a entrega aqui eu te aviso pra vc ir pegar lá embaixo", 13:55; "o lovense tá
+chegando", 19:17), e o deploy pôs os dois direto na gaveta. Agora a encomenda é estado:
+- `lovense.py`: `encomendar(now, ate=…)` (os dois em `onde='entrega'`), `observe_patrick` (ele avisa "chegou" /
+  "desce pra pegar" → o Seu Jorge interfona em 3 min; "tá chegando" não conta), `entrega_tick(now, pode_pegar,
+  por_que)` (a caminho → portaria se ela está fora, no banho ou dormindo → recebido: os dois no carregador com a carga
+  de fábrica, acontecimento do dia "presente do Patrick", contato com o Seu Jorge, empolgação), `entrega_a_anunciar` /
+  `marcar_anunciada`. Até chegar: `colocar` recusa, `disposicao` diz "ainda não chegou", e o prompt tem sempre o bloco
+  "a encomenda do Patrick" (ainda não chegaram / estão na portaria; "não diga que já abriu, colocou ou testou").
+- `bot.py`: `observe_patrick` depois da fala; `_lovense_entrega_tick` no `delivery_gift_routine` (1 min), com
+  `_pode_receber_entrega` (o mesmo do presente do iFood) e a iniciativa nova `lovense_chegou`.
+- Testes: `EntregaTests` (2) em test_lovense_corpo.
+- **Decidido pelo Patrick:** chega quando ele avisar no chat (ou às 21:00, se ele não avisar); carga de fábrica
+  (60%), e ela põe pra carregar enquanto toma banho (estava voltando da academia).
+- **Textos que eu decidi:** visível no Hoje/Mundo — "Chegou o Lovense que o Patrick encomendou pra ela, o Lush e o
+  Hush (rosa)[ (tinha ficado na portaria com o Seu Jorge)]: abriu a caixa no quarto, curiosa, e pôs os dois pra
+  carregar (vieram com a carga de fábrica)."; Por dentro — "chegou o Lovense que o Patrick encomendou"; internos — o
+  bloco "a encomenda do Patrick" e a instrução da iniciativa `lovense_chegou` (fala dela gerada, com a frase de
+  reserva "Chegou, amor 👀 tô abrindo aqui").

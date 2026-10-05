@@ -1081,7 +1081,7 @@ ninguém pode perceber. O tesão é de verdade, mas nada de cama, gaveta, se toc
 (combinar → "pronto. tá dentro" acende → a palavra para → "pode voltar" → "tirei" apaga → a conversa da confiança
 fecha a pendência; "imagina se eu colocasse" não faz nada). Na pré-visualização, a saudade dele contava como briga
 e ela tirava — corrigido.
-**No ar desde seg 05/10, 19:28** (`c2ab84a`; corte do relatório do dia 7). **Fica pro 5b:** ela propor (tesão + ocasião + confiança + curiosidade; a novidade cansa), levar o Lush na bolsa
+**No ar desde seg 05/10, 19:28** (`c2ab84a`; corte do relatório do dia 7). **A encomenda (05/10, noite, pedido dele):** em vez de nascerem na gaveta, os dois chegam pela entrega que ele combinou na conversa — a caminho até ele avisar "chegou" (ou 21:00), o Seu Jorge interfona, portaria se ela está fora ou no banho, e ela recebe com a carga de fábrica e põe pra carregar (Auditoria, "a encomenda chega"). **Fica pro 5b:** ela propor (tesão + ocasião + confiança + curiosidade; a novidade cansa), levar o Lush na bolsa
 quando sai sabendo que pode rolar, usar sozinha (o `tempo_livre` com o brinquedo), mudar de opinião sobre o Hush
 conversando (com ele ou com a Bia) e a amiga perceber quando ela goza perto. Depois: passo 6 (fotos e áudio) e 7
 (Bastidores e catálogo de textos).

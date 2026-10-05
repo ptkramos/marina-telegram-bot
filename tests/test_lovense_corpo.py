@@ -298,3 +298,43 @@ class PromptTests(LovenseBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EntregaTests(LovenseBase):
+    """05/10 (Patrick): ele encomendou e avisa no chat quando chegar; até lá ela sabe que vem, mas não tem."""
+
+    def test_a_caminho_ele_avisa_portaria_e_recebe(self):
+        from lovense import CARGA_DE_FABRICA
+        self.lv.encomendar(T0, ate=T0 + timedelta(hours=2))
+        with self.assertRaises(ValueError):
+            self.lv.colocar(s(10), ["lush"])
+        self.assertEqual(self.lv.disposicao(s(10), ["lush"], feeling=com(libido=0.9))["impossivel"],
+                         "ainda não chegou (o Patrick encomendou)")
+        with patch("lovense._feeling", return_value=com()):
+            p = self.lv.prompt(s(10), "HOME_RELAXING", "e aí")
+        self.assertIn("Ainda não chegaram", p)
+        self.assertFalse(self.lv.observe_patrick("o lovense tá chegando", s(20)), "tá chegando ainda não é chegou")
+        self.assertTrue(self.lv.observe_patrick("chegou! desce pra pegar", s(30)))
+        self.assertIsNone(self.lv.entrega_tick(s(60), pode_pegar=True))
+        self.assertEqual(self.lv.entrega_tick(s(240), pode_pegar=False, por_que="banho"), "portaria")
+        with patch("lovense._feeling", return_value=com()):
+            self.assertIn("portaria com o Seu Jorge", self.lv.prompt(s(250), "SHOWER", ""))
+        self.assertIsNone(self.lv.entrega_tick(s(300), pode_pegar=False, por_que="banho"))
+        self.assertEqual(self.lv.entrega_tick(s(600), pode_pegar=True), "recebido")
+        est = self.lv.estado(s(601))
+        for b in est["brinquedos"]:
+            self.assertEqual(b["onde"], "carregador")
+            self.assertGreaterEqual(b["bateria"], CARGA_DE_FABRICA)
+        self.assertEqual(self.lv.entrega_a_anunciar()["esperou"], "banho")
+        self.lv.marcar_anunciada()
+        self.assertIsNone(self.lv.entrega_a_anunciar())
+        with self.db.get_connection() as conn:
+            self.assertIn("tinha ficado na portaria", conn.execute(
+                "SELECT summary FROM life_events WHERE event_key LIKE 'lovense:entrega:%'").fetchone()[0])
+        self.lv.colocar(s(700), ["lush"])
+        self.assertTrue(self.lv.estado(s(701))["conectada"])
+
+    def test_sem_aviso_chega_no_horario(self):
+        self.lv.encomendar(T0, ate=T0 + timedelta(hours=1))
+        self.assertIsNone(self.lv.entrega_tick(T0 + timedelta(minutes=59), pode_pegar=True))
+        self.assertEqual(self.lv.entrega_tick(T0 + timedelta(hours=1), pode_pegar=True), "recebido")
