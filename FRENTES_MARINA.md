@@ -6,11 +6,14 @@ O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_M
 
 _Atualizado em 05/10/2026 (soak, dia 6 lido e corrigido, item 28; **o Patrick decidiu o soak contínuo** — seção 0;
 **"recalibrar a Marina" planejado** — seção 1, PLANO_VOZ "Recalibrar a Marina — plano"; **Lovense, passos 1–4
-feitos** na tarde de 05/10 e o **5a** à noite, sem deploy — seção 2).
+feitos** na tarde de 05/10 e o **5a** à noite, **no ar desde 19:28**; a encomenda a caminho desde 19:46 — seção 2).
 **Mudança de 05/10, tarde (Patrick):** o Lovense e o redesenho dos Bastidores adiantam **pra hoje**, um depois do
 outro, cada um na sua conversa da frente de apps (mexem nos mesmos arquivos do Mini App; não em paralelo); o que
 ficar pronto e testado entra no ar hoje. **Corte no relatório:** a hora do deploy divide o dia 7 — antes = soak
 formal (Marina de antes), depois = dia 0 da observação do Lovense e do redesenho. **Corte: seg 05/10, 19:28** (deploy do Lovense, passos 1–5a, `c2ab84a`; o redesenho entra depois no mesmo dia 0).
+**Encomenda do Lovense (19:46, `7d592e8`):** os dois estão "a caminho" na produção; chegam quando o Patrick escrever
+"chegou"/"desce pra pegar" (o Seu Jorge interfona em 3 min; com ela no banho ou fora, ficam na portaria) ou às 21:00;
+ela recebe com 60%, põe pra carregar e manda mensagem (`lovense_chegou`). No dia 7, conferir que isso aconteceu.
 Fila depois: consertos do dia 7 → recalibrar 1 (vínculo; adota a `trust` que o Lovense cria) → recalibrar 2 → 3 → 4
 (as barras novas entram no desenho novo) → Hoje com "Em casa" → banco dela e iFood da Ma.
 **Próximas conversas:** o **passo 5a do Lovense está feito e no ar desde 19:28**; a **encomenda** chega de verdade (a caminho até o Patrick avisar "chegou", ou 21:00; Auditoria, "a encomenda chega") (05/10, noite: ela coloca e tira pela fala, a palavra
