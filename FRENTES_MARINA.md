@@ -5,7 +5,8 @@ Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
 _Atualizado em 05/10/2026 (soak, dia 6 lido e corrigido, item 28; **o Patrick decidiu o soak contínuo** — seção 0;
-**"recalibrar a Marina" planejado** — seção 1, PLANO_VOZ "Recalibrar a Marina — plano").
+**"recalibrar a Marina" planejado** — seção 1, PLANO_VOZ "Recalibrar a Marina — plano"; **Lovense, passos 1–3
+feitos** na tarde de 05/10, sem deploy — seção 2).
 **Mudança de 05/10, tarde (Patrick):** o Lovense e o redesenho dos Bastidores adiantam **pra hoje**, um depois do
 outro, cada um na sua conversa da frente de apps (mexem nos mesmos arquivos do Mini App; não em paralelo); o que
 ficar pronto e testado entra no ar hoje. **Corte no relatório:** a hora do deploy divide o dia 7 — antes = soak
