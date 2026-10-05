@@ -3,9 +3,11 @@
 Bot de Telegram da Marina Salles, namorada virtual do Patrick (dono do projeto, uso pessoal). Objetivo dele: ela
 ser "praticamente humana" — um mundo vivo onde tudo o que ela faz acontece de verdade e vira história.
 
-## FREIO (28/09, pedido dele): nada de funcionalidade nova até o soak fechar
-Leia a seção 0 do `FRENTES_MARINA.md`: só entra o que está em "Antes do soak" e correção de bug; ideia nova (dele ou
-sua) vai pra "Depois do soak" e você avisa ele. Soak = 7 dias reais + 3 limpos, relatório diário na VPS às 05:10.
+## Soak contínuo (05/10, decisão dele; antes era o FREIO de 28/09)
+Leia a seção 0 do `FRENTES_MARINA.md`. O dia 7 (lido na terça 06/10) fecha o soak formal; até lá, só conserto e
+planejamento (sem código novo). Depois: código novo **um por vez**, na fila da seção 0, com 2 dias de observação no
+relatório diário (VPS, 05:10; conversa "bora no soak, dia N") antes do próximo; bug grave passa na frente. Ideia nova
+fora da fila vai pra "Depois do soak" e você avisa ele.
 
 ## Como trabalhar com o Patrick
 - Sempre em **português**. Ele é visual: decisões de texto/tela com mockup (show_widget) e perguntas de múltipla

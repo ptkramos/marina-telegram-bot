@@ -1211,3 +1211,8 @@ Item 3 da lista "antes do soak". Decisões do Patrick (28/09, múltipla escolha,
   ~6min", "Manhã · 7", motivo do sentimento no Por dentro ("Viu Paradise Kiss · eps 1 e 2"), "Precisa de R$ X · motivo".
 - Testes: `tests/test_lista_compras.py` (8), `test_social_battery_audit5` (+1), `test_social_day_audit6` (+1 e o
   fechamento), `test_roupa` (bug 17, 0 falhas em 40 rodadas), `test_hoje` (+1).
+
+**05/10 — soak contínuo (decisão do Patrick):** depois do dia 7 (lido na terça), o Mini App recebe o código planejado
+um por vez, com 2 dias de observação cada: Lovense (passo 1) → Hoje com bloco "Em casa" → banco dela e iFood da Ma →
+redesenho dos Bastidores (10 passos). O extrato com "(fictícia)" e o filtro do "Rolando agora" entram antes, no lote
+de consertos.

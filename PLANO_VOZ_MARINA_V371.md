@@ -1509,3 +1509,7 @@ banho depois da rua não diz mais "acabei de chegar" meia hora depois. Se ela di
 verdade ("vou me divertir sim", 15:26), ela se toca. Anotados pro lote da voz: /ruim 073 (respondeu à parte errada), a
 reação 🤣 dele virando "exatamente" dela mesma, a "fofoca do rolê" prometida duas vezes sem fofoca, oito áudios
 seguidos no flerte. Detalhe na Auditoria ("Soak, dia 6").
+
+**05/10 — soak contínuo (decisão do Patrick):** depois do dia 7 o código novo volta um por vez, com 2 dias de
+observação cada (fila na seção 0 do FRENTES). Da voz, na fila: o lote dos anotados (dias 5 e 6) entra junto com os
+consertos; o modo íntimo enxuto e as técnicas antigas (PLANO_VOZ 13) seguem em "Depois do soak" até ganharem lugar.

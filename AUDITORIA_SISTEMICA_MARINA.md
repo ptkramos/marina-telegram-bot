@@ -2886,3 +2886,10 @@ Dia calmo de plantão dele (66 mensagens dele, 69 dela, 3 fotos, 8 áudios); o r
 - **Relatório do soak:** "a short … satin robe" não é short (falso alarme do foto × roupa); nova conferência: foto do
   Milo pedida ou prometida × a foto que chegou (pegaria as três de 15:01–15:05).
 `tests/test_soak_dia6.py` (+26).
+
+## Soak contínuo (05/10, decisão do Patrick)
+
+Os 3 dias limpos nunca vieram (dias 1–6, todo dia ao menos um grave) e cada funcionalidade nova pediria outro soak.
+O dia 7 (seg 05/10, lido na terça) fecha o soak formal; o relatório diário das 05:10 continua. Código novo entra um
+por vez (fila na seção 0 do FRENTES: consertos → Lovense → bloco "Em casa" → banco dela/iFood da Ma → redesenho dos
+Bastidores → recalibrar a Marina), com 2 dias de observação no relatório antes do próximo; bug grave passa na frente.

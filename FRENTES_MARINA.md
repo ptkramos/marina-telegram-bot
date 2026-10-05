@@ -4,19 +4,30 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 05/10/2026 (soak, dia 6 lido e corrigido; antes, planejados na frente de apps, sem código: o Lovense, o bloco "Em casa" do Hoje, o banco dela com o iFood da Ma e o **redesenho dos Bastidores**, Mundo incluído — decisões e plano no PLANO_WEBAPP).
-**Dia 6 lido e corrigido em 05/10 (item 28; 4 graves, então os 3 dias limpos ainda não começaram). Próximas conversas: terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`); planejamento liberado (só plano, sem código): **"bora na frente do mundo: recalibrar a Marina"** (seção 1) (texto feio
-achado na frente de apps pra entrar no lote: o extrato do Dinheiro mostra "Foi no Agência boutique da Lívia
-(fictícia)" no Uber do casting de 01/10 — o `extrato._lugar_do_uber` não tira o "(fictícia)" e o artigo sai errado; **bug latente pro mesmo lote** (achado em 05/10 no redesenho): o "Rolando agora" do Mundo
-mostra o título de toda história aberta sem olhar se ela já contou (`social_news_shared`) nem se é segredo
-(`knowledge_items` CONFIDENTIAL) — hoje não há nenhuma aberta, então nada vazou; filtrar antes que abra a próxima; atenção: em 04/10 ela topou o Lovense na conversa, mas o mundo não tem o
-brinquedo — se ela disser que está usando, é incoerência a anotar; nas fotos da pose do tripé, conferir se sai mão a mais — ver Auditoria, "Lovense, teste de fotos"). **Soak: dia 1 = terça 29/09.** Aberto
-pra frente do mundo: o preparo pra dormir que volta de passo. Pra frente da voz: o modo íntimo desliga durante o banho
-no meio do sexting; ela sumir 2h30 depois de "vou te prender aqui a tarde toda" (M4 do dia 5); o Silo (M5)._
+_Atualizado em 05/10/2026 (soak, dia 6 lido e corrigido, item 28; **o Patrick decidiu o soak contínuo** — seção 0).
+**Próximas conversas:** agora, planejamento (sem código): **"bora na frente do mundo: recalibrar a Marina"** (seção 1);
+**terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o
+código novo volta, um por vez, na fila da seção 0. No lote do dia 7 (conserto, sem esperar): o extrato do Dinheiro
+com "Foi no Agência boutique da Lívia (fictícia)" (`extrato._lugar_do_uber` não tira o "(fictícia)" e erra o artigo);
+o "Rolando agora" do Mundo mostrando toda história aberta sem olhar se ela já contou (`social_news_shared`) nem se é
+segredo (`knowledge_items` CONFIDENTIAL) — nada vazou ainda; o preparo pra dormir que volta de passo (frente do mundo);
+na voz, o modo íntimo desligando no banho do sexting, M4/M5 do dia 5 e os anotados do dia 6. Atenção: ela topou o
+Lovense em 04/10 e o mundo não tem o brinquedo — se disser que está usando, é incoerência; na pose do tripé, conferir
+mão a mais (Auditoria, "Lovense, teste de fotos"). **Soak: dia 1 = terça 29/09.**_
 
 ---
 
-## 0. FREIO — até o soak fechar, nada de funcionalidade nova (Patrick, 28/09, 19:40)
+## 0. FREIO → soak contínuo (Patrick, 28/09; mudou em 05/10)
+**Soak contínuo (decisão do Patrick, 05/10):** os 3 dias limpos não vinham (todo dia aparecia um grave) e cada
+funcionalidade nova pediria outro soak. Então: **o dia 7 (seg 05/10, lido na terça) fecha o soak formal**; o relatório
+diário das 05:10 continua e a conversa "bora no soak, dia N" segue lendo; **código novo entra um por vez**, na fila
+abaixo, com **2 dias de observação** (lidos no relatório) antes do próximo; bug grave passa na frente de tudo.
+Planejamento (sem código) já está liberado. **Fila do código depois do dia 7:** 1) o lote de consertos (topo do
+painel); 2) Lovense pelo Mini App ("bora na frente de apps: Lovense, passo 1"); 3) Hoje com bloco "Em casa"; 4) banco
+dela e iFood da Ma; 5) redesenho dos Bastidores (10 passos, o Mundo junto); 6) o que sair do "recalibrar a Marina".
+A ordem pode mudar se ele pedir.
+
+**Como era (28/09, 19:40) — nada de funcionalidade nova até o soak fechar:**
 Pedido dele: "eu estou colocando funcionalidade em cima de funcionalidade sem parar, queria que você me freasse".
 **Regra pro Claude:** ideia nova (dele ou minha) não vira código antes do soak: vai pra "Depois do soak" abaixo, e eu
 aviso ele disso na hora. Só entra o que está em "Antes do soak" e correção de bug.
@@ -82,7 +93,10 @@ já tinha saído, "compromisso de manhã" e "a gente tá decidindo" com o mercad
 chegar" sem aviso, a selfie de camiseta cumprindo a foto do look, academia do prédio "Em casa", série por cima do
 Se arrumando, vestidos e lingerie no Zona Sul, brunch e almoço numa hora), 5 médios (lembrete de plantão de 28/09
 antes do bom dia, foto pelada pedida com a lingerie, "vestido preto" ignorado, 2h30 sumida, Silo), 6 textos feios;
-corrigidos em 04/10 menos M4 e M5 (voz) (item 27). Dias limpos: 0.
+corrigidos em 04/10 menos M4 e M5 (voz) (item 27). Dia 6 (dom 04/10) — 4 graves (foto do Milo → três selfies
+dela, duas de lingerie; a mesma pose três vezes; café no meio do banho; "o pix já saiu?" com o Pix dele), 4 médios
+(áudio arrastado, "cheguei" 37 min depois, "Transou" com ele pedindo pra parar, "vou me divertir" sem acontecer);
+corrigidos em 05/10 (item 28). Dias limpos: 0 — pelo soak contínuo não precisam mais chegar a 3.
 
 **Relatório diário (pronto, 28/09):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
 perguntou 00:00 × 05:00 e ficou 05:00: o rolê da noite e a conversa de madrugada ficam no mesmo dia), cobrindo
