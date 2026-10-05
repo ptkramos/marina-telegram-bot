@@ -1417,6 +1417,13 @@ async def handle_reaction(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_human_messages(chat_id, context.bot, fala)
         memory_manager.registrar_mensagem_assistente(fala)
 
+# Linha inteira entre colchetes = turno do Mini App (Pix, brinquedo), não fala dele.
+_TURNO_DO_APP_RE = re.compile(r"\[[^\[\]]*\]")
+
+
+def _falas_dele(texto: str) -> str:
+    return "\n".join(l for l in texto.splitlines() if not _TURNO_DO_APP_RE.fullmatch(l.strip()))
+
 # --- BUFFER INTELIGENTE DE DIGITAÇÃO (DEBOUNCE ANTI-ATROPELO) ---
 
 class MessageDebouncer:
@@ -3112,8 +3119,9 @@ async def process_incoming_batch(
             return
 
     # 1. Aprendizado dinâmico do estilo linguístico do Patrick (risadas, emojis, gírias, cadência)
+    # 05/10: turno do app ([Pix…], [Brinquedo…]) não é o jeito dele de escrever
     if pending_batch_id is None:
-        style_engine.processar_mensagem_patrick(texto_usuario)
+        style_engine.processar_mensagem_patrick(_falas_dele(texto_usuario))
 
     from pending_response import resolve_cancelled_requests
     resolved_req = resolve_cancelled_requests(texto_usuario)
@@ -5328,6 +5336,79 @@ async def _webapp_pix(application: Application, valor: int, nota: str) -> dict:
     return {"kind": res["kind"], "saldo": res["saldo"]}
 
 
+# Lovense, passo 3 (05/10): o que ela sente com o brinquedo vira turno. O app avisa a cada comando; o bot espera
+# ele assentar a mão (lovense.JUNTAR) e pergunta ao `Lovense.sentir` se ela sente diferença. O relógio
+# (`lovense_routine`, 10 s) anda a palavra de segurança e o tempo no mesmo ritmo.
+_LOVENSE_EVENTOS: list[str] = []
+_LOVENSE_ESPERA: Optional[asyncio.Task] = None
+_LOVENSE_LOCK = asyncio.Lock()
+
+
+async def _webapp_lovense(application: Application, eventos: list[str], now: datetime) -> None:
+    global _LOVENSE_ESPERA
+    _LOVENSE_EVENTOS.extend(eventos)
+    if _LOVENSE_ESPERA is not None and not _LOVENSE_ESPERA.done():
+        _LOVENSE_ESPERA.cancel()                 # ainda arrastando: junta com o próximo
+    _LOVENSE_ESPERA = asyncio.create_task(_lovense_assentou(application))
+
+
+async def _lovense_assentou(application: Application) -> None:
+    global _LOVENSE_ESPERA
+    from lovense import JUNTAR
+    try:
+        await asyncio.sleep(JUNTAR.total_seconds())
+    except asyncio.CancelledError:
+        return
+    _LOVENSE_ESPERA = None                       # daqui pra frente um comando novo não cancela este turno
+    eventos = _LOVENSE_EVENTOS[:]
+    _LOVENSE_EVENTOS.clear()
+    await _lovense_turno(application, eventos)
+
+
+async def _lovense_turno(application: Application, eventos: list[str]) -> None:
+    from lovense import Lovense
+    async with _LOVENSE_LOCK:                    # o gancho e o relógio não criam o mesmo turno duas vezes
+        turno = await asyncio.to_thread(Lovense(memory_manager.db).sentir, datetime.now(), eventos)
+    if not turno:
+        return
+    logger.info("lovense.turno motivo=%s", turno["motivo"])
+    _turno_do_app(application, turno["texto"])
+
+
+def _turno_do_app(application: Application, texto: str) -> None:
+    """Turno sem mensagem real que entra pelo mesmo buffer das mensagens dele: se ele está escrevendo, vai junto
+    (a resposta continua citando a mensagem dele) e nunca sai no meio de outra resposta."""
+    chat_id = settings.TARGET_CHAT_ID
+    real = debouncer.latest_updates.get(chat_id)
+    fake_update, fake_context = _fake_turn(application)
+    debouncer.add_message(chat_id, texto, fake_update, fake_context, process_incoming_batch)
+    if real is not None and getattr(getattr(real, "message", None), "message_id", 0):
+        debouncer.latest_updates[chat_id] = real
+
+
+async def lovense_routine(application: Application) -> None:
+    """Relógio do Lovense (10 s, só com sessão aberta): bateria, a escada da palavra (firme, bronca, corte) e o
+    tempo no mesmo ritmo."""
+    try:
+        from lovense import Lovense
+        lv = Lovense(memory_manager.db)
+        if not await asyncio.to_thread(lv.sessao_ativa):
+            return
+        now = datetime.now()
+        pode = True
+        try:                                     # na aula, no banho…: não consegue cortar pelo celular na hora
+            act_code, *_ = availability_service.policy._resolve_activity(now)
+            pode = availability_service.policy.profiles.get(act_code, {}).get("phone_access") != "LOW"
+        except Exception:
+            pass
+        eventos = await asyncio.to_thread(lv.tick, now, pode_mexer_no_celular=pode)
+        if eventos:
+            logger.info("lovense.tick eventos=%s", ",".join(eventos))
+        await _lovense_turno(application, eventos)
+    except Exception as e:
+        logger.error(f"Erro no job de lovense_routine: {e}", exc_info=True)
+
+
 async def _attach_tracking_link(bot, message_id: Optional[int]) -> None:
     """A mensagem dela em que conta que mandou ganha o 'link' de acompanhar (abre o Mini App).
 
@@ -5907,7 +5988,8 @@ async def _start_webapp(application: Application):
             pix=lambda valor, nota: _webapp_pix(application, valor, nota),
             post_receipt=post_receipt, public_url=settings.WEBAPP_URL,
             ig_texto=_ig_texto,
-            ig_story_reply=lambda story, texto, qid: _ig_responder_story(application, story, texto, qid))
+            ig_story_reply=lambda story, texto, qid: _ig_responder_story(application, story, texto, qid),
+            lovense=lambda eventos, now: _webapp_lovense(application, eventos, now))
         application.bot_data["webapp_runner"] = await webapp_server.start(hooks, port=settings.WEBAPP_PORT)
     except OSError as exc:
         logger.warning("webapp.not_started: %s", exc)     # porta ocupada (ex.: outra instância): o bot segue
@@ -6030,6 +6112,8 @@ async def post_init(application: Application):
         scheduler.add_job(delivery_gift_routine, 'interval', seconds=60, args=[application],
                           max_instances=1, coalesce=True)
         scheduler.add_job(instagram_routine, 'interval', seconds=300, args=[application],   # 27/09: Instagram
+                          max_instances=1, coalesce=True)
+        scheduler.add_job(lovense_routine, 'interval', seconds=10, args=[application],      # 05/10: Lovense
                           max_instances=1, coalesce=True)
         await _start_webapp(application)
 

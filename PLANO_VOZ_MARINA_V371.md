@@ -1647,4 +1647,13 @@ nem nos Bastidores; por enquanto só o Lovense mexe nela (PLANO_WEBAPP, "passo 1
 **05/10, tarde — Lovense, passo 2 (rotas + tela do Mini App):** não muda a voz nem o chat ainda. Os comandos dele
 devolvem eventos (`respeitou`, `parou_tarde`, `religou`, `bateria_acabou:…`) por um gancho novo
 (`Hooks.lovense`), hoje só no log; o passo 3 transforma isso em turno (o que ela sente, nunca a fala dela).
+
+**05/10, tarde — Lovense, passo 3 (o que ela sente vira turno):** toca a voz pela primeira vez. Os comandos dele no
+app viram um turno sem mensagem real, `[Brinquedo, pelo app do Patrick: …]`, só quando ela sente diferença (ligou,
+parou, salto de 4+, ritmo novo, liga-desliga, 5 min no mesmo ritmo) e no máximo um a cada 45 s; os eventos da palavra
+de segurança (respeitou, parou tarde, firme, bronca, cortou) e a bateria acabando sempre viram turno. O texto descreve
+a sensação ("vibrando forte (difícil de ignorar), constante"; "o tesão vai acumulando"), nunca o que ela diz. O turno
+entra pelo buffer das mensagens dele (vai junto se ele está escrevendo) e linha entre colchetes não ensina mais o
+estilo dele. Sem o passo 4 a resposta segue o perfil da atividade; sem o 5 o prompt não tem o bloco do brinquedo.
+Detalhe no PLANO_WEBAPP, "passo 3 feito".
 Detalhe em PLANO_WEBAPP, "passo 2 feito".

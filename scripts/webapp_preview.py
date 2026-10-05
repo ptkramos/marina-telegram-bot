@@ -125,8 +125,45 @@ async def _serve(db, port: int, status, fixo) -> None:
     async def story_reply(story: dict, texto: str, query_id) -> None:
         print("resposta ao story:", story["id"], texto)
 
+    # 05/10 (Lovense, passo 3): igual ao bot — junta a rajada, pergunta ao `sentir` e guarda o turno que ela
+    # receberia (/dev/lovense?acao=turnos); o relógio de 10 s roda num laço aqui.
+    lv_turnos: list = []
+    lv_espera: dict = {"task": None, "eventos": []}
+
+    async def lovense_sentir(eventos: list) -> None:
+        from lovense import Lovense
+        turno = await asyncio.to_thread(Lovense(db).sentir, hooks.now(), eventos)
+        if turno:
+            print("lovense.turno:", turno["texto"])
+            lv_turnos.append({"em": hooks.now().strftime("%H:%M:%S"), **turno})
+
     async def lovense_eventos(eventos: list, now) -> None:
-        print("lovense:", now.strftime("%H:%M:%S"), eventos)
+        if eventos:
+            print("lovense:", now.strftime("%H:%M:%S"), eventos)
+        lv_espera["eventos"] += eventos
+        if lv_espera["task"] and not lv_espera["task"].done():
+            lv_espera["task"].cancel()
+
+        async def assentou():
+            from lovense import JUNTAR
+            try:
+                await asyncio.sleep(JUNTAR.total_seconds())
+            except asyncio.CancelledError:
+                return
+            lv_espera["task"] = None
+            ev, lv_espera["eventos"] = lv_espera["eventos"], []
+            await lovense_sentir(ev)
+        lv_espera["task"] = asyncio.create_task(assentou())
+
+    async def lovense_relogio(app) -> None:
+        async def laco():
+            from lovense import Lovense
+            while True:
+                await asyncio.sleep(10)
+                lv = Lovense(db)
+                if await asyncio.to_thread(lv.sessao_ativa):
+                    await lovense_sentir(await asyncio.to_thread(lv.tick, hooks.now()))
+        app["lv_relogio"] = asyncio.create_task(laco())
 
     relogio = {"t": fixo}                     # /dev/agora?t=2026-09-25T21:20 troca o horário sem reiniciar
     hooks = webapp_server.Hooks(db=db, bot_token=TOKEN, allowed_user_id=USER, status=status, pix=pix,
@@ -149,7 +186,8 @@ async def _serve(db, port: int, status, fixo) -> None:
 
     async def dev_lovense(request):
         """05/10 (Lovense, passo 2): o que ela faz, simulado — /dev/lovense?acao=colocar&b=lush,hush | palavra |
-        pedir_parar | liberar | cortar | tirar | tick (anda o relógio da escada) | conversar."""
+        pedir_parar | liberar | cortar | tirar | tick (anda o relógio da escada) | conversar | turnos (passo 3: o que
+        ela recebeu como turno)."""
         from lovense import Lovense
         lv, now = Lovense(db), hooks.now()
         acao, bs = request.query.get("acao", ""), [b for b in request.query.get("b", "lush").split(",") if b]
@@ -158,7 +196,8 @@ async def _serve(db, port: int, status, fixo) -> None:
                    "palavra": lambda: lv.combinar_palavra(now, request.query.get("p", "abacaxi")),
                    "pedir_parar": lambda: lv.pedir_parar(now), "liberar": lambda: lv.liberar(now),
                    "cortar": lambda: lv.cortar(now), "tirar": lambda: lv.tirar(now, bs),
-                   "tick": lambda: lv.tick(now), "conversar": lambda: lv.conversar(now)}[acao]()
+                   "tick": lambda: lv.tick(now), "conversar": lambda: lv.conversar(now),
+                   "turnos": lambda: lv_turnos}[acao]()
         except (KeyError, ValueError) as e:
             return web.json_response({"erro": str(e)}, status=400)
         return web.json_response({"res": res, "estado": lv.estado(now)}, dumps=lambda d: json.dumps(d, default=str))
@@ -167,6 +206,7 @@ async def _serve(db, port: int, status, fixo) -> None:
         app = original_make(h)
         app.router.add_get("/dev/agora", dev_agora)
         app.router.add_get("/dev/lovense", dev_lovense)
+        app.on_startup.append(lovense_relogio)
         return app
 
     webapp_server.make_app = make_app

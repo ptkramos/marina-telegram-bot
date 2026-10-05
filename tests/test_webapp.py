@@ -238,7 +238,7 @@ class ApiTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_lovense_tela_comandos_e_eventos(self):
         """05/10 (Lovense, passo 2): ícone apagado/aceso, a tela só com o que o app real saberia, comandos e os
-        eventos indo pro gancho (o passo 3 transforma em turno)."""
+        eventos indo pro gancho (o passo 3 transforma em turno; o gancho é chamado a cada comando que vale)."""
         from lovense import Lovense
         eventos = AsyncMock()
         self.client.server.app["hooks"].lovense = eventos
@@ -267,7 +267,8 @@ class ApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(d["aviso"], "Marina pediu pra parar")
         d = await (await post({"acao": "parar"})).json()
         self.assertEqual(d["brinquedos"][0]["nivel"], 0)
-        eventos.assert_awaited_once_with(["respeitou"], T)
+        # Passo 3: todo comando que vale avisa o bot (ela pode sentir a diferença); os recusados, não.
+        self.assertEqual([c.args for c in eventos.await_args_list], [([], T), (["respeitou"], T)])
 
         lv.liberar(T)
         lv.cortar(T)

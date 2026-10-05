@@ -41,7 +41,7 @@ class LovenseBase(unittest.TestCase):
 
 class EstadoTests(LovenseBase):
     def test_migration_cria_brinquedos_e_confianca(self):
-        self.assertEqual(self.db.get_schema_version(), 34)
+        self.assertEqual(self.db.get_schema_version(), 35)
         est = self.lv.estado(T0)
         self.assertFalse(est["conectada"])
         self.assertEqual(est["estado"], "desconectada")
@@ -285,3 +285,121 @@ class ConfiancaTests(LovenseBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SentirTests(LovenseBase):
+    """Passo 3: o que ela sente vira turno só quando ela sente diferença (texto interno, nunca a fala dela)."""
+
+    def setUp(self):
+        super().setUp()
+        self.lv.colocar(T0, ["lush"])
+
+    def test_sem_comando_nao_ha_turno(self):
+        self.assertIsNone(self.lv.sentir(s(5)))
+
+    def test_ligou_vira_turno_e_a_rajada_vira_um_so(self):
+        for i, n in enumerate((2, 4, 6, 8, 10, 12)):
+            self.lv.comando(s(10 + i * 0.5), "lush", n)
+        t = self.lv.sentir(s(16))
+        self.assertEqual(t["motivo"], "mudou")
+        self.assertTrue(t["texto"].startswith("[Brinquedo, pelo app do Patrick: Ele ligou o Lush"))
+        self.assertIn("vibrando forte", t["texto"])
+        self.assertIn("provocando", t["texto"])          # seis mexidas no clássico
+        # Nada mudou desde o turno: nada a sentir.
+        self.assertIsNone(self.lv.sentir(s(20)))
+
+    def test_mexida_pequena_nao_vira_turno(self):
+        self.lv.comando(s(10), "lush", 10)
+        self.lv.sentir(s(15))
+        self.lv.comando(s(80), "lush", 12)               # +2: ela nem nota
+        self.assertIsNone(self.lv.sentir(s(85)))
+        self.lv.comando(s(90), "lush", 14)               # +4 desde o último turno: sente
+        self.assertIn("aumentou o Lush", self.lv.sentir(s(95))["texto"])
+
+    def test_no_maximo_um_turno_a_cada_45_s_sem_perder_o_que_mudou(self):
+        self.lv.comando(s(10), "lush", 10)
+        self.lv.sentir(s(15))
+        self.lv.comando(s(20), "lush", 20)
+        self.assertIsNone(self.lv.sentir(s(25)))         # cedo demais
+        t = self.lv.sentir(s(61))                        # o relógio pega depois
+        self.assertIn("aumentou o Lush", t["texto"])
+        self.assertIn("no máximo", t["texto"])
+
+    def test_parou_e_ligou_desligou_provocando(self):
+        self.lv.comando(s(10), "lush", 10)
+        self.lv.sentir(s(15))
+        self.lv.comando(s(70), "lush", 0)
+        self.assertIn("Ele parou o Lush", self.lv.sentir(s(75))["texto"])
+        self.lv.comando(s(130), "lush", 18)
+        self.lv.comando(s(132), "lush", 0)
+        self.assertIn("por uns segundos (chegou a no máximo) e desligou", self.lv.sentir(s(140))["texto"])
+
+    def test_padrao_novo(self):
+        self.lv.comando(s(10), "lush", 10)
+        self.lv.sentir(s(15))
+        self.lv.comando(s(70), "lush", 10, "padrao", "onda")
+        t = self.lv.sentir(s(75))["texto"]
+        self.assertIn("mudou o ritmo do Lush", t)
+        self.assertIn("em ondas que sobem e descem", t)
+
+    def test_toque_soltou(self):
+        self.lv.comando(s(10), "lush", 14, "toque")
+        self.assertIn("no ritmo do dedo dele", self.lv.sentir(s(15))["texto"])
+        self.lv.comando(s(70), "lush", 0, "toque")
+        self.assertIn("tirou o dedo", self.lv.sentir(s(75))["texto"])
+        # Do Clássico pro Toque: passou o dedo e soltou (pré-visualização, 05/10).
+        self.lv.comando(s(130), "lush", 19)
+        self.lv.sentir(s(135))
+        self.lv.comando(s(190), "lush", 14, "toque")
+        self.lv.comando(s(191), "lush", 0, "toque")
+        self.assertIn("tirou o dedo e o Lush parou", self.lv.sentir(s(195))["texto"])
+
+    def test_mesmo_ritmo_o_tesao_acumula(self):
+        self.lv.comando(s(10), "lush", 10)
+        self.lv.sentir(s(15))
+        self.assertIsNone(self.lv.sentir(s(15 + 4 * 60)))
+        t = self.lv.sentir(s(15 + 5 * 60))
+        self.assertEqual(t["motivo"], "sustentado")
+        self.assertIn("Faz 5 min que o Lush vibra no mesmo ritmo", t["texto"])
+        self.assertIsNone(self.lv.sentir(s(15 + 10 * 60)))     # depois do primeiro, de 10 em 10 min
+        self.assertIn("Faz 15 min", self.lv.sentir(s(15 + 15 * 60))["texto"])
+
+    def test_fraquinho_parado_nao_acumula(self):
+        self.lv.comando(s(10), "lush", 2)
+        self.lv.sentir(s(15))
+        self.assertIsNone(self.lv.sentir(s(15 + 20 * 60)))
+
+    def test_eventos_da_palavra_sempre_viram_turno(self):
+        self.lv.comando(s(10), "lush", 10)
+        self.lv.sentir(s(15))
+        self.lv.pedir_parar(s(20))
+        r = self.lv.comando(s(25), "lush", 0)
+        t = self.lv.sentir(s(26), r["eventos"])                 # 6 s depois do último turno: o evento passa
+        self.assertIn("parou na hora, como combinado", t["texto"])
+        self.assertNotIn("ele parou o Lush", t["texto"])
+        self.assertNotIn("abacaxi", t["texto"])
+
+    def test_nao_parou_firme_com_o_que_ela_sente_agora(self):
+        self.lv.comando(s(10), "lush", 16)
+        self.lv.sentir(s(15))
+        self.lv.pedir_parar(s(20))
+        t = self.lv.sentir(s(51), self.lv.tick(s(51)))
+        self.assertIn("Faz 30 s que você disse a palavra de segurança", t["texto"])
+        self.assertIn("agora vibrando muito forte", t["texto"])
+
+    def test_cortou_e_bateria_com_a_sessao_ja_fechada(self):
+        self.lv.comando(s(10), "lush", 16)
+        self.lv.pedir_parar(s(20))
+        self.lv.tick(s(81))
+        t = self.lv.sentir(s(111), self.lv.tick(s(111)))
+        self.assertIn("Você cortou o controle dele", t["texto"])
+        self.assertFalse(self.lv.estado(s(112))["conectada"])
+
+    def test_bateria_acabou(self):
+        self.lv.comando(s(10), "lush", 20)
+        t = self.lv.sentir(s(3 * 3600), self.lv.estado(s(3 * 3600))["eventos"])
+        self.assertIn("A bateria do Lush acabou", t["texto"])
+        self.assertIn("perdeu a conexão", t["texto"])
+
+    def test_os_eventos_dela_nao_viram_turno(self):
+        self.assertIsNone(self.lv.sentir(s(5), ["pediu_parar", "tirou"]))

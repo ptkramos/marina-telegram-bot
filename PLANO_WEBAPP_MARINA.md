@@ -962,6 +962,30 @@ múltipla escolha):** ícone com o texto, nível 0–20, "Conectada desde 14:48"
 `test_lovense_tela_comandos_e_eventos` (test_webapp). Próximo: **"bora na frente de apps: Lovense, passo 3"** (o que
 ela sente vira turno).
 
+**05/10, tarde — passo 3 feito ✅ (o que ela sente vira turno; sem deploy, e ainda nada no bot chama `colocar`):**
+`Lovense.sentir(now, eventos)` decide se ela sente diferença e devolve o turno interno, `[Brinquedo, pelo app do
+Patrick: …]` (a sensação e o que ele fez; nunca a fala dela, nunca a palavra combinada). Guarda o que ela já sentiu na
+sessão (`sentido_json`, migration 035), então a rajada e o que mudou no intervalo entram juntos no turno seguinte.
+Vira turno: **ligou**, **parou** (no Toque, "tirou o dedo"), **salto** de 4 níveis ou mais (já com o padrão),
+**ritmo novo** (Clássico/Toque/padrão), **liga-desliga provocando**, e **no mesmo ritmo** há 5 min (depois de 10 em
+10 min; abaixo do nível 3 não) — "o tesão vai acumulando". Os eventos da palavra (`respeitou`, `parou_tarde`,
+`parou_depois_da_bronca`, `religou`, `firme`, `bronca`, `cortou`) e da bateria viram turno sempre, com o que ela
+sente agora quando continua ligado; os dela (`pediu_parar`, `tirou`) não. Mudança comum: no máximo um turno a cada
+45 s. No bot: o app avisa a cada comando que vale (`Hooks.lovense` → `_webapp_lovense`), o bot espera 4 s sem
+comando novo (ele assentou a mão) e pergunta ao `sentir`; o relógio `lovense_routine` (10 s, só com sessão aberta)
+anda a escada da palavra (sem celular na mão — aula, banho — não corta) e o tempo no mesmo ritmo. O turno entra pelo
+**mesmo buffer das mensagens dele** (`_turno_do_app`): se ele está escrevendo, vai junto e a resposta continua
+citando a mensagem dele. Linha inteira entre colchetes (Pix, brinquedo) não ensina mais o estilo dele
+(`style_engine`). Pré-visualização: o `webapp_preview.py` faz igual ao bot e mostra o que ela receberia em
+`/dev/lovense?acao=turnos`. Testes: `SentirTests` (15, test_lovense) e `tests/test_lovense_turno.py` (4).
+**Conferido na pré-visualização (celular):** arrastar a barra → "Ele ligou o Lush, vibrando forte (difícil de
+ignorar), constante"; subir ao máximo em 15 s não virou turno na hora e saiu no relógio aos 51 s; palavra sem parar →
+"Faz 30 s…" e "Já faz 1 min…, ignorando você" com o que ela sente; Parar → "Ele só parou depois da sua bronca…";
+Toque soltou → "tirou o dedo".
+**Ainda não (passos 4–5):** a disponibilidade com o brinquedo ligado (hoje o turno segue o perfil da atividade — no
+banho espera e sai depois), o bloco do prompt (com qual, onde, a palavra), o tesão subindo de verdade e quem chama
+`colocar`. Próximo: **"bora na frente de apps: Lovense, passo 4"**.
+
 ### Hoje com o bloco "Em casa" — plano (04/10, noite, frente de apps; sem código até o soak fechar) 📝
 Primeiro da frente de apps depois do soak. Base: respostas dele de 02/10 (`ideias_pos_soak/ideias/em_casa.json`: o
 bloco abre quando ela **chega** em casa e fecha quando ela **sai**; dentro, tudo o que ela faz **dentro do

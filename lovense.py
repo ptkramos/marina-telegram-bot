@@ -14,7 +14,8 @@ O brinquedo é o dela na história e o Patrick controla pelo app. Este módulo �
   ela recusa a próxima vez; volta só conversando — mais de um incidente no mês pede mais de uma conversa.
 
 Quem chama (passos seguintes): o Mini App manda os comandos; o bot transforma os eventos em turno (o que ela
-sente), a agenda decide quando ela coloca, tira e se consegue mexer no celular. Nada aqui fala por ela.
+sente, `sentir`, passo 3), a agenda decide quando ela coloca, tira e se consegue mexer no celular. Nada aqui fala
+por ela: o turno descreve a sensação, nunca a fala.
 """
 from __future__ import annotations
 
@@ -52,6 +53,18 @@ JANELA_INCIDENTES = timedelta(days=30)
 CONVERSAS_NO_MAXIMO = 3               # 1 incidente no mês: 1 conversa; 2: duas; 3+: três
 ENTRE_CONVERSAS = timedelta(hours=6)  # a mesma conversa não conta duas vezes
 
+# O que ela sente vira turno (passo 3). Ela não fala a cada mexida na barra: fala quando sente diferença.
+JUNTAR = timedelta(seconds=4)             # o bot espera ele assentar a mão: a rajada de comandos vira um turno só
+ENTRE_TURNOS = timedelta(seconds=45)      # mudança comum: no máximo um turno a cada 45 s (o que muda nesse meio
+                                          # tempo não se perde: entra no turno seguinte)
+SALTO = 4                                 # diferença de nível (0–20, já com o padrão) que ela sente
+SUSTENTADO = timedelta(minutes=5)         # no mesmo ritmo há 5 min: o tesão acumulando
+SUSTENTADO_DE_NOVO = timedelta(minutes=10)
+NIVEL_QUE_SENTE = 3                       # abaixo disso, ficar no mesmo nível não vira turno
+EVENTOS_DE_TURNO = ("respeitou", "parou_tarde", "parou_depois_da_bronca", "religou", "firme", "bronca",
+                    "cortou", "sessao_acabou_bateria")       # + bateria_acabou:<brinquedo>; os dela (pediu_parar,
+                                                             # tirou) ela já sabe
+
 
 def _dt(raw) -> Optional[datetime]:
     if not raw:
@@ -64,6 +77,74 @@ def _dt(raw) -> Optional[datetime]:
 
 def _efetivo(nivel: int, modo: str, padrao: Optional[str]) -> float:
     return nivel * (PADROES.get(padrao or "", 1.0) if modo == "padrao" else 1.0)
+
+
+# Texto interno do turno (eu decido; descreve a sensação e o que ele fez, nunca a fala dela).
+_NOME = {"lush": "o Lush", "hush": "o Hush"}
+_NOME_DE = {"lush": "do Lush", "hush": "do Hush"}
+_RITMO = {"classico": "constante", "toque": "no ritmo do dedo dele, mexendo agora",
+          "pulso": "em pulsos", "onda": "em ondas que sobem e descem", "fogos": "em estouros sem aviso",
+          "terremoto": "tremendo forte, sem ritmo"}
+_EVENTO_TEXTO = {
+    "respeitou": "você disse a palavra de segurança e ele parou na hora, como combinado",
+    "parou_tarde": "ele só parou depois que você repetiu a palavra de segurança; demorou",
+    "parou_depois_da_bronca": "ele só parou depois da sua bronca, bem depois da palavra de segurança",
+    "religou": "você tinha dito a palavra de segurança e ele ligou de novo sem você liberar",
+    "firme": "faz 30 s que você disse a palavra de segurança e continua ligado: ele não parou",
+    "bronca": "já faz 1 min que você disse a palavra de segurança e ele continua, ignorando você",
+    "cortou": ("você cortou o controle dele pelo seu celular, porque ele não parou depois da palavra de "
+               "segurança; o brinquedo continua em você, desligado"),
+    "bateria_acabou": "a bateria {nome_de} acabou e ele parou de vibrar sozinho",
+    "sessao_acabou_bateria": "sem bateria, o app dele perdeu a conexão com você",
+}
+
+
+def _intensidade(e: float) -> tuple[str, str]:
+    """Nível efetivo → (intensidade, o que o corpo sente)."""
+    if e <= 4:
+        return "fraquinho", "um zumbido que dá pra ignorar se quiser"
+    if e <= 8:
+        return "médio", "dá pra sentir bem"
+    if e <= 13:
+        return "forte", "difícil de ignorar"
+    if e <= 17:
+        return "muito forte", "difícil de disfarçar"
+    return "no máximo", "quase insuportável"
+
+
+def _sensacao(b: str, nivel: int, modo: str, padrao: Optional[str], *, so_ritmo: bool = False) -> str:
+    forca, corpo = _intensidade(_efetivo(nivel, modo, padrao))
+    ritmo = _RITMO[padrao if modo == "padrao" and padrao else modo if modo in _RITMO else "classico"]
+    return f"{forca}, {ritmo}" if so_ritmo else f"vibrando {forca} ({corpo}), {ritmo}"
+
+
+def _mudanca(b: str, antes: tuple, agora: tuple, mexida: Optional[dict], *, sistema: bool = False) -> Optional[str]:
+    """O que ela sente de diferença num brinquedo desde o último turno (None: nada que ela note)."""
+    if sistema:
+        return None                       # parou pela bateria ou porque ela tirou: o evento (ou ela) já conta
+    e0, e1 = _efetivo(*antes), _efetivo(*agora)
+    pico = mexida["pico"] if mexida else 0.0
+    nome = _NOME[b]
+    prov = " (ele ficou mexendo, provocando)" if mexida and mexida["n"] >= 6 and agora[1] != "toque" else ""
+    if e0 == 0 and e1 == 0:
+        if pico >= NIVEL_QUE_SENTE:
+            return f"ele ligou {nome} por uns segundos (chegou a {_intensidade(pico)[0]}) e desligou, provocando"
+        return None
+    if e0 == 0:
+        return f"ele ligou {nome}{prov}, {_sensacao(b, *agora)}"
+    if e1 == 0:
+        subiu = f" depois de subir até {_intensidade(pico)[0]}" if pico >= e0 + SALTO else ""
+        if agora[1] == "toque":           # o 0 veio de soltar o dedo no Toque
+            return f"ele tirou o dedo e {nome} parou{subiu}"
+        return f"ele parou {nome}{subiu}{prov}"
+    agora_sente = f"agora {_sensacao(b, *agora)}"
+    if (antes[1], antes[2]) != (agora[1], agora[2]):
+        return f"ele mudou o ritmo {_NOME_DE[b]}{prov}: {agora_sente}"
+    if abs(e1 - e0) >= SALTO:
+        return f"ele {'aumentou' if e1 > e0 else 'diminuiu'} {nome}{prov}: {agora_sente}"
+    if pico >= max(e0, e1) + SALTO:
+        return f"ele subiu {nome} até {_intensidade(pico)[0]} e voltou{prov}: {agora_sente}"
+    return None
 
 
 class Lovense:
@@ -446,6 +527,73 @@ class Lovense:
 
     def confianca(self, now: datetime) -> float:
         return float(self.db.get_estado_emocional(now).get(TRUST, {}).get("valor", 0.8))
+
+    # ---------------------------------------------------------------- o que ela sente (passo 3)
+
+    def sessao_ativa(self) -> bool:
+        """Consulta leve pro relógio do bot (não mexe na bateria)."""
+        with self.db.get_connection() as conn:
+            return self._ativa(conn) is not None
+
+    def sentir(self, now: datetime, eventos: Iterable[str] = ()) -> Optional[dict]:
+        """Os comandos dele (e os eventos da palavra e da bateria) viram o que ela sente: {texto, motivo} pro bot
+        transformar em turno, ou None quando ela não sente diferença. Guarda o que ela já sentiu na sessão
+        (`sentido_json`), então a rajada de comandos e o que mudou no intervalo entram juntos no turno seguinte."""
+        eventos = list(dict.fromkeys(e for e in eventos
+                                     if e in EVENTOS_DE_TURNO or e.startswith("bateria_acabou:")))
+        with self.db.get_connection() as conn:
+            sessao = self._ativa(conn)
+            if not sessao and eventos:            # cortou / bateria: a sessão acabou neste mesmo passo
+                sessao = conn.execute("SELECT * FROM lovense_sessoes ORDER BY id DESC LIMIT 1").fetchone()
+            if not sessao:
+                return None
+            snap = json.loads(sessao["sentido_json"] or "{}")
+            ult = _dt(snap.get("em"))
+            em_uso = self._em_uso(conn, sessao)
+            niveis = self._niveis(conn, sessao["id"])
+            agora = {b: niveis.get(b, (0, "classico", None)) for b in em_uso}
+            antes = {b: tuple(v) for b, v in (snap.get("b") or {}).items()}
+            desde = (ult or _dt(sessao["desde"]) or now).isoformat()
+            mexidas = {}
+            for c in conn.execute("""SELECT brinquedo, nivel, modo, padrao FROM lovense_comandos
+                                     WHERE sessao_id=? AND criado_em>? AND criado_em<=? AND modo!='sistema'""",
+                                  (sessao["id"], desde, now.isoformat())):
+                m = mexidas.setdefault(c["brinquedo"], {"n": 0, "pico": 0.0})
+                m["n"] += 1
+                m["pico"] = max(m["pico"], _efetivo(c["nivel"], c["modo"], c["padrao"]))
+
+            partes, motivo = [], None
+            if eventos:
+                motivo = "evento"
+                partes = [_EVENTO_TEXTO[e.partition(":")[0]].format(
+                    nome_de=_NOME_DE.get(e.partition(":")[2], "do brinquedo")) for e in eventos]
+                if any(e in ("religou", "firme", "bronca") for e in eventos):
+                    ligados = [_sensacao(b, *agora[b]) for b in em_uso if agora[b][0] > 0]
+                    if ligados:
+                        partes.append("agora " + " e ".join(ligados))
+            elif sessao["estado"] == "conectada":
+                mudancas = [m for b in em_uso if (m := _mudanca(b, antes.get(b, (0, "classico", None)), agora[b],
+                                                                 mexidas.get(b), sistema=agora[b][1] == "sistema"))]
+                if mudancas and (ult is None or now - ult >= ENTRE_TURNOS):
+                    motivo, partes = "mudou", mudancas
+                elif not mudancas and ult is not None:
+                    ligados = [b for b in em_uso if _efetivo(*agora[b]) >= NIVEL_QUE_SENTE]
+                    espera = SUSTENTADO_DE_NOVO if snap.get("motivo") == "sustentado" else SUSTENTADO
+                    if ligados and now - ult >= espera:
+                        ritmo = _dt(snap.get("ritmo_desde")) or ult
+                        minutos = max(1, round((now - ritmo).total_seconds() / 60))
+                        motivo = "sustentado"
+                        partes = [f"faz {minutos} min que " + " e ".join(
+                            f"{_NOME[b]} vibra no mesmo ritmo dentro de você ({_sensacao(b, *agora[b], so_ritmo=True)})"
+                            for b in ligados) + "; o tesão vai acumulando"]
+            if not partes:
+                return None
+            novo = {"em": now.isoformat(), "motivo": motivo, "b": {b: list(v) for b, v in agora.items()},
+                    "ritmo_desde": snap.get("ritmo_desde") if motivo == "sustentado" else now.isoformat()}
+            conn.execute("UPDATE lovense_sessoes SET sentido_json=? WHERE id=?", (json.dumps(novo), sessao["id"]))
+            conn.commit()
+        texto = "; ".join(partes)
+        return {"texto": f"[Brinquedo, pelo app do Patrick: {texto[0].upper()}{texto[1:]}]", "motivo": motivo}
 
     # ---------------------------------------------------------------- painel
 

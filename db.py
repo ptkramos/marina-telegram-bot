@@ -426,6 +426,8 @@ class DatabaseManager:
                             20: ('reminders', {'offer_message_id'}),
                             # 27/09: roupa e pose do post do Instagram
                             32: ('ig_posts', {'roupa', 'pose'}),
+                            # 05/10: Lovense, passo 3 (o que ela já sentiu na sessão)
+                            35: ('lovense_sessoes', {'sentido_json'}),
                         }
                         target = replayable.get(version_num)
                         if target is None or "duplicate column name" not in str(e).lower():

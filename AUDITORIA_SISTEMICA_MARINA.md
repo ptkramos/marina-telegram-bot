@@ -2964,3 +2964,28 @@ fica apagado e o comportamento dela não muda até os passos 3–5. Detalhe no P
   `hand-stop` (faixa da palavra), `plug-connected-x` (corte), `battery-1..4`.
 - **Deploy:** não feito. Sem os passos 3–5 a tela só mostra "Marina desconectada"; subir junto com o que faz ela
   colocar, pra hora do deploy cortar o relatório do dia 7 com o Lovense funcionando de verdade.
+
+## Lovense, passo 3: o que ela sente vira turno (05/10, tarde, frente de apps)
+
+Terceiro passo (exceção do Patrick: hoje). Ainda nada chama `colocar`, então na produção nada muda até o passo 5.
+Detalhe no PLANO_WEBAPP, "passo 3 feito".
+- `lovense.py`: `sentir(now, eventos)` (turno interno só quando ela sente diferença), `sessao_ativa()` pro relógio,
+  textos internos `_EVENTO_TEXTO`/`_intensidade`/`_mudanca`. `migrations/035_lovense_sentido.sql` (`sentido_json` em
+  `lovense_sessoes`; replayável no `db.py`); os testes de versão do schema foram de 34 pra 35.
+- `webapp_server.py`: `_lovense_eventos(..., comando=True)` avisa o bot a cada comando que vale, mesmo sem evento.
+- `bot.py`: `_webapp_lovense` (junta a rajada, 4 s), `_lovense_turno` (trava pra o gancho e o relógio não criarem o
+  mesmo turno), `_turno_do_app` (pelo `debouncer`, sem roubar a citação da mensagem real dele), `lovense_routine`
+  (10 s, só com sessão; `phone_access` LOW não corta), o gancho no `Hooks`, e `_TURNO_DO_APP_RE`: linha inteira entre
+  colchetes sai do `style_engine` (vale pro Pix também — antes o "[Pix de R$…]" contava como jeito dele de escrever).
+- `scripts/webapp_preview.py`: o mesmo caminho do bot, com `/dev/lovense?acao=turnos`.
+- Conferido na pré-visualização (celular): ligou, salto segurado pelos 45 s e solto pelo relógio, firme, bronca,
+  parou depois da bronca, Toque soltou. Achado no caminho: soltar o dedo no Toque logo depois do Clássico saía
+  "Ele parou o Lush" — o texto olhava o modo de antes; agora olha o comando de agora ("tirou o dedo"), com teste.
+- **Números e textos que eu decidi (internos, calibrar no uso):** juntar 4 s; um turno a cada 45 s; salto de 4
+  níveis; no mesmo ritmo 5 min e depois 10 em 10; abaixo do nível 3 não acumula; intensidade por faixa (≤4
+  fraquinho "um zumbido que dá pra ignorar se quiser", ≤8 médio "dá pra sentir bem", ≤13 forte "difícil de
+  ignorar", ≤17 muito forte "difícil de disfarçar", acima no máximo "quase insuportável"); ritmo ("constante", "no
+  ritmo do dedo dele, mexendo agora", "em pulsos", "em ondas que sobem e descem", "em estouros sem aviso", "tremendo
+  forte, sem ritmo"); "provocando" com 6+ mexidas no intervalo; e os textos da palavra e da bateria.
+- **Ponto de atenção pro passo 4:** o turno do brinquedo passa pela disponibilidade normal; no banho ele espera e sai
+  depois (pode chegar "velho"). O perfil "com o brinquedo ligado" resolve.

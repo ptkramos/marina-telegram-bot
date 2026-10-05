@@ -81,8 +81,8 @@ class Hooks:
     # 27/09 (Instagram): texto das amigas (sync, roda numa thread) e a resposta dele a um story (vira chat)
     ig_texto: Optional[Callable[[str], str]] = None
     ig_story_reply: Optional[Callable[[dict, str, Optional[str]], Awaitable[None]]] = None
-    # 05/10 (Lovense, passo 2): os eventos dos comandos dele (ligou, parou depois da palavra…). O passo 3 liga
-    # no bot pra virar turno; até lá fica None e os eventos só vão pro log.
+    # 05/10 (Lovense): cada comando dele e os eventos (parou depois da palavra, bateria…). Passo 3: o bot junta a
+    # rajada e transforma o que ela sente em turno (`_webapp_lovense`); sem bot (testes) fica None, só o log.
     lovense: Optional[Callable[[list[str], datetime], Awaitable[None]]] = None
 
 
@@ -997,10 +997,12 @@ def lovense_view(est: dict) -> dict:
             "padroes": [{"id": k, "nome": n} for k, n in LOVENSE_PADROES]}
 
 
-async def _lovense_eventos(hooks: Hooks, eventos: list[str], now: datetime) -> None:
-    if not eventos:
+async def _lovense_eventos(hooks: Hooks, eventos: list[str], now: datetime, *, comando: bool = False) -> None:
+    """Avisa o bot. Comando sem evento também avisa (passo 3): é ele mexendo, e ela pode sentir a diferença."""
+    if not eventos and not comando:
         return
-    logger.info("webapp.lovense eventos=%s", ",".join(eventos))
+    if eventos:
+        logger.info("webapp.lovense eventos=%s", ",".join(eventos))
     if hooks.lovense:
         try:
             await hooks.lovense(eventos, now)
@@ -1040,7 +1042,7 @@ async def api_lovense_comando(request: web.Request) -> web.Response:
     res = await asyncio.to_thread(run)
     eventos = [e for r in res for e in r["eventos"]]
     est = await asyncio.to_thread(_lovense_estado, hooks.db, now)
-    await _lovense_eventos(hooks, eventos + est["eventos"], now)
+    await _lovense_eventos(hooks, eventos + est["eventos"], now, comando=any(r["ok"] for r in res))
     if not any(r["ok"] for r in res):
         return _json({**lovense_view(est), "erro": LOVENSE_ERROS.get(res[0]["erro"], "Não deu certo agora")}, 409)
     return _json(lovense_view(est))
