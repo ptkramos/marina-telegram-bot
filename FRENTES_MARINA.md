@@ -10,10 +10,10 @@ feitos** na tarde de 05/10 e o **5a** à noite, sem deploy — seção 2).
 **Mudança de 05/10, tarde (Patrick):** o Lovense e o redesenho dos Bastidores adiantam **pra hoje**, um depois do
 outro, cada um na sua conversa da frente de apps (mexem nos mesmos arquivos do Mini App; não em paralelo); o que
 ficar pronto e testado entra no ar hoje. **Corte no relatório:** a hora do deploy divide o dia 7 — antes = soak
-formal (Marina de antes), depois = dia 0 da observação do Lovense e do redesenho (anotar a hora do deploy aqui).
+formal (Marina de antes), depois = dia 0 da observação do Lovense e do redesenho. **Corte: seg 05/10, 19:28** (deploy do Lovense, passos 1–5a, `c2ab84a`; o redesenho entra depois no mesmo dia 0).
 Fila depois: consertos do dia 7 → recalibrar 1 (vínculo; adota a `trust` que o Lovense cria) → recalibrar 2 → 3 → 4
 (as barras novas entram no desenho novo) → Hoje com "Em casa" → banco dela e iFood da Ma.
-**Próximas conversas:** o **passo 5a do Lovense está feito** (05/10, noite: ela coloca e tira pela fala, a palavra
+**Próximas conversas:** o **passo 5a do Lovense está feito e no ar desde 19:28** (05/10, noite: ela coloca e tira pela fala, a palavra
 para, goza pelo corpo, o Hush é descoberta dela, ousadia fora — PLANO_WEBAPP, "passo 5a feito"); o 5b (ela propor
 pela curiosidade, bolsa, sozinha, mudar de opinião com a Bia) vem em **"bora na frente de apps: Lovense, passo 5b"**;
 depois, **"bora na frente de apps: redesenho dos Bastidores, passo 1"**; **terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o

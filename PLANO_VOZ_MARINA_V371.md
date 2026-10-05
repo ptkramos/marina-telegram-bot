@@ -1677,3 +1677,4 @@ dois, se ela toparia agora e por quê, e "a palavra você puxa"). A fala dela vi
 app, a palavra dita faz ele ter que parar, "pode voltar" libera, "tirei" desliga, e a conversa sobre a vez em que ele
 não respeitou reconstrói a confiança. Ela goza pelo corpo (o turno avisa) ou pela fala; com a ideia sendo dela e ele
 sumido do app, ela cutuca. Detalhe no PLANO_WEBAPP, "passo 5a feito".
+No ar desde seg 05/10, 19:28 (corte do relatório do dia 7).

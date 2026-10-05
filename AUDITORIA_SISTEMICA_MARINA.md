@@ -3085,3 +3085,7 @@ de opinião sobre o Hush conversando (com ele ou com a Bia). Detalhe no PLANO_WE
   controlava pelo app[, no meio da aula, tentando disfarçar (ficou vermelha)].", "Usou o Hush pela primeira vez…
   e gostou mais do que esperava / ainda não sabe se gosta… / não curtiu desta vez… / concluiu que o Hush não é pra
   ela", "Foi no banheiro da PUC uns minutos, colocando o brinquedo escondida." — entram no catálogo no passo 7.
+
+- **No ar: seg 05/10, 19:28** (`c2ab84a`, passos 1–5a juntos). Na VPS: schema 36, `experiencia_json` criada, os dois
+  brinquedos na gaveta com 100%, `lovense_routine` rodando sem erro. Esta hora corta o relatório do dia 7 (antes =
+  soak formal; depois = dia 0 do Lovense).
