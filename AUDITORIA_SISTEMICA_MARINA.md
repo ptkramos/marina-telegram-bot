@@ -2922,3 +2922,24 @@ PLANO_VOZ, "Recalibrar a Marina — plano"; item 6 da fila do soak contínuo. Le
 um depois do outro; a hora do deploy corta o relatório do dia 7 (antes = soak formal, depois = dia 0 dos dois). Depois:
 consertos → recalibrar 1–4 → Hoje com "Em casa" → banco dela. Eu recomendei código hoje e deploy depois do dia 7;
 ele escolheu o corte.
+
+## Lovense, passo 1: estado (05/10, tarde, frente de apps)
+
+Código novo da fila do soak contínuo (exceção do Patrick: Lovense hoje). Só o estado — nada é chamado pelo bot nem
+pelo Mini App ainda, então o comportamento dela não muda até os passos 2–5. Detalhe e os números no PLANO_WEBAPP,
+"Lovense pelo Mini App — plano", "passo 1 feito".
+- `migrations/034_lovense.sql`: brinquedos (bateria, onde), sessões, comandos, `emocao_travas` e a barra `trust`
+  (0,80) em `estado_emocional`. Replayável (CREATE IF NOT EXISTS / INSERT OR IGNORE); os 4 testes que conferem a
+  versão do schema foram de 33 pra 34.
+- `db.py`: `_relaxar(..., travada)` — com pendência aberta a barra abaixo do normal não volta sozinha (vale em
+  `get_estado_emocional`, `ajustar_emocao` e `aplicar_decay_emocional`); `travar_emocao`/`destravar_emocao`
+  (destravar grava o valor de agora, pra não "pular" o tempo que passou travada); meia-vida da `trust` 336 h; o
+  baseline de barra nova saiu pra `EMOTION_BASELINE_PADRAO`; `reset_soak_learning` limpa sessões, comandos e travas
+  e devolve os brinquedos cheios na gaveta. O início limpo (`bootstrap_v36.CLEAR`) também esvazia as quatro tabelas
+  novas (a suíte pegou: tabela sem regra de limpeza aborta o bootstrap); o `lovense.py` recria os dois brinquedos
+  cheios na gaveta se a tabela vier vazia.
+- Conferido: a `trust` não aparece sozinha no prompt nem nos Bastidores (o painel e o prompt leem barras por nome; só o
+  contexto legado, que é fallback, varre todas).
+- `lovense.py` + `tests/test_lovense.py` (26): bateria gasta pelo nível e acaba a sessão na hora certa, carrega em
+  casa; prazo de 30 s; escada firme → bronca → corte (sem celular na mão não corta); religar depois da palavra;
+  confiança presa com pendência, volta só conversando, dois incidentes pedem duas conversas.

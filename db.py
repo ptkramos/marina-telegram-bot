@@ -659,6 +659,10 @@ class DatabaseManager:
             "conversas",
             "real_context_cache",
             "estado_relacional",
+            # 05/10: Lovense (sessões, comandos) e as pendências que seguram uma barra.
+            "lovense_comandos",
+            "lovense_sessoes",
+            "emocao_travas",
         )
         counts = {}
         now_iso = datetime.now().isoformat()
@@ -686,6 +690,9 @@ class DatabaseManager:
                 )
                 conn.execute(
                     "UPDATE estado_emocional SET valor=baseline, updated_at=?", (now_iso,)
+                )
+                conn.execute(
+                    "UPDATE lovense_brinquedos SET bateria=1.0, bateria_em=?, onde='gaveta'", (now_iso,)
                 )
                 # Auditoria #8: o mundo vivo (#6) grava em tabelas que o reset
                 # preserva por conterem o cânone. Separa o que nasceu no soak.
@@ -2230,12 +2237,19 @@ class DatabaseManager:
     # Fase D14: o vínculo com o Patrick é lento — um dia sem ele não apaga o
     # carinho. Meia-vida em horas por chave (as outras usam a padrão).
     EMOTION_HALF_LIFE_BY_KEY = {"affection": 72.0, "romantic_intensity": 48.0,
-                                "security": 96.0, "hurt": 36.0}
+                                "security": 96.0, "hurt": 36.0,
+                                # 05/10 (Lovense, recalibrar a Marina): confiança volta em ~14 dias sem pendência.
+                                "trust": 336.0}
+    EMOTION_BASELINE_PADRAO = {"hurt": 0.0, "security": 0.8, "trust": 0.8}
 
     @classmethod
     def _relaxar(cls, valor: float, baseline: float, updated_at: Optional[str],
-                 now: Optional[datetime] = None, chave: Optional[str] = None) -> float:
+                 now: Optional[datetime] = None, chave: Optional[str] = None,
+                 travada: bool = False) -> float:
         if not updated_at or chave in cls.EMOTIONS_WITHOUT_TIME_RELAX:
+            return valor
+        if travada and valor < baseline:
+            # Pendência aberta (emocao_travas): abaixo do normal ela não volta sozinha, só conversando.
             return valor
         try:
             desde = datetime.fromisoformat(updated_at)
@@ -2246,14 +2260,20 @@ class DatabaseManager:
         fator = 0.5 ** (horas / meia_vida)
         return baseline + (valor - baseline) * fator
 
+    @staticmethod
+    def _chaves_travadas(conn) -> set[str]:
+        return {r[0] for r in conn.execute("SELECT DISTINCT chave FROM emocao_travas")}
+
     def get_estado_emocional(self, now: Optional[datetime] = None) -> dict[str, dict]:
         with self.get_connection() as conn:
+            travadas = self._chaves_travadas(conn)
             cursor = conn.cursor()
             cursor.execute("SELECT chave, valor, baseline, updated_at FROM estado_emocional")
             return {
                 r["chave"]: {
                     "valor": round(self._relaxar(float(r["valor"]), float(r["baseline"]),
-                                                 r["updated_at"], now, r["chave"]), 3),
+                                                 r["updated_at"], now, r["chave"],
+                                                 r["chave"] in travadas), 3),
                     "baseline": float(r["baseline"]),
                     "updated_at": r["updated_at"]
                 }
@@ -2272,7 +2292,7 @@ class DatabaseManager:
             row = cursor.fetchone()
             if row:
                 atual = self._relaxar(float(row["valor"]), float(row["baseline"]),
-                                      row["updated_at"], now, chave)
+                                      row["updated_at"], now, chave, chave in self._chaves_travadas(conn))
                 folga = (1.0 - atual) if delta > 0 else atual
                 efetivo = (delta * min(1.0, max(0.0, folga) / self.EMOTION_SOFT_EDGE)
                            if soft_edges else delta)
@@ -2288,7 +2308,7 @@ class DatabaseManager:
                 )
             else:
                 # D14: mágoa nasce em zero e segurança em 0,8 — não em 0,75.
-                base = {"hurt": 0.0, "security": 0.8}.get(chave, 0.75)
+                base = self.EMOTION_BASELINE_PADRAO.get(chave, 0.75)
                 novo_valor = max(0.0, min(1.0, base + delta))
                 cursor.execute(
                     "INSERT INTO estado_emocional (chave, valor, baseline, updated_at) VALUES (?, ?, ?, ?)",
@@ -2300,6 +2320,7 @@ class DatabaseManager:
         """Aproxima gradualmente os estados emocionais em direção aos seus baselines naturais."""
         now_iso = datetime.now().isoformat()
         with self.get_connection() as conn:
+            travadas = self._chaves_travadas(conn)
             cursor = conn.cursor()
             cursor.execute("SELECT chave, valor, baseline, updated_at FROM estado_emocional")
             rows = cursor.fetchall()
@@ -2309,12 +2330,63 @@ class DatabaseManager:
                 # updated_at=agora desfaria o relaxamento acumulado.
                 if r["chave"] in self.EMOTIONS_WITHOUT_TIME_RELAX:
                     continue
-                val = self._relaxar(float(r["valor"]), base, r["updated_at"], chave=r["chave"])
+                travada = r["chave"] in travadas
+                val = self._relaxar(float(r["valor"]), base, r["updated_at"], chave=r["chave"], travada=travada)
+                if travada and val < base:
+                    continue
                 novo_val = max(0.0, min(1.0, val + (base - val) * taxa))
                 cursor.execute(
                     "UPDATE estado_emocional SET valor = ?, updated_at = ? WHERE chave = ?",
                     (round(novo_val, 3), now_iso, r["chave"])
                 )
+
+    def get_trava_emocao(self, chave: str, motivo: str) -> Optional[dict]:
+        with self.get_connection() as conn:
+            row = conn.execute("SELECT desde, detalhe FROM emocao_travas WHERE chave=? AND motivo=?",
+                               (chave, motivo)).fetchone()
+        if not row:
+            return None
+        try:
+            detalhe = json.loads(row["detalhe"] or "{}")
+        except (TypeError, ValueError):
+            detalhe = {}
+        return {"desde": row["desde"], "detalhe": detalhe}
+
+    def travar_emocao(self, chave: str, motivo: str, now: Optional[datetime] = None,
+                      detalhe: Optional[dict] = None):
+        """Abre (ou atualiza) uma pendência que segura a barra: abaixo do normal ela não volta sozinha."""
+        now = now or datetime.now()
+        atual = self.get_trava_emocao(chave, motivo)
+        with self.get_connection() as conn:
+            if chave not in self._chaves_travadas(conn):
+                # O relaxamento até aqui fica gravado: a trava vale a partir de agora.
+                row = conn.execute("SELECT valor, baseline, updated_at FROM estado_emocional WHERE chave=?",
+                                   (chave,)).fetchone()
+                if row:
+                    valor = self._relaxar(float(row["valor"]), float(row["baseline"]), row["updated_at"], now, chave)
+                    conn.execute("UPDATE estado_emocional SET valor=?, updated_at=? WHERE chave=?",
+                                 (round(valor, 3), now.isoformat(), chave))
+            conn.execute(
+                """INSERT INTO emocao_travas (chave, motivo, desde, detalhe) VALUES (?, ?, ?, ?)
+                   ON CONFLICT(chave, motivo) DO UPDATE SET detalhe=excluded.detalhe""",
+                (chave, motivo, (atual or {}).get("desde") or now.isoformat(),
+                 json.dumps(detalhe or {}, ensure_ascii=False)))
+            conn.commit()
+
+    def destravar_emocao(self, chave: str, motivo: str, now: Optional[datetime] = None):
+        """Fecha a pendência; a barra volta a relaxar a partir de agora (não de quando travou)."""
+        now = now or datetime.now()
+        with self.get_connection() as conn:
+            row = conn.execute("SELECT valor, baseline, updated_at FROM estado_emocional WHERE chave=?",
+                               (chave,)).fetchone()
+            if row:
+                valor = self._relaxar(float(row["valor"]), float(row["baseline"]), row["updated_at"], now, chave,
+                                      chave in self._chaves_travadas(conn))
+                conn.execute("UPDATE estado_emocional SET valor=?, updated_at=? WHERE chave=?",
+                             (round(valor, 3), now.isoformat(), chave))
+            conn.execute("DELETE FROM emocao_travas WHERE chave=? AND motivo=?", (chave, motivo))
+            conn.commit()
+
     # --- MÉTODOS DE HISTÓRICO DE PATCHES (AUTO-PATCHER v3.4) ---
 
     def registrar_patch(

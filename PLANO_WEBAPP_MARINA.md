@@ -921,6 +921,27 @@ manda uma mensagem a cada mexida na barra: fala quando sente diferença.
 **A decidir no código (texto interno, eu decido e listo):** a janela de juntar comandos, o ganho de tesão por nível,
 o gasto da bateria, quanto a confiança cai/sobe. Textos visíveis da tela passam por ele (catálogo).
 
+**05/10, tarde — passo 1 feito ✅ (só estado; nada liga no bot ainda, então não muda o que ela faz):**
+`migrations/034_lovense.sql` (`lovense_brinquedos`, `lovense_sessoes`, `lovense_comandos`, `emocao_travas` e a
+barra `trust` em 0,80) e `lovense.py` (classe `Lovense`): `colocar` (fora de casa só com o brinquedo na bolsa; os dois
+juntos, cada um à parte), `combinar_palavra`, `comando`/`parar` (0–20; clássico, toque, padrão), `pedir_parar`,
+`liberar`, `tick` (bateria e escada), `cortar`, `tirar` (em casa vai pro carregador, fora volta pra bolsa),
+`levar_na_bolsa`/`guardar`, `pendencia`/`pode_topar`/`conversar`, `sessoes_recentes` e `estado` (o JSON que a tela
+vai ler: conectada, aviso "pediu_parar"/"cortou", brinquedos com bateria, onde, nível). Eventos devolvidos pro passo
+3 virar turno: `pediu_parar`, `respeitou`, `parou_tarde`, `parou_depois_da_bronca`, `religou`, `firme`, `bronca`,
+`cortou`, `tirou`, `bateria_acabou:<brinquedo>`, `sessao_acabou_bateria`. No `db.py`: a trava (`travar_emocao`,
+`destravar_emocao`; barra travada abaixo do normal não relaxa pra cima e, ao destravar, volta a relaxar a partir da
+conversa), meia-vida da `trust` de 14 dias e o reset do soak limpando o Lovense. Testes `tests/test_lovense.py` (26).
+**Números que eu decidi (calibrar no uso):** bateria por hora — Lush 0,01 parado + 0,49 no nível 20 (~2 h no máximo),
+Hush 0,02 + 0,58 (~1 h 40); carga 0,7/h (~1 h 30); padrão entrega em média Pulso 55%, Onda 60%, Fogos 70%, Terremoto
+85% do nível; não coloca com menos de 5%. Palavra: firme aos 30 s, bronca aos 60 s, corta aos 90 s (se consegue mexer
+no celular); voltar a ligar depois de parar, sem ela liberar, já é o firme. Confiança: parou a tempo +0,02, parou
+tarde −0,03, bronca −0,10, corte −0,08; com a palavra dita e tudo já parado, não ganha ponto. Pendência: abre na
+bronca ou no corte; conversas pra fechar = incidentes dos últimos 30 dias (no máximo 3), cada uma pelo menos 6 h
+depois da outra; conversa que não fecha +0,02, a que fecha +0,04; incidente novo zera as conversas feitas. O app
+mostra "Marina encerrou o controle" por 12 h depois do corte. Próximo: **"bora na frente de apps: Lovense, passo 2"**
+(rotas + tela, com dados falsos).
+
 ### Hoje com o bloco "Em casa" — plano (04/10, noite, frente de apps; sem código até o soak fechar) 📝
 Primeiro da frente de apps depois do soak. Base: respostas dele de 02/10 (`ideias_pos_soak/ideias/em_casa.json`: o
 bloco abre quando ela **chega** em casa e fecha quando ela **sai**; dentro, tudo o que ela faz **dentro do

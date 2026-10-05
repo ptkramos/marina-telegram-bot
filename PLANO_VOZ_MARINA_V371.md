@@ -1638,3 +1638,8 @@ Relacionamento.
 
 **05/10, tarde — ordem:** o Lovense (que cria a `trust`) e o redesenho dos Bastidores entram antes do recalibrar
 (decisão do Patrick); o passo 1 do recalibrar adota a `trust` do Lovense, e as barras novas entram no desenho novo.
+
+**05/10, tarde — a `trust` existe (Lovense, passo 1):** barra `trust` em `estado_emocional` (normal 0,80, meia-vida
+de 14 dias), com a trava genérica `emocao_travas` que o passo 1 do recalibrar reaproveita pro degrau da escada e pra
+mágoa (`db.travar_emocao`/`destravar_emocao`: travada abaixo do normal, não volta sozinha). Ainda não entra no prompt
+nem nos Bastidores; por enquanto só o Lovense mexe nela (PLANO_WEBAPP, "passo 1 feito").
