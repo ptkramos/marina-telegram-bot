@@ -21,7 +21,7 @@ import json
 import logging
 import random
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 from typing import Optional
 
@@ -966,6 +966,8 @@ class Agenda:
             linha2, comodo, inicio, fim = bloco.texto, bloco.comodo_nome, bloco.inicio, bloco.fim
             if bloco.tipo == "sexting":                   # 03/10: acaba quando o clima acaba — sem barra, "desde"
                 fim = None
+                if TempoLivre(self.db)._so_ela(replace(bloco, fim=now)):    # soak, dia 6: só ela no clima
+                    linha2 = "Provocando o Patrick por mensagem"
             passos, grade_extra = self._passos_midia(bloco, now)
             if bloco.faixas:                              # a linha 2 acompanha o artista que está tocando
                 from musica import Musica

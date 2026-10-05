@@ -23,6 +23,7 @@ Masturbação (Patrick, 26/09): sem limite — com tesão, em casa, ela goza qua
 from __future__ import annotations
 
 import json
+import re
 import logging
 import random
 from dataclasses import dataclass
@@ -73,7 +74,15 @@ UMECTACAO = ("umectacao", "Umectando o cabelo", ("quarto", "sala", "varanda"), "
 # 03/10 (Patrick, soak dia 5): o sexting não aparecia no Agora nem no Hoje — das 15:04 às 15:44 o mundo tinha ela
 # "olhando o Pinterest no closet", e às 15:41 ela usou isso na fala. Agora o modo íntimo vira bloco em casa.
 SEXTING_TEXTO = "Transando com o Patrick por mensagem"
-SEXTING_FOLGA = timedelta(minutes=5)     # o bloco vai até 5 min depois da última fala no clima
+# Ele no clima (pede, provoca de volta, descreve) × ele pedindo pra parar (soak, dia 6: "Marinaaa paraaa é sério eu não
+# quero saber… não me provoca quando eu tô no trabalho")
+ENTROU_RE = re.compile(r"goz|te comer|me chupa|\bmete\b|enfia|se toca|te toca|me toca|tira a roupa|abre as pernas|"
+                       r"molhad|pelad|\bnua\b|manda (?:foto|nude)|quero (?:te|você|vc|ver)|lingerie|calcinha|tes[aã]o|"
+                       r"geme|safad|gostosa|\bpau\b|duro")
+RECUSA_RE = re.compile(r"\bpa+ra+\b|n[aã]o me provoca|n[aã]o quero saber|para de me provocar|agora n[aã]o|"
+                       r"vai (?:botar|colocar|por) (?:uma )?roupa|vai se vestir|t[oô] no trabalho")
+SE_TOCAR_RE = re.compile(r"\bvou\s+me\s+(?:divertir|tocar|masturbar|aliviar)\b|\bvou\s+(?:gozar|terminar)\s+sozinha\b")
+SEXTING_FOLGA = timedelta(minutes=5)   # o bloco vai até 5 min depois da última fala no clima
 SEXTING_EMENDA = timedelta(minutes=15)   # voltou ao clima logo depois (o gozo dela antes do dele): mesmo bloco
 SOLO_BLOCK_CHANCE = 0.45            # com tesão (>= SOLO_MIN_LIBIDO); mais tesão, mais chance
 CHAMA_ELE_CHANCE = 0.5              # com saudade/desejo por ele, chama pro sexting
@@ -449,7 +458,8 @@ class TempoLivre:
     def _resumo(self, b: Bloco) -> str:
         onde, texto = self._onde(b), b.texto[:1].lower() + b.texto[1:]
         if b.tipo == "sexting":
-            return f"Transou com o Patrick por mensagem {onde}{' e gozou' if b.gozou else ''}."
+            verbo = "Provocou" if self._so_ela(b) else "Transou com"
+            return f"{verbo} o Patrick por mensagem {onde}{' e gozou' if b.gozou else ''}."
         if b.faixas:
             nomes = [f"\"{f['nome']}\" ({f['artista']})" for f in b.faixas[:4]]
             return f"Ficou ouvindo a playlist dela {onde}: " + ", ".join(nomes) + "."
@@ -517,6 +527,50 @@ class TempoLivre:
             return None
         return g
 
+    def _so_ela(self, b: Bloco) -> bool:
+        """Soak, dia 6 (04/10, 15:08–15:31; decisão do Patrick): "Transou com o Patrick" com ele dizendo "não me
+        provoca no trabalho". Só ela no clima — o último "para" dele veio depois de tudo que ele entrou — é
+        "Provocou o Patrick". Sem recusa dele fica "Transou" (nem todo jeito de entrar no clima casa com a lista)."""
+        try:
+            with self.db.get_connection() as conn:
+                rows = conn.execute("SELECT content FROM conversas WHERE role='user' AND timestamp>=? AND timestamp<=?"
+                                    " ORDER BY id", (b.inicio.isoformat(), b.fim.isoformat())).fetchall()
+        except Exception:
+            return False
+        ultima = None
+        for (texto,) in rows:
+            t = (texto or "").lower()
+            if RECUSA_RE.search(t):
+                ultima = "recusa"
+            elif ENTROU_RE.search(t):
+                ultima = "entrou"
+        return ultima == "recusa"
+
+    def promessa_de_se_tocar(self, fala: str, dele: str, now: datetime) -> bool:
+        """Soak, dia 6 (04/10, 15:26; decisão do Patrick): "Divirta-se aí sozinha" → "vou me divertir sim" e o mundo
+        foi pra playlist na sala. Ela disse que vai se tocar sozinha e o tesão deixa: o próximo bloco em casa é esse.
+        Gozou há menos de 1 h, ou o tesão está baixo: fica só na fala."""
+        fala = (fala or "").lower()
+        if not SE_TOCAR_RE.search(fala):
+            return False
+        if not (re.search(r"masturb|aliviar", fala) or "sozinha" in fala or "sozinha" in (dele or "").lower()):
+            return False
+        try:
+            from emotion import EmotionEngine, TESAO_MIN
+            f = EmotionEngine(self.db).feeling(now)
+        except Exception:
+            logger.exception("tempo_livre.promessa_de_se_tocar")
+            return False
+        if f.excitation < 0.45 and f.libido < TESAO_MIN:
+            logger.info("tempo_livre.vai_se_tocar nao: tesao=%.2f excitacao=%.2f", f.libido, f.excitation)
+            return False
+        if f.hours_since_release is not None and f.hours_since_release < 1:
+            return False
+        from agenda_reativa import AgendaReativa
+        AgendaReativa(self.db).marcar_alivio_em_casa(now, now)
+        logger.info("tempo_livre.vai_se_tocar sim: tesao=%.2f excitacao=%.2f", f.libido, f.excitation)
+        return True
+
     def _em_casa_livre(self, now: datetime) -> bool:
         """Em casa e no tempo livre dela (não numa saída, refeição, banho ou dormindo)."""
         with self.db.get_connection() as conn:
@@ -534,7 +588,11 @@ class TempoLivre:
         if g:
             g["fim"] = max(datetime.fromisoformat(g["fim"]), now + SEXTING_FOLGA).isoformat()
             self._save(st, now)
-            return self._bloco(g)
+            b = self._bloco(g)
+            with self.db.get_connection() as conn:          # quem entrou no clima pode mudar a cada fala
+                conn.execute("UPDATE life_events SET summary=? WHERE event_key=?", (self._resumo(b), b.chave))
+                conn.commit()
+            return b
         if not self._em_casa_livre(now):
             return None
         self.interrompe(now, now)

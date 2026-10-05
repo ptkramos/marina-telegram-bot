@@ -359,6 +359,12 @@ class AgendaReativa:
         self.db.set_estado_relacional(RELEASE_KEY, gozo.isoformat())
         EmotionEngine(self.db).feel("alegria", "alivio", 0.3, "se aliviou fora de casa", gozo, source_key=f"{key}:alivio")
 
+    def marcar_alivio_em_casa(self, chega: datetime, now: datetime, *, chama_ele: bool = False) -> None:
+        """O primeiro bloco em casa a partir de `chega` é a masturbação (ela disse que ia se tocar)."""
+        st = self._state()
+        st["alivio_em_casa"] = {"chega": chega.isoformat(), "chama_ele": chama_ele}
+        self._save(st, now)
+
     def alivio_em_casa(self, now: datetime, *, consumir: bool = True) -> Optional[bool]:
         """Voltou correndo pra casa por tesão: o primeiro bloco em casa é a masturbação.
         None: nada pendente. False/True: sozinha / chamando ele."""

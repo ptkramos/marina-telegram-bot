@@ -4,8 +4,8 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 05/10/2026 (planejados na frente de apps, sem código: o Lovense, o bloco "Em casa" do Hoje, o banco dela com o iFood da Ma e o **redesenho dos Bastidores**, Mundo incluído — decisões e plano no PLANO_WEBAPP).
-**Próximas conversas: segunda de manhã, "bora no soak, dia 6"**; depois, planejamento liberado (só plano, sem código): **"bora na frente do mundo: recalibrar a Marina"** (seção 1) (relatório `soak/dia-2026-10-04.md`; texto feio
+_Atualizado em 05/10/2026 (soak, dia 6 lido e corrigido; antes, planejados na frente de apps, sem código: o Lovense, o bloco "Em casa" do Hoje, o banco dela com o iFood da Ma e o **redesenho dos Bastidores**, Mundo incluído — decisões e plano no PLANO_WEBAPP).
+**Dia 6 lido e corrigido em 05/10 (item 28; 4 graves, então os 3 dias limpos ainda não começaram). Próximas conversas: terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`); planejamento liberado (só plano, sem código): **"bora na frente do mundo: recalibrar a Marina"** (seção 1) (texto feio
 achado na frente de apps pra entrar no lote: o extrato do Dinheiro mostra "Foi no Agência boutique da Lívia
 (fictícia)" no Uber do casting de 01/10 — o `extrato._lugar_do_uber` não tira o "(fictícia)" e o artigo sai errado; **bug latente pro mesmo lote** (achado em 05/10 no redesenho): o "Rolando agora" do Mundo
 mostra o título de toda história aberta sem olhar se ela já contou (`social_news_shared`) nem se é segredo
@@ -775,7 +775,21 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
     - Relatório do soak: refeição em cima de refeição, compra que não é de mercado, aviso de chegada prometido e não
       dado, iniciativa antes do bom dia; academia do prédio não é teleporte; "shorts" × "short".
 
-**Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo); M4 e M5 do dia 5 (frente da voz).
+28. ✅ **Soak, dia 6 (domingo 04/10) — relatório lido em 05/10.** `tests/test_soak_dia6.py` (+26). Detalhe na
+    Auditoria ("Soak, dia 6").
+    - Graves: foto do Milo pedida/prometida → três selfies dela, duas de lingerie (o "safada" da bronca vestia ela pra
+      provocar); a mesma pose três vezes seguidas; café da manhã no meio do banho; "o pix já saiu?" com o Pix dele de
+      02/10 (assunto em aberto sem dono, e "resolvido" com nota de não resolvido).
+    - Médios: áudio arrastado (/ruim 074) gerado de novo; "Cheguei em casa" 37 min depois de chegar.
+    - Decisões do Patrick: "Provocou o Patrick" no Hoje quando só ela vai pro clima; "vou me divertir" com tesão vira
+      masturbação de verdade.
+    - **Anotados pra frente da voz:** /ruim 073; reação 🤣 → "exatamente" dela mesma; fofoca prometida 2x sem fofoca;
+      oito áudios seguidos no flerte.
+    - No banco (OK do Patrick): assunto 46 com dono, fato 111 desativado; originais em `soak/originais-2026-10-04.json`.
+    - Relatório do soak: "short robe" não é short; foto do Milo pedida × foto que chegou.
+
+**Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo); M4 e M5 do dia 5 e os anotados do
+dia 6 (frente da voz).
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
 **Abertura:** congelada até o soak fechar (freio, seção 0); foto errada no uso real é bug do soak

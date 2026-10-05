@@ -548,7 +548,10 @@ class Rituals:
         except Exception:
             energy = 0.7
         if slot.startswith("banho_rua"):
-            porque = " Você acabou de chegar da rua" + (" e está um calor absurdo" if temp and temp >= SHOWER_HOT_C else "")
+            # Soak, dia 6 (04/10): chegou do passeio às 09:41 e às 10:18 disse "Cheguei em casa acabada e vou tomar
+            # banho" — o banho da rua é marcado 10–30 min depois da chegada.
+            porque = (" Você voltou da rua faz um tempinho (já está em casa há uns minutos)"
+                      + (" e está um calor absurdo" if temp and temp >= SHOWER_HOT_C else ""))
         elif energy < 0.35:
             porque = " Vai ser um banho demorado, pra relaxar e se sentir gente de novo (skincare, cabelo)"
         else:

@@ -560,6 +560,18 @@ class Meals:
         except (TypeError, ValueError, KeyError):
             return False
 
+    def _fim_do_banho_em(self, t: datetime) -> Optional[datetime]:
+        """Se às `t` ela estava no banho (a transição do banho cobre `t`), a hora em que saiu."""
+        raw = self.db.get_estado_relacional().get("pending_transition_json")
+        try:
+            data = json.loads(raw) if raw else {}
+            if data.get("routine_type") != "shower":
+                return None
+            ini, fim = datetime.fromisoformat(data["transition_at"]), datetime.fromisoformat(data["end_at"])
+        except (TypeError, ValueError, KeyError):
+            return None
+        return fim if ini <= t < fim else None
+
     def _at_home(self) -> bool:
         return not self._fora(WorldStateRepository(self.db).latest())
 
@@ -636,6 +648,15 @@ class Meals:
                     continue
                 from dataclasses import replace
                 slot = replace(slot, at=now)
+            if slot.where == "casa" and not slot.skipped:
+                # Soak, dia 6 (04/10): o café das 10:30 foi registrado com ela no banho (10:20–11:01). No banho ela
+                # não come: espera sair e come em seguida.
+                saiu = self._fim_do_banho_em(slot.at)
+                if saiu is not None:
+                    if saiu > now:
+                        continue
+                    from dataclasses import replace
+                    slot = replace(slot, at=saiu)
             sac = self._record(slot, now)
             if sac is not None:
                 created += 1

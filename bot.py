@@ -4151,6 +4151,12 @@ async def process_incoming_batch(
         except Exception:
             logger.exception("intimacy.observe_marina.error")
         try:
+            # Soak, dia 6 (Patrick, 05/10): "vou me divertir sim" com tesão de verdade vira a masturbação no mundo.
+            from tempo_livre import TempoLivre
+            TempoLivre(memory_manager.db).promessa_de_se_tocar(fala_limpa, texto_usuario, datetime.now())
+        except Exception:
+            logger.exception("tempo_livre.promessa_de_se_tocar.error")
+        try:
             # 26/09 (agenda reativa): o que ela topa/anuncia/desiste na conversa vira agenda de verdade.
             # Modelo barato, fora do loop (só quando a fala tem cara de plano).
             from agenda_reativa import PLANO_RE, AgendaReativa

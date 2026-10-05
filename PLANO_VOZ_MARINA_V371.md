@@ -1498,3 +1498,14 @@ selfie de camiseta tinha fechado a promessa); "deixa eu ver você com ela" com a
 com a peça; no turno de foto, a fala leva pra foto (nada de "fala primeiro" com a foto saindo junto). Anotados pro
 lote da voz: ela sumir 2h30 depois de "vou te prender aqui a tarde toda", o Silo ("continua que melhora" × "ainda
 não vi") e os /ruim 067–072. Detalhe na Auditoria ("Soak, dia 5").
+
+**05/10 — soak, dia 6 (domingo 04/10), o que muda na fala e nas fotos:** pediu foto do Milo ("manda foto dele?", "eu
+peço foto do Milo e vc manda foto tua?!") ou ela prometeu ("a próxima foto é do Milo"): vem o Milo, do ponto de vista
+dela, e o "safada" da bronca não faz ela vestir lingerie (às 15:01–15:05 foram três selfies dela, a segunda e a
+terceira de lingerie na varanda); vestida, cada foto nova é pose nova (eram três iguais, "só manda foto mostrando
+elas"). A iniciativa de assunto em aberto não pergunta dele o que ele já fez ("o pix já saiu?" com o Pix dele de 02/10:
+comprar o vestido era ela). Áudio que sai arrastado (/ruim 074: ~10 s em 22 s) é gerado de novo uma vez. O aviso do
+banho depois da rua não diz mais "acabei de chegar" meia hora depois. Se ela diz que vai se tocar sozinha com tesão de
+verdade ("vou me divertir sim", 15:26), ela se toca. Anotados pro lote da voz: /ruim 073 (respondeu à parte errada), a
+reação 🤣 dele virando "exatamente" dela mesma, a "fofoca do rolê" prometida duas vezes sem fofoca, oito áudios
+seguidos no flerte. Detalhe na Auditoria ("Soak, dia 6").

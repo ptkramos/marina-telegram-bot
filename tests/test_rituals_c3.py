@@ -220,7 +220,7 @@ class CotidianoTests(_Base):
             self.assertTrue(self._at(17, 40) <= planned <= self._at(18, 0))
             ritual = self._tick(planned + timedelta(minutes=1), ("HOME_RELAXING", "em casa"))
         self.assertEqual(ritual.moment, "banho")
-        self.assertIn("chegar da rua", ritual.detail)
+        self.assertIn("voltou da rua", ritual.detail)   # soak, dia 6: não "acabou de chegar"
         self.assertIn("calor", ritual.detail)
 
     def test_d4v2_sem_teto_mas_nunca_colado(self):

@@ -272,6 +272,13 @@ def saudacao_fora_de_hora(texto: str, at: datetime) -> str:
 ROUPA_PALAVRAS = ("vestido", "saia", "calça", "calca", "short", "shorts", "top", "cropped", "camiseta", "blusa",
                   "moletom", "pijama", "lingerie", "biquíni", "biquini", "legging", "jaqueta", "camisola",
                   "sutiã", "sutia", "calcinha", "body", "regata", "jeans", "macacão", "macacao", "suéter", "sueter")
+# "short" do inglês como adjetivo ("a short light pink satin robe", "short sleeves"): não é a peça
+RE_SHORT_ADJETIVO = re.compile(r"\bshort\s+(?:[\w-]+\s+){0,4}?(?:robe|dress|skirt|kimono|sleeves?|jacket|nightie|"
+                               r"coat|cardigan|hair)\b")
+# soak, dia 6 (04/10, 15:01–15:05): ele pediu foto do Milo ("foto dele"), ela prometeu "a próxima é do Milo", e as
+# três fotos foram selfies dela — a conferência de foto pedida × chegou só olhava se chegou alguma foto
+RE_FOTO_DO_MILO = re.compile(r"\bfot(?:o|inho|inha)s?\s+(?:é\s+|e\s+)?d(?:o\s+(?:milo|cachorr\w*)|ele)\b|"
+                             r"\b(?:uma|outra)\s+dele\b|\bvai\s+o\s+milo\b")
 
 
 def quebras(texto: str) -> list[str]:
@@ -610,6 +617,7 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
                 look = f"(erro: {type(exc).__name__})"
         linhas_foto.append(f"**{_hm(m['at'])}** {_curto(m['content'], 160)} → roupa no mundo: {look or '(sem registro)'}")
         desc = (m["content"].split("]")[0] if m["content"].startswith("[") else m["content"]).lower()
+        desc = RE_SHORT_ADJETIVO.sub(" ", desc)        # soak, dia 6: "a short light pink satin robe" não é short
         # soak, dia 5 (19:15): "grey cotton shorts" × "short de moletom cinza" é a mesma peça (plural do inglês)
         falta = [p for p in ROUPA_PALAVRAS if re.search(rf"\b{p}\b", desc) and p not in _sem_acento(look)
                  and _sem_acento(p) not in _sem_acento(look) and _sem_acento(p).rstrip("s") not in _sem_acento(look)]
@@ -831,6 +839,16 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
             lugar = re.search(r"place=(\S+)", e["msg"])
             pedidos.append((e["at"], "tentou", f"uma foto ({lugar.group(1) if lugar else '?'})",
                             e["at"] + timedelta(minutes=5)))
+    for i, m in enumerate(msgs):
+        achou = [a.group(0) for a in RE_FOTO_DO_MILO.finditer((m["content"] or "").lower())]
+        antes = " ".join((x["content"] or "").lower() for x in msgs[max(0, i - 3):i])
+        if not achou or not (any("milo" in a or "cachorr" in a for a in achou) or re.search(r"\bmilo\b", antes)):
+            continue
+        foto = next((f for f in fotos_dela if m["at"] <= f["at"] <= m["at"] + timedelta(minutes=15)), None)
+        if foto and "milo" not in (foto["content"] or "").lower():
+            quem = "ele pediu" if m["role"] == "user" else "ela prometeu"
+            s_pedida.append(f"**{_hm(m['at'])}** {quem} foto do Milo («{_curto(m['content'], 70)}») e chegou "
+                            f"outra: «{_curto(foto['content'], 120)}» ({_hm(foto['at'])})")
     promessas_at = [at for at, quem, _, _ in pedidos if quem == "prometeu"]
     for at, quem, o_que, limite in sorted(pedidos):
         if any(at <= f <= limite for f in fotos_at):

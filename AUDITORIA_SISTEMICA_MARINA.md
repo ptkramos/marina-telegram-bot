@@ -2837,3 +2837,52 @@ tensão zero pra todo mundo e `contact_frequency` contando desde o reset (o "28 
 pro "Depois do soak". **Bug latente:** o "Rolando agora" mostra o título de toda história aberta sem olhar o que ela
 já contou nem o que é segredo; na produção só existe 1 história, fechada (nada vazou) — o filtro entra no lote do
 soak. Regra do Patrick pro redesenho: nada de fofoca não contada nem segredo na tela.
+
+## Soak, dia 6 — domingo 04/10 (relatório `soak/dia-2026-10-04.md`, lido em 05/10; FRENTES item 28)
+
+Dia calmo de plantão dele (66 mensagens dele, 69 dela, 3 fotos, 8 áudios); o relatório achou 3 suspeitas (1 real) e
+0 /feedback. Lido inteiro: a conversa com o mundo, os 4 "O Patrick estranhou", o por dentro, o log e os /ruim 073–074.
+**4 graves.**
+- **G1 — 15:01–15:05 ele pediu foto do Milo e vieram três selfies dela. Camada: foto (diretor).** "Manda foto dele?"
+  (o Milo que ela tinha acabado de citar) não casava com nada e o LLM escolheu `unhas_selfie`; às 15:03 "sua safada,
+  eu peço foto do Milo e vc manda foto tua?!" tinha "sua"/"tua", que contavam como foto dela (`_HER_IN_IT_RE`), e o
+  "safada" (nível 1) fez ela vestir o conjunto de renda com robe pra provocar — a selfie de lingerie na varanda; às
+  15:04 ela prometeu "a próxima foto é do Milo" e veio a terceira. Agora `pede_milo`: "foto do Milo", "foto dele" /
+  "uma dele" com o Milo citado nos últimos 20 min, "a próxima foto é do Milo", "vai o Milo" → `pov_milo`, nível 0,
+  sem troca de roupa (foto do ponto de vista dela não veste ninguém); "foto sua com o Milo", "eu e o Milo" seguem
+  dela. O story das 15:13 foi a primeira selfie (camisetão), não a de lingerie.
+- **G2 — a mesma pose três vezes seguidas ("só manda foto mostrando elas"). Camada: foto (sessão).** A sessão da foto
+  segurava a pose de uma foto pra outra (feita pras cenas do clima). Vestida (nível ≤ 1) e sem momentos, foto nova é
+  pose nova no mesmo cômodo e com a mesma roupa; "igual/igualzinha/mesma pose" repete.
+- **G3 — 10:30 café da manhã (brunch) registrado no meio do banho (10:20–11:01). Camada: mundo (refeições).** O
+  `Meals.materialize` só evitava o "comendo agora" com a transição ocupada; a refeição era gravada na hora do plano.
+  Refeição em casa que cai dentro do banho espera ele acabar e começa quando ela sai (`_fim_do_banho_em`).
+- **G4 — 13:23 "e aquele vestido novo… o pix já saiu?" (o Pix de R$ 1000 ele mandou em 02/10). Camada: memória
+  (assuntos em aberto).** O assunto 46 dizia "Comprar o vestido novo com o Pix até domingo", sem dono; os 39–41
+  tinham sido "resolvidos" com a nota "Não há evidência de resolução; mantido como assunto em aberto" e voltaram. O
+  reflector agora escreve o assunto começando por quem faz ("Marina vai…") e não fecha assunto cuja nota diz que não
+  resolveu; a iniciativa do assunto em aberto sabe que, se fala de algo que ele deu (Pix, presente), a parte dele já
+  foi. No banco (OK do Patrick): o 46 virou "Marina vai comprar o vestido novo com o Pix de R$ 1000 que o Patrick
+  mandou em 02/10" e o fato 111 ("Patrick pretende presentear… vestido novo") saiu; originais em
+  `soak/originais-2026-10-04.json`.
+- **Médios consertados.** **M1** /ruim 074 (15:16): áudio de ~10 s saiu com 22 s, "o início inteiro lento e
+  arrastado" — o MiniMax arrasta sozinho às vezes. Áudio com 1,75× a duração esperada e 5 s a mais é gerado de novo
+  uma vez e fica o mais curto (`voice_engine.arrastado`; no log de 29/09–04/10 pega só esse e o de 03/10 15:26).
+  **M2** 10:18 "Cheguei em casa acabada e vou tomar banho" com ela em casa desde 09:41: o aviso do banho da rua (marcado
+  10–30 min depois da chegada) dizia "você acabou de chegar da rua".
+- **Decisões do Patrick (05/10).** **M3** "Transou com o Patrick (No quarto por mensagem)" 15:08–15:31 com ele pedindo
+  pra parar ("não me provoca no trabalho"): quando o último "para / não me provoca / vai botar uma roupa" dele vem
+  depois de tudo que ele entrou no clima, o Hoje mostra **"Provocou o Patrick"** (enquanto acontece, "Provocando o
+  Patrick"; o Agora diz "Provocando o Patrick por mensagem"); sem recusa dele segue "Transou" (`TempoLivre._so_ela`,
+  revisto a cada fala dela no clima). **M4** 15:26 "vou me divertir sim" e o mundo foi pra playlist na sala: se ela
+  diz que vai se tocar sozinha e o tesão deixa (excitação ≥ 0,45 ou tesão ≥ 0,72; às 15:26 a excitação era 0,89), o
+  próximo bloco em casa é a masturbação; gozou há menos de 1 h, não.
+- **Anotados (frente da voz):** /ruim 073 (15:01 "Me conhece demais, folgado" respondendo a "Tá sim graças a Deus",
+  que era sobre o plantão dele); 11:32 a reação 🤣 dele virou "KKKKK exatamente, hoje o plantão vai render Silo" (ela
+  concordando com ela mesma); 09:03 e 10:18 duas iniciativas prometendo "a fofoca do rolê" que não existia ("a fofoca
+  veio flopada"); oito áudios seguidos no flerte das 15:11–15:26. Lovense: às 15:22 ela topou (já anotado no painel).
+- **Infra:** o reinício das 16:44 foi 2 min depois da última mensagem (16:41:54) — o deploy do lote 2 do catálogo
+  (`69e0b23`), que só reinicia assim com `--now`; a conversa parou ali (a próxima foi a iniciativa das 19:04).
+- **Relatório do soak:** "a short … satin robe" não é short (falso alarme do foto × roupa); nova conferência: foto do
+  Milo pedida ou prometida × a foto que chegou (pegaria as três de 15:01–15:05).
+`tests/test_soak_dia6.py` (+26).

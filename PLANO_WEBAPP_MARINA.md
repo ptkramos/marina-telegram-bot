@@ -795,6 +795,12 @@ da noite não começa mais por cima do Se arrumando (/feedback 19:52: o card est
 Hoje: nada de "Comprou vestidos" no mercado (roupa não entra na lista) e o brunch é o almoço do dia (não aparece
 "Almoçou" uma hora depois). Detalhe na Auditoria ("Soak, dia 5").
 
+**05/10 — soak, dia 6 (domingo 04/10), o que muda no Bastidores:** no Hoje, quando só ela fica no clima por mensagem
+(o último recado dele é pra parar), o bloco é **"Provocou o Patrick"** (embaixo "No quarto por mensagem"; enquanto
+acontece, "Provocando o Patrick", e no Agora "Provocando o Patrick por mensagem"), escolha do Patrick — em 04/10 aparecia "Transou com o Patrick" 15:08–15:31 com ele
+dizendo "não me provoca no trabalho". O café da manhã não aparece mais dentro do banho (10:20–11:01 com o brunch às
+10:30): a refeição espera ela sair. Detalhe na Auditoria ("Soak, dia 6").
+
 **04/10, noite — catálogo de textos, leva 2 decidida (sem mudança de tela ainda):** as 253 fichas dos Bastidores,
 iFood, Nubank e Instagram têm decisão (117 do Patrick pelo celular, 136 preenchidas por mim pelos padrões dele e
 conferidas no chat). Regras novas pra tela (9 a 17 em `data/feedback/catalogo_textos/regras_gerais.md`): rótulo diz o

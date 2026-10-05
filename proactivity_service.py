@@ -657,7 +657,11 @@ class ProactivityService:
                         f"Período do dia: {daypart}. Você lembrou de um assunto em aberto entre vocês: "
                         f"'{loop['content']}'. Se é coisa dele, pergunte de leve se tem novidade. Se é coisa sua (algo "
                         "que você mesma tem que fazer ou contar), não pergunte a ele: conte como está de verdade, pelo "
-                        "seu dia. Sem pressão, sem inventar cena."
+                        "seu dia. Sem pressão, sem inventar cena. "
+                        # Soak, dia 6 (04/10, 13:23): "Comprar o vestido novo com o Pix" virou "o pix já saiu?" —
+                        # o Pix de R$ 1000 ele tinha mandado em 02/10; comprar era ela.
+                        "Se o assunto fala de algo que ele te deu ou mandou (Pix, presente), a parte dele já foi: "
+                        "o que falta é seu."
                     )
                 }
 

@@ -446,6 +446,40 @@ _HER_IN_IT_RE = re.compile(r"(?<!pra )(?<!para )\b(?:sua|voc[eê]|vc|tu|contigo)
 _PHOTO_OF_RE = re.compile(r"\bfot(?:o|inho|inha)s?\s+d[oa]\b", re.IGNORECASE)
 
 
+# Soak, dia 6 (04/10, 15:01–15:05): "Manda foto dele?" (o Milo, que ela tinha acabado de citar) virou selfie dela;
+# "sua safada, eu peço foto do Milo e vc manda foto tua?!" também (o "sua"/"tua" da bronca contava como ela na foto,
+# e o "safada" ainda fez ela vestir lingerie); "prometo que a próxima foto é do Milo" e veio a terceira selfie igual.
+_MILO_RE = re.compile(r"\bmilo\b|cachorr(?:o|inho)\b|doguinho", re.IGNORECASE)
+_FOTO_DO_MILO_RE = re.compile(
+    r"\bfot(?:o|inho|inha)s?\s+(?:é\s+|e\s+|vai\s+ser\s+)?d(?:o\s+(?:milo|cachorr\w*|doguinho)|ele)\b"
+    r"|\b(?:uma|outra)\s+dele\b|\bvai\s+o\s+milo\b", re.IGNORECASE)
+_ELA_COM_O_MILO_RE = re.compile(
+    r"\b(?:voc[eê]|vc|tu|eu)\s+(?:e|com)\s+o\s+(?:milo|cachorr\w*|doguinho)\b"
+    r"|\bfot\w*\s+(?:sua|tua|nossa)\s+(?:com|e)\b|\bn[oó]s\s+dois\b|\bcomigo\b|\bcontigo\b", re.IGNORECASE)
+
+
+def _milo_no_assunto(db, now: datetime) -> bool:
+    """O Milo foi citado na conversa dos últimos 20 min (o "dele" de "manda foto dele?" é ele)."""
+    try:
+        with db.get_connection() as conn:
+            rows = conn.execute("SELECT content FROM conversas WHERE timestamp>=? ORDER BY id DESC LIMIT 4",
+                                ((now - timedelta(minutes=20)).isoformat(),)).fetchall()
+    except Exception:
+        return False
+    return any(_MILO_RE.search(r[0] or "") for r in rows)
+
+
+def pede_milo(db, now: datetime, request: str, her_line: str) -> bool:
+    """A foto pedida (ou prometida por ela) é do Milo, sem ela: "foto do Milo", "foto dele", "a próxima é do Milo"."""
+    texto = f"{request or ''}\n{her_line or ''}"
+    if _ELA_COM_O_MILO_RE.search(texto):
+        return False
+    achou = [m.group(0) for m in _FOTO_DO_MILO_RE.finditer(texto)]
+    if not achou:
+        return False
+    return any(_MILO_RE.search(a) for a in achou) or _milo_no_assunto(db, now)
+
+
 def _worded_pose(text: str, level: int, at_home: bool, *, hers: bool = False) -> Optional[Pose]:
     """hers: a fala é dela — foto sem ela só se ela disse "foto do Milo/da vista"."""
     low = (text or "").lower()
@@ -507,6 +541,7 @@ _CLOTHED = re.compile(r"\b(vestida|de roupa|com roupa|look|lookinho|roupa do dia
 _POSE_CHANGE = re.compile(r"\b(deita|deitada|vira|virada|de quatro|de costas|senta|sentada|levanta|de p[eé]|"
                           r"em p[eé]|ajoelha|outra posi[cç][aã]o|muda (a|de) posi|no chuveiro|no espelho|na cama|"
                           r"no sof[aá]|na poltrona|na bancada)\b")
+_MESMA_FOTO_RE = re.compile(r"\b(igualzinha|igual|mesma (foto|pose)|assim de novo|desse jeito de novo)\b")
 _CLIMAX = re.compile(r"\b(goza pra mim|goza comigo|gozei|gozando|vou gozar|gozar junto|goza)\b")
 _BEAT_ASK = (("plug", r"\bplug\b"), ("dildo", r"dildo|consolo|brinquedo|vibrador"), ("lick", r"lamb|chupa (o|os) dedo"),
              ("spread", r"abre|abrindo"),
@@ -829,7 +864,10 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         # Soak, dia 5 (03/10, 15:08): "deixa eu ver você com ela" (o conjunto de renda rosa que ela vestiu pra
         # provocar) virou foto pelada. Ver com a peça é com a peça.
         asked = 2
-    level = decide_level(asked, turn, session, her_initiative=her_initiative, rng=rng)
+    milo = force_pose is None and pede_milo(db, now, request, her_line)
+    if milo:
+        asked = None                                         # o "safada" da bronca não é pedido de foto ousada
+    level = 0 if milo else decide_level(asked, turn, session, her_initiative=her_initiative, rng=rng)
     declined = ""
     if not at_home and level > 1:
         declined, level = "fora de casa", 1
@@ -839,6 +877,8 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     food = _food(f"{request} {her_line}") if level <= 1 else None
     if food:
         worded = BY_ID["pov_comida" if at_home else "pov_comida_rua"]      # 26/09: comida é do ponto de vista dela
+    if milo:
+        worded = BY_ID["pov_milo" if at_home else "pov_milo_rua"]
     if getattr(turn, "state", "") == "climax" and not worded and level >= 3:
         current = BY_ID.get((session or {}).get("pose", ""))
         if not (current and current.beats):          # sem cena com "momentos" rolando: foto do depois
@@ -857,11 +897,16 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
     room_asked = apartamento.room_for(request) if at_home else None
     keep = (session is not None and not change and (room_asked in (None, session.get("room")))
             and session.get("pose") in BY_ID)
+    repetida = ""
     if keep:
         pose = BY_ID[session["pose"]]
         lo, hi = pose.levels
         if not (lo <= level <= hi):
             keep = False
+        elif level <= 1 and not pose.beats and not _MESMA_FOTO_RE.search((request or "").lower()):
+            # Soak, dia 6 (04/10, 15:02–15:05): três selfies iguais seguidas ("só manda foto mostrando elas").
+            # Vestida, foto nova é pose nova (mesmo cômodo, mesma roupa); a sessão segura a pose nas cenas do clima.
+            keep, repetida = False, pose.id
     intimo = not outfit_override and ((asked or 0) >= 1 or getattr(turn, "state", "off") in
                                       ("warming", "active", "climax", "afterglow"))
     if keep:
@@ -891,6 +936,8 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         if not candidates and at_home:                       # o cômodo não tem pose desse nível: vai pro quarto
             room = "quarto"
             candidates = [p for p in POSES if "quarto" in p.rooms and p.levels[0] <= level <= p.levels[1]]
+        if repetida and len([p for p in candidates if p.id != repetida]) >= 1:
+            candidates = [p for p in candidates if p.id != repetida]
         pose = worded
         if pose and room not in pose.rooms:
             room = pose.rooms[0] if at_home else "fora"
@@ -902,7 +949,8 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
                 pose = None
         pose = pose or rng.choice(candidates)
         seed = rng.randint(1, 2**31 - 1)
-        outfit, _ = _outfit(pose, level, now, at_home, rng, db, intimo, scene_at)
+        # foto do ponto de vista dela (Milo, comida, vista): ela não aparece, então não troca de roupa pra ela
+        outfit = None if pose.framing == "pov" else _outfit(pose, level, now, at_home, rng, db, intimo, scene_at)[0]
 
     if outfit_override and level <= 1:
         outfit = outfit_override           # 25/09: as duas opções de look que ela prometeu mandar

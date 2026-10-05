@@ -22,6 +22,9 @@ from db import db_manager, DatabaseManager
 
 logger = logging.getLogger("SessionReflector")
 
+_NAO_RESOLVIDO_RE = re.compile(r"n[aã]o h[aá] evid[eê]ncia|mantid[oa] como|(?:segue|continua|fica|mantido) em aberto|"
+                               r"ainda n[aã]o (?:foi )?(?:resolvid|conclu|feit)", re.IGNORECASE)
+
 # Auditoria #2: traduzido para pt-BR pelo mesmo motivo do consolidator — este
 # componente lê conversa em português e grava saída em português, mas raciocinava
 # sob instrução em inglês. O Patch 021 tratou o prompt de conversa; os prompts de
@@ -32,7 +35,7 @@ Use apenas a evidência da conversa fornecida. Não invente interioridade, biogr
 REGRAS:
 1. Resuma a conversa recente com clareza em 'summary'.
 2. Liste os assuntos principais em 'topics' (no máximo 3).
-3. Processos inacabados → 'open_loops'. Promessa miúda do momento ("vou jantar e te conto o que comi") é loop_type='promise': vale só pro dia e vence sozinha. Falha técnica do app (foto, áudio, "função em manutenção") NUNCA é assunto em aberto — não é da vida deles.
+3. Processos inacabados → 'open_loops'. Promessa miúda do momento ("vou jantar e te conto o que comi") é loop_type='promise': vale só pro dia e vence sozinha. Falha técnica do app (foto, áudio, "função em manutenção") NUNCA é assunto em aberto — não é da vida deles. O 'content' sempre diz de quem é a tarefa e o que já aconteceu, começando pelo nome ("Marina vai comprar o vestido novo com o Pix que o Patrick já mandou", "Patrick vai ver o resultado do exame").
 4. Open loops fornecidos que foram concluídos → 'resolved_loops', com o loop_id.
 5. Compromissos futuros ainda não registrados → 'events'.
 6. Momentos de conexão memoráveis entre os dois → 'relationship_moments'.
@@ -204,6 +207,11 @@ class SessionReflector:
             loop_db = self.db.get_open_loop(lid)
             if not loop_db or loop_db.get("status") != "open":
                 logger.warning(f"SessionReflector: loop {lid} não existe ou não está aberto.")
+                continue
+            if _NAO_RESOLVIDO_RE.search(notes or ""):
+                # Soak, dia 6: "Comprar o vestido até domingo" saiu como resolvido com a nota "Não há evidência de
+                # resolução na conversa; mantido como assunto em aberto" — e voltou como loop novo, sem dono.
+                logger.info(f"SessionReflector: loop {lid} segue aberto (a nota diz que não resolveu).")
                 continue
 
             if self.db.resolver_open_loop(lid, resolution_notes=notes):

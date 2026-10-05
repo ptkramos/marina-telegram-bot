@@ -408,7 +408,20 @@ class VoiceEngine:
         # 2. Novita MiniMax Voice Cloning com o perfil selecionado (PRIORIDADE OFICIAL)
         if await self._synthesize_novita_minimax(clean_text, out_ogg, profile=selected_profile, voice_plan=voice_plan):
             if voice_plan is not None:
-                self._log_actual_duration(out_ogg)
+                real = self._log_actual_duration(out_ogg)
+                esperado = len(voice_plan.display_text.split()) / 2.5
+                if arrastado(real, esperado):
+                    # Soak, dia 6 (04/10, 15:16, /ruim 074): ~10 s de fala saíram em 22 s, "o início inteiro lento e
+                    # arrastado". O MiniMax às vezes arrasta sozinho: gera de novo uma vez e fica com o mais curto.
+                    logger.info('voice.arrastado real=%.1f esperado=%.1f: gerando de novo', real, esperado)
+                    outro = TEMP_AUDIO_DIR / f"voice_{uid}_b.ogg"
+                    if await self._synthesize_novita_minimax(clean_text, outro, profile=selected_profile,
+                                                             voice_plan=voice_plan):
+                        real2 = self._log_actual_duration(outro)
+                        if real2 is not None and real2 < real:
+                            out_ogg.unlink(missing_ok=True)
+                            return outro
+                        outro.unlink(missing_ok=True)
             return out_ogg
 
         # Se Novita falhou e cross-profile fallback estiver expressamente permitido:
@@ -443,9 +456,9 @@ class VoiceEngine:
         return None
 
     @staticmethod
-    def _log_actual_duration(audio_path: Path) -> None:
+    def _log_actual_duration(audio_path: Path) -> float | None:
         if not audio_path.exists():
-            return
+            return None
         try:
             result = subprocess.run(
                 ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
@@ -453,9 +466,18 @@ class VoiceEngine:
                 capture_output=True, text=True, timeout=10,
             )
             if result.returncode == 0:
-                logger.info('voice.duration_actual seconds=%.2f', float(result.stdout.strip()))
+                seconds = float(result.stdout.strip())
+                logger.info('voice.duration_actual seconds=%.2f', seconds)
+                return seconds
         except (OSError, ValueError, subprocess.TimeoutExpired):
             logger.debug('voice.duration_actual unavailable')
+        return None
+
+
+def arrastado(real: float | None, esperado: float) -> bool:
+    """Áudio que saiu bem mais lento que a fala. No log de 29/09 a 04/10 pega só dois: o do /ruim 074 (04/10 15:16,
+    10 s → 22 s) e o de 03/10 15:26 (13 s → 23 s); áudio curto com estimativa ruim não conta."""
+    return real is not None and esperado > 0 and real >= esperado * 1.75 and real - esperado >= 5
 
 
 voice_engine = VoiceEngine()
