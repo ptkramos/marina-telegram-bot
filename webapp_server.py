@@ -533,63 +533,79 @@ def _dormiu_em(db, now: datetime) -> Optional[datetime]:
     return None
 
 
+# 06/10 (redesenho, passo 2): cada tela da barra de baixo pede só o que mostra (?tela=agora|dentro|fora|mundo);
+# sem ?tela, devolve tudo como antes (front antigo em cache depois do deploy)
+BAST_TELAS = ("agora", "dentro", "fora", "mundo")
+
+
 async def api_bastidores(request: web.Request) -> web.Response:
     hooks: Hooks = request.app["hooks"]
     now = hooks.now()
+    tela = request.query.get("tela", "")
+    if tela and tela not in BAST_TELAS:
+        return _error("tela inválida", 400)
+    telas = (tela,) if tela else BAST_TELAS
 
     def collect():
         from emotion import EmotionEngine
         from social_day import SocialDay
-        status = status_view(hooks.status(now))
-        try:
-            from agenda import Agenda
-            ag = Agenda(hooks.db)
-            status["card"] = ag.card(now) or ag.card_casa(now, status["celular"])   # 26/09: layout D
-        except Exception:
-            logger.exception("webapp.agenda.error")
-            status["card"] = None
-        out = {"status": status, "emocao": emocao_view(EmotionEngine(hooks.db).panel(now), status["dormindo"], now,
-                                                       status["ciclo"], status.get("ciclo_fase", ""),
-                                                       _dormiu_em(hooks.db, now) if status["dormindo"] else None),
-               "hoje": _hoje(hooks.db, now)}
-        try:
-            import por_dentro                        # 28/09 (Patrick): Hoje por dentro, Na cabeça, Vocês dois
-            out["diario"] = por_dentro.diario_view(hooks.db, now)
-            out["cabeca"] = por_dentro.cabeca_view(hooks.db, now, status["dormindo"])
-            out["emocao"]["voces_linhas"] = por_dentro.voces_linhas(hooks.db, now)
-        except Exception:
-            logger.exception("webapp.por_dentro.error")
-            out.setdefault("diario", {"titulo": "Hoje por dentro", "itens": []})
-            out.setdefault("cabeca", [])
-        try:
-            from roupa import Roupa                  # 28/09 (Patrick): roupa e make de agora abrem a aba Por fora
-            out["roupa"] = Roupa(hooks.db).painel(now)
-        except Exception:
-            logger.exception("webapp.roupa.error")
-            out["roupa"] = None
-        try:
-            from meals import Meals                  # 28/09 (Patrick): Peso abre a aba Por fora
-            out["peso"] = Meals(hooks.db).painel_peso(now)
-        except Exception:
-            logger.exception("webapp.peso.error")
-            out["peso"] = None
-        try:
-            from unhas import Unhas                  # 26/09: unhas; 28/09 foi pra aba Por fora
-            out["unhas"] = Unhas(hooks.db).painel(now)
-        except Exception:
-            logger.exception("webapp.unhas.error")
-            out["unhas"] = None
-        try:
-            from cabelo import Cabelo                # 26/09: cabelo; 28/09 foi pra aba Por fora
-            out["cabelo"] = Cabelo(hooks.db).painel(now)
-        except Exception:
-            logger.exception("webapp.cabelo.error")
-            out["cabelo"] = None
-        try:
-            out["mundo"] = SocialDay(hooks.db).world_panel(now)
-        except Exception:
-            logger.exception("webapp.mundo.error")
-            out["mundo"] = {"pessoas": [], "lugares": [], "rolando": [], "planos": []}
+        out: dict = {}
+        status = status_view(hooks.status(now)) if {"agora", "dentro"} & set(telas) else None
+        if "agora" in telas:
+            try:
+                from agenda import Agenda
+                ag = Agenda(hooks.db)
+                status["card"] = ag.card(now) or ag.card_casa(now, status["celular"])   # 26/09: layout D
+            except Exception:
+                logger.exception("webapp.agenda.error")
+                status["card"] = None
+            out["hoje"] = _hoje(hooks.db, now)
+        if status is not None:
+            out["status"] = status
+        if "dentro" in telas:
+            out["emocao"] = emocao_view(EmotionEngine(hooks.db).panel(now), status["dormindo"], now,
+                                        status["ciclo"], status.get("ciclo_fase", ""),
+                                        _dormiu_em(hooks.db, now) if status["dormindo"] else None)
+            try:
+                import por_dentro                    # 28/09 (Patrick): Hoje por dentro, Na cabeça, Vocês dois
+                out["diario"] = por_dentro.diario_view(hooks.db, now)
+                out["cabeca"] = por_dentro.cabeca_view(hooks.db, now, status["dormindo"])
+                out["emocao"]["voces_linhas"] = por_dentro.voces_linhas(hooks.db, now)
+            except Exception:
+                logger.exception("webapp.por_dentro.error")
+                out.setdefault("diario", {"titulo": "Hoje por dentro", "itens": []})
+                out.setdefault("cabeca", [])
+        if "fora" in telas:
+            try:
+                from roupa import Roupa              # 28/09 (Patrick): roupa e make de agora abrem a aba Por fora
+                out["roupa"] = Roupa(hooks.db).painel(now)
+            except Exception:
+                logger.exception("webapp.roupa.error")
+                out["roupa"] = None
+            try:
+                from meals import Meals              # 28/09 (Patrick): Peso abre a aba Por fora
+                out["peso"] = Meals(hooks.db).painel_peso(now)
+            except Exception:
+                logger.exception("webapp.peso.error")
+                out["peso"] = None
+            try:
+                from unhas import Unhas              # 26/09: unhas; 28/09 foi pra aba Por fora
+                out["unhas"] = Unhas(hooks.db).painel(now)
+            except Exception:
+                logger.exception("webapp.unhas.error")
+                out["unhas"] = None
+            try:
+                from cabelo import Cabelo            # 26/09: cabelo; 28/09 foi pra aba Por fora
+                out["cabelo"] = Cabelo(hooks.db).painel(now)
+            except Exception:
+                logger.exception("webapp.cabelo.error")
+                out["cabelo"] = None
+        if "mundo" in telas:
+            try:
+                out["mundo"] = SocialDay(hooks.db).world_panel(now)
+            except Exception:
+                logger.exception("webapp.mundo.error")
+                out["mundo"] = {"pessoas": [], "lugares": [], "rolando": [], "planos": []}
         return out
     return _json(await asyncio.to_thread(collect))
 

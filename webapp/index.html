@@ -212,24 +212,29 @@
     <button data-lvmodo="padrao"><i class="ti ti-wave-sine"></i><span>Padrões</span></button>
   </nav>
 
-  <!-- 26/09 (Patrick): Bastidores em abas; rótulos falam como painel, sentimento fala do jeito dela -->
-  <section id="v-bastidores" class="view" hidden>
-    <header class="top"><h1>Bastidores</h1><p class="sub">Só o Patrick vê isso</p></header>
-    <div class="seg" id="bs-abas">
-      <button data-bast="agora" class="on">Agora</button><button data-bast="dentro">Por dentro</button>
-      <button data-bast="fora">Por fora</button><button data-bast="dinheiro">Dinheiro</button><button data-bast="mundo">Mundo</button>
-    </div>
+  <!-- 26/09 (Patrick): Bastidores em abas; rótulos falam como painel, sentimento fala do jeito dela.
+       06/10 (redesenho, passo 2, Patrick): no topo só o nome da tela; barra de baixo só com ícones; Por dentro e
+       Mundo com sub-abas em pílula. O conteúdo de cada sub-aba muda nos passos 3 a 9 -->
+  <section id="v-bastidores" class="view bast" hidden>
+    <header class="top"><h1 id="bs-titulo">Agora</h1></header>
+    <p class="err" id="bs-err" hidden></p>
     <div class="bast-aba" id="ba-agora">
       <div class="card ag" id="ag-card"></div>
       <h2>Acontecimentos de hoje</h2><div id="ag-hoje" class="card"></div>
     </div>
     <div class="bast-aba" id="ba-dentro" hidden>
-      <h2>Corpo</h2><div id="bd-corpo" class="card"></div>
-      <h2>Humor</h2><div id="bd-humor" class="card"></div>
-      <h2>Sentindo agora</h2><div id="bd-sentindo" class="card"></div>
-      <h2 id="bd-cabeca-t" hidden>Na cabeça</h2><div id="bd-cabeca" class="card" hidden></div>
-      <h2 id="bd-diario-t" hidden>Hoje por dentro</h2><div id="bd-diario" class="card" hidden></div>
-      <h2>Vocês dois</h2><div id="bd-voces" class="card"></div>
+      <div class="pilulas-sub" data-subde="dentro">
+        <button data-sub="corpo" class="on">Corpo</button><button data-sub="sentimentos">Sentimentos</button>
+        <button data-sub="pensando">Pensando</button><button data-sub="relacionamento">Relacionamento</button>
+      </div>
+      <div class="bast-sub" id="bs-corpo"><div id="bd-corpo" class="card"></div></div>
+      <div class="bast-sub" id="bs-sentimentos" hidden>
+        <h2>Humor</h2><div id="bd-humor" class="card"></div>
+        <h2>Sentindo agora</h2><div id="bd-sentindo" class="card"></div>
+        <h2 id="bd-diario-t" hidden>Hoje por dentro</h2><div id="bd-diario" class="card" hidden></div>
+      </div>
+      <div class="bast-sub" id="bs-pensando" hidden><div id="bd-cabeca" class="card"></div></div>
+      <div class="bast-sub" id="bs-relacionamento" hidden><div id="bd-voces" class="card"></div></div>
     </div>
     <!-- 28/09 (Patrick): aparência sai do Por dentro — Peso, Cabelo, Unhas -->
     <div class="bast-aba" id="ba-fora" hidden>
@@ -245,10 +250,21 @@
       <div id="bn-extrato"></div>
     </div>
     <div class="bast-aba" id="ba-mundo" hidden>
-      <div id="bm-pessoas"></div>
-      <div id="bm-resto"></div>
+      <div class="pilulas-sub" data-subde="mundo">
+        <button data-sub="pessoas" class="on">Pessoas</button><button data-sub="agenda">Agenda</button><button data-sub="lugares">Lugares</button>
+      </div>
+      <div class="bast-sub" id="bs-pessoas"><div id="bm-pessoas"></div></div>
+      <div class="bast-sub" id="bs-agenda" hidden><div id="bm-agenda"></div></div>
+      <div class="bast-sub" id="bs-lugares" hidden><div id="bm-lugares"></div></div>
     </div>
   </section>
+  <nav class="bs-nav" id="bs-nav" hidden>
+    <button data-bast="agora" aria-label="Agora" class="on"><i class="ti ti-map-pin"></i></button>
+    <button data-bast="dentro" aria-label="Por dentro"><i class="ti ti-heartbeat"></i></button>
+    <button data-bast="fora" aria-label="Por fora"><i class="ti ti-hanger"></i></button>
+    <button data-bast="dinheiro" aria-label="Dinheiro"><i class="ti ti-building-bank"></i></button>
+    <button data-bast="mundo" aria-label="Mundo"><i class="ti ti-users"></i></button>
+  </nav>
 
   <div id="toast" hidden></div>
 </main>

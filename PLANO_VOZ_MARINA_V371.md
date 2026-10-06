@@ -1695,6 +1695,10 @@ da brincadeira (mesmo sem dizer "lush"), lembra a palavra já combinada, "vou li
 avisa de verdade, e o sono e o boa noite esperam o combinado — exausta, ela desiste e diz (`lovense_desistiu`). E o
 Hush no receio só com tesão alto. Detalhe na Auditoria e no FRENTES (seção 5, item 29). No ar desde 00:22.
 
+**06/10 — Redesenho dos Bastidores, passo 2 (a moldura):** nada muda na fala nem no que ela lê. Só a tela: barra
+de baixo com 5 ícones, sub-abas em pílula no Por dentro e no Mundo, cada tela pedindo só o seu. Detalhe na Auditoria,
+"Redesenho dos Bastidores, passo 2".
+
 **06/10 — Redesenho dos Bastidores, passo 1 (o histórico):** nada muda na fala. O mundo passa a guardar, só pra tela,
 cada gozo (com ele ou sozinha), a hora em que a excitação acendeu, o vínculo de cada hora, o peso do dia e a pesagem
 (`bastidores_hist`, migração 037). Ela não lê. Detalhe na Auditoria, "Redesenho dos Bastidores, passo 1".

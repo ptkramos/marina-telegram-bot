@@ -1408,6 +1408,15 @@ Lovense), o **vínculo de hora em hora** (no lugar do "diário": o tracinho é o
 `ultimo(db, chave, ate)`. O caminho do humor não é guardado: o passo 4 refaz pelo `feeling` como o relatório do soak.
 15 testes em `tests/test_bastidores_hist.py`. Próximo: **passo 2, a moldura** (barra de baixo com 5 ícones).
 
+**Passo 2 feito (06/10) ✅ — a moldura:** decidido pelo Patrick no mockup: **no topo só o nome da tela** (sai o
+"Só o Patrick vê isso") e **barra de baixo só com ícones** (a aberta em azul). `/api/bastidores?tela=` por tela (sem
+`tela`, tudo como antes); cada tela com o seu carregador e a recarga de 30 s só da aberta; o Dinheiro só pede
+`/api/dinheiro` quando abre. Sub-abas em pílula, presas no topo, ocupando a linha: Por dentro = Corpo / Sentimentos
+(Humor, Sentindo agora, Hoje por dentro) / Pensando (era "Na cabeça") / Relacionamento (era "Vocês dois"); Mundo =
+Pessoas / Agenda (Acontecendo agora, Planos) / Lugares. O conteúdo de dentro é o de antes, redistribuído; o desenho
+novo de cada sub-aba vem nos passos 3 a 9. Vazios novos: "Nada pela frente.", "Nada acontecendo nem planejado.",
+"Nenhum lugar neste mês.". Próximo: **passo 3, o Corpo** ("bora na frente de apps: redesenho dos Bastidores, passo 3").
+
 **Textos que eu decidi (pra ele revisar):** "Dormiu por volta de 7 horas e 45 minutos" / "Dormindo há 5 horas e 10
 minutos" (o cochilo só na faixa); "Menstruação em 4 dias"; "Último orgasmo: dia 3, sozinha"; "Excitada desde 21:40";
 etiquetas da vontade ("2 dias sem gozar", "Saudade do Patrick", "Fase fértil", "Cansaço", "Cólica", "Mágoa");

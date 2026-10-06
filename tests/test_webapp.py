@@ -236,6 +236,21 @@ class ApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(d["status"]["celular"], "Na mão")
         self.assertIn("pessoas", d["mundo"])
 
+    async def test_bastidores_cada_tela_pede_so_o_seu(self):
+        """06/10 (redesenho, passo 2): a barra de baixo carrega uma tela por vez; sem ?tela vem tudo."""
+        get = lambda q: self.client.get("/api/bastidores" + q, headers=self.h)
+        chaves = {}
+        for tela in ("agora", "dentro", "fora", "mundo"):
+            r = await get("?tela=" + tela)
+            self.assertEqual(r.status, 200)
+            chaves[tela] = set(await r.json())
+        self.assertEqual(chaves["agora"], {"status", "hoje"})
+        self.assertEqual(chaves["dentro"], {"status", "emocao", "diario", "cabeca"})
+        self.assertEqual(chaves["fora"], {"roupa", "peso", "unhas", "cabelo"})
+        self.assertEqual(chaves["mundo"], {"mundo"})
+        self.assertEqual(set(await (await get("")).json()), set().union(*chaves.values()))
+        self.assertEqual((await get("?tela=xyz")).status, 400)
+
     async def test_lovense_tela_comandos_e_eventos(self):
         """05/10 (Lovense, passo 2): ícone apagado/aceso, a tela só com o que o app real saberia, comandos e os
         eventos indo pro gancho (o passo 3 transforma em turno; o gancho é chamado a cada comando que vale)."""

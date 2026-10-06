@@ -48,6 +48,7 @@ function show(view, push = true) {
   $("if-nav").hidden = !IF_TABS.includes(view);
   $("ig-nav").hidden = !IG_TABS.includes(view);
   $("lv-nav").hidden = view !== "lovense";          // 05/10: os modos do Lovense embaixo, como no app real
+  $("bs-nav").hidden = view !== "bastidores";       // 06/10: as 5 telas dos Bastidores embaixo
   document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === view));
   if (push) stack.push(view);
   if (nativeBack) (stack.length > 1 ? tg.BackButton.show() : tg.BackButton.hide());
@@ -96,7 +97,6 @@ const abreAs = (h) => `Abre às ${String(h).padStart(2, "0")}:00`;
 const HOJE_ABERTOS = new Set();   // períodos passados que ele abriu no Hoje (sobrevivem à recarga de 30 s)
 let DIARIO_ABERTO = false;        // "Ver o dia todo" no Hoje por dentro (idem)
 const EXTRATO_ABERTOS = new Set(); // saídas abertas no extrato da aba Dinheiro (idem)
-let BAST_CARREGANDO = false;      // uma carga dos Bastidores por vez
 
 // 28/09 (Patrick): na recarga dos Bastidores a barra desliza do valor antigo pro novo, em vez de pular.
 // A chave é o cartão (id) + a posição da barra dentro dele.
@@ -270,191 +270,237 @@ const loaders = {
 
   // 26/09 (Patrick): abas Agora · Por dentro · Dinheiro · Mundo. O servidor já manda o texto pronto
   // (status_view, emocao_view, world_panel, extrato); aqui é só desenho.
-  async bastidores() {
-    if (BAST_CARREGANDO) return;              // 28/09: abrir a tela e a recarga de 30 s não pedem duas vezes
-    BAST_CARREGANDO = true;
-    try {
-      const [d, g] = await Promise.all([api("/api/bastidores"), api("/api/dinheiro")]);
-      const s = d.status, e = d.emocao, m = d.mundo;
-      const antes = largurasBarras();
-      const linha = (icone, rotulo, valor) => `<div class="linha"><span class="li-ic">${ic(icone)}</span>
-        <span class="li-rot">${esc(rotulo)}</span><span class="li-val">${esc(valor)}</span></div>`;
-      const vazio = (txt) => `<p class="muted vazio-txt">${esc(txt)}</p>`;
-      const bar = (label, v, word, warm) => `<div class="bar-row"><span>${esc(label)}</span>
-        <div class="bar${warm ? " warm" : ""}"><i style="width:${pct(v)}%"></i></div><span class="w">${esc(word || pct(v) + "%")}</span></div>`;
+  // 06/10 (redesenho, passo 2): barra de baixo com 5 ícones; cada tela pede só o seu (BAST_TELAS)
+  bastidores() { return bastCarrega(BAST.aba); },
+};
 
-      // Agora — 26/09: layout D aprovado com o Patrick linha a linha (agenda.card no servidor)
-      const grade = (rows) => `<div class="ag-grade">${rows.map(([i, r, v]) =>
-        `<span class="li-ic">${ic(i)}</span><span class="ag-rot">${esc(r)}</span><span class="ag-val">${esc(v)}</span>`).join("")}</div>`;
-      const c = s.card;
-      if (c) {
-        const passos = (ps) => ps.length ? `<div class="ag-sub">${ps.map((p) => `<div class="ag-st ${p.estado}">
-          <span class="ag-dot"></span><span class="ag-tx">${esc(p.texto)}</span><span class="ag-vl">${p.valor ? brl0(p.valor) : ""}</span>
-          <span class="ag-hr">${esc(p.hora)}</span>${p.nota ? `<span class="ag-nota">${esc(p.nota)}</span>` : ""}</div>`).join("")}</div>` : "";
-        const b = c.barra;
-        // sem hora de fim: duração e "desde" à direita do título (decisão do Patrick)
-        const topo = b.pct == null
-          ? `<div class="ag-topo"><div class="ag-t">${esc(c.titulo)}</div><div class="ag-dur"><b>${esc(b.duracao)}</b><span>desde as ${esc(b.desde)}</span></div></div>`
-          : `<div class="ag-t">${esc(c.titulo)}</div>`;
-        $("ag-card").innerHTML = `${topo}${c.linha2 ? `<div class="ag-s">${esc(c.linha2)}</div>` : ""}
-          ${b.pct == null ? "" : `<div class="ag-bar"><i style="width:${b.pct}%"></i></div>
-          <div class="ag-bar-l"><span>${esc(b.inicio)}</span><span>${esc(b.meio)}</span><span>${esc(b.fim)}</span></div>`}
-          <div class="ag-sep"></div>${grade(c.grade)}<div class="ag-sep"></div>
-          <div class="ag-linha">${c.linha.map((e) => `<div class="ag-st ${e.estado}"><span class="ag-dot"></span>
-            <span class="ag-tx">${esc(e.texto)}</span><span class="ag-vl">${e.valor ? brl0(e.valor) : ""}</span>
-            <span class="ag-hr">${esc(e.hora)}</span></div>${passos(e.passos)}`).join("")}</div>`;
-      } else {
-        // fora de uma etapa (em casa, dormindo…): a revisar com o Patrick (atividades em casa)
-        $("ag-card").innerHTML = `<div class="ag-t">${esc(s.atividade)}</div><div class="ag-s">${esc(s.local)}</div>
-          <div class="ag-sep"></div>${grade([["device-mobile", "Celular", s.celular], s.ciclo && ["droplet", "Ciclo", s.ciclo],
-            ...s.saude.map((x) => ["temperature", "Saúde", x]), s.proximo && ["calendar-event", "Próximo", s.proximo],
-            ...s.planos.map((x) => ["calendar", "Plano", x])].filter(Boolean))}`;
-      }
-      // 26/09 (Patrick): Hoje por período, saída com o que rolou dentro, previsto em cinza.
-      // Períodos que já passaram ficam fechados ("Manhã, 7 acontecimentos") e abrem ao tocar; o de agora fica aberto.
-      const hj = d.hoje.periodos || [];
-      const hjHora = (x) => `<span class="lt-hora">${esc(x.hora)}</span>`;
-      const hjVal = (x) => `<span class="lt-val">${x.valor ? brl0(x.valor) : ""}</span>`;   // coluna sempre existe: hora alinhada
-      const hjTx = (x) => `<span class="lt-txt">${esc(x.texto)}${x.sub ? `<span class="lt-sub">${esc(x.sub)}</span>` : ""}</span>`;
-      const atual = hj.reduce((k, p, n) => (p.itens.some((x) => !x.previsto) ? n : k), 0);
-      const desenhaHoje = () => {
-      $("ag-hoje").innerHTML = hj.length ? hj.map((p, n) => {
-        const fechado = n < atual && !HOJE_ABERTOS.has(p.nome);
-        const feitos = p.itens.filter((x) => !x.previsto).length;
-        return `<button class="hj-per${n < atual ? " passado" : ""}" data-per="${esc(p.nome)}"${n < atual ? "" : " disabled"}>
-            <span>${esc(p.nome)}${fechado ? `, ${feitos} acontecimento${feitos === 1 ? "" : "s"}` : ""}</span>${n < atual ? ic(fechado ? "chevron-down" : "chevron-up") : ""}</button>
-          ${fechado ? "" : `<ol class="linha-tempo">${p.itens.map((x) => `<li class="${x.previsto ? "previsto" : ""}${x.aviso ? " aviso" : ""}">
-            <span class="lt-ic">${ic(x.ic)}</span>${hjTx(x)}${hjVal(x)}${hjHora(x)}</li>
-            ${x.filhos.length ? `<li class="lt-filhos"><ol>${x.filhos.map((f) => `<li class="${f.aviso ? "aviso" : ""}">
-              ${hjTx(f)}${hjVal(f)}${hjHora(f)}</li>`).join("")}</ol></li>` : ""}`).join("")}</ol>`}`;
-      }).join("") : vazio(s.dormindo ? "Ainda não acordou" : "Nenhum acontecimento");
-      $("ag-hoje").querySelectorAll(".hj-per.passado").forEach((b) => b.addEventListener("click", () => {
-        const nome = b.dataset.per;
-        HOJE_ABERTOS.has(nome) ? HOJE_ABERTOS.delete(nome) : HOJE_ABERTOS.add(nome);
-        desenhaHoje();
-      }));
-      };
+// ------------------------------------------------------------- Bastidores --
+const BAST = { aba: "agora", sub: { dentro: "corpo", mundo: "pessoas" }, carregando: new Set() };
+const BAST_TITULOS = { agora: "Agora", dentro: "Por dentro", fora: "Por fora", dinheiro: "Dinheiro", mundo: "Mundo" };
+const linha = (icone, rotulo, valor) => `<div class="linha"><span class="li-ic">${ic(icone)}</span>
+  <span class="li-rot">${esc(rotulo)}</span><span class="li-val">${esc(valor)}</span></div>`;
+const vazio = (txt) => `<p class="muted vazio-txt">${esc(txt)}</p>`;
+const bar = (label, v, word, warm) => `<div class="bar-row"><span>${esc(label)}</span>
+  <div class="bar${warm ? " warm" : ""}"><i style="width:${pct(v)}%"></i></div><span class="w">${esc(word || pct(v) + "%")}</span></div>`;
+const bloco = (titulo, itens) => itens.length ? `${titulo ? `<h2>${titulo}</h2>` : ""}<div class="card">${itens.join("")}</div>` : "";
+
+// trocar de tela na barra não empilha (o voltar sai dos Bastidores, como no iFood) e volta pro topo
+function bastAba(aba) {
+  BAST.aba = aba;
+  document.querySelectorAll("[data-bast]").forEach((b) => b.classList.toggle("on", b.dataset.bast === aba));
+  document.querySelectorAll(".bast-aba").forEach((v) => (v.hidden = v.id !== "ba-" + aba));
+  $("bs-titulo").textContent = BAST_TITULOS[aba];
+  window.scrollTo(0, 0);
+  bastCarrega(aba);
+}
+function bastSub(dono, sub) {
+  BAST.sub[dono] = sub;
+  document.querySelectorAll(`[data-subde="${dono}"] [data-sub]`).forEach((b) => b.classList.toggle("on", b.dataset.sub === sub));
+  $("ba-" + dono).querySelectorAll(".bast-sub").forEach((v) => (v.hidden = v.id !== "bs-" + sub));
+  window.scrollTo(0, 0);
+}
+// uma carga por tela de cada vez (abrir a tela e a recarga de 30 s não pedem duas vezes)
+async function bastCarrega(aba) {
+  if (BAST.carregando.has(aba)) return;
+  BAST.carregando.add(aba);
+  try {
+    const antes = largurasBarras();
+    await BAST_TELAS[aba]();
+    $("bs-err").hidden = true;
+    deslizaBarras(antes);
+  } catch (err) { $("bs-err").textContent = err.message; $("bs-err").hidden = false; }
+  finally { BAST.carregando.delete(aba); }
+}
+
+const BAST_TELAS = {
+  async agora() {
+    const d = await api("/api/bastidores?tela=agora");
+    const s = d.status;
+    // Agora — 26/09: layout D aprovado com o Patrick linha a linha (agenda.card no servidor)
+    const grade = (rows) => `<div class="ag-grade">${rows.map(([i, r, v]) =>
+      `<span class="li-ic">${ic(i)}</span><span class="ag-rot">${esc(r)}</span><span class="ag-val">${esc(v)}</span>`).join("")}</div>`;
+    const c = s.card;
+    if (c) {
+      const passos = (ps) => ps.length ? `<div class="ag-sub">${ps.map((p) => `<div class="ag-st ${p.estado}">
+        <span class="ag-dot"></span><span class="ag-tx">${esc(p.texto)}</span><span class="ag-vl">${p.valor ? brl0(p.valor) : ""}</span>
+        <span class="ag-hr">${esc(p.hora)}</span>${p.nota ? `<span class="ag-nota">${esc(p.nota)}</span>` : ""}</div>`).join("")}</div>` : "";
+      const b = c.barra;
+      // sem hora de fim: duração e "desde" à direita do título (decisão do Patrick)
+      const topo = b.pct == null
+        ? `<div class="ag-topo"><div class="ag-t">${esc(c.titulo)}</div><div class="ag-dur"><b>${esc(b.duracao)}</b><span>desde as ${esc(b.desde)}</span></div></div>`
+        : `<div class="ag-t">${esc(c.titulo)}</div>`;
+      $("ag-card").innerHTML = `${topo}${c.linha2 ? `<div class="ag-s">${esc(c.linha2)}</div>` : ""}
+        ${b.pct == null ? "" : `<div class="ag-bar"><i style="width:${b.pct}%"></i></div>
+        <div class="ag-bar-l"><span>${esc(b.inicio)}</span><span>${esc(b.meio)}</span><span>${esc(b.fim)}</span></div>`}
+        <div class="ag-sep"></div>${grade(c.grade)}<div class="ag-sep"></div>
+        <div class="ag-linha">${c.linha.map((e) => `<div class="ag-st ${e.estado}"><span class="ag-dot"></span>
+          <span class="ag-tx">${esc(e.texto)}</span><span class="ag-vl">${e.valor ? brl0(e.valor) : ""}</span>
+          <span class="ag-hr">${esc(e.hora)}</span></div>${passos(e.passos)}`).join("")}</div>`;
+    } else {
+      // fora de uma etapa (em casa, dormindo…): a revisar com o Patrick (atividades em casa)
+      $("ag-card").innerHTML = `<div class="ag-t">${esc(s.atividade)}</div><div class="ag-s">${esc(s.local)}</div>
+        <div class="ag-sep"></div>${grade([["device-mobile", "Celular", s.celular], s.ciclo && ["droplet", "Ciclo", s.ciclo],
+          ...s.saude.map((x) => ["temperature", "Saúde", x]), s.proximo && ["calendar-event", "Próximo", s.proximo],
+          ...s.planos.map((x) => ["calendar", "Plano", x])].filter(Boolean))}`;
+    }
+    // 26/09 (Patrick): Hoje por período, saída com o que rolou dentro, previsto em cinza.
+    // Períodos que já passaram ficam fechados ("Manhã, 7 acontecimentos") e abrem ao tocar; o de agora fica aberto.
+    const hj = d.hoje.periodos || [];
+    const hjHora = (x) => `<span class="lt-hora">${esc(x.hora)}</span>`;
+    const hjVal = (x) => `<span class="lt-val">${x.valor ? brl0(x.valor) : ""}</span>`;   // coluna sempre existe: hora alinhada
+    const hjTx = (x) => `<span class="lt-txt">${esc(x.texto)}${x.sub ? `<span class="lt-sub">${esc(x.sub)}</span>` : ""}</span>`;
+    const atual = hj.reduce((k, p, n) => (p.itens.some((x) => !x.previsto) ? n : k), 0);
+    const desenhaHoje = () => {
+    $("ag-hoje").innerHTML = hj.length ? hj.map((p, n) => {
+      const fechado = n < atual && !HOJE_ABERTOS.has(p.nome);
+      const feitos = p.itens.filter((x) => !x.previsto).length;
+      return `<button class="hj-per${n < atual ? " passado" : ""}" data-per="${esc(p.nome)}"${n < atual ? "" : " disabled"}>
+          <span>${esc(p.nome)}${fechado ? `, ${feitos} acontecimento${feitos === 1 ? "" : "s"}` : ""}</span>${n < atual ? ic(fechado ? "chevron-down" : "chevron-up") : ""}</button>
+        ${fechado ? "" : `<ol class="linha-tempo">${p.itens.map((x) => `<li class="${x.previsto ? "previsto" : ""}${x.aviso ? " aviso" : ""}">
+          <span class="lt-ic">${ic(x.ic)}</span>${hjTx(x)}${hjVal(x)}${hjHora(x)}</li>
+          ${x.filhos.length ? `<li class="lt-filhos"><ol>${x.filhos.map((f) => `<li class="${f.aviso ? "aviso" : ""}">
+            ${hjTx(f)}${hjVal(f)}${hjHora(f)}</li>`).join("")}</ol></li>` : ""}`).join("")}</ol>`}`;
+    }).join("") : vazio(s.dormindo ? "Ainda não acordou" : "Nenhum acontecimento");
+    $("ag-hoje").querySelectorAll(".hj-per.passado").forEach((b) => b.addEventListener("click", () => {
+      const nome = b.dataset.per;
+      HOJE_ABERTOS.has(nome) ? HOJE_ABERTOS.delete(nome) : HOJE_ABERTOS.add(nome);
       desenhaHoje();
+    }));
+    };
+    desenhaHoje();
+  },
 
-      // Por dentro — 28/09 (Patrick, no celular): Corpo, Humor, Sentindo agora, Na cabeça, Hoje por dentro,
-      // Vocês dois. Unhas e Cabelo foram pra aba Por fora (28/09).
-      $("bd-corpo").innerHTML = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Excitação")).join("")
-        + (e.linhas.length || e.no_clima ? `<div class="linhas sep">${e.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}
-          ${e.no_clima ? `<div class="linha"><span class="li-ic">${ic("flame")}</span><span class="li-rot">No clima agora</span></div>` : ""}</div>` : "");
-      // Por fora — 28/09 (Patrick): Agora (roupa e make de verdade), Peso (barra de folga até a agência, amarela
-      // quando passa), Cabelo, Unhas. Agora: a roupa em destaque, a barra da make quando tem, e as linhas.
-      const rp = d.roupa;
-      $("bf-agora-t").hidden = $("bf-agora").hidden = !rp;
-      if (rp) {
-        $("bf-agora").innerHTML = `<div class="big">${esc(rp.look)}</div>
-          ${rp.make ? `<div class="ca-barras"><div class="bar-row"><span>Estado</span><div class="bar${rp.make.alerta ? " alerta" : ""}"><i style="width:${pct(rp.make.valor)}%"></i></div>
-            <span class="w">${esc(rp.make.palavra)}</span></div></div>` : ""}
-          <div class="linhas sep">${rp.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
-      }
-      const ps = d.peso;
-      $("bf-peso-t").hidden = $("bf-peso").hidden = !ps;
-      if (ps) {
-        $("bf-peso").innerHTML = `<div class="big">${esc(ps.kg)}</div>
-          <div class="ca-barras"><div class="bar-row"><span>Limites</span><div class="bar${ps.alerta ? " alerta" : ""}"><i style="width:${pct(ps.barra)}%"></i></div>
-            <span class="w">${esc(ps.palavra)}</span></div></div>
-          <div class="linhas sep">${ps.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
-      }
-      // 26/09 (Patrick): unhas em seção própria. 28/09: a barra ganha rótulo, igual ao Cabelo (Desgaste · estado)
-      const u = d.unhas;
-      $("bd-unhas-t").hidden = $("bd-unhas").hidden = !u;
-      if (u) {
-        $("bd-unhas").innerHTML = `<div class="big un-cor">${u.hex ? `<span class="un-dot" style="background:${esc(u.hex)}"></span>` : ""}${esc(u.cor)}</div>
-          <div class="ca-barras"><div class="bar-row"><span>Estado</span><div class="bar${u.gasta ? " alerta" : ""}"><i style="width:${pct(u.desgaste)}%"></i></div>
-            <span class="w">${esc(u.estado)}</span></div></div>
-          <div class="linhas sep">${linha("droplet-half", "Tipo", u.tipo)}${linha("calendar-check", "Feita em", u.feita)}</div>`;
-      }
-      // 26/09 (Patrick): cabelo em seção própria — penteado, quatro barras (amarela quando vence) e as linhas
-      const cab = d.cabelo;
-      $("bd-cabelo-t").hidden = $("bd-cabelo").hidden = !cab;
-      if (cab) {
-        $("bd-cabelo").innerHTML = `<div class="big un-cor">${cab.hex ? `<span class="un-dot" style="background:${esc(cab.hex)}"></span>` : ""}${esc(cab.penteado)}</div>
-          <div class="ca-barras">${cab.barras.map((b) => `<div class="bar-row"><span>${esc(b.label)}</span>
-            <div class="bar${b.alerta ? " alerta" : ""}"><i style="width:${pct(b.valor)}%"></i></div><span class="w">${esc(b.palavra)}</span></div>`).join("")}</div>
-          <div class="linhas sep">${cab.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
-      }
-      $("bd-humor").innerHTML = `<div class="big">${esc(e.humor)}</div>` + e.humor_barras.map((b) => bar(b.label, b.value)).join("");
-      // 28/09 (Patrick): o motivo ganha quando começou, na direita. 04/10 (catálogo, leva 2): "2x" antes do
-      // sentimento, na mesma linha (só de 2 vezes pra cima); o detalhe entre parênteses
-      $("bd-sentindo").innerHTML = e.sentindo.length ? e.sentindo.map((f) => `<div class="feel">
-        <div class="head"><span class="t">${f.vezes > 1 ? `<span class="vezes">${f.vezes}x</span>` : ""}${esc(f.texto)}</span><div class="bar"><i style="width:${pct(f.valor)}%"></i></div></div>
-        <div class="why"><span>${esc(f.motivo)}${f.detalhe ? `<span class="dt"> (${esc(f.detalhe)})</span>` : ""}</span>${f.quando ? `<span class="qd">${esc(f.quando)}</span>` : ""}</div>
-        ${f.ate_resolver ? '<div class="pilulas"><span class="pilula">até resolver</span></div>' : ""}</div>`).join("")
-        : vazio("Nada marcante até o momento.");
-      // 28/09 (Patrick): Na cabeça — o que vem pela frente e a vontade dela de ir (agenda viva).
-      // O mais curto possível: título | quando; embaixo estado | barra | motivo (coluna da direita, como no Corpo)
-      const cb = d.cabeca || [];
-      $("bd-cabeca-t").hidden = $("bd-cabeca").hidden = !cb.length;
-      $("bd-cabeca").innerHTML = cb.map((x) => `<div class="nc"><div class="nc-t"><span>${esc(x.titulo)}</span><span class="qd">${esc(x.quando)}</span></div>
-        ${x.estado || x.vontade != null || x.detalhe ? `<div class="nc-s"><span class="nc-e">${esc(x.estado)}</span>${x.vontade != null
-          ? `<div class="bar"><i style="width:${pct(x.vontade)}%"></i></div>` : "<span></span>"}<span class="w">${esc(x.detalhe)}</span></div>` : ""}</div>`).join("");
-      // 28/09 (Patrick): Hoje por dentro — tudo o que ela sentiu no dia, mesmo o que já passou (5 + ver o dia todo)
-      const di = d.diario || { itens: [] };
-      $("bd-diario-t").hidden = $("bd-diario").hidden = !di.itens.length;
-      $("bd-diario-t").textContent = di.titulo || "Hoje por dentro";
-      const desenhaDiario = () => {
-        const todos = DIARIO_ABERTO || di.itens.length <= 6;
-        $("bd-diario").innerHTML = (todos ? di.itens : di.itens.slice(0, 5)).map((x) => `<div class="dr">
-          <span class="dr-h">${esc(x.hora)}</span><div><div>${esc(x.texto)}</div><div class="dr-m"><span>${esc(x.motivo)}</span>
-          ${x.detalhe ? `<span class="dr-d">${esc(x.detalhe)}</span>` : ""}</div></div></div>`).join("")
-          + (di.itens.length > 6 ? `<button class="dr-mais">${DIARIO_ABERTO ? "Mostrar menos" : `Ver o dia todo (${di.itens.length})`}</button>` : "");
-        const b = $("bd-diario").querySelector(".dr-mais");
-        if (b) b.addEventListener("click", () => { DIARIO_ABERTO = !DIARIO_ABERTO; desenhaDiario(); });
-      };
-      desenhaDiario();
-      $("bd-voces").innerHTML = e.voces.map((b) => bar(b.label, b.value, null, b.label === "Desejo")).join("")
-        + ((e.voces_linhas || []).length ? `<div class="linhas sep">${e.voces_linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>` : "");
+  // Por dentro — 28/09 (Patrick, no celular): Corpo, Humor, Sentindo agora, Na cabeça, Hoje por dentro,
+  // Vocês dois. 06/10 (passo 2): as sub-abas Corpo / Sentimentos / Pensando / Relacionamento
+  async dentro() {
+    const d = await api("/api/bastidores?tela=dentro");
+    const e = d.emocao;
+    $("bd-corpo").innerHTML = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Excitação")).join("")
+      + (e.linhas.length || e.no_clima ? `<div class="linhas sep">${e.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}
+        ${e.no_clima ? `<div class="linha"><span class="li-ic">${ic("flame")}</span><span class="li-rot">No clima agora</span></div>` : ""}</div>` : "");
+    $("bd-humor").innerHTML = `<div class="big">${esc(e.humor)}</div>` + e.humor_barras.map((b) => bar(b.label, b.value)).join("");
+    // 28/09 (Patrick): o motivo ganha quando começou, na direita. 04/10 (catálogo, leva 2): "2x" antes do
+    // sentimento, na mesma linha (só de 2 vezes pra cima); o detalhe entre parênteses
+    $("bd-sentindo").innerHTML = e.sentindo.length ? e.sentindo.map((f) => `<div class="feel">
+      <div class="head"><span class="t">${f.vezes > 1 ? `<span class="vezes">${f.vezes}x</span>` : ""}${esc(f.texto)}</span><div class="bar"><i style="width:${pct(f.valor)}%"></i></div></div>
+      <div class="why"><span>${esc(f.motivo)}${f.detalhe ? `<span class="dt"> (${esc(f.detalhe)})</span>` : ""}</span>${f.quando ? `<span class="qd">${esc(f.quando)}</span>` : ""}</div>
+      ${f.ate_resolver ? '<div class="pilulas"><span class="pilula">até resolver</span></div>' : ""}</div>`).join("")
+      : vazio("Nada marcante até o momento.");
+    // 28/09 (Patrick): Na cabeça — o que vem pela frente e a vontade dela de ir (agenda viva).
+    // O mais curto possível: título | quando; embaixo estado | barra | motivo (coluna da direita, como no Corpo)
+    const cb = d.cabeca || [];
+    $("bd-cabeca").innerHTML = cb.length ? cb.map((x) => `<div class="nc"><div class="nc-t"><span>${esc(x.titulo)}</span><span class="qd">${esc(x.quando)}</span></div>
+      ${x.estado || x.vontade != null || x.detalhe ? `<div class="nc-s"><span class="nc-e">${esc(x.estado)}</span>${x.vontade != null
+        ? `<div class="bar"><i style="width:${pct(x.vontade)}%"></i></div>` : "<span></span>"}<span class="w">${esc(x.detalhe)}</span></div>` : ""}</div>`).join("")
+      : vazio("Nada pela frente.");
+    // 28/09 (Patrick): Hoje por dentro — tudo o que ela sentiu no dia, mesmo o que já passou (5 + ver o dia todo)
+    const di = d.diario || { itens: [] };
+    $("bd-diario-t").hidden = $("bd-diario").hidden = !di.itens.length;
+    $("bd-diario-t").textContent = di.titulo || "Hoje por dentro";
+    const desenhaDiario = () => {
+      const todos = DIARIO_ABERTO || di.itens.length <= 6;
+      $("bd-diario").innerHTML = (todos ? di.itens : di.itens.slice(0, 5)).map((x) => `<div class="dr">
+        <span class="dr-h">${esc(x.hora)}</span><div><div>${esc(x.texto)}</div><div class="dr-m"><span>${esc(x.motivo)}</span>
+        ${x.detalhe ? `<span class="dr-d">${esc(x.detalhe)}</span>` : ""}</div></div></div>`).join("")
+        + (di.itens.length > 6 ? `<button class="dr-mais">${DIARIO_ABERTO ? "Mostrar menos" : `Ver o dia todo (${di.itens.length})`}</button>` : "");
+      const b = $("bd-diario").querySelector(".dr-mais");
+      if (b) b.addEventListener("click", () => { DIARIO_ABERTO = !DIARIO_ABERTO; desenhaDiario(); });
+    };
+    desenhaDiario();
+    $("bd-voces").innerHTML = e.voces.map((b) => bar(b.label, b.value, null, b.label === "Desejo")).join("")
+      + ((e.voces_linhas || []).length ? `<div class="linhas sep">${e.voces_linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>` : "");
+  },
 
-      // Dinheiro — 28/09 (Patrick, no celular): saldo, entrou/saiu no mês, próximo cachê e contas;
-      // extrato por dia, saída agrupada com o total (toca e abre os itens, como no Hoje)
-      $("bn-saldo").textContent = brl(g.saldo);
-      const tp = g.topo;
-      $("bn-mes").innerHTML = `<div><span class="d">Entrou em ${esc(tp.mes)}</span><b class="plus">+ ${brl0(tp.entrou)}</b></div>
-        <div><span class="d">Saiu em ${esc(tp.mes)}</span><b>− ${brl0(tp.saiu)}</b></div>`;
-      $("bn-linhas").innerHTML = [...tp.linhas.map(([i, r, v]) => linha(i, r, v)),
-        g.devendo && linha("arrow-back-up", "Deve ao Patrick", brl0(g.devendo)),
-        g.pedido && linha("alert-circle", "Precisa de", `${brl0(g.pedido.valor)} (${g.pedido.motivo})`)].filter(Boolean).join("");
-      const valor = (v) => `${v >= 0 ? "+" : "−"} ${brl0(Math.abs(v))}`;
-      const mov = (x, extra = "") => `<span class="mov-txt">${esc(x.texto)}${extra}${x.sub ? `<span class="mov-sub">${esc(x.sub)}</span>` : ""}</span>
-        <span class="mov-val${x.valor >= 0 ? " plus" : ""}">${valor(x.valor)}<span class="mov-sub">${esc(x.hora)}</span></span>`;
-      const desenhaExtrato = () => {
-        $("bn-extrato").innerHTML = g.extrato.length ? g.extrato.map((d) => `<h2>${esc(d.dia)}</h2><div class="card">${d.itens.map((x) => {
-          if (!x.filhos.length) return `<div class="mov">${mov(x)}</div>`;
-          const id = `${d.dia}|${x.hora}|${x.texto}`, aberto = EXTRATO_ABERTOS.has(id);
-          return `<button class="mov${aberto ? " aberto" : ""}" data-ext="${esc(id)}">${mov(x, ic(aberto ? "chevron-up" : "chevron-down"))}</button>
-            ${aberto ? `<div class="mov-filhos">${x.filhos.map((f) => `<div class="mov">${mov(f)}</div>`).join("")}</div>` : ""}`;
-        }).join("")}</div>`).join("") : `<h2>Extrato</h2><div class="card">${vazio("Nenhuma movimentação ainda.")}</div>`;
-        $("bn-extrato").querySelectorAll("[data-ext]").forEach((b) => b.addEventListener("click", () => {
-          const id = b.dataset.ext;
-          EXTRATO_ABERTOS.has(id) ? EXTRATO_ABERTOS.delete(id) : EXTRATO_ABERTOS.add(id);
-          desenhaExtrato();
-        }));
-      };
-      desenhaExtrato();
+  // Por fora — 28/09 (Patrick): Agora (roupa e make de verdade), Peso (barra de folga até a agência, amarela
+  // quando passa), Cabelo, Unhas. Agora: a roupa em destaque, a barra da make quando tem, e as linhas.
+  async fora() {
+    const d = await api("/api/bastidores?tela=fora");
+    const rp = d.roupa;
+    $("bf-agora-t").hidden = $("bf-agora").hidden = !rp;
+    if (rp) {
+      $("bf-agora").innerHTML = `<div class="big">${esc(rp.look)}</div>
+        ${rp.make ? `<div class="ca-barras"><div class="bar-row"><span>Estado</span><div class="bar${rp.make.alerta ? " alerta" : ""}"><i style="width:${pct(rp.make.valor)}%"></i></div>
+          <span class="w">${esc(rp.make.palavra)}</span></div></div>` : ""}
+        <div class="linhas sep">${rp.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
+    }
+    const ps = d.peso;
+    $("bf-peso-t").hidden = $("bf-peso").hidden = !ps;
+    if (ps) {
+      $("bf-peso").innerHTML = `<div class="big">${esc(ps.kg)}</div>
+        <div class="ca-barras"><div class="bar-row"><span>Limites</span><div class="bar${ps.alerta ? " alerta" : ""}"><i style="width:${pct(ps.barra)}%"></i></div>
+          <span class="w">${esc(ps.palavra)}</span></div></div>
+        <div class="linhas sep">${ps.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
+    }
+    // 26/09 (Patrick): unhas em seção própria. 28/09: a barra ganha rótulo, igual ao Cabelo (Desgaste · estado)
+    const u = d.unhas;
+    $("bd-unhas-t").hidden = $("bd-unhas").hidden = !u;
+    if (u) {
+      $("bd-unhas").innerHTML = `<div class="big un-cor">${u.hex ? `<span class="un-dot" style="background:${esc(u.hex)}"></span>` : ""}${esc(u.cor)}</div>
+        <div class="ca-barras"><div class="bar-row"><span>Estado</span><div class="bar${u.gasta ? " alerta" : ""}"><i style="width:${pct(u.desgaste)}%"></i></div>
+          <span class="w">${esc(u.estado)}</span></div></div>
+        <div class="linhas sep">${linha("droplet-half", "Tipo", u.tipo)}${linha("calendar-check", "Feita em", u.feita)}</div>`;
+    }
+    // 26/09 (Patrick): cabelo em seção própria — penteado, quatro barras (amarela quando vence) e as linhas
+    const cab = d.cabelo;
+    $("bd-cabelo-t").hidden = $("bd-cabelo").hidden = !cab;
+    if (cab) {
+      $("bd-cabelo").innerHTML = `<div class="big un-cor">${cab.hex ? `<span class="un-dot" style="background:${esc(cab.hex)}"></span>` : ""}${esc(cab.penteado)}</div>
+        <div class="ca-barras">${cab.barras.map((b) => `<div class="bar-row"><span>${esc(b.label)}</span>
+          <div class="bar${b.alerta ? " alerta" : ""}"><i style="width:${pct(b.valor)}%"></i></div><span class="w">${esc(b.palavra)}</span></div>`).join("")}</div>
+        <div class="linhas sep">${cab.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>`;
+    }
+  },
 
-      // Mundo — 28/09 (Patrick, no celular): pessoas por círculo (quando e vezes no mês na direita, se houve contato);
-      // Rolando agora sem os fios de sistema; Planos; Onde ela foi no mês (com quem, quando, vezes)
-      const vezes = (n) => n ? `<div class="d">${n} ${n > 1 ? "vezes" : "vez"} no mês</div>` : "";
-      const bloco = (titulo, itens) => itens.length ? `<h2>${titulo}</h2><div class="card">${itens.join("")}</div>` : "";
-      const pessoa = (p) => `<div class="pessoa">${p.foto
-        ? `<img class="avatar-ini avatar-foto" src="/static/${esc(p.foto)}" alt="">`
-        : `<span class="avatar-ini">${esc(p.iniciais)}</span>`}
-        <div class="ps-txt"><div class="t">${esc(p.titulo)}</div>${p.sub ? `<div class="d">${esc(p.sub)}</div>` : ""}</div>
-        <div class="ps-dir"><div class="d">${p.falaram ? esc(p.falaram) : "Sem contato ainda"}</div>${p.falaram ? vezes(p.vezes_30d) : ""}</div></div>`;
-      $("bm-pessoas").innerHTML = m.circulos.map((c) => bloco(c, m.pessoas.filter((p) => p.circulo === c).map(pessoa))).join("")
-        || `<h2>Pessoas</h2><div class="card">${vazio("Ninguém ainda.")}</div>`;
-      $("bm-resto").innerHTML =
-        bloco("Acontecendo agora", m.rolando.map((r) => `<div class="item-m"><div>${esc(cap(r.titulo))}</div>${r.com.length ? `<div class="d">Com ${esc(r.com.join(", "))}</div>` : ""}</div>`))
-        + bloco("Planos", m.planos.map((p) => `<div class="item-m dois-lados"><span>${esc(cap(p.descricao))}</span><span class="d">${esc(p.quando)}</span></div>`))
-        + bloco("Lugares visitados", m.lugares.map((l) => `<div class="item-m lugar"><div><div>${esc(l.nome)}</div><div class="d">${esc(l.com)}</div></div>
-          <div class="ps-dir"><div class="d">${esc(l.quando)}</div>${vezes(l.vezes)}</div></div>`));
-      deslizaBarras(antes);
-    } catch (err) { failIn($("ag-card"), err); }
-    finally { BAST_CARREGANDO = false; }
+  // Dinheiro — 28/09 (Patrick, no celular): saldo, entrou/saiu no mês, próximo cachê e contas;
+  // extrato por dia, saída agrupada com o total (toca e abre os itens, como no Hoje)
+  async dinheiro() {
+    const g = await api("/api/dinheiro");
+    $("bn-saldo").textContent = brl(g.saldo);
+    const tp = g.topo;
+    $("bn-mes").innerHTML = `<div><span class="d">Entrou em ${esc(tp.mes)}</span><b class="plus">+ ${brl0(tp.entrou)}</b></div>
+      <div><span class="d">Saiu em ${esc(tp.mes)}</span><b>− ${brl0(tp.saiu)}</b></div>`;
+    $("bn-linhas").innerHTML = [...tp.linhas.map(([i, r, v]) => linha(i, r, v)),
+      g.devendo && linha("arrow-back-up", "Deve ao Patrick", brl0(g.devendo)),
+      g.pedido && linha("alert-circle", "Precisa de", `${brl0(g.pedido.valor)} (${g.pedido.motivo})`)].filter(Boolean).join("");
+    const valor = (v) => `${v >= 0 ? "+" : "−"} ${brl0(Math.abs(v))}`;
+    const mov = (x, extra = "") => `<span class="mov-txt">${esc(x.texto)}${extra}${x.sub ? `<span class="mov-sub">${esc(x.sub)}</span>` : ""}</span>
+      <span class="mov-val${x.valor >= 0 ? " plus" : ""}">${valor(x.valor)}<span class="mov-sub">${esc(x.hora)}</span></span>`;
+    const desenhaExtrato = () => {
+      $("bn-extrato").innerHTML = g.extrato.length ? g.extrato.map((d) => `<h2>${esc(d.dia)}</h2><div class="card">${d.itens.map((x) => {
+        if (!x.filhos.length) return `<div class="mov">${mov(x)}</div>`;
+        const id = `${d.dia}|${x.hora}|${x.texto}`, aberto = EXTRATO_ABERTOS.has(id);
+        return `<button class="mov${aberto ? " aberto" : ""}" data-ext="${esc(id)}">${mov(x, ic(aberto ? "chevron-up" : "chevron-down"))}</button>
+          ${aberto ? `<div class="mov-filhos">${x.filhos.map((f) => `<div class="mov">${mov(f)}</div>`).join("")}</div>` : ""}`;
+      }).join("")}</div>`).join("") : `<h2>Extrato</h2><div class="card">${vazio("Nenhuma movimentação ainda.")}</div>`;
+      $("bn-extrato").querySelectorAll("[data-ext]").forEach((b) => b.addEventListener("click", () => {
+        const id = b.dataset.ext;
+        EXTRATO_ABERTOS.has(id) ? EXTRATO_ABERTOS.delete(id) : EXTRATO_ABERTOS.add(id);
+        desenhaExtrato();
+      }));
+    };
+    desenhaExtrato();
+  },
+
+  // Mundo — 28/09 (Patrick, no celular): pessoas por círculo (quando e vezes no mês na direita, se houve contato);
+  // Rolando agora sem os fios de sistema; Planos; Onde ela foi no mês (com quem, quando, vezes).
+  // 06/10 (passo 2): sub-abas Pessoas / Agenda (acontecendo agora e planos) / Lugares
+  async mundo() {
+    const m = (await api("/api/bastidores?tela=mundo")).mundo;
+    const vezes = (n) => n ? `<div class="d">${n} ${n > 1 ? "vezes" : "vez"} no mês</div>` : "";
+    const pessoa = (p) => `<div class="pessoa">${p.foto
+      ? `<img class="avatar-ini avatar-foto" src="/static/${esc(p.foto)}" alt="">`
+      : `<span class="avatar-ini">${esc(p.iniciais)}</span>`}
+      <div class="ps-txt"><div class="t">${esc(p.titulo)}</div>${p.sub ? `<div class="d">${esc(p.sub)}</div>` : ""}</div>
+      <div class="ps-dir"><div class="d">${p.falaram ? esc(p.falaram) : "Sem contato ainda"}</div>${p.falaram ? vezes(p.vezes_30d) : ""}</div></div>`;
+    $("bm-pessoas").innerHTML = m.circulos.map((c) => bloco(c, m.pessoas.filter((p) => p.circulo === c).map(pessoa))).join("")
+      || `<div class="card">${vazio("Ninguém ainda.")}</div>`;
+    $("bm-agenda").innerHTML =
+      (bloco("Acontecendo agora", m.rolando.map((r) => `<div class="item-m"><div>${esc(cap(r.titulo))}</div>${r.com.length ? `<div class="d">Com ${esc(r.com.join(", "))}</div>` : ""}</div>`))
+      + bloco("Planos", m.planos.map((p) => `<div class="item-m dois-lados"><span>${esc(cap(p.descricao))}</span><span class="d">${esc(p.quando)}</span></div>`)))
+      || `<div class="card">${vazio("Nada acontecendo nem planejado.")}</div>`;
+    $("bm-lugares").innerHTML = bloco("", m.lugares.map((l) => `<div class="item-m lugar"><div><div>${esc(l.nome)}</div><div class="d">${esc(l.com)}</div></div>
+        <div class="ps-dir"><div class="d">${esc(l.quando)}</div>${vezes(l.vezes)}</div></div>`))
+      || `<div class="card">${vazio("Nenhum lugar neste mês.")}</div>`;
   },
 };
 
@@ -463,11 +509,9 @@ document.addEventListener("click", (e) => {
   const go = e.target.closest("[data-go]");
   if (go) { show(go.dataset.go); return; }
   const aba = e.target.closest("[data-bast]");
-  if (aba) {
-    document.querySelectorAll("[data-bast]").forEach((b) => b.classList.toggle("on", b === aba));
-    document.querySelectorAll(".bast-aba").forEach((v) => (v.hidden = v.id !== "ba-" + aba.dataset.bast));
-    window.scrollTo(0, 0);
-  }
+  if (aba) { bastAba(aba.dataset.bast); return; }
+  const sub = e.target.closest("[data-sub]");
+  if (sub) { bastSub(sub.closest("[data-subde]").dataset.subde, sub.dataset.sub); return; }
 });
 
 $("pix-valor").addEventListener("input", () => ($("pix-err").textContent = ""));
@@ -653,7 +697,8 @@ $("rv-fazer").addEventListener("click", async () => {
 show("inicio", false);
 // 26/09 (Patrick): o que ela sente atualiza em tempo real — Bastidores aberto se recarrega sozinho.
 // 28/09: "em todas as telas, a barra deve ser atualizada em tempo real" — a cada 30 s (antes 1 min), sem
-// duas recargas ao mesmo tempo, na volta pro app e com a barra deslizando até o valor novo (app.css)
+// duas recargas ao mesmo tempo, na volta pro app e com a barra deslizando até o valor novo (app.css).
+// 06/10 (passo 2): só a tela aberta na barra de baixo
 function recarregaBastidores() {
   if (stack[stack.length - 1] === "bastidores" && !document.hidden) loaders.bastidores();
 }

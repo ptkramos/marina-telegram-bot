@@ -59,7 +59,8 @@ class TelaTest(unittest.TestCase):
         self.assertNotIn("bd-cabelo", dentro)
         self.assertLess(fora.index("bf-peso"), fora.index("bd-cabelo"))
         self.assertLess(fora.index("bd-cabelo"), fora.index("bd-unhas"))
-        self.assertIn('data-bast="fora">Por fora<', html)
+        # 06/10 (redesenho, passo 2): a aba virou ícone na barra de baixo, com o nome no aria-label
+        self.assertIn('data-bast="fora" aria-label="Por fora"><i class="ti ti-hanger">', html)
 
 
 if __name__ == "__main__":

@@ -3252,3 +3252,28 @@ erro e loga (o teste apaga a tabela e confere que ninguém cai).
   (`bootstrap_v36.CLEAR`) zera a tabela junto com o mundo. O reset do soak (`reset_soak_learning`) também. Suíte inteira: 1795, verde.
 - **Textos que eu decidi:** nenhum visível (os valores "sexting", "lovense", "antes de dormir", "em casa", "fora de
   casa" são internos; o texto da tela nasce no passo 3).
+
+## Redesenho dos Bastidores, passo 2: a moldura (06/10, frente de apps)
+
+Decisões do Patrick por mockup: **no topo só o nome da tela** (sai "Bastidores" e "Só o Patrick vê isso"; a tela
+inicial segue com o link "Bastidores") e **barra de baixo só com ícones** (Agora `map-pin`, Por dentro `heartbeat`,
+Por fora `hanger`, Dinheiro `building-bank`, Mundo `users`; a aberta em azul, nome no `aria-label`).
+- **Servidor:** `/api/bastidores?tela=agora|dentro|fora|mundo` monta só o que aquela tela mostra (o `status` só pra
+  Agora e Por dentro; o Por fora não chama mais `hooks.status`, `emocao`, agenda nem mundo). Sem `?tela` devolve tudo
+  como antes (front antigo em cache depois do deploy); tela desconhecida dá 400. O Dinheiro continua no
+  `/api/dinheiro`, agora só quando a aba abre (antes ia junto em toda carga, a cada 30 s).
+- **Front:** cada tela com o seu carregador (`BAST_TELAS` no `app.js`), trava por tela (trocar de aba no meio de uma
+  carga não perde a outra), erro numa linha embaixo do título (`bs-err`) em vez de apagar o card do Agora. A recarga de
+  30 s pede só a tela aberta. A barra entra pelo `show()` como as do iFood, Instagram e Lovense; trocar de tela não
+  empilha (o voltar sai dos Bastidores).
+- **Sub-abas em pílula** (presas no topo ao rolar, ocupando a linha; as quatro cabem em 375 px):
+  Por dentro = Corpo (o card do Corpo) / Sentimentos (Humor, Sentindo agora, Hoje por dentro) / Pensando (o antigo
+  "Na cabeça") / Relacionamento (o antigo "Vocês dois"); Mundo = Pessoas / Agenda (Acontecendo agora e Planos) /
+  Lugares. **O conteúdo é o de antes, só redistribuído**: cada sub-aba ganha o desenho novo nos passos 3 a 9.
+- **Testes:** `test_bastidores_cada_tela_pede_so_o_seu` (as chaves de cada tela, a soma igual ao "tudo", o 400);
+  `test_por_fora` passou a conferir a aba pelo ícone. Suíte inteira: 1796, verde depois desse ajuste.
+  Conferido no celular (375 px) com a cópia do banco de produção de 06/10, 01:12: as 5 telas, as 7 sub-abas, uma
+  chamada por tela, pílula presa ao rolar, a última linha acima da barra e a barra some ao voltar.
+- **Textos que eu decidi (visíveis, pra ele revisar):** os vazios "Nada pela frente." (Pensando),
+  "Nada acontecendo nem planejado." (Agenda) e "Nenhum lugar neste mês." (Lugares); os títulos "Corpo",
+  "Pensando" e "Vocês dois"/"Lugares visitados" saíram de cima dos cards (a pílula já diz).
