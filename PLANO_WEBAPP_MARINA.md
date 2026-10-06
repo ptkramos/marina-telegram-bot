@@ -1417,6 +1417,24 @@ Pessoas / Agenda (Acontecendo agora, Planos) / Lugares. O conteúdo de dentro é
 novo de cada sub-aba vem nos passos 3 a 9. Vazios novos: "Nada pela frente.", "Nada acontecendo nem planejado.",
 "Nenhum lugar neste mês.". Próximo: **passo 3, o Corpo** ("bora na frente de apps: redesenho dos Bastidores, passo 3").
 
+**Passo 3 feito (06/10) ✅ — o Corpo:** aprovado pelo Patrick nos prints (banco real e uma demonstração). Servidor em
+`bastidores_corpo.py` (`corpo_view`, chave `corpo` do `/api/bastidores?tela=dentro`; uma seção com erro some sozinha):
+**Agora** com Energia, Saciedade e **Mal-estar** (âmbar, a palavra é a 1ª coisa do `discomfort_why`, sem repetir a
+fase), barras de 10 px; **Sono** na faixa de 18:00 a 18:00 (a noite e o cochilo, a hora em cima de cada trecho, o
+"agora" num tracinho; acordada no meio da noite, o trecho para na hora do micro-despertar) com "Dormiu por volta de …"
+/ "Dormindo há …" / "Acordou no meio da noite"; **Ciclo** com a fase, "Dia 6 de 28", os 28 quadradinhos (futuro
+clarinho, hoje com borda) e o próximo marco ("Período fértil em 6 dias", "Último dia de menstruação"…);
+**Intimidade** com o velocímetro (arco de fora rosa = vontade, com os cortes do `LIBIDO_WORDS`; arco de dentro coral =
+excitação, só quando acesa, com "Molhada desde 23:10" e o ícone da origem, `message-circle` ou
+`device-mobile-vibration`), as **etiquetas** ↑↓ do que mais empurra a vontade (até 4, de 0,03 pra cima; os termos saem
+da mesma conta do `EmotionEngine._libido`, que agora anota `libido_termos` — a conta não mudou) e o **calendário do
+mês** (coração com o Patrick, bolinha roxa sozinha, menstruação pintada e prevista tracejada, hoje com borda; toca no
+dia e aparece "22:05, com o Patrick, pelo Lovense"; legenda embaixo). Decidido pelo Patrick: a excitação **não** vira
+etiqueta (o arco já mostra); "Molhada" com o ponteiro em "Sem vontade" logo depois de gozar fica assim (é a conta
+pós-gozo que já existia). O calendário puxa 60 dias do `bastidores_hist` e, de antes dele, o `climax_at` e o
+`libido_release_at`. 18 testes em `tests/test_bastidores_corpo.py`. Próximo: **passo 4, os Sentimentos** ("bora na
+frente de apps: redesenho dos Bastidores, passo 4").
+
 **Textos que eu decidi (pra ele revisar):** "Dormiu por volta de 7 horas e 45 minutos" / "Dormindo há 5 horas e 10
 minutos" (o cochilo só na faixa); "Menstruação em 4 dias"; "Último orgasmo: dia 3, sozinha"; "Excitada desde 21:40";
 etiquetas da vontade ("2 dias sem gozar", "Saudade do Patrick", "Fase fértil", "Cansaço", "Cólica", "Mágoa");

@@ -312,6 +312,85 @@ async function bastCarrega(aba) {
   finally { BAST.carregando.delete(aba); }
 }
 
+// ------------------------------------------------------------------ Corpo --
+// 06/10 (redesenho, passo 3, PLANO_WEBAPP): cada informação vira desenho com uma linha curta centralizada embaixo
+// (nada de "rótulo à esquerda, texto à direita"). O servidor (bastidores_corpo.py) manda as posições e os textos.
+let CORPO_DIA = null;                                   // dia do calendário aberto (toca e mostra hora e como foi)
+const linhaC = (txt, cls = "") => txt ? `<p class="linha-c${cls ? " " + cls : ""}">${txt}</p>` : "";
+const secao = (id, titulo, html) => html ? `<h2>${titulo}</h2><div class="card" id="${id}">${html}</div>` : "";
+
+function faixaSono(s) {
+  const meio = (t) => Math.max(14, Math.min(86, (t.ini + t.fim) / 2));
+  return `<div class="fs">
+    <div class="fs-rot">${s.trechos.map((t) => `<span style="left:${meio(t)}%">${esc(t.rotulo)}</span>`).join("")}</div>
+    <div class="fs-trilho">${[25, 50, 75].map((x) => `<b style="left:${x}%"></b>`).join("")}
+      ${s.trechos.map((t) => `<i class="${t.cochilo ? "cochilo" : ""}" style="left:${t.ini}%;width:${Math.max(0.8, t.fim - t.ini)}%"></i>`).join("")}
+      ${s.agora != null ? `<u style="left:${s.agora}%"></u>` : ""}</div>
+    <div class="fs-eixo">${s.eixo.map((h, n) => `<span style="left:${n * 25}%">${esc(h)}</span>`).join("")}</div>
+  </div>${linhaC(esc(s.linha))}`;
+}
+
+function faixaCiclo(c) {
+  return `<div class="ci-topo"><b>${esc(c.fase)}</b><span>${esc(c.dia)}</span></div>
+    <div class="ci-faixa">${c.dias.map((d) => `<i class="${d.tipo}${d.hoje ? " hoje" : ""}${d.futuro ? " futuro" : ""}"></i>`).join("")}</div>
+    ${linhaC(esc(c.linha))}`;
+}
+
+// ponteiro = vontade (arco de fora); arco de dentro = excitação do momento (some quando é zero)
+function velocimetro(v, exc, cortes) {
+  const cx = 100, cy = 100, R = 82, r = 62;
+  const pt = (val, raio) => { const a = Math.PI * (1 - Math.max(0, Math.min(1, val)));
+    return [(cx + raio * Math.cos(a)).toFixed(1), (cy - raio * Math.sin(a)).toFixed(1)]; };
+  const arco = (ate, raio) => { const [x0, y0] = pt(0, raio), [x1, y1] = pt(ate, raio);
+    return `M${x0} ${y0} A${raio} ${raio} 0 0 1 ${x1} ${y1}`; };
+  const corte = (val) => { const [x0, y0] = pt(val, R - 9), [x1, y1] = pt(val, R + 9);
+    return `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" class="vl-corte"/>`; };
+  const [px, py] = pt(v, R - 4);
+  return `<svg class="vel" viewBox="0 0 200 108" aria-hidden="true">
+    <path d="${arco(1, R)}" class="vl-trilho"/>${v > 0 ? `<path d="${arco(v, R)}" class="vl-vontade"/>` : ""}
+    ${cortes.map(corte).join("")}
+    ${exc ? `<path d="${arco(1, r)}" class="vl-trilho fino"/><path d="${arco(exc.valor, r)}" class="vl-exc"/>` : ""}
+    <line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" class="vl-ponteiro"/><circle cx="${cx}" cy="${cy}" r="5.5" class="vl-pino"/>
+  </svg>`;
+}
+
+function calendario(c) {
+  const sel = c.dias.find((d) => d.n === CORPO_DIA && d.detalhes.length);
+  const legenda = [["heart", "com o Patrick", "lg-patrick"], ["point-filled", "sozinha", "lg-sozinha"]]
+    .map(([i, t, k]) => `<span class="${k}">${ic(i)}${t}</span>`).join("") + `<span class="lg-mens"><b></b>menstruação</span>`;
+  return `<div class="cal-mes">${esc(c.mes)}</div>${linhaC(esc(c.ultimo), "cal-ult")}
+    <div class="cal">${["D", "S", "T", "Q", "Q", "S", "S"].map((s) => `<span class="cal-sem">${s}</span>`).join("")}
+      ${"<span></span>".repeat(c.vazios)}
+      ${c.dias.map((d) => `<button class="cal-d${d.menstruacao ? " m-" + d.menstruacao : ""}${d.hoje ? " hoje" : ""}${d.futuro ? " futuro" : ""}${sel && sel.n === d.n ? " sel" : ""}"
+        data-dia="${d.n}"${d.detalhes.length ? "" : " disabled"}><span class="n">${d.n}</span>
+        <span class="mk">${d.patrick ? ic("heart", "mk-p") : ""}${d.sozinha ? ic("point-filled", "mk-s") : ""}</span></button>`).join("")}</div>
+    ${sel ? `<div class="cal-det">${sel.detalhes.map((x) => `<p>${esc(x)}</p>`).join("")}</div>` : ""}
+    <div class="cal-leg">${legenda}</div>`;
+}
+
+function desenhaCorpo(c) {
+  if (!c) { $("bd-corpo").innerHTML = ""; return; }
+  const agora = c.agora.map((b) => `<div class="bar-row"><span>${esc(b.label)}</span>
+    <div class="bar${b.label === "Mal-estar" ? " alerta" : ""}"><i style="width:${pct(b.value)}%"></i></div><span class="w">${esc(b.word)}</span></div>`).join("");
+  const it = c.intimidade;
+  let intim = "", cal = "";
+  if (it) {
+    const ex = it.excitacao;
+    intim = `${velocimetro(it.vontade.valor, ex, it.vontade.cortes)}<div class="vl-palavra">${esc(it.vontade.palavra)}</div>
+      ${ex ? `<p class="linha-c vl-exc-l">${ic(ex.origem === "lovense" ? "device-mobile-vibration" : "message-circle")}
+        ${esc(ex.palavra)}${ex.desde ? ` desde ${esc(ex.desde)}` : ""}</p>` : ""}
+      ${it.etiquetas.length ? `<div class="etqs">${it.etiquetas.map((e) => `<span class="etq${e.sobe ? " sobe" : ""}">
+        ${ic(e.sobe ? "arrow-up" : "arrow-down")}${esc(e.texto)}</span>`).join("")}</div>` : ""}`;
+    cal = `<div class="card" id="bc-cal">${calendario(it.calendario)}</div>`;
+  }
+  $("bd-corpo").innerHTML = secao("bc-agora", "Agora", agora) + (c.sono ? secao("bc-sono", "Sono", faixaSono(c.sono)) : "")
+    + (c.ciclo ? secao("bc-ciclo", "Ciclo", faixaCiclo(c.ciclo)) : "") + (it ? secao("bc-intim", "Intimidade", intim) + cal : "");
+  $("bd-corpo").querySelectorAll(".cal-d:not([disabled])").forEach((b) => b.addEventListener("click", () => {
+    CORPO_DIA = CORPO_DIA === +b.dataset.dia ? null : +b.dataset.dia;
+    desenhaCorpo(c);
+  }));
+}
+
 const BAST_TELAS = {
   async agora() {
     const d = await api("/api/bastidores?tela=agora");
@@ -375,9 +454,7 @@ const BAST_TELAS = {
   async dentro() {
     const d = await api("/api/bastidores?tela=dentro");
     const e = d.emocao;
-    $("bd-corpo").innerHTML = e.body.map((b) => bar(b.label, b.value, b.word, b.label === "Excitação")).join("")
-      + (e.linhas.length || e.no_clima ? `<div class="linhas sep">${e.linhas.map(([i, r, v]) => linha(i, r, v)).join("")}
-        ${e.no_clima ? `<div class="linha"><span class="li-ic">${ic("flame")}</span><span class="li-rot">No clima agora</span></div>` : ""}</div>` : "");
+    desenhaCorpo(d.corpo);
     $("bd-humor").innerHTML = `<div class="big">${esc(e.humor)}</div>` + e.humor_barras.map((b) => bar(b.label, b.value)).join("");
     // 28/09 (Patrick): o motivo ganha quando começou, na direita. 04/10 (catálogo, leva 2): "2x" antes do
     // sentimento, na mesma linha (só de 2 vezes pra cima); o detalhe entre parênteses

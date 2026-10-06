@@ -651,3 +651,71 @@ body.sem-rolar { overflow: hidden; }
   color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; padding: 4px 0; }
 .lv-nav button.on { color: var(--lv); font-weight: 600; }
 .lv-nav .ti { font-size: 24px; }
+
+/* 06/10 (redesenho, passo 3, PLANO_WEBAPP): o Corpo em desenhos, cada um com uma linha curta centralizada embaixo.
+   Barras de 10 px na tela toda; vontade em rosa (o arco de fora), excitação em coral (o de dentro) */
+.corpo .bar { height: 10px; }
+.linha-c { text-align: center; font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+.linha-c .ti { vertical-align: -2px; }
+/* sono: a faixa de 18:00 a 18:00 */
+.fs { padding: 2px 4px 0; }
+.fs-rot, .fs-eixo { position: relative; height: 16px; font-size: 11px; color: var(--muted); }
+.fs-rot span, .fs-eixo span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.fs-rot span { color: var(--fg); font-weight: 600; }
+.fs-eixo { margin-top: 4px; }
+.fs-eixo span:first-child { transform: none; }
+.fs-eixo span:last-child { transform: translateX(-100%); }
+.fs-trilho { position: relative; height: 14px; background: var(--line); border-radius: 4px; }
+.fs-trilho b { position: absolute; top: 0; bottom: 0; width: 1px; background: color-mix(in srgb, var(--muted) 35%, transparent); }
+.fs-trilho i { position: absolute; top: 0; bottom: 0; background: #5b6ee1; border-radius: 4px; }
+.fs-trilho i.cochilo { background: color-mix(in srgb, #5b6ee1 55%, transparent); }
+.fs-trilho u { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--fg); border-radius: 1px; }
+/* ciclo: os 28 quadradinhos */
+.ci-topo { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.ci-topo b { font-size: 15px; }
+.ci-topo span { font-size: 13px; color: var(--muted); }
+.ci-faixa { display: grid; grid-template-columns: repeat(28, 1fr); gap: 2px; padding: 0 3px; }
+.ci-faixa i { height: 16px; border-radius: 3px; background: #5b8fe0; }
+.ci-faixa i.menstruacao { background: #d64545; }
+.ci-faixa i.fertil { background: #d4537e; }
+.ci-faixa i.futuro { opacity: .38; }
+.ci-faixa i.hoje { box-shadow: 0 0 0 2px var(--bg2), 0 0 0 3.5px var(--fg); }
+/* intimidade: o velocímetro */
+.vel { display: block; width: 100%; max-width: 250px; margin: 2px auto 0; overflow: visible; }
+.vel path { fill: none; stroke-linecap: round; }
+.vl-trilho { stroke: var(--line); stroke-width: 13; }
+.vl-trilho.fino { stroke-width: 8; }
+.vl-vontade { stroke: #d4537e; stroke-width: 13; }
+.vl-exc { stroke: #e8664a; stroke-width: 8; }
+.vl-corte { stroke: var(--bg2); stroke-width: 2.5; }
+.vl-ponteiro { stroke: var(--fg); stroke-width: 3; stroke-linecap: round; }
+.vl-pino { fill: var(--fg); }
+.vl-palavra { text-align: center; font-size: 19px; font-weight: 600; margin-top: 4px; }
+.vl-exc-l { color: #e8664a; font-weight: 600; margin-top: 2px; }
+.etqs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
+.etq { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; padding: 4px 9px 4px 7px; border-radius: 99px;
+  background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
+.etq.sobe { background: color-mix(in srgb, #d4537e 13%, transparent); color: #c2416d; }
+.etq .ti { font-size: 13px; }
+/* intimidade: o calendário do mês, como app de ciclo */
+.cal-mes { text-align: center; font-weight: 600; font-size: 15px; }
+.cal-ult { margin: 2px 0 10px; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 4px; justify-items: center; }
+.cal-sem { font-size: 11px; color: var(--muted); padding-bottom: 2px; }
+.cal-d { display: flex; flex-direction: column; align-items: center; width: 38px; height: 44px; padding: 3px 0 0; border: 0;
+  background: none; font: inherit; color: var(--fg); cursor: pointer; }
+.cal-d[disabled] { cursor: default; }
+.cal-d .n { width: 28px; height: 28px; line-height: 28px; border-radius: 50%; font-size: 13px; box-sizing: border-box; }
+.cal-d.futuro .n { color: var(--muted); }
+.cal-d.m-real .n { background: color-mix(in srgb, #d64545 22%, transparent); }
+.cal-d.m-prevista .n { border: 1.5px dashed color-mix(in srgb, #d64545 70%, transparent); line-height: 25px; }
+.cal-d.hoje .n { box-shadow: inset 0 0 0 1.5px var(--fg); font-weight: 600; }
+.cal-d.sel .n { background: var(--fg); color: var(--bg); }
+.cal-d .mk { display: flex; gap: 1px; height: 12px; font-size: 11px; line-height: 12px; }
+.mk-p, .lg-patrick .ti { color: #d4537e; }
+.mk-s, .lg-sozinha .ti { color: #8a63d2; }
+.cal-det { text-align: center; font-size: 13px; margin-top: 6px; }
+.cal-det p { margin: 2px 0; }
+.cal-leg { display: flex; justify-content: center; gap: 14px; margin-top: 10px; font-size: 11px; color: var(--muted); }
+.cal-leg span { display: inline-flex; align-items: center; gap: 3px; }
+.cal-leg b { width: 10px; height: 10px; border-radius: 50%; background: color-mix(in srgb, #d64545 22%, transparent); }

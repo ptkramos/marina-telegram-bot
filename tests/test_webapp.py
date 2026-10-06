@@ -245,7 +245,7 @@ class ApiTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(r.status, 200)
             chaves[tela] = set(await r.json())
         self.assertEqual(chaves["agora"], {"status", "hoje"})
-        self.assertEqual(chaves["dentro"], {"status", "emocao", "diario", "cabeca"})
+        self.assertEqual(chaves["dentro"], {"status", "emocao", "corpo", "diario", "cabeca"})
         self.assertEqual(chaves["fora"], {"roupa", "peso", "unhas", "cabelo"})
         self.assertEqual(chaves["mundo"], {"mundo"})
         self.assertEqual(set(await (await get("")).json()), set().union(*chaves.values()))

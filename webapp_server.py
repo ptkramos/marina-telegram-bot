@@ -563,9 +563,12 @@ async def api_bastidores(request: web.Request) -> web.Response:
         if status is not None:
             out["status"] = status
         if "dentro" in telas:
-            out["emocao"] = emocao_view(EmotionEngine(hooks.db).panel(now), status["dormindo"], now,
+            panel = EmotionEngine(hooks.db).panel(now)
+            out["emocao"] = emocao_view(panel, status["dormindo"], now,
                                         status["ciclo"], status.get("ciclo_fase", ""),
                                         _dormiu_em(hooks.db, now) if status["dormindo"] else None)
+            import bastidores_corpo                  # 06/10 (redesenho, passo 3): o Corpo em desenhos
+            out["corpo"] = bastidores_corpo.corpo_view(hooks.db, now, panel, out["emocao"]["body"], status["dormindo"])
             try:
                 import por_dentro                    # 28/09 (Patrick): Hoje por dentro, Na cabeça, Vocês dois
                 out["diario"] = por_dentro.diario_view(hooks.db, now)

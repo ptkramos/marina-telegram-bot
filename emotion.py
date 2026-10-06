@@ -152,6 +152,7 @@ class Feeling:
     libido: float = 0.3            # vontade (tesão) — corpo
     excitation: float = 0.0        # excitação do momento (modo íntimo)
     hours_since_release: Optional[float] = None
+    libido_termos: dict = field(default_factory=dict)   # 06/10: o que empurrou a vontade (só tela)
 
 
 class EmotionEngine:
@@ -465,12 +466,14 @@ class EmotionEngine:
         social = self._stored("social_battery", 0.7)
         playfulness = _clamp(0.15 + 0.55 * valence + 0.25 * arousal + 0.15 * (social - 0.5))
         missing = self._missing(now)
-        libido, excitation, since = self._libido(now, phase, energy, discomfort, valence, bond, missing, eps)
+        termos: dict = {}
+        libido, excitation, since = self._libido(now, phase, energy, discomfort, valence, bond, missing, eps,
+                                                 termos)
         return Feeling(now=now, energy=energy, hours_slept=slept, awake_since=awake_since, hunger=hunger,
                        discomfort=discomfort, discomfort_why=why, cycle_phase=phase,
                        valence=round(valence, 3), arousal=round(arousal, 3), playfulness=round(playfulness, 3),
                        episodes=eps, bond=bond, missing=missing, social_battery=social,
-                       libido=libido, excitation=excitation, hours_since_release=since)
+                       libido=libido, excitation=excitation, hours_since_release=since, libido_termos=termos)
 
     # ============================================================ tesão ==
     def last_release(self, now: datetime) -> Optional[datetime]:
@@ -492,9 +495,12 @@ class EmotionEngine:
         past = [c for c in candidates if c <= now]
         return max(past) if past else None
 
-    def _libido(self, now, phase, energy, discomfort, valence, bond, missing, eps) -> tuple:
+    def _libido(self, now, phase, energy, discomfort, valence, bond, missing, eps,
+                termos: Optional[dict] = None) -> tuple:
         """Vontade (0–1): acumula com as horas sem gozar, sobe com ciclo fértil,
-        saudade, dia bom e desejo por ele; cai com cansaço, cólica e mágoa."""
+        saudade, dia bom e desejo por ele; cai com cansaço, cólica e mágoa.
+        06/10 (redesenho dos Bastidores, passo 3): com `termos`, anota quanto cada coisa empurrou a vontade (as
+        etiquetas ↑↓ da Intimidade, só tela); a conta é a mesma, linha por linha."""
         from intimacy import CYCLE_LIBIDO
         cycle = next((v for k, v in CYCLE_LIBIDO.items() if phase and phase.startswith(k.split("_")[0])), 1.0)
         release = self.last_release(now)
@@ -512,11 +518,24 @@ class EmotionEngine:
         except Exception:
             pass
         v += 0.5 * excitation
+        if termos is not None:
+            termos.update(
+                ciclo=0.35 * (cycle - 1.0) / 0.65,
+                sem_gozar=min(0.35, 0.012 * since) if since is not None else 0.0,
+                desejo=0.25 * (bond["romantic_intensity"] - 0.8), humor=0.15 * (valence - 0.6),
+                energia=0.1 * (energy - 0.55), saudade=0.08 * missing, mal_estar=-0.4 * discomfort,
+                magoa=-0.6 * bond["hurt"], excitacao=0.5 * excitation, desde=since,
+                patrick=min(LIBIDO_FROM_EPISODES_MAX, sum(0.1 * e.intensity for e in eps
+                                                          if e.target == PATRICK_TARGET and e.kind in ("diversao", "carinho"))))
         # 25/09 (Patrick): exausta às 2h, TPM e gozou há 5 h aparecia "esquentando" (0.62). Cansaço pesa
         # de verdade, e depois do gozo a vontade volta aos poucos, não de uma vez às 3 h.
+        if termos is not None:
+            termos["energia"] += v * (0.45 * min(1.0, energy / 0.6) - 0.45)
         v *= 0.55 + 0.45 * min(1.0, energy / 0.6)
         lo, hi = RELEASE_RECOVERY_H
         if since is not None and since < hi:
+            if termos is not None:
+                termos["gozou"] = v * ((0.3 if since < lo else 0.3 + 0.7 * (since - lo) / (hi - lo)) - 1.0)
             v *= 0.3 if since < lo else 0.3 + 0.7 * (since - lo) / (hi - lo)
         return round(_clamp(v), 3), round(excitation, 3), (round(since, 1) if since is not None else None)
 
@@ -720,6 +739,9 @@ class EmotionEngine:
                      {"label": "Tesão", "value": f.libido, "word": _word(f.libido, LIBIDO_WORDS)}],
             "in_the_mood": f.excitation >= 0.45,
             "hours_since_release": f.hours_since_release,
+            # 06/10 (redesenho, passo 3): o Corpo novo desenha os números (velocímetro, mal-estar, etiquetas)
+            "libido": f.libido, "excitation": f.excitation, "libido_termos": f.libido_termos,
+            "discomfort": f.discomfort, "cycle_phase": f.cycle_phase,
             "hours_slept": f.hours_slept,
             "awake_since": f.awake_since,
             "phase": PHASE_NAMES.get(f.cycle_phase, f.cycle_phase),

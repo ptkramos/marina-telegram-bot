@@ -3277,3 +3277,32 @@ Por fora `hanger`, Dinheiro `building-bank`, Mundo `users`; a aberta em azul, no
 - **Textos que eu decidi (visíveis, pra ele revisar):** os vazios "Nada pela frente." (Pensando),
   "Nada acontecendo nem planejado." (Agenda) e "Nenhum lugar neste mês." (Lugares); os títulos "Corpo",
   "Pensando" e "Vocês dois"/"Lugares visitados" saíram de cima dos cards (a pílula já diz).
+
+## Redesenho dos Bastidores, passo 3: o Corpo (06/10, frente de apps)
+
+Aprovado pelo Patrick nos prints do celular (banco de produção de 06/10, 01:32, e uma cópia com gozos e excitação
+inventados pra ver o desenho cheio). Detalhe das seções no PLANO_WEBAPP, "Passo 3 feito".
+- **Servidor:** `bastidores_corpo.py` monta `corpo` = agora / sono / ciclo / intimidade; cada seção num `try`
+  (`webapp.corpo.<seção>` no log, a seção vira `null` e some da tela). Só leitura: `SleepPlan` (bed, wake, nap,
+  micro_wakes), `ciclo_biologico`, `bastidores_hist` (orgasmo, excitacao) e, pra antes do histórico, `climax_at` e o
+  `libido_release_at` (o mesmo gozo a menos de 3 min não repete).
+- **`emotion.py`:** `Feeling.libido_termos` e o `panel` passam `libido`, `excitation`, `libido_termos`, `discomfort`
+  e `cycle_phase`. O `_libido` só anota (a conta é a mesma, linha por linha; teste compara com e sem anotação). Ela
+  não lê nada disso: o prompt segue com as palavras de antes.
+- **Front:** `desenhaCorpo` no `app.js` (faixa do sono, faixa do ciclo, velocímetro em SVG, calendário com toque),
+  CSS novo no fim do `app.css`. Some do Corpo antigo: as linhas "Dormindo/Acordada", "Ciclo", "Último orgasmo",
+  "Mal-estar" e "No clima agora" (tudo virou desenho).
+- **Conserto no caminho:** acordada num micro-despertar, a faixa pintava o sono até "agora"; agora para na hora em que
+  ela acordou.
+- **Testes:** `tests/test_bastidores_corpo.py` (18: mal-estar, próximo marco do ciclo, etiquetas, termos da vontade,
+  sono dormindo/acordada/noite inteira, calendário, seção com erro); `test_bastidores_cada_tela_pede_so_o_seu` ganhou
+  `corpo`.
+- **Textos que eu decidi (visíveis, pra ele revisar):** os títulos "Agora", "Sono", "Ciclo", "Intimidade"; "Acordou
+  no meio da noite"; "Menstruação acaba em 2 dias", "Menstruação acaba amanhã", "Último dia de menstruação",
+  "Período fértil em 5 dias", "Período fértil amanhã", "Período fértil acaba em 2 dias", "Último dia do período
+  fértil", "Menstruação em 5 dias", "Menstruação amanhã"; fases "Menstruada", "Fase folicular", "Período fértil",
+  "Fase lútea", "Pré-menstrual"; etiquetas "Desejo pelo Patrick"/"Pouco desejo pelo Patrick", "Bom humor"/"Mau
+  humor", "Disposição"/"Cansaço", "Saudade do Patrick", "Mágoa", "Carinho do Patrick", "2 dias sem gozar", "Gozou
+  há 1 hora"; mal-estar "Nenhum"; "Último orgasmo: hoje às 22:05, com o Patrick" / "ontem às …" / "dia 3" / "3 de
+  outubro"; detalhe do dia "22:05, com o Patrick, pelo Lovense" / "16:20, sozinha, no banho, com o Lush"; legenda
+  "com o Patrick", "sozinha", "menstruação".
