@@ -1695,6 +1695,10 @@ da brincadeira (mesmo sem dizer "lush"), lembra a palavra já combinada, "vou li
 avisa de verdade, e o sono e o boa noite esperam o combinado — exausta, ela desiste e diz (`lovense_desistiu`). E o
 Hush no receio só com tesão alto. Detalhe na Auditoria e no FRENTES (seção 5, item 29). No ar desde 00:22.
 
+**06/10 — Redesenho dos Bastidores, passo 1 (o histórico):** nada muda na fala. O mundo passa a guardar, só pra tela,
+cada gozo (com ele ou sozinha), a hora em que a excitação acendeu, o vínculo de cada hora, o peso do dia e a pesagem
+(`bastidores_hist`, migração 037). Ela não lê. Detalhe na Auditoria, "Redesenho dos Bastidores, passo 1".
+
 **05/10, noite — a encomenda do Lovense:** até chegar, o prompt diz que o Patrick encomendou e que ela ainda não está
 com eles (não diz que abriu, colocou ou testou); quando ele avisa "chegou", o Seu Jorge interfona e ela manda uma
 iniciativa nova (`lovense_chegou`) contando que pegou e pôs pra carregar. Detalhe na Auditoria, "a encomenda chega".

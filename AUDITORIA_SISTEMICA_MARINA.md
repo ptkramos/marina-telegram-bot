@@ -3226,3 +3226,29 @@ f5/f6 (calcinha descida, a haste cruza a faixa). Detalhe e lições em PLANO_VOZ
   brinquedo às vezes, e "fully clothed" perde na adulta); roupa que cobre o peito precisa de um corpo canônico sem os
   peitos; o LoRA da calcinha liga quando a cena diz "panties pulled down".
 - **Textos que eu decidi:** todos internos (prompts das fotos); nada visível.
+
+## Redesenho dos Bastidores, passo 1: o histórico (06/10, frente de apps)
+
+O desenho novo pede passado que o mundo não guardava (só existia a última vez: `intimacy_state.climax_at` e
+`libido_release_at`). Nova tabela `bastidores_hist` (migração **037**: chave, em, ref, valor JSON; `UNIQUE(chave, ref)`)
+e o módulo `bastidores_hist.py`. **Só a tela lê**: nada entra no prompt nem muda o que ela faz; cada função engole o
+erro e loga (o teste apaga a tabela e confere que ninguém cai).
+- **Orgasmo** (calendário da Intimidade), gravado nos 5 lugares onde ela goza: com o Patrick pela fala
+  (`intimacy.observe_marina_line`, "sexting") e pelo brinquedo (`Lovense._gozar`, "lovense", com brinquedos, público e
+  onde); sozinha antes de dormir (`EmotionEngine.maybe_release_alone`), em casa (`TempoLivre._se_masturbou`, com
+  onde, brinquedos e se chamou ele) e fora (`AgendaReativa._alivio`). O mesmo gozo chega por dois caminhos (ela escreve
+  "gozei" com o Lush ligado): até 3 min de distância é um registro só, "com o Patrick" vence "sozinha" e "lovense"
+  vence "sexting". A hora é a mesma que o mundo já usa pro `libido_release_at` (80% do bloco), então pode ficar
+  alguns minutos no futuro: a tela só mostra o que já passou.
+- **Excitação acendeu** ("Excitada desde 21:40"): no `IntimacyEngine._save`, quando a excitação de antes (já esfriada
+  até agora) estava abaixo de **0,10** e passou; origem "conversa" ou "lovense" (`estimular`). Um SELECT de uma linha
+  a mais por gravação; o INSERT só quando acende.
+- **Retrato** (relógio novo `bastidores_hist_routine` no `bot.py`, a cada 10 min): o **vínculo da hora** (Carinho,
+  Desejo, Segurança, Mágoa e a Saudade calculada; o primeiro da hora fica) e o **peso do dia**. Só leitura no mundo.
+  Escolhi por hora e não por dia (o plano dizia "diário") porque o tracinho é "onde a barra estava **ontem neste
+  horário**". As chaves novas do recalibrar (Confiança, Admiração, Atenção) entram sozinhas quando forem pro `BOND_KEYS`.
+- **Pesagem** da balança da academia (`Meals._weigh_in`): a bolinha vazia na linha do peso.
+- **Testes:** `tests/test_bastidores_hist.py` (15). Versão do banco 36 → 37 nos 6 testes que conferem. O reset
+  (`bootstrap_v36.CLEAR`) zera a tabela junto com o mundo. O reset do soak (`reset_soak_learning`) também. Suíte inteira: 1795, verde.
+- **Textos que eu decidi:** nenhum visível (os valores "sexting", "lovense", "antes de dormir", "em casa", "fora de
+  casa" são internos; o texto da tela nasce no passo 3).

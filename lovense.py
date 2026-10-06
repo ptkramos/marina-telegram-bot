@@ -1273,6 +1273,9 @@ class Lovense:
             except Exception:
                 pass
         quais = " e ".join(_NOME[b] for b in em_uso) or "o brinquedo"
+        import bastidores_hist                            # 06/10: calendário de orgasmos (só tela)
+        bastidores_hist.orgasmo(self.db, now, "patrick", "lovense", brinquedos=sorted(em_uso), publico=publico,
+                                onde=_ONDE_GOZO.get(rec["atividade"], "no meio de gente") if publico else None)
         amiga = []
         if publico:
             onde = _ONDE_GOZO.get(rec["atividade"], "no meio de gente")

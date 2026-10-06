@@ -683,6 +683,9 @@ class TempoLivre:
                 pass
         gozo = b.inicio + (b.fim - b.inicio) * 0.8
         self.db.set_estado_relacional(RELEASE_KEY, gozo.isoformat())
+        import bastidores_hist                            # 06/10: calendário de orgasmos (só tela)
+        bastidores_hist.orgasmo(self.db, gozo, "sozinha", "em casa", onde=onde, brinquedos=list(b.brinquedos or []),
+                                chamou=b.chama_ele or None)
         EmotionEngine(self.db).feel("alegria", "alivio", 0.3, "se masturbou e gozou", gozo, source_key=f"{key}:alivio")
 
     def atual(self, now: datetime) -> Optional[Bloco]:

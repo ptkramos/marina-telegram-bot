@@ -1400,6 +1400,14 @@ diário do vínculo (pro tracinho e a variação), peso de cada dia, hora em que
 10. **Catálogo:** textos novos de tela entram como leva nova pra ele; conferir no celular com o banco real
     (miniapp-real) tela por tela.
 
+**Passo 1 feito (06/10) ✅ — o histórico:** `migrations/037_bastidores_hist.sql` + `bastidores_hist.py`. Grava o
+orgasmo nos 5 lugares onde ela goza (com o Patrick: fala e Lovense; sozinha: antes de dormir, em casa, fora; o mesmo
+gozo por dois caminhos, até 3 min, é um só), a hora em que a excitação acendeu (passou de 0,10; origem conversa ou
+Lovense), o **vínculo de hora em hora** (no lugar do "diário": o tracinho é ontem **neste horário**) e o peso do dia
+(relógio de 10 min no `bot.py`), e a pesagem da balança. Leitura pros próximos passos: `lista(db, chave, desde, ate)` e
+`ultimo(db, chave, ate)`. O caminho do humor não é guardado: o passo 4 refaz pelo `feeling` como o relatório do soak.
+15 testes em `tests/test_bastidores_hist.py`. Próximo: **passo 2, a moldura** (barra de baixo com 5 ícones).
+
 **Textos que eu decidi (pra ele revisar):** "Dormiu por volta de 7 horas e 45 minutos" / "Dormindo há 5 horas e 10
 minutos" (o cochilo só na faixa); "Menstruação em 4 dias"; "Último orgasmo: dia 3, sozinha"; "Excitada desde 21:40";
 etiquetas da vontade ("2 dias sem gozar", "Saudade do Patrick", "Fase fértil", "Cansaço", "Cólica", "Mágoa");

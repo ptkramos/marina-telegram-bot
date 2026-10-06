@@ -991,6 +991,8 @@ class Meals:
         elif kg < self.HEALTH_MIN_KG:
             extra.append(("saude", "Anda meio fraca e sentiu tontura no treino — está comendo menos do que devia."))
         self._save_weight(data)
+        import bastidores_hist                            # 06/10: a bolinha da balança na linha do peso (só tela)
+        bastidores_hist.pesagem(self.db, now, kg)
         rows = [("peso", texto)] + extra
         with self.db.get_connection() as conn:
             for tag, summary in rows:

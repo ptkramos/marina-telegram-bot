@@ -562,6 +562,8 @@ class EmotionEngine:
             except Exception:
                 pass
         self.db.set_estado_relacional(RELEASE_KEY, now.isoformat())
+        import bastidores_hist                            # 06/10: calendário de orgasmos (só tela)
+        bastidores_hist.orgasmo(self.db, now, "sozinha", "antes de dormir")
         self.feel("alegria", "alivio", 0.3, "se masturbou antes de dormir", now, source_key=f"{key}:alivio")
         if wanted_him:
             self.feel("raiva", "frustracao", 0.2, "ficou querendo ele e não rolou", now, target=PATRICK_TARGET,

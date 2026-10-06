@@ -120,14 +120,24 @@ class IntimacyEngine:
         return dict(row) if row else {"arousal": 0.0, "updated_at": None, "mode_since": None,
                                       "hot_turns": 0, "climax_at": None}
 
-    def _save(self, st: dict) -> None:
+    def _save(self, st: dict, *, origem: str = "conversa") -> None:
         with self.db.get_connection() as conn:
+            antes = conn.execute("SELECT arousal, updated_at FROM intimacy_state WHERE id = 1").fetchone()
             conn.execute(
                 "INSERT INTO intimacy_state (id, arousal, updated_at, mode_since, hot_turns, climax_at) "
                 "VALUES (1, :arousal, :updated_at, :mode_since, :hot_turns, :climax_at) "
                 "ON CONFLICT(id) DO UPDATE SET arousal=:arousal, updated_at=:updated_at, "
                 "mode_since=:mode_since, hot_turns=:hot_turns, climax_at=:climax_at", st)
             conn.commit()
+        # 06/10 (redesenho dos Bastidores, passo 1): a hora em que a excitação acendeu, só pra tela
+        try:
+            em = datetime.fromisoformat(st["updated_at"])
+            mins = self._minutes(antes["updated_at"], em) if antes else None
+            era = float(antes["arousal"]) * 0.5 ** ((mins or 0.0) / AROUSAL_HALF_LIFE_MIN) if antes else 0.0
+            import bastidores_hist
+            bastidores_hist.excitacao(self.db, era, float(st["arousal"]), em, origem)
+        except Exception:
+            logger.exception("intimacy.bastidores_hist")
 
     @staticmethod
     def _minutes(since: Optional[str], now: datetime) -> Optional[float]:
@@ -208,7 +218,7 @@ class IntimacyEngine:
             st["mode_since"] = now.isoformat()
         elif st["arousal"] < ACTIVE_OFF:
             st["mode_since"], st["hot_turns"] = None, 0
-        self._save(st)
+        self._save(st, origem="lovense")
         return st["arousal"]
 
     def observe(self, text: str, plan: Optional[dict] = None,
@@ -330,6 +340,8 @@ def observe_marina_line(db, text: str, now: Optional[datetime] = None) -> bool:
     st.update(arousal=0.35, mode_since=None, hot_turns=0, climax_at=now.isoformat(), updated_at=now.isoformat())
     engine._save(st)
     logger.info("intimacy.climax by=marina")
+    import bastidores_hist
+    bastidores_hist.orgasmo(db, now, "patrick", "sexting")
     _no_mundo(db, now, acabou=True, gozou=True)
     return True
 

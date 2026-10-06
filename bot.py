@@ -5339,6 +5339,15 @@ async def tempo_real_routine(application: Application):
         logger.error(f"Erro no job de tempo_real_routine: {e}", exc_info=True)
 
 
+async def bastidores_hist_routine(application: Application):
+    """06/10 (redesenho dos Bastidores, passo 1): o retrato do vínculo da hora e do peso do dia, só pra tela."""
+    try:
+        import bastidores_hist
+        await asyncio.to_thread(bastidores_hist.retrato, memory_manager.db, datetime.now())
+    except Exception as e:
+        logger.error(f"Erro no job de bastidores_hist_routine: {e}", exc_info=True)
+
+
 async def media_lookup_routine(application: Application):
     """Atualiza o cache de mídia em alta fora do caminho da conversa.
 
@@ -6252,6 +6261,10 @@ async def post_init(application: Application):
     # Soak, dia 5 (03/10): o tempo do Rio também fora do turno (ela vive mesmo sem o Patrick escrever).
     scheduler.add_job(tempo_real_routine, "interval", minutes=10, args=[application], max_instances=1,
                       coalesce=True, next_run_time=datetime.now() + timedelta(seconds=30))
+
+    # 06/10 — redesenho dos Bastidores, passo 1: vínculo da hora e peso do dia (bastidores_hist).
+    scheduler.add_job(bastidores_hist_routine, "interval", minutes=10, args=[application], max_instances=1,
+                      coalesce=True, next_run_time=datetime.now() + timedelta(seconds=50))
 
     # 26/09 — mídia real: músicas (iTunes) e Botafogo (ESPN), fora do caminho do turno.
     scheduler.add_job(midia_real_routine, "interval", minutes=5, args=[application], max_instances=1,

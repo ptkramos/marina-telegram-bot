@@ -702,6 +702,8 @@ class DatabaseManager:
             "lovense_comandos",
             "lovense_sessoes",
             "emocao_travas",
+            # 06/10: redesenho dos Bastidores, passo 1 (o histórico que só a tela lê).
+            "bastidores_hist",
         )
         counts = {}
         now_iso = datetime.now().isoformat()

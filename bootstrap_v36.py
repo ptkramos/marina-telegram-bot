@@ -29,7 +29,7 @@ CLEAR = ('ig_comentarios', 'ig_posts', 'ig_fotos_chat', 'reminders', 'open_loops
          'social_place_state', 'social_place_links', 'social_relationships',
          'character_preferences', 'routine_patterns',
          'world_characters', 'world_places', 'world_bootstrap',
-         'lovense_comandos', 'lovense_sessoes', 'lovense_brinquedos', 'emocao_travas')
+         'lovense_comandos', 'lovense_sessoes', 'lovense_brinquedos', 'emocao_travas', 'bastidores_hist')
 PRESERVE = {'schema_version', 'ciclo_biologico', 'patch_history'}
 FTS = ('fatos_fts', 'momentos_fts', 'resumos_fts')
 FTS_TABLES = {name + suffix for name in FTS

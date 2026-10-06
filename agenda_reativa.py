@@ -364,6 +364,8 @@ class AgendaReativa:
                 pass
         gozo = inicio + (fim - inicio) * 0.8
         self.db.set_estado_relacional(RELEASE_KEY, gozo.isoformat())
+        import bastidores_hist                            # 06/10: calendário de orgasmos (só tela)
+        bastidores_hist.orgasmo(self.db, gozo, "sozinha", "fora de casa", onde=onde, chamou=chama_ele or None)
         EmotionEngine(self.db).feel("alegria", "alivio", 0.3, "se aliviou fora de casa", gozo, source_key=f"{key}:alivio")
 
     def marcar_alivio_em_casa(self, chega: datetime, now: datetime, *, chama_ele: bool = False) -> None:
