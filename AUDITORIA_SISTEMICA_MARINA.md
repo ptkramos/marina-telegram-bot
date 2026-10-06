@@ -3280,7 +3280,8 @@ Por fora `hanger`, Dinheiro `building-bank`, Mundo `users`; a aberta em azul, no
 
 ## Redesenho dos Bastidores, passo 5: os motivos na origem (06/10, frente de apps)
 
-Decidido pelo Patrick no chat (mockups + catálogo numerado de 57 linhas). Detalhe no PLANO_WEBAPP, "Passo 5 feito".
+Decidido pelo Patrick no chat (mockups + catálogo numerado de 57 linhas). No ar em 06/10, 13:21 (`6bf7161`; migração
+038 aplicada na produção, sem erro no log). Detalhe no PLANO_WEBAPP, "Passo 5 feito".
 - **Padrão:** o motivo (`emotion_episodes.cause`) é **uma frase inteira** em 3ª pessoa — quem fez + verbo no passado +
   o quê ("O Patrick mandou comida de surpresa"), coisa dela sem sujeito ("Furou o rolê"), o que vem com "Tem" ("Tem
   entrega na quarta") —, sem "·" nem parênteses e sem corte no meio (antes cortava em 42: "O Milo ficou encarando ela

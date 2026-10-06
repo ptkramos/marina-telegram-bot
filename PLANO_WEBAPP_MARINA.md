@@ -1471,7 +1471,7 @@ caminho refeito só na cópia). Servidor em `bastidores_sentimentos.py` (`sentim
 20 testes em `tests/test_bastidores_sentimentos.py`. Os motivos ainda são os de antes (o padrão novo é o passo 5).
 Próximo: **passo 5, os motivos na origem** ("bora na frente de apps: redesenho dos Bastidores, passo 5").
 
-**Passo 5 feito (06/10) ✅ — os motivos na origem:** decidido pelo Patrick no chat. O motivo de cada sentimento é
+**Passo 5 feito (06/10) ✅ — os motivos na origem (no ar 13:21, `6bf7161`):** decidido pelo Patrick no chat. O motivo de cada sentimento é
 **uma frase inteira** (quem fez + verbo no passado + o quê; coisa dela sem sujeito; o que vem com "Tem"), sem "·"
 nem parênteses e sem corte; o **detalhe vai à parte, com ícone pelo tipo e a preposição** (ele: "a linha tem espaço
 pros dois"): `cash` "De R$ 200", `note` recado do Pix, `message-circle` "Sobre fofocas", `map-pin` "No Quartinho

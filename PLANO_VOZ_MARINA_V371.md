@@ -1716,7 +1716,7 @@ Hush no receio só com tesão alto. Detalhe na Auditoria e no FRENTES (seção 5
 fez um Pix de presente, de R$ 200" no lugar de "o Patrick fez um Pix · R$ 200"; "Discutiu com o Patrick" no lugar de
 "Discutiram"; "Tem entrega na quarta" no lugar de "Entrega em 2 dias"). O planner escreve o `cause` na mesma regra
 ("O Patrick contou que…" pro que ele conta de si). Os sentimentos, as forças e o que entra no prompt são os mesmos
-(comparado na mesma cena). Detalhe na Auditoria, "Redesenho dos Bastidores, passo 5".
+(comparado na mesma cena). No ar desde 13:21. Detalhe na Auditoria, "Redesenho dos Bastidores, passo 5".
 
 **06/10 — Redesenho dos Bastidores, passo 4 (os Sentimentos):** nada muda na fala nem no que ela lê. O humor dela
 vira uma grade 3×3 na tela (as palavras da grade são só da tela; o prompt segue com o `mood_words`), o relógio de
