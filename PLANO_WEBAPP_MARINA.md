@@ -884,8 +884,10 @@ manda uma mensagem a cada mexida na barra: fala quando sente diferença.
 **Fotos e Bastidores**
 - **Foto pelo humor, sem teto** (Patrick: com o Buzz azul e o amarelo separados, Buzz não é problema; só não pode
   gastar repetindo quase a mesma pose). Regra: na mesma sessão, nada de repetir pose + expressão + gesto de mão.
-  Texto aprovado do Lush no começo da `action` (PLANO_VOZ, "Fotos pelo Civitai"). Pendente na frente de imagens: Hush,
-  Lush em outras poses, brinquedo na mão; e a carteira: hoje só a foto adulta pede `currencies: ["yellow"]`
+  Texto aprovado do Lush no começo da `action` (PLANO_VOZ, "Fotos pelo Civitai"). **05/10, noite (frente de
+  imagens):** aprovados o Hush preto de quatro (a aba achatada e curva do produto) e o Lush de quatro (a pose antes
+  do brinquedo); o Lush de frente segue o B4 de 04/10 (o Lush 4 fiel cai em "U" pra baixo). Pendente: os dois
+  juntos, banheiro de um lugar, brinquedo na mão — e o passo 6 lê o estado do `lovense.py` pra escolher o texto. A carteira: hoje só a foto adulta pede `currencies: ["yellow"]`
   (`civitai_images.py`), a normal vai sem — conferir que ela gasta o azul quando ele chegar.
 - **Bastidores:** Por fora "Com o Lush desde 14:10" e a bateria; Por dentro a confiança dela no brinquedo e se está
   chateada com o Patrick.
@@ -918,6 +920,24 @@ manda uma mensagem a cada mexida na barra: fala quando sente diferença.
 7. **Bastidores + catálogo de textos:** linhas novas do Por fora e Por dentro; todos os textos novos de tela entram no
    catálogo pra ele revisar.
 8. Segunda leva: aba Música (vibrar no ritmo do que ela ouve, `musica.py`).
+
+**Ideias do guia do Lovense Remote (05/10, noite; o Patrick mandou https://www.lovense.com/how-to-use-lovense-remote-app;
+lido na frente de imagens, nada decidido — ideia nova, entra um por vez depois do 5b e do redesenho):**
+- **Clássico:** além de arrastar, as opções **Loop** (repete o desenho que ele fez) e **Float** (segura a força
+  constante); e o painel "Traditional", um slider só.
+- **Padrões:** 4 prontos com 5 velocidades; ele **cria o próprio padrão** e organiza em playlists; a aba "Discover"
+  tem padrões de outros usuários (no nosso caso, só os nossos).
+- **Som:** o brinquedo vibra com o barulho em volta dela (shopping, reunião, balada) e a sensibilidade muda pelo lugar
+  — no nosso mundo dá história: no bar ou na aula, o barulho do lugar vira o nível (o mundo sabe onde ela está).
+- **Alarme:** acordar com o brinquedo em vez do despertador (padrão, repetições, soneca) — conversa com o
+  `sleep_plan.py` (ela dormiu com ele? e se tirou pra dormir, como no 5a?).
+- **Speed mode** (aceleração do celular): não serve pra gente.
+- **Longa distância e o chat interno:** os dois se adicionam; dentro do chat dele com ela, ele toca **"Live" e espera
+  ela aceitar** antes de controlar; durante o controle dá pra ligar (voz/vídeo), mandar fotos e padrões. Para nós o
+  chat continua sendo o Telegram (regra "chat é chat, app é app"), então o que vale copiar é o **pedido de controle
+  que ela aceita ou recusa pelo que sente** (hoje a tela já tem "Marina conectada/desconectada") e **mandar um
+  padrão** como gesto; um chat dentro do app duplicaria o Telegram.
+- **Sync:** os dois brinquedos (dela e dele) juntos — o Patrick não tem brinquedo na história; fica de fora.
 
 **A decidir no código (texto interno, eu decido e listo):** a janela de juntar comandos, o ganho de tesão por nível,
 o gasto da bateria, quanto a confiança cai/sobe. Textos visíveis da tela passam por ele (catálogo).

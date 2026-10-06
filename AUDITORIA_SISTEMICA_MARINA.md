@@ -3113,3 +3113,20 @@ chegando", 19:17), e o deploy pôs os dois direto na gaveta. Agora a encomenda �
   reserva "Chegou, amor 👀 tô abrindo aqui").
 
 - **Cor do Hush (Patrick, 05/10, noite): o Lush é rosa, o Hush é PRETO** (o "os dois rosa" de 04/10 estava errado). Corrigido no texto da entrega, no bloco do prompt e na mensagem de quando chega. Ele recarregou o Civitai (membro de US$ 10 e ~5 mil Buzz amarelo): a foto do Hush (preto) fica pra frente de imagens.
+
+## Lovense, fotos do Hush e do Lush (05/10, noite, frente de imagens)
+
+Teste de texto pras fotos com os brinquedos (o passo 6 do Lovense vai ler o estado e usar). 16 gerações + 1 edição,
+~415 Buzz, uma por vez com o OK do Patrick, em `references/lovense_teste/` (fora do git; as aprovadas em `boas/`).
+Aprovados: o **Hush preto de quatro** (h4, a aba achatada e curva do produto, pela foto que o Patrick mandou) e o
+**Lush de quatro** (l5, a pose antes do brinquedo; a ponta "as small as a pea" sem re-testar). O Lush de frente
+segue o B4 de 04/10: o Lush 4 fiel sai idêntico ao produto, mas a cauda sempre cai em "U" (duas seeds) e o Patrick
+escolheu o B4. O Krea 2 Edit com a foto do produto como referência não serve (copiou o ovo por fora; pele crocante).
+LoRA pesquisado sem gastar: Civitai treina Krea 2 (~1.600 Buzz), mas os LoRAs de brinquedo existentes são de anime e
+treinados com imagens em uso; LoRA SFW de produto não ensina o lugar no corpo — plano B com as nossas fotos boas.
+Textos, tentativas e lições em PLANO_VOZ, "Fotos pelo Civitai".
+- **Conserto na produção:** `cama_tripe_duas_maos` sem "both hands free" (com as mãos das batidas o Krea 2 fazia três
+  mãos; sem, duas, nas três fotos de frente de hoje). Teste em `test_tripod_frees_both_hands`.
+- **Falta:** os dois juntos, banheiro de um lugar (calcinha nas coxas), brinquedo na mão; o passo 6 (diretor lê o
+  `lovense.py`).
+- **Textos que eu decidi:** todos internos (prompts das fotos acima); nada visível.

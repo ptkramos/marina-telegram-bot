@@ -115,10 +115,11 @@ POSES: tuple[Pose, ...] = (
          "three_quarter", "selfie", "lying on her back on the bed with her knees up and her legs spread apart, "
          "her right arm stretched up toward the camera taking the selfie",
          beats=_beats("her legs spread wide on the white sheets", "left")),
-    # Tripé (Patrick, 24/09): celular fixo, as duas mãos livres pra se tocar.
+    # Tripé (Patrick, 24/09): celular fixo, as duas mãos livres pra se tocar. 05/10: sem "both hands free" — junto
+    # com as mãos posicionadas das batidas, o Krea 2 desenhava três mãos (teste do Lovense, 04/10; sem ele, duas).
     Pose("cama_tripe_duas_maos", "deitada de pernas abertas, celular no tripé, as duas mãos livres (timer)",
          ("quarto",), (3, 4), "three_quarter", "timer", "lying back on the pillows with her knees up and her legs "
-         "spread apart, both hands free", beats=_beats("her legs spread wide on the white sheets", "right",
+         "spread apart, her feet flat on the white sheets", beats=_beats("her legs spread wide on the white sheets", "right",
                                                       _SQUEEZE_LEFT)),
     Pose("cama_de_quatro", "de quatro na cama, de costas pra câmera (timer)", ("quarto",), (1, 4),
          "three_quarter", "timer", "on all fours on the bed seen from behind, her knees apart and her back arched, "

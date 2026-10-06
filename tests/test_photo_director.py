@@ -218,6 +218,8 @@ class DirectorTest(unittest.TestCase):
         loras, _ = ci.conditional_loras(fingers, is_nsfw=True)
         self.assertIn(ci.KREA2_SQUEEZE, loras, "o LoRA de apertar entra sozinho")
         self.assertNotIn("squeezing", dict(pd.BY_ID["cama_pernas_abertas"].beats)["fingers"], "selfie: uma mão")
+        # 05/10: "both hands free" + as mãos posicionadas das batidas = três mãos no Krea 2
+        self.assertNotIn("hands free", pose.action)
 
     def test_penetration_loras_approved_by_patrick(self):
         """24/09: dedo = Fingering 1.0; dildo = texto + Grippy 1.0 (3 rodadas de teste)."""
