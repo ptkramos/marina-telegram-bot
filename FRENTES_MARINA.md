@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 05/10/2026 (soak, dia 6 lido e corrigido, item 28; **o Patrick decidiu o soak contínuo** — seção 0;
+_Atualizado em 05/10/2026, 21:10 (fotos do Lovense na frente de imagens, `049c991` no ar às 21:08 — seção 6; soak, dia 6 lido e corrigido, item 28; **o Patrick decidiu o soak contínuo** — seção 0;
 **"recalibrar a Marina" planejado** — seção 1, PLANO_VOZ "Recalibrar a Marina — plano"; **Lovense, passos 1–4
 feitos** na tarde de 05/10 e o **5a** à noite, **no ar desde 19:28**; a encomenda a caminho desde 19:46 — seção 2).
 **Mudança de 05/10, tarde (Patrick):** o Lovense e o redesenho dos Bastidores adiantam **pra hoje**, um depois do
@@ -825,7 +825,7 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
 dia 6 (frente da voz).
 
 ## 6. Imagens (poses, prompts, motor) — skill `frente-imagens`
-**Abertura:** congelada até o soak fechar (freio, seção 0); foto errada no uso real é bug do soak
+**Abertura:** "bora na frente de imagens: Lovense, o resto" (os dois juntos, banheiro de um lugar, na mão); foto errada no uso real é bug do soak
 
 Cadeia única: pose de referência → prompt no jeito da casa (`photo_director.Pose`) → motor (Civitai Krea 2, LoRA `marinaX`).
 O *quando* ela manda foto continua na frente da voz.
