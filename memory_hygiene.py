@@ -9,7 +9,7 @@ relevante e livre de ruídos:
 4. Identificação de Reconfirmação Natural: sinaliza memórias antigas que devem ser checadas suavemente com Patrick.
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from config import settings
@@ -17,10 +17,37 @@ from db import db_manager, DatabaseManager
 
 logger = logging.getLogger("MemoryHygiene")
 
+# 06/10 (Patrick perguntou da memória dela): o job era "a cada 24 h" a partir do início do bot, e cada reinício
+# zerava o relógio — com 41 reinícios em 11 dias a faxina rodou uma vez só (30/09). Agora o relógio checa de hora em
+# hora e a faxina roda de madrugada (04h) se não rodou nas últimas 20 h, ou a qualquer hora se passou de 30 h.
+FAXINA_KEY = "memory_hygiene_last"
+FAXINA_HORA = 4
+
+
+def faxina_devida(ultima: Optional[datetime], now: datetime) -> bool:
+    if ultima is None:
+        return True
+    passou = now - ultima
+    return passou >= timedelta(hours=30) or (now.hour == FAXINA_HORA and passou >= timedelta(hours=20))
+
 
 class MemoryHygieneService:
     def __init__(self, db: Optional[DatabaseManager] = None):
         self.db = db or db_manager
+
+    def run_if_due(self, now: Optional[datetime] = None) -> Optional[dict]:
+        """Chamado de hora em hora: roda a faxina quando está na hora (ver `faxina_devida`)."""
+        now = now or datetime.now()
+        raw = self.db.get_estado_relacional(FAXINA_KEY)
+        try:
+            ultima = datetime.fromisoformat(raw) if raw else None
+        except (TypeError, ValueError):
+            ultima = None
+        if not faxina_devida(ultima, now):
+            return None
+        result = self.run_hygiene_cycle(now=now)
+        self.db.set_estado_relacional(FAXINA_KEY, now.isoformat())
+        return result
 
     def run_hygiene_cycle(self, now: Optional[datetime] = None, force: bool = False) -> dict:
         """

@@ -43,7 +43,7 @@ abaixo, com **2 dias de observação** (lidos no relatório) antes do próximo; 
 Planejamento (sem código) já está liberado. **Fila do código (refeita em 05/10, tarde, pelo Patrick):** 0) **hoje**,
 Lovense pelo Mini App e redesenho dos Bastidores (10 passos, o Mundo junto), com corte no relatório na hora do deploy
 (topo do painel); 1) o lote de consertos (topo do painel); 2) recalibrar a Marina (planejado em 05/10), 4 passos —
-vínculo → corpo → ciúme → amigos, cada um com seus 2 dias ("bora na frente do mundo: recalibrar, passo 1"); 3) Hoje
+vínculo (com a memória: o "anel" central, os momentos marcantes, o que ela não sabe dele — item 31) → corpo → ciúme → amigos, cada um com seus 2 dias ("bora na frente do mundo: recalibrar, passo 1"); 3) Hoje
 com bloco "Em casa"; 4) banco dela e iFood da Ma.
 A ordem pode mudar se ele pedir.
 
@@ -868,6 +868,11 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
     - Lote da fila junto: extrato "(fictícia)", "Rolando agora" só com o contado e sem segredo, o ciúme DELE.
     - No banco (OK do Patrick): 34 assuntos em aberto fechados com nota, ficam 11; originais em
       `soak/originais-2026-10-05.json`.
+31. ✅ **A memória dela (06/10, pergunta do Patrick)** — a faxina da memória rodou 1 vez em 11 dias (cada reinício
+    zerava o relógio de 24 h): agora roda às 04h, sem depender de reinício. Fatos sobre ele limpos no banco (76 → 46,
+    OK dele; originais em `soak/originais-2026-10-06-fatos.json`). Pro recalibrar 1: o "anel no dedo" central, os
+    momentos marcantes (128, só os 2 últimos entram) e o que ela não sabe dele (profissão, cidade…). Auditoria, "A
+    memória dela".
 
 **Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo); M4 e M5 do dia 5 e os anotados do
 dia 6 (frente da voz).

@@ -808,6 +808,9 @@ que ela já contou pro Patrick e nunca segredo (regra dele pro redesenho). No Ho
 (não mais no sorvete), nada de pote de 1 litro sozinha, um hambúrguer só (a fala "pedi no iFood" sobre o almoço não
 abre pedido novo) e a roupa de provocar não é vestida na rua. Detalhe na Auditoria ("Soak, dia 7").
 
+**06/10 — a memória dela:** nada muda na tela; a faxina da memória passa a rodar todo dia às 04h (antes rodou uma vez
+em 11 dias) e os fatos sobre o Patrick foram limpos no banco. Detalhe na Auditoria ("A memória dela").
+
 **04/10, noite — catálogo de textos, leva 2 decidida (sem mudança de tela ainda):** as 253 fichas dos Bastidores,
 iFood, Nubank e Instagram têm decisão (117 do Patrick pelo celular, 136 preenchidas por mim pelos padrões dele e
 conferidas no chat). Regras novas pra tela (9 a 17 em `data/feedback/catalogo_textos/regras_gerais.md`): rótulo diz o

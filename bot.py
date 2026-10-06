@@ -5328,7 +5328,7 @@ async def reminders_routine(application: Application):
 async def memory_hygiene_routine(application: Application):
     """Job periódico de higiene de memória (Release 3.5.3)."""
     try:
-        await asyncio.to_thread(memory_hygiene_service.run_hygiene_cycle)
+        await asyncio.to_thread(memory_hygiene_service.run_if_due)
     except Exception as e:
         logger.error(f"Erro no job de memory_hygiene_routine: {e}", exc_info=True)
 
@@ -6239,14 +6239,17 @@ async def post_init(application: Application):
 
     # Job periódico de Memory Hygiene (Release 3.5.3)
     if getattr(settings, "MEMORY_HYGIENE_ENABLED", False):
-        hygiene_hours = max(1, getattr(settings, "MEMORY_HYGIENE_INTERVAL_HOURS", 24))
+        # 06/10: o relógio de 24 h zerava a cada reinício (rodou 1 vez em 11 dias). Checa de hora em hora; a faxina
+        # roda às 04h ou quando passou de 30 h (memory_hygiene.faxina_devida).
         scheduler.add_job(
             memory_hygiene_routine,
             "interval",
-            hours=hygiene_hours,
-            args=[application]
+            hours=1,
+            args=[application],
+            coalesce=True,
+            next_run_time=datetime.now() + timedelta(minutes=3),
         )
-        logger.info(f"Job de Memory Hygiene agendado a cada {hygiene_hours}h.")
+        logger.info("Job de Memory Hygiene: checa de hora em hora, roda às 04h ou depois de 30 h.")
 
     # Auditoria #3 — refresh do cache de mídia fora do caminho do turno.
     # `next_run_time` imediato garante que o cache esquente no startup, sem

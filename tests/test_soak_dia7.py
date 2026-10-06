@@ -326,3 +326,24 @@ class RelatorioDia7Test(unittest.TestCase):
         for t in ("Ss, pretendo ficar o dia todo deitado hj", "Pode deixar, mas vamos bater papo",
                   "Não sei não, amor"):
             self.assertFalse(rel.estranhou(t), t)
+
+
+class FaxinaDaMemoriaTest(_Base):
+    """06/10: a faxina era "a cada 24 h" desde o início do bot e cada reinício zerava o relógio (1 vez em 11 dias)."""
+
+    def test_quando_roda(self):
+        from memory_hygiene import faxina_devida
+        self.assertTrue(faxina_devida(None, at(15, 0)))
+        self.assertTrue(faxina_devida(at(4, 0, d=5), at(4, 10, d=6)))       # 04h, passou de 20 h
+        self.assertFalse(faxina_devida(at(4, 0, d=6), at(15, 0, d=6)))      # já rodou hoje
+        self.assertFalse(faxina_devida(at(23, 0, d=5), at(4, 30, d=6)))     # 04h, mas só 5 h e meia
+        self.assertTrue(faxina_devida(at(4, 0, d=5), at(11, 0, d=6)))       # passou de 30 h: roda a qualquer hora
+
+    def test_reinicio_nao_zera(self):
+        from memory_hygiene import MemoryHygieneService, FAXINA_KEY
+        svc = MemoryHygieneService(self.db)
+        with patch.object(svc, "run_hygiene_cycle", return_value={"ok": True}) as ciclo:
+            self.assertEqual(svc.run_if_due(at(15, 0)), {"ok": True})
+            self.assertIsNone(svc.run_if_due(at(16, 0)))                    # "reiniciou": a última fica no banco
+            self.assertEqual(ciclo.call_count, 1)
+        self.assertEqual(self.db.get_estado_relacional(FAXINA_KEY), at(15, 0).isoformat())

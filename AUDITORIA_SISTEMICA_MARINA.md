@@ -3404,3 +3404,26 @@ deu 0 e devia ter dado 3 — conserto no relatório). `tests/test_soak_dia7.py` 
   satisfeita e não terminou", "Foi na Agência boutique da Lívia". Internos (prompt) — `[SEU TRABALHO À VISTA] … (a
   Lívia, sua agente, já marcou; é seu, você sabe)`, `[ELE PEDIU ASSUNTO]`, a linha da distância nas [LINHAS DURAS],
   "(conversa de ontem, 04/10, à noite)" nos resumos e a linha da Lívia no reflector.
+
+## A memória dela (06/10, pergunta do Patrick: "o que ela já aprendeu comigo, quanto de lixo tem")
+
+Leitura no banco da produção (cópia em /tmp na VPS). **Fatos sobre ele:** 76 ativos, 3 entram por turno (por busca)
+mais os 3 centrais em todo turno. O que vale: a música deles, pão de queijo no trabalho, plantões, celular no ônibus,
+Silo/Re:Zero/Sono Bisque Doll, cabelo com babyliss, unha rosa chiclete, voz manhosa, saudade do Milo, a visita, o
+apoio ao sonho dela. O que ela não sabe: a profissão dele, a cidade, idade, família, amigos pelo nome. Lixo: ~22
+repetidos com outras palavras (ciúme 6, segurança 7, desejo 8, elogio 4) e 9 com data vencida ainda ativos.
+**Momentos marcantes:** 128 em 11 dias, todos ativos; só os 2 mais novos entram no prompt (os outros 126 nunca foram
+lidos); ~20 quase iguais ("trocaram declarações de amor"). **Resumos:** 193 (até 33 por dia); 1 entra por turno.
+- **Bug: a faxina da memória rodou 1 vez em 11 dias (30/09) — camada: infra.** O job era `interval` de 24 h a partir
+  do início do bot e cada reinício zerava o relógio (41 reinícios desde 25/09). Nada expirava (fato contextual de
+  3 dias, assunto curto) e a regra nova do dia 7 (assunto de 7 dias esfria) também não rodaria. Agora o job checa de
+  hora em hora e a faxina roda às 04h se não rodou nas últimas 20 h, ou a qualquer hora depois de 30 h; a última vez
+  fica no banco (`memory_hygiene_last`), então reinício não zera (`memory_hygiene.faxina_devida`, `run_if_due`).
+  Simulação numa cópia: a primeira faxina desliga 8 fatos (5 vencidos, 3 cópias pelo canonical_key).
+- **No banco (OK do Patrick, lista aprovada no chat):** fatos 76 → 46. Desligados os vencidos (plantão de 1º e 4/10,
+  mangá a caminho, Re:Zero de 3/10, votar em 4/10, Lovense chegando em 5/10…) e os repetidos viraram uma frase só
+  (ciúme → 2; segurança, quando ela está mal, desejo e elogios → 1 cada); "Silo no episódio 3" virou "está
+  assistindo Silo". Original em `soak/originais-2026-10-06-fatos.json`.
+- **Pro recalibrar, passo 1 (decisão do Patrick):** o "anel no dedo" (memória central, entra em todo turno — 600
+  leituras) e os momentos marcantes (como o vínculo lembra: pelo assunto, sem repetição) e o que ela quer saber dele.
+- `tests/test_soak_dia7.py` +2 (`FaxinaDaMemoriaTest`).

@@ -1523,6 +1523,11 @@ dela leva a cor da unha (a mão pode aparecer). O ciúme dele não vira ciuminho
 íntimo desligando no banho do sexting (decidir com o Patrick), M4/M5 do dia 5 e os anotados do dia 6. Detalhe na
 Auditoria ("Soak, dia 7").
 
+**06/10 — a memória dela:** a faxina da memória quase nunca rodava (cada reinício zerava o relógio de 24 h); agora
+roda às 04h e não depende de reinício. Os fatos sobre o Patrick foram limpos (76 → 46, repetidos viraram uma frase,
+vencidos desligados). O "anel no dedo" central, os momentos marcantes que nunca entram e o que ela não sabe dele vão
+pro recalibrar, passo 1. Detalhe na Auditoria ("A memória dela").
+
 **05/10 — soak contínuo (decisão do Patrick):** depois do dia 7 o código novo volta um por vez, com 2 dias de
 observação cada (fila na seção 0 do FRENTES). Da voz, na fila: o lote dos anotados (dias 5 e 6) entra junto com os
 consertos; o modo íntimo enxuto e as técnicas antigas (PLANO_VOZ 13) seguem em "Depois do soak" até ganharem lugar.
