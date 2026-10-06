@@ -1088,6 +1088,8 @@ class SocialDay:
             meta = json.loads(s["metadata_json"] or "{}")
             if meta.get("seed_key") in SEMENTES:                 # 28/09: "Contato de Henrique" aberto desde 26/09
                 continue
+            if not self._contada_sem_segredo(s["thread_key"]):
+                continue
             com = [short_name(k) for k in meta.get("participants", []) if k != "marina"]
             rolando.append({"titulo": s["title"], "com": com})
         return {"pessoas": pessoas, "circulos": [c for c in CIRCULOS if any(p["circulo"] == c for p in pessoas)],
@@ -1155,10 +1157,20 @@ class SocialDay:
                    AND status='pending' AND confirmed=1 AND event_at>? ORDER BY event_at LIMIT ?""",
                 (now.isoformat(), limit))]
 
+    def _contada_sem_segredo(self, thread_key: str) -> bool:
+        """Regra do Patrick (05/10): na tela só a história que ela já contou pra ele, e nunca o que é segredo."""
+        shared = set(self._shared())
+        with self.db.get_connection() as conn:
+            rows = conn.execute(
+                """SELECT e.event_key, EXISTS (SELECT 1 FROM knowledge_items k WHERE k.subject_type='event'
+                          AND k.subject_id=e.id AND k.privacy_level='CONFIDENTIAL' AND k.revoked_at IS NULL) AS secret
+                   FROM life_events e WHERE e.event_key LIKE ? || ':%'""", (thread_key,)).fetchall()
+        return any(r["event_key"] in shared for r in rows) and not any(r["secret"] for r in rows)
+
     def open_stories(self) -> list[dict]:
         with self.db.get_connection() as conn:
             rows = conn.execute(
-                """SELECT title, summary, started_at, last_event_at, metadata_json FROM story_threads
+                """SELECT thread_key, title, summary, started_at, last_event_at, metadata_json FROM story_threads
                    WHERE status='open' ORDER BY last_event_at DESC LIMIT 2""").fetchall()
         return [dict(r) for r in rows]
 

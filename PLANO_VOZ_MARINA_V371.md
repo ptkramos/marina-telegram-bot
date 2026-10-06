@@ -1512,6 +1512,17 @@ verdade ("vou me divertir sim", 15:26), ela se toca. Anotados pro lote da voz: /
 reação 🤣 dele virando "exatamente" dela mesma, a "fofoca do rolê" prometida duas vezes sem fofoca, oito áudios
 seguidos no flerte. Detalhe na Auditoria ("Soak, dia 6").
 
+**06/10 — soak, dia 7 (segunda 05/10), o que muda na fala e nas fotos:** a marca de foto do histórico ("[1 foto(s): o
+Milo…]") que ela copiou e mandou como texto agora refaz o turno. "Tem novidades?", "não tem nada pra contar?": ela conta
+uma conversa de verdade do dia que ainda não contou (o pai mandou dinheiro sem ela pedir, o Theo…), sem dizer que não
+tem nada e sem repetir o que já falou. O casting, a agência, a Lívia, a PUC e o projeto são dela: não vira "a Lívia
+te deu notícia?" pra ele nem "comecei a mexer no projeto" sem ter começado; o trabalho dela das próximas 48 h entra no
+prompt. O resumo de conversa antiga diz de quando é ("conversa de ontem") — o "seu plantão" de 05/10 vinha do resumo
+de 04/10. Ela não fala como se fosse chegar onde ele está ("quando eu chegar aí", "ao vivo"). Foto do ponto de vista
+dela leva a cor da unha (a mão pode aparecer). O ciúme dele não vira ciuminho dela. Ficam pra frente da voz: o modo
+íntimo desligando no banho do sexting (decidir com o Patrick), M4/M5 do dia 5 e os anotados do dia 6. Detalhe na
+Auditoria ("Soak, dia 7").
+
 **05/10 — soak contínuo (decisão do Patrick):** depois do dia 7 o código novo volta um por vez, com 2 dias de
 observação cada (fila na seção 0 do FRENTES). Da voz, na fila: o lote dos anotados (dias 5 e 6) entra junto com os
 consertos; o modo íntimo enxuto e as técnicas antigas (PLANO_VOZ 13) seguem em "Depois do soak" até ganharem lugar.

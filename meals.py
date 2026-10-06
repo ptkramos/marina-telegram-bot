@@ -535,7 +535,10 @@ class Meals:
             summary = f"Beliscou {slot.dish}."
         else:
             summary = f"{name.capitalize()} {where}: {slot.dish}."
-        if sac.get("larga"):
+        if sac.get("larga") and re.search(r"no caminho|correndo", slot.dish or ""):
+            # soak, dia 7: "uma banana no caminho; ficou satisfeita e largou o resto no prato" — no caminho não tem prato
+            summary = summary.rstrip(".") + "; ficou satisfeita e não terminou."
+        elif sac.get("larga"):
             summary = summary.rstrip(".") + "; ficou satisfeita e largou o resto no prato."
         elif sac.get("excesso"):
             summary = summary.rstrip(".") + "; comeu além da conta e ficou estufada."
@@ -980,6 +983,7 @@ class Meals:
         if data.get("weighed_week") == week or not self._gym_today(now) or self._at_gym_now():
             return
         kg = data["kg"]
+        now = self._fim_do_treino(now)       # soak, dia 7: "se pesou na academia" às 18:56, já saindo pro sorvete
         data.update(weighed_week=week, known_kg=kg, known_at=now.isoformat())
         texto = f"Se pesou na academia: {kg:.1f} kg.".replace(".", ",", 1)
         extra = []
@@ -1005,6 +1009,23 @@ class Meals:
                      json.dumps(["marina", "livia_vasconcelos"] if tag == "agencia" else ["marina"]),
                      now.isoformat()))
             conn.commit()
+
+    def _fim_do_treino(self, now: datetime) -> datetime:
+        """A balança é no fim do treino, antes de sair: 5 min antes do primeiro estado depois do último 'treinando'."""
+        start = datetime.combine(now.date(), time(0, 0)).isoformat()
+        with self.db.get_connection() as conn:
+            treino = conn.execute("SELECT observed_at FROM world_state WHERE observed_at>=? AND observed_at<=? AND "
+                                  "activity LIKE 'treinando%' ORDER BY observed_at DESC LIMIT 1",
+                                  (start, now.isoformat())).fetchone()
+            if not treino:
+                return now
+            saida = conn.execute("SELECT observed_at FROM world_state WHERE observed_at>? AND observed_at<=? AND "
+                                 "activity NOT LIKE 'treinando%' ORDER BY observed_at LIMIT 1",
+                                 (treino["observed_at"], now.isoformat())).fetchone()
+        if not saida:
+            return now
+        fim = datetime.fromisoformat(saida["observed_at"]) - timedelta(minutes=5)
+        return max(fim, datetime.fromisoformat(treino["observed_at"]))
 
     def _at_gym_now(self) -> bool:
         state = WorldStateRepository(self.db).latest()

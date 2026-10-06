@@ -1058,8 +1058,9 @@ def direct(db, now: datetime, *, request: str = "", her_line: str = "", camera_c
         from visual_profile import krea2_pov_prompt
         subject = action.replace("{milo}", MILO_VISUAL)
         mao = pose.id.startswith("pov_unhas")
-        return DirectedShot(prompt=krea2_pov_prompt(subject, setting, hand=mao,
-                                                    nails=nails if (mao or "hand" in subject) else ""), is_nsfw=False, focus_angle="frontal",
+        # Soak, dia 7 (/ruim 077): a foto do Milo saiu com a mão dela e a unha errada — a do ponto de vista dela pode
+        # mostrar a mão na borda, então a cor de verdade vai sempre.
+        return DirectedShot(prompt=krea2_pov_prompt(subject, setting, hand=mao, nails=nails), is_nsfw=False, focus_angle="frontal",
                             place_key=place or "", room=room, pose_id=pose.id, level=0, beat=None, outfit=None,
                             seed=seed, facts=f"lugar: {where}; foto tirada por você, do seu ponto de vista (você "
                             f"não aparece): {pose.pt}", session=session or {}, pov=True)

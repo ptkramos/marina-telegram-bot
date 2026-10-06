@@ -154,7 +154,11 @@ def plan(outing: dict) -> list[Item]:
             return []
         secoes = _secoes(meta.get("loja", ""))
         itens = [i for s in secoes for i in s["itens"]]
-        bebidas = {i["nome"] for s in secoes if _BEBIDA_RE.search(s.get("nome") or "") for i in s["itens"]}
+        # Soak, dia 7 (05/10, 19:04): sozinha no Officina del Gelato ela "comeu pote 1 litro" (R$ 98, serve 2).
+        # O que é pra dividir só sai com companhia.
+        if pessoas == 1:
+            itens = [i for i in itens if not re.search(r"serve até [2-9]", i.get("serve") or "", re.I)] or itens
+        bebidas ={i["nome"] for s in secoes if _BEBIDA_RE.search(s.get("nome") or "") for i in s["itens"]}
         if itens:
             at = start + timedelta(minutes=rng.randint(2, 6))
             escolhidos = rng.sample(itens, k=1 if rng.random() < 0.6 or len(itens) < 2 else 2)

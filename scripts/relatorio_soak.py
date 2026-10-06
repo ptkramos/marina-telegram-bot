@@ -299,7 +299,10 @@ RE_ESTRANHOU = re.compile(
     r"\b(?:voce|vc) (?:nao )?(?:disse|falou|tinha dito)\b|\b(?:voce|vc) nao (?:tava|estava|ia)\b|"
     r"\beu (?:nao )?(?:disse|falei)\b|\bnao era\b|\bcade\b|\bkd\b|\bnao chegou\b|\bde novo\?|"
     r"\b(?:que )?estranh[oa]\b|\bbug(?:ou|ad[oa])\b|\bconfus[oa]\b|\bnada a ver\b|\bnao faz sentido\b|"
-    r"\baqui onde\b|\besquec\w* de (?:me )?avisar\b")     # 02/10, 23:27 e 23:28
+    r"\baqui onde\b|\besquec\w* de (?:me )?avisar\b|"     # 02/10, 23:27 e 23:28
+    # 05/10: "Não to de plantão não marina", "O plantão foi ontem", "Cê já me falou isso tudo", "que formalidade"
+    r"\bn(?:ao)?\s+(?:to|tou|estou|tava|era|foi)\b[^.!?\n]{0,30}\bnao\b|\bfoi ontem\b|"
+    r"\bj[aá] (?:me )?(?:falou|disse|contou)\b|\bque formalidade\b|\bta repetindo\b")
 
 
 def estranhou(texto: str) -> str:
@@ -598,6 +601,10 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
         at = _dt(ev["event_at"])
         if any(b0 < at < b1 for b0, b1 in banhos):
             s_mundo.append(f"**{_hm(at)}** «{_curto(ev['summary'], 70)}» no meio do banho")
+    for ev in eventos:                   # soak, dia 7 (19:26): meia arrastão e salto andando na rua
+        at = _dt(ev["event_at"])
+        if ev["title"] == "provocando" and (e := estado_em(at)) and e["sit"] in FORA | {"caminho"}:
+            s_mundo.append(f"**{_hm(at)}** vestiu roupa de provocar com o mundo em «{e['activity']}»")
 
     # foto × roupa
     try:
@@ -870,6 +877,8 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
     enviados = [(e["at"], m.group(1), m.group(2)) for e in log
                 if (m := re.match(r"chat\.enviado tipo=(\S+) texto=(.*)", e["msg"]))]
     for at, tipo, texto in enviados:
+        if tipo == "texto" and re.match(r"\s*\[\s*\d+\s*fotos?(?:\(s\))?\s*:", texto):   # soak, dia 7 (14:05)
+            s_quebra.append(f"**{_hm(at)}** marca de foto do histórico enviada como texto: «{_curto(texto, 120)}»")
         perto = [m["content"] for m in falas_perto(at, timedelta(minutes=10), timedelta(minutes=10))]
         if not no_historico(texto, perto):
             s_fora_hist.append(f"**{_hm(at)}** {tipo} enviado e fora do histórico: «{_curto(texto, 120)}»")
@@ -879,6 +888,9 @@ def _relatorio(dia: date, ini: datetime, fim: datetime, copia: Path, out: Path, 
     for e in log:
         if m := re.match(r"photo_director\.cena lugar=(\S+) comodo=(\S+) pose=(\S+) cena=(.*)", e["msg"]):
             cenas.append((e["at"], m.group(1), m.group(2), m.group(4)))
+            # 05/10, 20:05: o post do Instagram da academia, publicado em casa depois do treino, não é erro
+            if any(abs((_dt(p["criado_em"]) - e["at"]).total_seconds()) <= 180 for p in posts):
+                continue
             if achado := fundo_contradiz(m.group(2), m.group(4), estado_em(e["at"])):
                 st = estado_em(e["at"])
                 s_fundo.append(f"**{_hm(e['at'])}** {achado} → mundo: {st['activity']} ({st['location_region']})")

@@ -252,6 +252,11 @@ class WorldContextBuilder:
                 # Auditoria do prompt (28/09): era "em 2026-09-29T07:00:00" com "calendário único" no título.
                 blocks.append(f"[PRÓXIMO COMPROMISSO] {upcoming['activity']} "
                               f"{self._quando_futuro(upcoming['start_at'], now)}.")
+            # Soak, dia 7 (05/10, 14:04): "a Lívia não me passou nenhuma novidade do casting" — o casting de óculos
+            # estava marcado pra 06/10 15:30, mas o próximo compromisso era a aula e o trabalho não aparecia.
+            trabalho = self._trabalho_a_vista(now, upcoming)
+            if trabalho:
+                blocks.append(trabalho)
             holiday = calendar.context.get(f'holiday:{now.date().isoformat()}', now=now)
             if holiday and holiday['payload']['date'] == now.date().isoformat():
                 label = ('PONTO FACULTATIVO OBSERVADO' if holiday['payload']['scope'] == 'optional'
@@ -689,6 +694,19 @@ class WorldContextBuilder:
             return f"amanhã ({moment:%d/%m}) às {hora}"
         semana = ("seg", "ter", "qua", "qui", "sex", "sáb", "dom")[moment.weekday()]
         return f"{semana} {moment:%d/%m} às {hora}"
+
+    def _trabalho_a_vista(self, now: datetime, upcoming: Optional[dict]) -> str:
+        """Casting/job dela nas próximas 48 h, quando não é o próximo compromisso."""
+        with self.db.get_connection() as conn:
+            row = conn.execute(
+                "SELECT description, event_at FROM eventos_pendentes WHERE event_type='trabalho' AND status='pending' "
+                "AND COALESCE(owner_character_key,'marina')='marina' AND event_at>? AND event_at<=? "
+                "ORDER BY event_at LIMIT 1",
+                (now.isoformat(), (now + timedelta(hours=48)).isoformat())).fetchone()
+        if not row or (upcoming and str(upcoming.get("start_at"))[:16] == row["event_at"][:16]):
+            return ""
+        return (f"[SEU TRABALHO À VISTA] {row['description']} {self._quando_futuro(row['event_at'], now)} "
+                "(a Lívia, sua agente, já marcou; é seu, você sabe).")
 
     def _social_day_block(self, now: datetime) -> list[str]:
         """Auditoria #6: o que aconteceu de verdade no dia social dela."""

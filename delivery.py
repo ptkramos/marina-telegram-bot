@@ -75,6 +75,24 @@ def _what(text: str, fallback: str = "o pedido") -> str:
     return m.group(1).lower() if m else fallback
 
 
+# Soak, dia 7 (05/10): o almoço das 12:59 foi "hambúrguer pedido no iFood"; às 13:28 ela contou "tô almoçando um
+# hambúrguer que pedi no iFood" e a fala abriu um pedido novo, que chegou às 14:21 — ela comeu o hambúrguer duas vezes.
+_PASSADO_RE = re.compile(r"\b(?:j[aá]\s+pedi|acabei\s+de\s+pedir|pedi)\b", re.I)
+REFEICAO_RECENTE = timedelta(hours=3)
+
+
+def _refeicao_recente(db, what: str, now: datetime) -> bool:
+    """Uma refeição das últimas 3 h já é esse pedido (o mesmo prato, ou "do iFood"/delivery)."""
+    with db.get_connection() as conn:
+        rows = conn.execute("SELECT summary FROM life_events WHERE event_type='meal' AND event_at>=? AND event_at<=?",
+                            ((now - REFEICAO_RECENTE).isoformat(), now.isoformat())).fetchall()
+    for r in rows:
+        s = (r["summary"] or "").lower()
+        if re.search(r"\bifood\b|\bdelivery\b", s) or (what != "o pedido" and what in s):
+            return True
+    return False
+
+
 def observe(db, text: str, now: datetime, context: str = "") -> bool:
     """Fala dela ('vou pedir pelo iFood'): abre um pedido. context = conversa recente, pra achar o quê."""
     if not ORDER_RE.search(text or ""):
@@ -85,8 +103,10 @@ def observe(db, text: str, now: datetime, context: str = "") -> bool:
     cur = _load(db)
     if cur and not cur.get("arrived_at"):
         return False                                   # já tem pedido a caminho
-    rng = random.Random(f"delivery:{now.isoformat(timespec='minutes')}")
     what = _what(text, _what(context, "o pedido"))
+    if _PASSADO_RE.search(text) and _refeicao_recente(db, what, now):
+        return False                                   # "pedi no iFood" é a refeição que ela já comeu/está comendo
+    rng = random.Random(f"delivery:{now.isoformat(timespec='minutes')}")
     eta = now + timedelta(minutes=rng.randint(*ETA_MIN))
     _save(db, {"what": what, "ordered_at": now.isoformat(), "eta_at": eta.isoformat(), "arrived_at": None})
     logger.info("delivery.ordered what=%s eta=%s", what, eta.isoformat(timespec="minutes"))

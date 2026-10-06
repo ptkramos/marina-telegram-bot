@@ -3335,3 +3335,72 @@ inventados pra ver o desenho cheio). Detalhe das seções no PLANO_WEBAPP, "Pass
   há 1 hora"; mal-estar "Nenhum"; "Último orgasmo: hoje às 22:05, com o Patrick" / "ontem às …" / "dia 3" / "3 de
   outubro"; detalhe do dia "22:05, com o Patrick, pelo Lovense" / "16:20, sozinha, no banho, com o Lush"; legenda
   "com o Patrick", "sozinha", "menstruação".
+
+## Soak, dia 7 — segunda 05/10 (relatório `soak/dia-2026-10-05.md`, lido em 06/10; FRENTES item 30)
+
+Último dia do soak formal. Corte às 19:28 (deploy do Lovense): antes = soak, depois = dia 0 do Lovense e do redesenho.
+Lido inteiro: a conversa com o mundo, o por dentro, as decisões, o log e os /ruim 075–078 (0 /feedback; o «estranhou»
+deu 0 e devia ter dado 3 — conserto no relatório). `tests/test_soak_dia7.py` (+28).
+- **G1 14:05 "[1 foto(s): Milo, Shih Tzu, deitado no quarto, olhando pra câmera]" chegou como texto, em dois balões
+  (/ruim 076) — camada: fala.** O modelo imitou a marca que o histórico grava pra foto. O guard de artefato
+  (`bot._DEBUG_ARTIFACT_RE`) passa a pegar `[N foto(s):`, `[Foto enviada pelo`, `[Áudio:` e `[Respondeu ao seu story`
+  e o turno é refeito.
+- **G2 o hambúrguer duas vezes — camada: mundo.** O almoço das 12:59 já era "hambúrguer pedido no iFood"; às 13:28 ela
+  contou "um hambúrguer que pedi no iFood" e `delivery.observe` abriu um pedido novo, que chegou às 14:21 e ela comeu
+  de novo (fome 0). Fala no passado ("pedi", "já pedi") com refeição de iFood/delivery ou do mesmo prato nas últimas
+  3 h não abre pedido (`delivery._refeicao_recente`). Limite: o almoço/jantar de iFood do `meals` continua sem passar
+  pelo delivery (sem Seu Jorge nem cobrança) — anotado pro "banco dela e iFood da Ma".
+- **G3 o casting dela perguntado a ele — camada: memória/proatividade.** 08:24 e 17:31 "a Lívia te deu alguma
+  novidade do casting?"; o casting de óculos era dela, marcado pra 06/10 15:30; às 14:04 "a Lívia não me passou
+  nenhuma novidade". Causas: cinco cópias de "Aguardar notícias da Lívia" (o tipo mudava a cada reflexão e o
+  dedupe era por tipo), uma com dono trocado ("Patrick vai informar…"), o check-in perguntando a ele, e o casting
+  de amanhã fora do prompt (o próximo compromisso era a aula). Agora: casting, agência, Lívia, freela, PUC,
+  faculdade e o projeto são dela (`db._assunto_dela`) e não viram pergunta; o dedupe ignora o tipo e acento; o
+  reflector vê 10 assuntos (era 5) e sabe que a Lívia é a agente dela; o prompt ganha `[SEU TRABALHO À VISTA]` com o
+  trabalho das próximas 48 h quando não é o próximo compromisso (`WorldContextBuilder._trabalho_a_vista`).
+- **G4 "seu plantão" 2x com o plantão ontem — camada: memória.** O resumo da conversa de 04/10 ("provocações durante
+  o plantão dele") entrava no prompt sem data. Resumo agora diz de quando é: "(conversa de ontem, 04/10, à noite) …"
+  (`memory_retriever._resumo_datado`). E a lista de assuntos em aberto tinha 45 abertos, metade velha (plantão de
+  27/09, Silo, foto do look de 03/10, "aguardar a chegada do Lovense" depois de chegar): assunto aberto há mais de uma
+  semana esfria na higiene (`db.esfriar_open_loops`). No banco (OK do Patrick): 34 fechados com nota, ficam 11;
+  originais em `soak/originais-2026-10-05.json`.
+- **G5 19:26 meia arrastão e salto pra provocar, andando na rua — camada: mundo.** A caminho o lugar é vazio e
+  `Roupa._em_casa` tratava vazio como casa. "A caminho" agora não é casa.
+- **G6 15:11 "comecei a mexer no projeto" com ela no TikTok — camada: proatividade.** Era o check-in do assunto
+  "Começar cedo o projeto de Projetar em Sociedade" (sem "Marina" no texto, não contava como dela). Coberto pelo G3:
+  projeto e faculdade são dela e não viram check-in.
+- **G7 pote de 1 litro sozinha (R$ 98) — camada: mundo.** A saída por vontade sorteava qualquer item da loja; sozinha,
+  item "Serve até 2 pessoas" fica de fora (`consumo.plan`).
+- **M1 "Tem novidades?" → "Só o Lovense chegando"; "nada pra contar?" → "péssima fofoqueira"; repetiu a música e o
+  Milo — camada: voz.** Ela tinha o pai mandando dinheiro sem ela pedir, o Theo, a Júlia, o ônibus perdido. Quando
+  ele pede assunto (`chat_naturalness.pediu_assunto`), o turno leva `[ELE PEDIU ASSUNTO]` com uma conversa de verdade
+  do dia que ela não contou (contato primeiro, segredo nunca), sem esperar o intervalo nem o sorteio.
+- **M2 a foto do Milo com a mão e a unha errada (/ruim 077) — camada: imagens.** Na foto do ponto de vista dela a cor
+  da unha só ia quando o texto dizia "mão"; agora vai sempre (a mão pode aparecer na borda). O "no quarto" dito ×
+  sala da foto ficou anotado.
+- **M3 "se pesou na academia" às 18:56, já saindo pro sorvete — camada: mundo.** A pesagem fica 5 min antes do
+  primeiro estado depois do treino (`Meals._fim_do_treino`).
+- **M4 "quando eu chegar aí", "ver essa pose ao vivo" — camada: prompt.** Uma linha nas [LINHAS DURAS]: vocês não
+  estão no mesmo lugar; chegar é chegar em casa ou onde ela vai.
+- **M6 13:53 "Lembro vagamente… qual era o assunto?" do Lush** — antes do Lovense existir no mundo; hoje "lush" já
+  põe o bloco do brinquedo no prompt (`lovense.BRINQUEDO_RE`). Sem código.
+- **Textos (Hoje):** "Saiu mais cedo na PUC" → "da PUC"; "Trabalhou no apresentação" → "na apresentação"; café "uma
+  banana no caminho; … largou o resto no prato" → "ficou satisfeita e não terminou" quando é no caminho. /ruim 075
+  ("projeto que entrega quarta-feira"), 078 ("banca") e o "Tudo que estiver ao meu alcance" ficam na antibiblioteca.
+- **Lote da fila:** extrato "Foi no Agência boutique da Lívia (fictícia)" → "Foi na Agência boutique da Lívia"
+  (`extrato`, `vontade.FEMININO`); "Rolando agora" só mostra história que ela já contou (`social_news_shared`) e
+  nunca segredo (`SocialDay._contada_sem_segredo`); o ciúme DELE (achado 3 do recalibrar) deixa de virar ciuminho
+  DELA: `ciume` do planner só vale se a mensagem dele fala de outra mulher (`planner._fala_de_outra`), senão vira
+  "nenhum" (log `planner.ciume_dele_descartado`).
+- **Relatório do soak:** «estranhou» pega "Não to de plantão não", "foi ontem", "já me falou", "que formalidade";
+  marca de foto enviada como texto vira fala quebrada; roupa de provocar com ela fora/a caminho vira mundo × mundo;
+  post do Instagram (foto de antes) não acusa fundo × lugar.
+- **Dia 0 do Lovense e do redesenho (depois das 19:28):** a encomenda chegou às 20:10, depois do banho; a estreia que
+  não aconteceu já foi consertada às 00:22 (item 29); `bastidores_hist` crescendo (vínculo 11, humor 4, peso 1 até
+  10:08 de 06/10). O café no meio do banho (08:04, antes do deploy do dia 6) não se repetiu em 06/10.
+- **Ficam pras frentes (não entraram no lote):** o modo íntimo desligando no banho do sexting (pra decidir com o
+  Patrick), M4/M5 do dia 5 e os anotados do dia 6 (voz), o preparo pra dormir que volta de passo (mundo).
+- **Textos que eu decidi:** visíveis — "Saiu mais cedo da PUC às …", "Trabalhou na apresentação de …", "ficou
+  satisfeita e não terminou", "Foi na Agência boutique da Lívia". Internos (prompt) — `[SEU TRABALHO À VISTA] … (a
+  Lívia, sua agente, já marcou; é seu, você sabe)`, `[ELE PEDIU ASSUNTO]`, a linha da distância nas [LINHAS DURAS],
+  "(conversa de ontem, 04/10, à noite)" nos resumos e a linha da Lívia no reflector.

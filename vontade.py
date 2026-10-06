@@ -57,8 +57,8 @@ SAIDAS = {
                  "horas": ((8, 22),), "peso": 0.05, "motivo": "precisava de um remédio"},
 }
 COISA = {"Açaí": "um açaí", "Sorvetes": "um sorvete"}
-FEMININO = ("estação", "drogaria", "drogarias", "officina", "kopenhagen", "enseada", "praia", "clínica", "orla",
-            "novamed")
+FEMININO = ("agência", "estação", "drogaria", "drogarias", "officina", "kopenhagen", "enseada", "praia", "clínica",
+            "orla", "novamed")
 PREP_MIN = {"milo": (3, 5), "cafe": (8, 12), "acai": (6, 10), "orla": (8, 12), "shopping": (20, 30),
             "praia": (15, 20), "mercado": (6, 10), "farmacia": (5, 8), "academia": (10, 15),
             "mercado_semana": (8, 12), "medico": (12, 18), "pronto_atendimento": (8, 12), "manicure": (8, 12),

@@ -162,6 +162,7 @@ def _saida(filhos: list[tuple[dict, str, dict]]) -> dict:
     if any(k.startswith("transporte:") for _, k, _ in filhos):
         nomes.append("uber")
     itens = [_filho(m, k, ev) for m, k, ev in filhos]
+    lugar = lugar.replace(" (fictícia)", "")      # soak, dia 7: "Foi no Agência boutique da Lívia (fictícia)"
     return {"texto": f"Foi {no(lugar)}" if lugar else "Saiu", "sub": _cap(_lista(nomes)) if nomes else "",
             "valor": sum(i["valor"] for i in itens), "hora": itens[0]["hora"], "at": itens[0]["at"],
             "filhos": itens if len(itens) > 1 else []}

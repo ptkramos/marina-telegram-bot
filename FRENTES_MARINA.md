@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 06/10/2026, 04:00 (**Bastidores, passo 4 — os Sentimentos: humor em grade 3×3 com o caminho do dia, por pessoa com bolinhas, força e tendência, "Já passou hoje" — no ar 03:57**, seção 2 item 2b; antes: **passo 3 — o Corpo em desenhos: faixa do sono, 28 dias do ciclo, velocímetro da vontade e da excitação, calendário de orgasmos — no ar 02:22**, seção 2 item 2b; antes: **passo 2 — a moldura: barra de baixo só com ícones, topo só com o nome da tela, sub-abas em pílula — no ar 01:25**, seção 2 item 2b; antes: **passo 1, o histórico, no ar 00:57**; **Lovense 5b no ar 23:43** e o **conserto da estreia** — ela combinou, prometeu e dormiu — **no ar 00:22**, seção 5 item 29; Hush no receio só com tesão alto; suíte de testes 34 → 10 min. Antes: fotos do Lovense na frente de imagens, `049c991` no ar às 21:08, e "o resto" à noite, só texto — seção 6; soak, dia 6 lido e corrigido, item 28; **o Patrick decidiu o soak contínuo** — seção 0;
+_Atualizado em 06/10/2026, 12:00 (**soak, dia 7 lido e corrigido com o lote da fila — o soak formal fechou**, seção 5 item 30; antes: **Bastidores, passo 4 — os Sentimentos: humor em grade 3×3 com o caminho do dia, por pessoa com bolinhas, força e tendência, "Já passou hoje" — no ar 03:57**, seção 2 item 2b; antes: **passo 3 — o Corpo em desenhos: faixa do sono, 28 dias do ciclo, velocímetro da vontade e da excitação, calendário de orgasmos — no ar 02:22**, seção 2 item 2b; antes: **passo 2 — a moldura: barra de baixo só com ícones, topo só com o nome da tela, sub-abas em pílula — no ar 01:25**, seção 2 item 2b; antes: **passo 1, o histórico, no ar 00:57**; **Lovense 5b no ar 23:43** e o **conserto da estreia** — ela combinou, prometeu e dormiu — **no ar 00:22**, seção 5 item 29; Hush no receio só com tesão alto; suíte de testes 34 → 10 min. Antes: fotos do Lovense na frente de imagens, `049c991` no ar às 21:08, e "o resto" à noite, só texto — seção 6; soak, dia 6 lido e corrigido, item 28; **o Patrick decidiu o soak contínuo** — seção 0;
 **"recalibrar a Marina" planejado** — seção 1, PLANO_VOZ "Recalibrar a Marina — plano"; **Lovense, passos 1–4
 feitos** na tarde de 05/10 e o **5a** à noite, **no ar desde 19:28**; a encomenda a caminho desde 19:46 — seção 2).
 **Mudança de 05/10, tarde (Patrick):** o Lovense e o redesenho dos Bastidores adiantam **pra hoje**, um depois do
@@ -14,14 +14,16 @@ formal (Marina de antes), depois = dia 0 da observação do Lovense e do redesen
 **Encomenda do Lovense (19:46, `7d592e8`):** os dois estão "a caminho" na produção; chegam quando o Patrick escrever
 "chegou"/"desce pra pegar" (o Seu Jorge interfona em 3 min; com ela no banho ou fora, ficam na portaria) ou às 21:00;
 ela recebe com 60%, põe pra carregar e manda mensagem (`lovense_chegou`). No dia 7, conferir que isso aconteceu. **O Hush é preto** (o Lush rosa); o Patrick recarregou o Civitai (membro + ~5 mil Buzz amarelo) — **fotos feitas (05/10, noite, frente de imagens):** Hush preto e Lush de quatro aprovados, Lush de frente = B4; tripé sem a 3ª mão no ar (seção 6). **O resto (mais tarde):** dois juntos, banheiro com a calcinha de lado e o Lush na mão aprovados, LoRA da calcinha aprovado; falta a calcinha descida (seção 6).
-Fila depois: consertos do dia 7 → recalibrar 1 (vínculo; adota a `trust` que o Lovense cria) → recalibrar 2 → 3 → 4
+Fila depois: ~~consertos do dia 7~~ (feitos, item 30) → recalibrar 1 (vínculo; adota a `trust` que o Lovense cria) → recalibrar 2 → 3 → 4
 (as barras novas entram no desenho novo) → Hoje com "Em casa" → banco dela e iFood da Ma.
 **Próximas conversas:** o **passo 5a do Lovense está feito e no ar desde 19:28**; a **encomenda** chega de verdade (a caminho até o Patrick avisar "chegou", ou 21:00; Auditoria, "a encomenda chega") (05/10, noite: ela coloca e tira pela fala, a palavra
 para, goza pelo corpo, o Hush é descoberta dela, ousadia fora — PLANO_WEBAPP, "passo 5a feito"); o **5b está feito e no ar desde 23:43**
 (05/10, noite: ela propõe pela vontade — mensagem dela ou na conversa —, leva o Lush na bolsa, usa sozinha, o Hush
 volta à curiosidade com a Bia/ele/o tempo, a amiga percebe o gozo — PLANO_WEBAPP, "passo 5b feito"; pendente pro
-Patrick: ela topa o Hush no receio só pela empolgação, regra do 5a — **decidido e feito em 06/10**: só com tesão alto); **06/10, 00:22: conserto da estreia no ar** (seção 5, item 29; no dia 0, conferir a 1ª proposta dela, o "pronto" depois de colocar e o sono esperando o combinado); **redesenho dos Bastidores, passo 1 (o histórico, só pra tela) no ar em 06/10, 00:57** (`6d28e79`; no dia 0, conferir que `bastidores_hist` cresce: vínculo por hora, peso por dia, gozos e excitação); **passo 2 (a moldura) no ar em 06/10, 01:25** (`b687241`; no dia 0, conferir no celular a barra de baixo, as pílulas e que cada tela carrega); **passo 3 (o Corpo) no ar em 06/10, 02:22** (`dfa62e4`; no dia 0, conferir no celular o velocímetro, a faixa do sono e o calendário — o 1º gozo registrado tem que aparecer com coração ou bolinha); **passo 4 (os Sentimentos) no ar em 06/10, 03:57** (`c049db2`; no dia 0, conferir que `bastidores_hist` ganha a chave `humor` acordada e nada dormindo, e no celular as setas, o "Dormindo desde" e o Sentindo agora por pessoa); depois, **"bora na frente de apps: redesenho dos Bastidores, passo 5"** (os motivos na origem: catálogo dos motivos no padrão novo pro Patrick revisar, aplicado com teste comparando o prompt antes e depois); **terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o
-código novo volta, um por vez, na fila da seção 0. No lote do dia 7 (conserto, sem esperar): o extrato do Dinheiro
+Patrick: ela topa o Hush no receio só pela empolgação, regra do 5a — **decidido e feito em 06/10**: só com tesão alto); **06/10, 00:22: conserto da estreia no ar** (seção 5, item 29; no dia 0, conferir a 1ª proposta dela, o "pronto" depois de colocar e o sono esperando o combinado); **redesenho dos Bastidores, passo 1 (o histórico, só pra tela) no ar em 06/10, 00:57** (`6d28e79`; no dia 0, conferir que `bastidores_hist` cresce: vínculo por hora, peso por dia, gozos e excitação); **passo 2 (a moldura) no ar em 06/10, 01:25** (`b687241`; no dia 0, conferir no celular a barra de baixo, as pílulas e que cada tela carrega); **passo 3 (o Corpo) no ar em 06/10, 02:22** (`dfa62e4`; no dia 0, conferir no celular o velocímetro, a faixa do sono e o calendário — o 1º gozo registrado tem que aparecer com coração ou bolinha); **passo 4 (os Sentimentos) no ar em 06/10, 03:57** (`c049db2`; no dia 0, conferir que `bastidores_hist` ganha a chave `humor` acordada e nada dormindo, e no celular as setas, o "Dormindo desde" e o Sentindo agora por pessoa); depois, **"bora na frente de apps: redesenho dos Bastidores, passo 5"** (os motivos na origem: catálogo dos motivos no padrão novo pro Patrick revisar, aplicado com teste comparando o prompt antes e depois); ~~terça de manhã, "bora no soak, dia 7"~~ **feito em 06/10 (item 30), com o lote de consertos junto; o soak formal
+fechou.** Daqui em diante o código novo volta, um por vez, na fila da seção 0; o relatório diário segue ("bora no soak,
+dia 8" lê 06/10, que é o dia 1 do Lovense e do redesenho). Do lote do dia 7, **feitos no item 30:** extrato
+"(fictícia)", "Rolando agora" e o ciúme DELE. **Ainda abertos (cada um na sua frente):** o extrato do Dinheiro
 com "Foi no Agência boutique da Lívia (fictícia)" (`extrato._lugar_do_uber` não tira o "(fictícia)" e erra o artigo);
 o "Rolando agora" do Mundo mostrando toda história aberta sem olhar se ela já contou (`social_news_shared`) nem se é
 segredo (`knowledge_items` CONFIDENTIAL) — nada vazou ainda; o preparo pra dormir que volta de passo (frente do mundo);
@@ -114,7 +116,10 @@ antes do bom dia, foto pelada pedida com a lingerie, "vestido preto" ignorado, 2
 corrigidos em 04/10 menos M4 e M5 (voz) (item 27). Dia 6 (dom 04/10) — 4 graves (foto do Milo → três selfies
 dela, duas de lingerie; a mesma pose três vezes; café no meio do banho; "o pix já saiu?" com o Pix dele), 4 médios
 (áudio arrastado, "cheguei" 37 min depois, "Transou" com ele pedindo pra parar, "vou me divertir" sem acontecer);
-corrigidos em 05/10 (item 28). Dias limpos: 0 — pelo soak contínuo não precisam mais chegar a 3.
+corrigidos em 05/10 (item 28). Dia 7 (seg 05/10, até o corte das 19:28) — 7 graves ("[1 foto(s)…]" como texto,
+hambúrguer duas vezes, o casting dela perguntado a ele, "seu plantão" de ontem, arrastão vestida na rua, "comecei o
+projeto" no TikTok, pote de 1 litro sozinha), 6 médios, 4 textos feios; corrigidos em 06/10 com o lote da fila (item
+30). **Soak formal fechado em 06/10.** Dias limpos: 0 — pelo soak contínuo não precisam mais chegar a 3.
 
 **Relatório diário (pronto, 28/09):** gerado sozinho na VPS às **05:10** (o dia dela vira às 5h — Patrick
 perguntou 00:00 × 05:00 e ficou 05:00: o rolê da noite e a conversa de madrugada ficam no mesmo dia), cobrindo
@@ -851,6 +856,18 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       (iniciativa `lovense_desistiu`, que vale como boa noite). Com o brinquedo dentro, tira pra dormir como sempre.
     - A noite de ontem ficou como aconteceu (decisão dele): ela lembra que capotou e te deixou na expectativa.
     - **No ar: ter 06/10, 00:22** (`08d6eba`); "abacaxi" gravada como a última palavra combinada (OK dele).
+
+30. ✅ **Soak, dia 7 (segunda 05/10) — relatório lido em 06/10; fecha o soak formal.** `tests/test_soak_dia7.py`
+    (+28). Detalhe na Auditoria ("Soak, dia 7").
+    - Graves: "[1 foto(s): Milo…]" mandado como texto; o hambúrguer duas vezes ("pedi no iFood" abriu pedido novo); o
+      casting DELA (06/10 15:30) perguntado a ele duas vezes; "seu plantão" com o plantão ontem (resumo sem data e 45
+      assuntos em aberto, metade velha); meia arrastão vestida na rua; "comecei a mexer no projeto" no TikTok; pote de
+      1 litro sozinha.
+    - Médios: "nada pra contar" com o dia cheio; unha errada na foto do Milo; pesagem fora da academia; "quando eu
+      chegar aí"; o relatório sem os «estranhou» dele.
+    - Lote da fila junto: extrato "(fictícia)", "Rolando agora" só com o contado e sem segredo, o ciúme DELE.
+    - No banco (OK do Patrick): 34 assuntos em aberto fechados com nota, ficam 11; originais em
+      `soak/originais-2026-10-05.json`.
 
 **Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo); M4 e M5 do dia 5 e os anotados do
 dia 6 (frente da voz).

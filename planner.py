@@ -431,6 +431,17 @@ PLANNER_MAX_TOKENS = 900   # JSON completo do plano (~1.200 caracteres) com folg
 _PLAN_OBJECTS = ("event_details", "direct_reminder", "open_loop_details", "media_mentioned", "patrick_event")
 
 
+_OUTRA_MULHER_RE = re.compile(
+    r"\b(?:minha\s+ex|uma\s+ex|ex\s+(?:minha|dele)|mina|menina|garota|mulher|moça|gatinha|gata|gostosa|novinha|"
+    r"colega|enfermeira|médica|medica|amiga\s+minha|minha\s+amiga|uma\s+amiga|uma\s+conhecida|crush|"
+    r"atriz|cantora)\b", re.IGNORECASE)
+
+
+def _fala_de_outra(user_message: str) -> bool:
+    """A mensagem dele cita outra mulher (o que daria ciuminho nela)?"""
+    return bool(_OUTRA_MULHER_RE.search(user_message or ""))
+
+
 def _sanitize_plan(data: Any) -> Dict[str, Any]:
     """Auditoria #9: um modelo devolveu {"intent": -1, "event_details": -1, ...} e
     `event_details.get` derrubou o turno inteiro — o Patrick ficava sem resposta.
@@ -582,6 +593,15 @@ class InternalPlanner:
                 if not (isinstance(title, str) and len(title.strip()) >= 3
                         and title.strip().casefold() in (user_message or "").casefold()):
                     data["media_mentioned"] = None
+
+                # Soak, dia 7 (achado 3 do "recalibrar"): o ciúme DELE virava o ciuminho DELA — 29/09 "revelou que
+                # sente ciúmes dela", 03/10 "quis controlar o comprimento do look", 04/10 "pediu que ela saísse da
+                # varanda" foram 'ciume' e o prompt disse "implica de brincadeira". A regra do texto falhava: o
+                # ciuminho dela só vale se a mensagem dele fala de outra mulher.
+                pe = data.get("patrick_event")
+                if isinstance(pe, dict) and pe.get("kind") == "ciume" and not _fala_de_outra(user_message):
+                    logger.info("planner.ciume_dele_descartado cause=%s", pe.get("cause"))
+                    pe["kind"] = "nenhum"
 
                 # Validação antecipada de lembrete direto no plano (P1 - Rodada 3 / P0 - Rodada 4)
                 dir_rem = data.get("direct_reminder")

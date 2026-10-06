@@ -22,7 +22,10 @@ from db import db_manager, DatabaseManager
 
 logger = logging.getLogger("SessionReflector")
 
-_NAO_RESOLVIDO_RE = re.compile(r"n[aã]o h[aá] evid[eê]ncia|mantid[oa] como|(?:segue|continua|fica|mantido) em aberto|"
+# Soak, dia 7: com só 5 loops à vista, o reflector não conseguia fechar os velhos e recriava os mesmos com outro tipo.
+REFLECTOR_LOOPS = 10
+
+_NAO_RESOLVIDO_RE =re.compile(r"n[aã]o h[aá] evid[eê]ncia|mantid[oa] como|(?:segue|continua|fica|mantido) em aberto|"
                                r"ainda n[aã]o (?:foi )?(?:resolvid|conclu|feit)", re.IGNORECASE)
 
 # Auditoria #2: traduzido para pt-BR pelo mesmo motivo do consolidator — este
@@ -35,7 +38,7 @@ Use apenas a evidência da conversa fornecida. Não invente interioridade, biogr
 REGRAS:
 1. Resuma a conversa recente com clareza em 'summary'.
 2. Liste os assuntos principais em 'topics' (no máximo 3).
-3. Processos inacabados → 'open_loops'. Promessa miúda do momento ("vou jantar e te conto o que comi") é loop_type='promise': vale só pro dia e vence sozinha. Falha técnica do app (foto, áudio, "função em manutenção") NUNCA é assunto em aberto — não é da vida deles. O 'content' sempre diz de quem é a tarefa e o que já aconteceu, começando pelo nome ("Marina vai comprar o vestido novo com o Pix que o Patrick já mandou", "Patrick vai ver o resultado do exame").
+3. Processos inacabados → 'open_loops'. Promessa miúda do momento ("vou jantar e te conto o que comi") é loop_type='promise': vale só pro dia e vence sozinha. Falha técnica do app (foto, áudio, "função em manutenção") NUNCA é assunto em aberto — não é da vida deles. O 'content' sempre diz de quem é a tarefa e o que já aconteceu, começando pelo nome ("Marina vai comprar o vestido novo com o Pix que o Patrick já mandou", "Patrick vai ver o resultado do exame"). A Lívia é a agente da Marina: casting, job, agência, faculdade e projeto da PUC são da Marina — quem recebe notícia da Lívia é ela, nunca o Patrick. O plantão é do Patrick. Antes de criar, confira a lista de loops em aberto: se já existe um parecido, não crie outro.
 4. Open loops fornecidos que foram concluídos → 'resolved_loops', com o loop_id.
 5. Compromissos futuros ainda não registrados → 'events'.
 6. Momentos de conexão memoráveis entre os dois → 'relationship_moments'.
@@ -97,7 +100,7 @@ class SessionReflector:
                 "events": []
             }
 
-        loops_to_check = active_loops if active_loops is not None else self.db.get_open_loops_ativos(limit=5)
+        loops_to_check = active_loops if active_loops is not None else self.db.get_open_loops_ativos(limit=REFLECTOR_LOOPS)
         loops_ctx = ""
         if loops_to_check:
             loops_ctx = "\n[LOOPS ATUALMENTE EM ABERTO COM PATRICK]:\n" + "\n".join(
@@ -274,7 +277,7 @@ class SessionReflector:
                 return None
 
         # Busca loops ativos para apresentar à LLM e define allowlist
-        active_loops = self.db.get_open_loops_ativos(limit=5)
+        active_loops = self.db.get_open_loops_ativos(limit=REFLECTOR_LOOPS)
         allowed_loop_ids = {l["id"] for l in active_loops}
 
         logger.info(f"Disparando reflexão de sessão para {len(messages)} mensagens recentes (cursor: {last_reflected_id} -> {end_id})...")

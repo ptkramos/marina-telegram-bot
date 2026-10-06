@@ -177,8 +177,10 @@ class AgendaReativa:
         if uber:
             info["uber"] = uber
         self._save(st, now)
+        # soak, dia 7: "Saiu mais cedo na PUC" → "da PUC"
+        de_onde = re.sub(r"^(?:n([oa]s?)|em)\b", lambda m: f"d{m.group(1)}" if m.group(1) else "de", onde)
         self._registra(f"interrupcao:{c['key']}", now,
-                       f"Saiu mais cedo {onde} às {now:%H:%M}" + (f": {texto}" if texto else "")
+                       f"Saiu mais cedo {de_onde} às {now:%H:%M}" + (f": {texto}" if texto else "")
                        + (f". Voltou de uber (R$ {uber['valor']}) e avisou o Patrick." if uber else "."))
         logger.info("agenda_reativa.interrompeu key=%s motivo=%s sai=%s", c["key"], motivo, sai.strftime("%H:%M"))
         return info

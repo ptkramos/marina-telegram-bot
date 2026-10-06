@@ -315,8 +315,13 @@ class Roupa:
         try:
             with self.db.get_connection() as conn:
                 if snap is None:
-                    snap = conn.execute("SELECT location_place_id FROM world_state ORDER BY id DESC LIMIT 1").fetchone()
+                    snap = conn.execute("SELECT location_place_id, location_region FROM world_state "
+                                        "ORDER BY id DESC LIMIT 1").fetchone()
                     snap = dict(snap) if snap else {}
+                # Soak, dia 7 (05/10, 19:26): a caminho o lugar é vazio e contava como casa — ela vestiu meia arrastão
+                # e salto pra provocar o Patrick andando na rua, na volta do sorvete.
+                if str(snap.get("location_region") or "").startswith("a caminho"):
+                    return "a_caminho"
                 pid = snap.get("location_place_id")
                 if not pid:
                     return None

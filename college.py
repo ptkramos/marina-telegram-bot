@@ -286,7 +286,8 @@ class College:
             rng = _rng(f"{a['key']}:sessao:{now.date().isoformat()}:texto")
             vibe = ("virando a noite" if s["vespera"] and a["pace"] == "ultima_hora"
                     else rng.choice(("focada", "enrolando um pouco", "rendendo bem")))
-            summary = (f"Trabalhou no {a['kind']} de {a['course']} (entrega "
+            na = "na" if a["kind"] in ("apresentação", "entrega final") else "no"   # soak, dia 7: "no apresentação"
+            summary = (f"Trabalhou {na} {a['kind']} de {a['course']} (entrega "
                        f"{'amanhã' if s['vespera'] else date.fromisoformat(a['due']).strftime('%d/%m')}), {vibe}.")
             if self._log(f"facul:sessao:{now.date().isoformat()}", s["start"], summary):
                 done += 1

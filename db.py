@@ -77,12 +77,20 @@ def _assunto_dela(texto: Optional[str]) -> bool:
     """O assunto em aberto é só da Marina (o peso dela, a cólica dela) — nada do Patrick nele."""
     import re as _re
     t = (texto or "").casefold()
+    # Soak, dia 7 (05/10): "Aguardar notícias da Lívia sobre os castings" (a agente DELA) virou "a Lívia te deu alguma
+    # novidade?" pra ele, duas vezes — com o casting dela marcado pra 06/10; e "Começar cedo o projeto de Projetar em
+    # Sociedade" virou "comecei a mexer no projeto" com ela no TikTok. Casting, agência e faculdade são dela, sempre.
+    if _re.search(r"\b(?:l[íi]via|castings?|ag[êe]ncia|freelas?|puc|faculdade|projetar em sociedade)\b", t):
+        return True
     return "marina" in t and not _re.search(r"\b(?:patrick|ele|dele|nele|com ele)\b", t)
 
 
 def _loop_words(text: Optional[str]) -> set:
     import re as _re
-    return {w for w in _re.findall(r"\w+", (text or "").casefold()) if len(w) >= 4}
+    import unicodedata as _ud
+    t = _ud.normalize("NFKD", (text or "").casefold())
+    t = "".join(c for c in t if not _ud.combining(c))           # "Livia" e "Lívia" são a mesma palavra
+    return {w for w in _re.findall(r"\w+", t) if len(w) >= 4} - {"patrick", "marina"}
 
 
 def _running_under_tests() -> bool:
@@ -1174,7 +1182,7 @@ class DatabaseManager:
             try:
                 cursor.execute(
                     """
-                    SELECT r.id, r.topic, r.summary, r.importance, fts.rank
+                    SELECT r.id, r.topic, r.summary, r.importance, r.created_at, fts.rank
                     FROM resumos_fts fts
                     JOIN resumos_conversa r ON r.id = fts.rowid
                     WHERE resumos_fts MATCH ?
@@ -1524,9 +1532,11 @@ class DatabaseManager:
                     (loop_type, content, importance, due_at, source_conversation_id, now_iso, now_iso, now_iso))
                 conn.commit()
                 return cursor.lastrowid
+            # Soak, dia 7: "Aguardar notícias de Livia sobre o casting" estava aberto 5 vezes (waiting, waiting_reply,
+            # project, ongoing_project…) — o tipo muda a cada reflexão; a pendência é a mesma.
             for row in cursor.execute(
-                    "SELECT id, content FROM open_loops WHERE status='open' AND loop_type=? "
-                    "AND (is_archived = 0 OR is_archived IS NULL)", (loop_type,)).fetchall():
+                    "SELECT id, content FROM open_loops WHERE status='open' "
+                    "AND (is_archived = 0 OR is_archived IS NULL)").fetchall():
                 other = _loop_words(row["content"])
                 if words and other and len(words & other) / len(words | other) >= 0.5:
                     cursor.execute("UPDATE open_loops SET last_touched_at=? WHERE id=?", (now_iso, row["id"]))
@@ -1641,6 +1651,21 @@ class DatabaseManager:
                    WHERE status='open' AND next_check_after IS NULL AND due_at IS NULL
                      AND last_touched_at < ?""",
                 (now_dt.isoformat(), limite))
+            conn.commit()
+            return cursor.rowcount
+
+    def esfriar_open_loops(self, dias: int = 7, now: Optional[datetime] = None) -> int:
+        """Soak, dia 7 (05/10): 41 assuntos abertos, metade velha — "Patrick terá um plantão amanhã" (27/09), "Marina
+        começar a assistir Silo", a foto do look de 03/10. O check-in empurra a próxima checagem e nada fechava. Assunto
+        de uma semana atrás que ninguém resolveu esfriou: sai do aberto (o que importa de verdade vira fato ou volta)."""
+        now_dt = now or datetime.now()
+        limite = (now_dt - timedelta(days=dias)).isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.execute(
+                """UPDATE open_loops SET status='abandoned', resolved_at=?,
+                          resolution_notes=COALESCE(resolution_notes, 'esfriou: aberto há mais de uma semana')
+                   WHERE status='open' AND created_at < ? AND (due_at IS NULL OR due_at < ?)""",
+                (now_dt.isoformat(), limite, now_dt.isoformat()))
             conn.commit()
             return cursor.rowcount
 

@@ -49,7 +49,7 @@ class MemoryHygieneService:
 
         # 2.1 Auditoria #2b: contexto de curto prazo vence de verdade.
         expired_facts = self.db.expirar_fatos_contextuais(dias=3, now=now_dt)
-        expired_loops = self.db.vencer_open_loops_curtos(now=now_dt)
+        expired_loops = self.db.vencer_open_loops_curtos(now=now_dt) + self.db.esfriar_open_loops(dias=7, now=now_dt)
         if expired_facts or expired_loops:
             logger.info(f"Memory Hygiene: {expired_facts} fatos contextuais e {expired_loops} pendências curtas vencidos.")
 

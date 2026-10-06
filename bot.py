@@ -831,6 +831,10 @@ _DEBUG_ARTIFACT_RE = re.compile(
     r"|<\|[a-z_]+\|>"                         # <|im_start|>
     # Soak, dia 4 (02/10, 14:22): "capricha no desfile, hein GATE_CHANNEL" — rótulo de prompt em CAIXA_ALTA
     r"|(?-i:\b[A-Z]{2,}(?:_[A-Z0-9]+)+\b)"
+    # Soak, dia 7 (05/10, 14:05): "[1 foto(s): Milo, Shih Tzu, deitado no quarto, olhando pra câmera]" — o modelo
+    # imitou a marca de foto do histórico e ela chegou em dois balões (/ruim 076). As outras marcas do histórico também.
+    r"|\[\s*\d+\s*fotos?(?:\(s\))?\s*:"
+    r"|\[(?:foto enviada pelo|[áa]udio\s*:|respondeu ao seu story)"
     r")",
     re.IGNORECASE,
 )
@@ -3646,10 +3650,12 @@ async def process_incoming_batch(
     if (not pediu_foto and not pediu_audio and intimacy_turn.state == "off"
             and not reminder_decision_instruction):
         try:
-            from chat_naturalness import share_nudge, share_constraint, mark_nudged
-            news = share_nudge(memory_manager.db, datetime.now(), intent=plan.get("intent") if plan else None)
+            from chat_naturalness import share_nudge, share_constraint, mark_nudged, pediu_assunto
+            pediu = pediu_assunto(texto_usuario)
+            news = share_nudge(memory_manager.db, datetime.now(), intent=plan.get("intent") if plan else None,
+                               pediu=pediu)
             if news:
-                messages.append({"role": "system", "content": share_constraint(news)})
+                messages.append({"role": "system", "content": share_constraint(news, pediu=pediu)})
                 mark_nudged(memory_manager.db, datetime.now(), news["event_key"])
                 logger.info("chat.share_nudge event=%s", news["event_key"])
         except Exception as exc:

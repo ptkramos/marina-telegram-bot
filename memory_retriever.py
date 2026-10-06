@@ -40,6 +40,22 @@ STOP_WORDS = {
 }
 
 
+def _resumo_datado(row: dict, now: Optional[datetime] = None) -> str:
+    """'(ontem, 04/10, à noite) Patrick comentou…' — o resumo diz de quando é a conversa."""
+    texto = (row.get("summary") or "").strip()
+    try:
+        quando = datetime.fromisoformat(row["created_at"])
+    except (KeyError, TypeError, ValueError):
+        return texto
+    if not texto:
+        return texto
+    dias = ((now or datetime.now()).date() - quando.date()).days
+    parte = "de madrugada" if quando.hour < 5 else "de manhã" if quando.hour < 12 else \
+        "à tarde" if quando.hour < 18 else "à noite"
+    dia = "hoje" if dias <= 0 else "ontem" if dias == 1 else f"há {dias} dias"
+    return f"(conversa de {dia}, {quando:%d/%m}, {parte}) {texto}"
+
+
 class MemoryRetriever:
     def __init__(self, db: Optional[DatabaseManager] = None):
         self.db = db or db_manager
@@ -208,7 +224,7 @@ class MemoryRetriever:
 
         moments = self.db.get_momentos_marcantes(active_only=True)[-max_moments:]
         summaries_data = self.db.get_resumos_conversa(limit=max_summaries)
-        summaries = [s["summary"] for s in summaries_data if s.get("summary")]
+        summaries = [_resumo_datado(s) for s in summaries_data if s.get("summary")]
 
         return {
             "fatos": [sf["fato"] for sf in selected_facts],
@@ -358,12 +374,14 @@ class MemoryRetriever:
                     selected_moments.append(m)
 
         # 7. Resumos de conversas anteriores com suporte a FTS5 + recentes
+        # Soak, dia 7 (05/10, 13:58): o resumo de 04/10 ("provocações durante o plantão dele") entrava sem data e ela
+        # disse "não deixa o celular engolir o plantão inteiro" — o plantão tinha sido ontem. Resumo leva quando foi.
         selected_summaries = []
         if keywords:
             for kw in keywords[:2]:
                 res_results = self.db.buscar_resumos_fts(kw, limit=max_summaries)
                 for rr in res_results:
-                    s_txt = rr.get("summary")
+                    s_txt = _resumo_datado(rr)
                     if s_txt and s_txt not in selected_summaries:
                         selected_summaries.append(s_txt)
                 if len(selected_summaries) >= max_summaries:
@@ -372,7 +390,7 @@ class MemoryRetriever:
         if len(selected_summaries) < max_summaries:
             recent_resumos = self.db.get_resumos_conversa(limit=max_summaries)
             for r in recent_resumos:
-                s_txt = r.get("summary")
+                s_txt = _resumo_datado(r)
                 if s_txt and s_txt not in selected_summaries:
                     selected_summaries.append(s_txt)
                 if len(selected_summaries) >= max_summaries:

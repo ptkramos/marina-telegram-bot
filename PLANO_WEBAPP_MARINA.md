@@ -801,6 +801,13 @@ acontece, "Provocando o Patrick", e no Agora "Provocando o Patrick por mensagem"
 dizendo "não me provoca no trabalho". O café da manhã não aparece mais dentro do banho (10:20–11:01 com o brunch às
 10:30): a refeição espera ela sair. Detalhe na Auditoria ("Soak, dia 6").
 
+**06/10 — soak, dia 7 (segunda 05/10), o que muda no Bastidores:** o extrato do Dinheiro diz "Foi na Agência boutique
+da Lívia" (sem "(fictícia)" e com o artigo certo); o "Acontecendo agora"/"Rolando agora" do Mundo só mostra história
+que ela já contou pro Patrick e nunca segredo (regra dele pro redesenho). No Hoje: "Saiu mais cedo da PUC",
+"Trabalhou na apresentação de …", o café no caminho "ficou satisfeita e não terminou", a pesagem dentro da academia
+(não mais no sorvete), nada de pote de 1 litro sozinha, um hambúrguer só (a fala "pedi no iFood" sobre o almoço não
+abre pedido novo) e a roupa de provocar não é vestida na rua. Detalhe na Auditoria ("Soak, dia 7").
+
 **04/10, noite — catálogo de textos, leva 2 decidida (sem mudança de tela ainda):** as 253 fichas dos Bastidores,
 iFood, Nubank e Instagram têm decisão (117 do Patrick pelo celular, 136 preenchidas por mim pelos padrões dele e
 conferidas no chat). Regras novas pra tela (9 a 17 em `data/feedback/catalogo_textos/regras_gerais.md`): rótulo diz o

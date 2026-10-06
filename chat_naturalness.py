@@ -439,8 +439,41 @@ SHARE_INTENTS = {"casual_chat", "sharing_day", "question", "planning_future", "o
 SHARE_WITHIN = timedelta(hours=6)
 
 
-def share_nudge(db, now: datetime, *, intent: Optional[str], rng=random) -> Optional[dict]:
-    """Uma coisa do dia dela que ainda não contou, se é hora de puxar."""
+# Soak, dia 7 (05/10, 14:00–14:22): "Tem novidades?" → "Só o Lovense chegando"; "ta saindo todo fim de semana e n tem
+# nada pra contar?" → "fui uma péssima fofoqueira"; "tu não tem nada pra gente conversar?" → repetiu a música e o Milo
+# ("Cê já me falou isso tudo"). Ela tinha o pai mandando dinheiro sem ela pedir, o Theo falando de crushes, a Júlia,
+# o ônibus perdido. Quando ele pede assunto, ela conta uma coisa de verdade do dia, sempre.
+_PEDIU_ASSUNTO_RE = re.compile(
+    r"\b(?:novidades?|fofocas?|nada\s+(?:pra|para)\s+(?:a\s+gente\s+|gente\s+)?(?:contar|conversar|falar)"
+    r"|me\s+conta\s+(?:algo|alguma\s+coisa|uma\s+coisa|as\s+fofocas?)|puxa\s+(?:um\s+)?assunto)\b", re.IGNORECASE)
+PEDIU_WITHIN = timedelta(hours=12)
+
+
+def pediu_assunto(texto: str) -> bool:
+    return bool(_PEDIU_ASSUNTO_RE.search(texto or ""))
+
+
+def _contato_fresco(db, now: datetime) -> Optional[dict]:
+    """Conversa com alguém (pai, amiga, colega) que ela ainda não contou — o melhor assunto quando ele pede."""
+    from social_day import SocialDay
+    day = SocialDay(db)
+    shared = set(day._shared())
+    with db.get_connection() as conn:
+        rows = conn.execute(
+            "SELECT e.event_key, e.event_at, e.event_type, e.summary, e.participants_json FROM life_events e "
+            "WHERE e.event_type='social_contact' AND e.event_at<=? AND e.event_at>=? "
+            "AND NOT EXISTS (SELECT 1 FROM knowledge_items k WHERE k.subject_type='event' AND k.subject_id=e.id "
+            "AND k.holder_character_key='marina' AND k.privacy_level='CONFIDENTIAL' AND k.revoked_at IS NULL) "
+            "ORDER BY e.event_at DESC",
+            (now.isoformat(), (now - PEDIU_WITHIN).isoformat())).fetchall()
+    return next((dict(r) for r in rows if r["event_key"] not in shared), None)
+
+
+def share_nudge(db, now: datetime, *, intent: Optional[str], rng=random, pediu: bool = False) -> Optional[dict]:
+    """Uma coisa do dia dela que ainda não contou, se é hora de puxar (ou se ele pediu assunto)."""
+    if pediu:
+        from social_day import SocialDay
+        return _contato_fresco(db, now) or SocialDay(db).fresh_news(now, within=PEDIU_WITHIN)
     if intent not in SHARE_INTENTS:
         return None
     raw = db.get_estado_relacional(SHARE_KEY)
@@ -479,10 +512,15 @@ def mark_nudged(db, now: datetime, event_key: str) -> None:
     db.set_estado_relacional(SHARE_KEY, json.dumps({"at": now.isoformat(), "event": event_key}))
 
 
-def share_constraint(news: dict) -> str:
+def share_constraint(news: dict, pediu: bool = False) -> str:
     from atraso import aprox
     # soak, dia 4 (02/10, 20:30): "Chegou 22 min atrasada" virou "atrasada 22 min" na boca dela
     resumo = re.sub(r"\b(\d+) min atrasada", lambda m: f"{aprox(int(m.group(1)))} atrasada", news["summary"] or "")
+    if pediu:
+        return ("[TURN CONSTRAINT — ELE PEDIU ASSUNTO]\n"
+                "O Patrick quer que você conte alguma coisa. Conte esta, que aconteceu de verdade hoje e ele ainda "
+                f"não sabe, com detalhe e opinião sua (sem soar relatório, sem data/hora): {resumo}\n"
+                "Não diga que não tem nada pra contar e não repita o que já falou nesta conversa.")
     return ("[TURN CONSTRAINT — SUA VIDA TAMBÉM ENTRA NA CONVERSA]\n"
             "Namorada de verdade não espera ser perguntada pra contar do dia. Depois de "
             "reagir ao que o Patrick disse, puxe naturalmente esta coisa SUA, com suas "
