@@ -256,7 +256,8 @@ class College:
                     life.cancel_class_occurrence(b["id"], day, source_key=f"falta:{day.isoformat()}:{b['id']}")
                 except ValueError:
                     continue
-            names = " e ".join(dict.fromkeys(b["display_name"] for b in blocks))
+            # 06/10 (passo 5): vírgula entre as aulas (os nomes já têm "e": "Acessórios de Moda e Extensões…")
+            names = ", ".join(dict.fromkeys(b["display_name"] for b in blocks))
             self._log(f"falta:{day.isoformat()}", wake + timedelta(minutes=10),
                       f"Faltou a aula hoje ({names}): {reason}.")
             return "falta"

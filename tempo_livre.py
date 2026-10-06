@@ -634,7 +634,7 @@ class TempoLivre:
 
     def _se_masturbou(self, b: Bloco, now: datetime, onde: str) -> None:
         """Vale no corpo: orgasmo e alívio. Chamando ele, vira convite pro sexting (proatividade)."""
-        from emotion import EmotionEngine, RELEASE_KEY, SOLO_TELL_CHANCE
+        from emotion import EmotionEngine, RELEASE_KEY, SOLO_TELL_CHANCE, _motivo
         key = f"solo:{b.chave}"
         rng = _rng(self._dia(b.inicio), f"conta:{b.chave}")
         tells = b.chama_ele or rng.random() < SOLO_TELL_CHANCE
@@ -686,7 +686,7 @@ class TempoLivre:
         import bastidores_hist                            # 06/10: calendário de orgasmos (só tela)
         bastidores_hist.orgasmo(self.db, gozo, "sozinha", "em casa", onde=onde, brinquedos=list(b.brinquedos or []),
                                 chamou=b.chama_ele or None)
-        EmotionEngine(self.db).feel("alegria", "alivio", 0.3, "se masturbou e gozou", gozo, source_key=f"{key}:alivio")
+        EmotionEngine(self.db).feel("alegria", "alivio", 0.3, _motivo("Se masturbou e gozou"), gozo, source_key=f"{key}:alivio")
 
     def atual(self, now: datetime) -> Optional[Bloco]:
         """Só leitura (card): o bloco guardado que cobre agora."""

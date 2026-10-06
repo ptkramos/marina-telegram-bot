@@ -414,6 +414,10 @@ function gradeHumor(h) {
     ${h.setas.map(seta).join("")}</div>${h.dormindo ? linhaC(ic("moon") + " " + esc(h.dormindo)) : ""}`;
 }
 
+// 06/10 (Patrick, passo 5): o detalhe do motivo vem à parte, cada um com o ícone do tipo e a preposição
+// ("De R$ 200", "Sobre fofocas", "No Quartinho Bar"); os motivos antigos chegam sem ícone
+const detalhes = (ds) => (ds || []).map((d) => `<span class="det">${d.icone ? ic(d.icone) : ""}${esc(d.texto)}</span>`).join("");
+
 const TENDENCIA = { crescendo: ["trending-up", "Crescendo"], estavel: ["minus", "Estável"],
   passando: ["trending-down", "Passando"], ate_resolver: ["lock", "Até resolver"] };
 
@@ -428,7 +432,7 @@ function pessoaSentindo(p) {
         <div class="sp-l1"><span class="sp-nome">${esc(f.nome)}<span class="sp-bol">${[1, 2, 3, 4, 5].map((n) => `<i class="${n <= f.bolinhas ? "on" : ""}"></i>`).join("")}</span><span class="sp-forca">${esc(f.forca)}</span></span>
           <span class="sp-desde">${esc(f.desde)}</span></div>
         <div class="sp-mot">${esc(f.motivo)}</div>
-        <div class="sp-l3"><span class="sp-det">${esc(f.detalhe)}</span><span class="sp-tend ${f.tendencia}">${ic(ti)}${tt}</span></div></div>`; }).join("")}</div>`;
+        <div class="sp-l3"><span class="sp-det">${detalhes(f.detalhes)}</span><span class="sp-tend ${f.tendencia}">${ic(ti)}${tt}</span></div></div>`; }).join("")}</div>`;
 }
 
 function desenhaSentimentos(s) {
@@ -443,7 +447,7 @@ function desenhaSentimentos(s) {
   const todos = DIARIO_ABERTO || ps.length <= 6;
   const passou = ps.length ? `<h2>Já passou hoje</h2><div class="card ja-passou">${(todos ? ps : ps.slice(0, 5)).map((x) => `<div class="dr">
       <span class="dr-h">${esc(x.hora)}</span><div><div>${esc(x.texto)}</div>
-      <div class="dr-m">${esc(x.motivo)}${x.detalhe ? ` (${esc(x.detalhe)})` : ""}</div></div></div>`).join("")}
+      <div class="dr-m">${esc(x.motivo)}</div>${(x.detalhes || []).length ? `<div class="dr-m dr-dets">${detalhes(x.detalhes)}</div>` : ""}</div></div>`).join("")}
     ${ps.length > 6 ? `<button class="dr-mais">${DIARIO_ABERTO ? "Mostrar menos" : `Ver o dia todo (${ps.length})`}</button>` : ""}</div>` : "";
   $("bd-sentimentos").innerHTML = humor + sentindo + passou;
   const b = $("bd-sentimentos").querySelector(".dr-mais");

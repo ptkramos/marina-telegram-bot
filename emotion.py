@@ -126,10 +126,16 @@ class Episode:
     target: Optional[str]
     started_at: datetime
     sticky: bool
+    detalhes: tuple = ()  # 06/10 (passo 5): (tipo, texto) do detalhe que vai à parte
 
     @property
     def word(self) -> str:
         return KIND_WORDS.get(self.kind, self.kind)
+
+    @property
+    def texto(self) -> str:
+        """O motivo como o prompt lê: a frase com o detalhe emendado."""
+        return texto_motivo(self.cause, self.detalhes)
 
 
 @dataclass
@@ -261,10 +267,14 @@ class EmotionEngine:
     def feel(self, family: str, kind: str, intensity: float, cause: str, now: Optional[datetime] = None, *,
              target: Optional[str] = None, source_key: Optional[str] = None,
              half_life_min: Optional[int] = None, sticky: bool = False) -> bool:
-        """Registra um sentimento com causa. `source_key` evita sentir duas vezes a mesma coisa."""
+        """Registra um sentimento com causa. `source_key` evita sentir duas vezes a mesma coisa.
+        A causa feita por `_motivo` leva o detalhe junto (vai pra coluna `detalhe_json`)."""
         if family not in FAMILIES:
             raise ValueError(f"família emocional desconhecida: {family}")
         now = now or datetime.now()
+        detalhe = json.dumps([list(d) for d in getattr(cause, "detalhes", ())], ensure_ascii=False) \
+            if getattr(cause, "detalhes", ()) else None
+        cause = str(cause)
         with self.db.get_connection() as conn:
             if source_key and (
                     conn.execute("SELECT 1 FROM emotion_episodes WHERE source_key=?", (source_key,)).fetchone()
@@ -284,8 +294,8 @@ class EmotionEngine:
                     (family, kind, target, (now - MERGE_WINDOW).isoformat(), now.isoformat())).fetchone()
                 if row:
                     merged = _clamp(max(float(row["intensity"]), intensity) + 0.1 * intensity)
-                    conn.execute("UPDATE emotion_episodes SET intensity=?, cause=?, started_at=? WHERE id=?",
-                                 (round(merged, 3), cause, now.isoformat(), row["id"]))
+                    conn.execute("UPDATE emotion_episodes SET intensity=?, cause=?, detalhe_json=?, started_at=? "
+                                 "WHERE id=?", (round(merged, 3), cause, detalhe, now.isoformat(), row["id"]))
                     if source_key:
                         conn.execute("INSERT OR IGNORE INTO emotion_sources (source_key, episode_id, created_at) "
                                      "VALUES (?,?,?)", (source_key, row["id"], datetime.now().isoformat()))
@@ -293,10 +303,12 @@ class EmotionEngine:
                     return True
             cur = conn.execute(
                 """INSERT OR IGNORE INTO emotion_episodes
-                   (family, kind, intensity, cause, target, source_key, started_at, half_life_min, sticky, created_at)
-                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                   (family, kind, intensity, cause, target, source_key, started_at, half_life_min, sticky, created_at,
+                    detalhe_json)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
                 (family, kind, round(_clamp(intensity), 3), cause, target, source_key, now.isoformat(),
-                 int(half_life_min or FAMILIES[family]["half_life"]), int(sticky), datetime.now().isoformat()))
+                 int(half_life_min or FAMILIES[family]["half_life"]), int(sticky), datetime.now().isoformat(),
+                 detalhe))
             conn.commit()
             return cur.rowcount > 0
 
@@ -329,7 +341,8 @@ class EmotionEngine:
             value = float(r["intensity"]) * 0.5 ** (minutes / max(1, r["half_life_min"]))
             if value >= ACTIVE_MIN:
                 out.append(Episode(r["id"], r["family"], r["kind"], round(value, 3), float(r["intensity"]),
-                                   r["cause"], r["target"], started, bool(r["sticky"])))
+                                   r["cause"], r["target"], started, bool(r["sticky"]),
+                                   _detalhes(r["detalhe_json"])))
         return sorted(out, key=lambda e: e.intensity, reverse=True)
 
     # ==================================================== D14b: o mundo sente ==
@@ -373,9 +386,11 @@ class EmotionEngine:
                 continue
             if item["start"] - now <= timedelta(hours=18):
                 job = item["kind"] == "job"
-                quando = "amanhã" if item["start"].date() != now.date() else "hoje"
+                # 06/10 (passo 5): "Tem casting na quarta" — o dia da semana não fica errado de um dia pro outro
+                # (o episódio nasce uma vez e o "amanhã" de ontem à noite virava mentira de manhã)
                 created += self.feel("medo", "ansiedade", 0.35 if job else 0.25,
-                                     _motivo(f"{'Job' if job else 'Casting'} {quando}", item["what"]),
+                                     _motivo(f"Tem {'job' if job else 'casting'} {_no_dia(item['start'].date())}",
+                                             _trabalho(item["what"])),
                                      now, source_key=key, sticky=True)
         return created
 
@@ -393,7 +408,7 @@ class EmotionEngine:
             delivered_at = datetime.combine(due, datetime.min.time()).replace(hour=18)
             if now >= delivered_at:
                 self.resolve(key, delivered_at)
-                created += self.feel("alegria", "alivio", 0.45, _motivo(f"Entregou o {a['kind']}", a["course"]),
+                created += self.feel("alegria", "alivio", 0.45, _motivo(_entregou(a["kind"]), _materias([a["course"]])),
                                      delivered_at, source_key=f"entregou:{a['key']}")
                 continue
             if a["pace"] == "adiantada":
@@ -404,8 +419,7 @@ class EmotionEngine:
                           now - timedelta(hours=48))
             if started <= now:
                 created += self.feel("medo", "ansiedade", intensity,
-                                     _motivo(f"Entrega {'amanhã' if days == 1 else 'hoje' if days == 0 else f'em {days} dias'}",
-                                             a["course"]),
+                                     _motivo(f"Tem entrega {_no_dia(due)}", _materias([a["course"]])),
                                      started, source_key=key, sticky=True)
         return created
 
@@ -583,9 +597,9 @@ class EmotionEngine:
         self.db.set_estado_relacional(RELEASE_KEY, now.isoformat())
         import bastidores_hist                            # 06/10: calendário de orgasmos (só tela)
         bastidores_hist.orgasmo(self.db, now, "sozinha", "antes de dormir")
-        self.feel("alegria", "alivio", 0.3, "se masturbou antes de dormir", now, source_key=f"{key}:alivio")
+        self.feel("alegria", "alivio", 0.3, _motivo("Se masturbou antes de dormir"), now, source_key=f"{key}:alivio")
         if wanted_him:
-            self.feel("raiva", "frustracao", 0.2, "ficou querendo ele e não rolou", now, target=PATRICK_TARGET,
+            self.feel("raiva", "frustracao", 0.2, _motivo("Ficou querendo o Patrick e não rolou"), now, target=PATRICK_TARGET,
                       source_key=f"{key}:frustracao", half_life_min=180)
         return summary
 
@@ -664,7 +678,7 @@ class EmotionEngine:
                 dias = (f.now.date() - ep.started_at.date()).days
                 quando = (f" (às {ep.started_at:%H:%M})" if dias == 0 else
                           f" (ontem, {ep.started_at:%H:%M})" if dias == 1 else f" (dia {ep.started_at:%d/%m})")
-            lines.append(f"- Sentindo agora: {ep.word}{about} — {_short(ep.cause)}{quando}.")
+            lines.append(f"- Sentindo agora: {ep.word}{about} — {_short(ep.texto, 120)}{quando}.")
         heart = []
         if f.bond["affection"] >= 0.8:
             heart.append("apaixonada e carinhosa")
@@ -681,7 +695,7 @@ class EmotionEngine:
         grievance = next((e for e in f.episodes if e.target == "o Patrick" and e.family in ("tristeza", "raiva")
                           and e.intensity >= 0.15), None)
         if grievance or f.bond["hurt"] >= 0.25:
-            heart.append("chateada com ele" + (f" ({_short(grievance.cause)})" if grievance else ""))
+            heart.append("chateada com ele" + (f" ({_short(grievance.texto, 120)})" if grievance else ""))
         if heart:
             lines.append("- Com o Patrick: " + ", ".join(heart) + ".")
         if grievance or f.bond["hurt"] >= 0.25:
@@ -726,7 +740,8 @@ class EmotionEngine:
                 rows.append((min(1.0, strongest + 0.02 * (len(eps_) - 1)), last, len(eps_)))
             for value, e, n in sorted(rows, key=lambda r: r[0], reverse=True)[:5]:
                 feelings.append({"word": e.word, "target": e.target, "value": value, "at": e.started_at,
-                                 "cause": _short(e.cause, 70), "cause_raw": e.cause, "count": n,
+                                 "cause": _short(e.cause, 70), "cause_raw": e.cause, "detalhes": e.detalhes,
+                                 "count": n,
                                  "until_resolved": bool(e.sticky and e.intensity >= e.peak * 0.99)})
         bond = [("Carinho", b["affection"]), ("Desejo", b["romantic_intensity"]),
                 ("Segurança", b["security"]), ("Saudade", f.missing)]
@@ -759,7 +774,7 @@ class EmotionEngine:
         já passou, do mais recente pro mais antigo. O mesmo sentimento com a mesma causa no mesmo minuto
         (ex.: quatro "banho quentinho" às 19h58) vira uma linha só."""
         with self.db.get_connection() as conn:
-            rows = conn.execute("""SELECT kind, target, cause, started_at, intensity FROM emotion_episodes
+            rows = conn.execute("""SELECT kind, target, cause, detalhe_json, started_at, intensity FROM emotion_episodes
                                    WHERE started_at>=? AND started_at<? ORDER BY started_at DESC""",
                                 (start.isoformat(), end.isoformat())).fetchall()
         out, vistos = [], set()
@@ -769,6 +784,7 @@ class EmotionEngine:
                 continue
             vistos.add(chave)
             out.append({"word": KIND_WORDS.get(r["kind"], r["kind"]), "target": r["target"], "cause": r["cause"],
+                        "detalhes": _detalhes(r["detalhe_json"]),
                         "at": datetime.fromisoformat(r["started_at"]), "intensity": float(r["intensity"])})
         return out
 
@@ -821,85 +837,207 @@ def _person(participants_json: Optional[str]) -> Optional[str]:
         return None
 
 
-# 28/09 (Patrick, Bastidores → Por dentro): o motivo de cada sentimento segue UM padrão — o fato em poucas
-# palavras, em 3ª pessoa ("o Patrick" pra ele, "ela" implícita), e o detalhe depois de " · " (a tela põe o detalhe
-# ao lado, em cinza, e troca "o Patrick" por "você"). Ex.: "Viu Paradise Kiss · eps 1 e 2", "Mensagens com a Bia ·
-# festas", "o Patrick mandou comida · surpresa". Antes cada fonte gravava de um jeito ("Viu episódios 1 a 2 de…",
-# "o pai deu bom dia e perguntou dela", "Trocou mensagens com a Bia; assunto: …").
-FATO_MAX = 42
+# 06/10 (Patrick, redesenho dos Bastidores, passo 5): o motivo de cada sentimento é UMA FRASE inteira, em 3ª pessoa:
+# quem fez + verbo no passado + o quê ("O Patrick mandou comida de surpresa", "A Bia chamou ela pra sair"); coisa dela
+# sem sujeito ("Furou o rolê"); o que vai acontecer com "Tem" ("Tem casting amanhã"); sem "·" nem parênteses. O
+# detalhe vai à parte (coluna `detalhe_json`), cada um com o tipo — a tela põe o ícone — e com a preposição ("De R$
+# 200", "Sobre fofocas", "No Quartinho Bar"). O prompt lê a frase com o detalhe emendado (`texto_motivo`).
+# Antes (28/09): "fato · detalhe" numa string só ("Viu Paradise Kiss · eps 1 e 2"); a tela ainda entende os antigos.
+DETALHE_ICONE = {"valor": "cash", "recado": "note", "pra": "shopping-cart", "materia": "book",
+                 "assunto": "message-circle", "lugar": "map-pin", "atraso": "clock", "episodio": "device-tv",
+                 "trabalho": "camera", "loja": "tools-kitchen-2", "app": "moped", "com": "users",
+                 "caminho": "route", "audio": "microphone", "mensagem": "message", "brinquedo": "device-mobile-vibration"}
+MOTIVO_MAX = 90
+LUGAR_FEMININO = ("praia", "agência", "agencia", "enseada", "puc", "drogaria", "bodytech", "estação", "clínica",
+                  "orla", "academia", "padaria", "farmácia", "ophicina", "officina", "kopenhagen", "novamed",
+                  "faculdade", "rua", "casa de")
 
 
-def _motivo(fato: str, detalhe: str = "") -> str:
-    fato = re.sub(r"\s+", " ", fato or "").strip().rstrip(".")
-    if len(fato) > FATO_MAX:
-        fato = fato[:FATO_MAX].rsplit(" ", 1)[0]
-    detalhe = (detalhe or "").strip().rstrip(".")
-    fato = fato[:1].upper() + fato[1:] if not fato.startswith("o Patrick") else fato
-    return f"{fato} · {detalhe}" if detalhe else fato
+class Motivo(str):
+    """A frase é a própria string (vai pra `cause` e pros testes); os detalhes viajam junto até o `feel`."""
+    detalhes: tuple = ()
+
+    def __new__(cls, frase: str, detalhes=()):
+        obj = super().__new__(cls, frase)
+        obj.detalhes = tuple((t, x) for t, x in detalhes if x)
+        return obj
 
 
-def _motivo_generico(text: str) -> str:
-    """Resumo do mundo → 'fato · detalhe': o assunto (ou o que está entre parênteses) vira o detalhe."""
+def _cap(text: str) -> str:
+    return text[:1].upper() + text[1:]
+
+
+def _limpo(text: str) -> str:
+    return re.sub(r"\s+", " ", text or "").strip().rstrip(".")
+
+
+def _motivo(frase: str, *detalhes: tuple) -> Motivo:
+    frase = _limpo(frase)
+    if len(frase) > MOTIVO_MAX:
+        frase = frase[:MOTIVO_MAX].rsplit(" ", 1)[0]
+    return Motivo(_cap(frase), [(t, _cap(_limpo(x))) for t, x in detalhes if _limpo(x)])
+
+
+def _detalhes(raw) -> tuple:
+    try:
+        return tuple((t, x) for t, x in json.loads(raw or "[]"))
+    except (ValueError, TypeError):
+        return ()
+
+
+def texto_motivo(cause: str, detalhes=()) -> str:
+    """Frase + detalhe emendado, como o prompt lê: 'O Patrick fez um Pix de presente, de R$ 200'."""
+    partes = [cause]
+    for tipo, x in detalhes:
+        partes.append(f'com o recado "{x}"' if tipo == "recado" else x[:1].lower() + x[1:])
+    return ", ".join(partes)
+
+
+def _no(lugar: str) -> str:
+    """'Quartinho Bar' → 'No Quartinho Bar'; 'PUC-Rio' → 'Na PUC-Rio'; o apê dela → 'Em casa'."""
+    lugar = (lugar or "").split("/")[0].strip()
+    if not lugar:
+        return ""
+    if lugar.lower().startswith(("apartamento da marina", "casa da marina")):
+        return "Em casa"
+    return ("Na " if lugar.lower().startswith(LUGAR_FEMININO) else "No ") + lugar
+
+
+def _da(loja: str) -> str:
+    return ("Da " if loja.lower().startswith(LUGAR_FEMININO) else "Do ") + loja
+
+
+def _valor(text: str) -> tuple:
+    m = re.search(r"R\$ ?([\d.,]+\d)", text or "")
+    return ("valor", f"De R$ {m.group(1)}") if m else ("valor", "")
+
+
+def _recado(text: str) -> tuple:
+    """O recado que o Patrick escreve no Pix: "('Pra gastar no shopping')"."""
+    m = re.search(r"\('([^']+)'\)", text or "")
+    return ("recado", m.group(1)) if m else ("recado", "")
+
+
+def _motivo_generico(text: str) -> Motivo:
+    """Resumo do mundo → frase: o primeiro pedaço, sem parênteses; o assunto (se houver) vira o detalhe."""
     base, _, assunto = (text or "").partition("; assunto: ")
-    base = base.split("; ")[0]
-    par = re.search(r"\(([^)]{1,28})\)", base)
-    base = re.sub(r"\s*\([^)]*\)", "", base)
-    return _motivo(base, assunto or (par.group(1) if par else ""))
+    base = re.sub(r"\s*\([^)]*\)", "", base.split("; ")[0]).split(" — ")[0]
+    return _motivo(base, ("assunto", f"Sobre {assunto.split(',')[0]}" if assunto else ""))
 
 
-def _motivo_contato(text: str, who: Optional[str], briga: bool) -> str:
-    """'Trocou mensagens com a Bia; assunto: festas' → 'Mensagens com a Bia · festas';
-    'Encontrou a Bia (Quartinho Bar); assunto: conflitos leves' → 'Se estranhou com a Bia · Quartinho Bar'."""
+def _motivo_contato(text: str, who: Optional[str], briga: bool) -> Motivo:
+    """'Trocou mensagens com a Bia; assunto: festas' → 'Trocou mensagens com a Bia' + 'Sobre festas';
+    'Encontrou a Júlia (PUC-Rio); assunto: fotografia' → 'Encontrou a Júlia' + 'Na PUC-Rio' + 'Sobre fotografia';
+    briga: 'Se estranhou com a Bia' + 'Por áudio' (ou o lugar)."""
     base, _, assunto = text.partition("; assunto: ")
     par = re.search(r"\(([^)]+)\)", base)
-    lugar = par.group(1) if par else ""
+    lugar = _no(par.group(1)) if par else ""
     base = re.sub(r"\s*\([^)]*\)", "", base).split(", ")[0]
-    mensagem = base.lower().startswith("trocou mensagens")
+    low = base.lower()
     if briga:
-        return _motivo(f"Se estranhou com {who}" if who else "Se estranhou",
-                       "por mensagem" if mensagem else lugar)
-    if mensagem:
-        base = "Mensagens com " + base.split(" com ", 1)[-1]
-    return _motivo(base, assunto.split(",")[0] if assunto else lugar)
+        canal = ("audio", "Por áudio") if "áudio" in low else ("mensagem", "Por mensagem") \
+            if low.startswith("trocou mensagens") else ("lugar", lugar)
+        return _motivo(f"Se estranhou com {who}" if who else "Se estranhou com uma amiga", canal)
+    sobre = ("assunto", f"Sobre {_limpo(assunto.split(',')[0])}" if assunto else "")
+    return _motivo(base, ("lugar", lugar), sobre)
 
 
-def _motivo_convite(text: str) -> str:
-    """'A Bia te chamou: Saindo com a Bia no Quartinho Bar (hoje às 21:00)' → 'A Bia chamou pra sair · Quartinho Bar'."""
+def _motivo_convite(text: str) -> Motivo:
+    """'A Bia te chamou: Saindo com a Bia no Quartinho Bar (hoje às 21:00)' → 'A Bia chamou ela pra sair' +
+    'No Quartinho Bar'."""
     quem, _, resto = text.partition(" te chamou: ")
     resto = re.sub(r"\s*\([^)]*\)", "", resto)
     m = re.search(r"\b(?:no|na|em) ([A-ZÁÉÍÓÚ][^,;]*)$", resto)
-    return _motivo(f"{quem} chamou pra sair" if resto else text, m.group(1) if m else "")
+    if not resto:
+        return _motivo_generico(text)
+    return _motivo(f"{quem} chamou ela pra sair", ("lugar", _no(m.group(1)) if m else ""))
 
 
-def _motivo_tv(text: str) -> str:
-    """'Viu episódios 1 a 2 de Paradise Kiss (…)' → 'Viu Paradise Kiss · eps 1 e 2';
-    'Saiu episódio novo de One Piece hoje (temporada 23, ep. 1180)' → 'Episódio novo de One Piece · ep. 1180'."""
+def _episodios(a: str, b: Optional[str]) -> str:
+    if not b or a == b:
+        return f"Episódio {a}"
+    return f"Episódios {a} e {b}" if int(b) == int(a) + 1 else f"Episódios {a} a {b}"
+
+
+def _motivo_tv(text: str) -> Motivo:
+    """'Viu episódios 1 a 2 de Paradise Kiss (…)' → 'Viu Paradise Kiss' + 'Episódios 1 e 2';
+    'Saiu episódio novo de One Piece hoje (temporada 23, ep. 1180)' → 'Saiu episódio novo de One Piece' +
+    'Episódio 1180'."""
     m = re.match(r"Saiu episódio novo de (.+?) hoje", text)
     if m:
         ep = re.search(r"ep\. ?(\d+)", text)
-        return _motivo(f"Episódio novo de {m.group(1)}", f"ep. {ep.group(1)}" if ep else "")
+        return _motivo(f"Saiu episódio novo de {m.group(1)}", ("episodio", f"Episódio {ep.group(1)}" if ep else ""))
     m = re.match(r"Viu (?:o )?epis[óo]dios? (\d+)(?: a (\d+))? de ([^(;]+)", text)
     if m:
-        eps = f"eps {m.group(1)} e {m.group(2)}" if m.group(2) and int(m.group(2)) == int(m.group(1)) + 1 \
-            else f"eps {m.group(1)} a {m.group(2)}" if m.group(2) else f"ep {m.group(1)}"
-        return _motivo(f"Viu {m.group(3).strip()}", eps)
+        return _motivo(f"Viu {m.group(3).strip()}", ("episodio", _episodios(m.group(1), m.group(2))))
     return _motivo_generico(text)
 
 
-REFEICAO = {"almoço": "Almoçou", "jantar": "Jantou", "café": "Tomou café:", "lanche": "Lanchou"}
+REFEICAO = {"almoço": "Almoçou", "jantar": "Jantou", "café": "Tomou café com", "lanche": "Lanchou"}
 
 
-def _motivo_refeicao(text: str) -> str:
-    """'Almoço em casa: um poke pedido no iFood; comeu além da conta…' → 'Almoçou um poke · comeu demais'."""
+def _motivo_refeicao(text: str) -> Motivo:
+    """'Almoço em casa: um poke pedido no iFood; comeu além da conta…' → 'Almoçou um poke e comeu demais' +
+    'Pelo iFood'; 'Almoço no shopping: …' → o lugar embaixo."""
     head, _, rest = text.partition(": ")
     verbo = REFEICAO.get(head.split(" ")[0].lower())
     if not verbo or not rest:
         return _motivo_generico(text)
     low = text.lower()
     comida = re.sub(r" pedid[oa]s? no iFood", "", rest.split("; ")[0])
-    detalhe = "comeu demais" if "além da conta" in low else "iFood" if "ifood" in low else \
-        head.split(" no ", 1)[1] if " no " in head else ""
-    return _motivo(f"{verbo} {comida}", detalhe)
+    comida = re.sub(r"\s*\([^)]*\)", "", comida)
+    frase = f"{verbo} {comida}" + (" e comeu demais" if "além da conta" in low else "")
+    lugar = _no(head.split(" no ", 1)[1]) if " no " in head else _no(head.split(" na ", 1)[1]) if " na " in head else ""
+    return _motivo(frase, ("app", "Pelo iFood" if "ifood" in low else ""), ("lugar", lugar))
+
+
+def _motivo_presente(text: str) -> tuple[Motivo, Motivo]:
+    """'O Patrick mandou de surpresa X do Megamatte pelo app; …' → o carinho dele e o contentamento dela, com a
+    loja embaixo ('Do Megamatte')."""
+    m = re.search(r" d[oa] (.+?) pelo app", text)
+    loja = ("loja", _da(m.group(1)) if m else "")
+    return _motivo("O Patrick mandou comida de surpresa", loja), _motivo("Chegou a comida surpresa", loja)
+
+
+def _motivo_pix(text: str) -> Motivo:
+    """Os pix do Patrick (financas): de presente, pra cobrir o aperto, pelo uber, o prometido; valor e recado embaixo."""
+    low = text.lower()
+    frase = ("O Patrick fez o Pix que tinha prometido" if "tinha prometido" in low
+             else "O Patrick fez um Pix pra cobrir o aperto" if "cobrir o aperto" in low
+             else "O Patrick fez um Pix pelo uber" if "uber" in low
+             else "O Patrick fez um Pix de presente" if "presente" in low else "O Patrick fez um Pix")
+    return _motivo(frase, _valor(text), _recado(text))
+
+
+def _materias(nomes: list[str]) -> tuple:
+    nomes = [n.strip() for n in nomes if n.strip()]
+    if not nomes:
+        return ("materia", "")
+    return ("materia", f"De {nomes[0]}" + (f" e mais {len(nomes) - 1}" if len(nomes) > 1 else ""))
+
+
+def _trabalho(what: str) -> tuple:
+    return ("trabalho", f"De {what}" if what else "")
+
+
+def _o_que(text: str) -> str:
+    """O job do freela entre parênteses ('Não passou no casting (vídeo pra uma marca de cosméticos)')."""
+    m = re.search(r"\(([^)]+)\)", text)
+    return m.group(1) if m else ""
+
+
+DIAS_SEMANA = ("na segunda", "na terça", "na quarta", "na quinta", "na sexta", "no sábado", "no domingo")
+
+
+def _no_dia(dia: date) -> str:
+    return DIAS_SEMANA[dia.weekday()]
+
+
+def _entregou(kind: str) -> str:
+    """'Entregou o trabalho', 'Entregou a apresentação'; a entrega final vira 'Fez a entrega final'."""
+    if kind == "entrega final":
+        return "Fez a entrega final"
+    return f"Entregou {'a' if kind.endswith('ção') else 'o'} {kind}"
 
 
 # Milo: travessura que diverte, que irrita ou que derrete.
@@ -921,7 +1059,9 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
     who = _person(ev.get("participants_json"))
     out = []
     if kind_ev == "commute" and key.endswith(":imprevisto"):
-        cause = _motivo_generico(text.split(": ", 1)[-1])
+        # "No caminho (voltando da PUC, de metrô e ônibus): perdeu o ônibus da integração por um minuto."
+        m = re.match(r"No caminho \(([^,)]+)[^)]*\): (.+)$", text)
+        cause = _motivo(m.group(2), ("caminho", m.group(1))) if m else _motivo_generico(text.split(": ", 1)[-1])
         if "açaí" in low:
             out.append(("alegria", "diversao", 0.3, cause, None))
         else:
@@ -933,28 +1073,30 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
                 out.append((fam, kind, intensity + (0.1 if tired and fam == "raiva" else 0.0), _motivo_generico(text), None))
                 break
     elif key.startswith("banho:"):
-        out.append(("alegria", "alivio", 0.2, "Banho quentinho", None))
+        out.append(("alegria", "alivio", 0.2, _motivo("Tomou um banho quentinho"), None))
     elif key.startswith("tv:novo:") or low.startswith("saiu episódio novo"):
         out.append(("alegria", "empolgacao", 0.45, _motivo_tv(text), None))
     elif key.startswith("tv:"):
+        fim = text.split("; ")[-1]
         if " e amou" in low:
-            out.append(("alegria", "contentamento", 0.4, _motivo_generico(text.split("; ")[-1]), None))
+            out.append(("alegria", "contentamento", 0.4, _motivo(fim), None))
         elif "achou só ok" in low:
-            out.append(("tristeza", "decepcao", 0.2, _motivo_generico(text.split("; ")[-1]), None))
+            out.append(("tristeza", "decepcao", 0.2, _motivo(fim.replace(", achou só ok", " e achou só ok")), None))
         elif low.startswith("viu "):
             out.append(("alegria", "diversao", 0.2, _motivo_tv(text), None))
     elif key.startswith("peso:"):
         if key.endswith(":agencia"):
-            out.append(("medo", "inseguranca", 0.6, "A Lívia cobrou o peso · agência", "a Lívia"))
-            out.append(("vergonha", "vergonha", 0.3, "Bronca da agência · peso", None))
+            out.append(("medo", "inseguranca", 0.6, _motivo("A Lívia cobrou o peso dela"), "a Lívia"))
+            out.append(("vergonha", "vergonha", 0.3, _motivo("Levou bronca da agência pelo peso"), None))
         elif key.endswith(":saude"):
-            out.append(("medo", "preocupacao", 0.35, "Tontura no treino", None))
+            out.append(("medo", "preocupacao", 0.35, _motivo("Sentiu tontura no treino"), None))
     elif key.startswith("casa:"):             # D9 — casa e vida adulta
         step = key.rsplit(":", 1)[-1]
         if step == "roupa_esquecida":
-            out.append(("raiva", "frustracao", 0.3 + (0.1 if tired else 0.0), "Esqueceu a roupa na máquina", None))
+            out.append(("raiva", "frustracao", 0.3 + (0.1 if tired else 0.0),
+                        _motivo("Esqueceu a roupa na máquina"), None))
         elif step in ("geral", "bagunca"):
-            out.append(("alegria", "alivio", 0.3, "Apê arrumado e cheiroso", None))
+            out.append(("alegria", "alivio", 0.3, _motivo("O apê ficou arrumado e cheiroso"), None))
         elif step == "mercado_esqueceu":
             out.append(("alegria", "diversao", 0.2, _motivo_generico(text), None))
         elif step == "perrengue":
@@ -965,67 +1107,96 @@ def appraise_event(ev: dict, *, tired: bool = False) -> list[tuple]:
     elif key.startswith("freela:"):          # D10 — trabalho de modelo
         step = key.rsplit(":", 1)[-1]
         if step == "oferta":
-            out.append(("alegria", "empolgacao", 0.35, "A Lívia mandou um casting", "a Lívia"))
+            what = text.split(": ", 1)[1] if ": " in text else ""
+            out.append(("alegria", "empolgacao", 0.35, _motivo("A Lívia mandou um casting", _trabalho(what)),
+                        "a Lívia"))
         elif step == "resultado" and "passou no casting" in low and "não passou" not in low:
+            what = _trabalho(_o_que(text))
             if "abrir mão" in low:
-                out.append(("tristeza", "decepcao", 0.4, "Passou no casting · batia com a facul", None))
+                out.append(("tristeza", "decepcao", 0.4, _motivo("Passou no casting, mas batia com a facul", what),
+                            None))
             else:
-                out.append(("alegria", "empolgacao", 0.65, "Passou no casting", None))
-                out.append(("alegria", "orgulho", 0.45, "Foi escolhida pro job", None))
+                out.append(("alegria", "empolgacao", 0.65, _motivo("Passou no casting", what), None))
+                out.append(("alegria", "orgulho", 0.45, _motivo("Foi escolhida pro job", what), None))
         elif step == "resultado":
-            out.append(("tristeza", "decepcao", 0.4, "Não passou no casting", None))
+            out.append(("tristeza", "decepcao", 0.4, _motivo("Não passou no casting", _trabalho(_o_que(text))), None))
         elif step == "job":
-            out.append(("alegria", "orgulho", 0.45, _motivo_generico(text.split(". ")[0]), None))
+            what = re.match(r"Fez o job: ([^.]+)", text)
+            out.append(("alegria", "orgulho", 0.45, _motivo("Fez o job", _trabalho(what.group(1) if what else "")),
+                        None))
         elif step in ("job_perdido", "casting_perdido"):
-            out.append(("tristeza", "decepcao", 0.5 if step == "job_perdido" else 0.3, _motivo_generico(text), None))
+            out.append(("tristeza", "decepcao", 0.5 if step == "job_perdido" else 0.3,
+                        _motivo(text.split(" (")[0].split(": ")[0], _trabalho(_o_que(text))), None))
         elif step in ("cache", "sinal"):
-            out.append(("alegria", "contentamento", 0.45 if step == "cache" else 0.35, _motivo_generico(text), None))
+            frase = "A Lívia fez o Pix do resto do cachê" if step == "cache" else "A Lívia fez o Pix de metade do cachê"
+            out.append(("alegria", "contentamento", 0.45 if step == "cache" else 0.35,
+                        _motivo(frase, _valor(text)), None))
     elif key.endswith(":presente") or key.startswith("presente:"):   # delivery surpresa pelo Mini App (25/09)
-        out.append(("afeto", "carinho", 0.6, "o Patrick mandou comida · surpresa", PATRICK))
-        out.append(("alegria", "contentamento", 0.45, "Delivery surpresa", None))
+        dele, dela = _motivo_presente(text)
+        out.append(("afeto", "carinho", 0.6, dele, PATRICK))
+        out.append(("alegria", "contentamento", 0.45, dela, None))
     elif key.startswith("financas:"):        # /pix e o dinheiro dela (24/09)
         step = key.rsplit(":", 1)[-1]
-        if step in ("emergencia", "aperto"):
+        if step == "emergencia":
+            m = re.match(r"Aperto: (.+?) \(R\$", text)
+            out.append(("medo", "preocupacao", 0.45, _motivo(m.group(1) if m else text, _valor(text)), None))
+        elif step == "aperto":
             out.append(("medo", "preocupacao", 0.45, _motivo_generico(text), None))
         elif step == "pix":
-            valor = re.search(r"R\$ ?[\d.]+", text)
-            out.append(("afeto", "gratidao" if "presente" in low else "carinho", 0.5,
-                        _motivo("o Patrick fez um Pix", valor.group(0) if valor else ""), PATRICK))
+            out.append(("afeto", "gratidao" if "presente" in low else "carinho", 0.5, _motivo_pix(text), PATRICK))
             if "aperto" in low:
-                out.append(("alegria", "alivio", 0.45, "o Patrick cobriu o aperto", None))
+                out.append(("alegria", "alivio", 0.45, _motivo("O Patrick cobriu o aperto dela"), None))
         elif step == "devolveu":
-            out.append(("alegria", "alivio", 0.35, "Devolveu o empréstimo do Patrick", None))
+            out.append(("alegria", "alivio", 0.35, _motivo("Devolveu o empréstimo do Patrick", _valor(text)), None))
         elif step == "presente_usado":
-            out.append(("alegria", "contentamento", 0.35, _motivo_generico(text), None))
+            m = re.match(r"Usou o pix do Patrick: comprou (.+?) \(R\$", text)
+            out.append(("alegria", "contentamento", 0.35,
+                        _motivo(f"Usou o Pix do Patrick pra comprar {m.group(1)}" if m else text, _valor(text)), None))
     elif key.startswith("falta:"):
-        out.append(("vergonha", "culpa", 0.35, _motivo_generico(text), None))
+        # college: "Faltou a aula hoje (A, B, C): cólica forte, ficou em casa."
+        m = re.match(r"Faltou a aula hoje \((.+?)\):", text)
+        nomes = m.group(1).split(", ") if m else []
+        out.append(("vergonha", "culpa", 0.35,
+                    _motivo("Faltou às aulas de hoje" if len(nomes) > 1 else "Faltou à aula de hoje", _materias(nomes)),
+                    None))
     elif key.startswith("atraso:"):
         # 28/09 (atraso.py): "Chegou 15 min atrasada na aula de Ergodesign — perdeu o despertador…"
-        m = re.search(r"Chegou (\d+) min atrasada (?:na |no |em )?(.+?)(?: —|\.|$)", text)
+        m = re.search(r"Chegou (\d+) min atrasada ((?:na |no |em )?.+?)(?: —|\.|$)", text)
         if m:
-            out.append(("raiva", "frustracao", round(0.25 + min(0.3, int(m.group(1)) / 100), 2),
-                        _motivo("Chegou atrasada", m.group(2)), None))
+            n = int(m.group(1))
+            out.append(("raiva", "frustracao", round(0.25 + min(0.3, n / 100), 2),
+                        _motivo(f"Chegou atrasada {m.group(2)}",
+                                ("atraso", f"Com {n} minuto{'s' if n != 1 else ''} de atraso")), None))
         else:
-            out.append(("raiva", "frustracao", 0.4, "Perdeu a hora · chegou atrasada", None))
+            out.append(("raiva", "frustracao", 0.4, _motivo("Perdeu a hora e chegou atrasada"), None))
     elif key.startswith("facul:sessao:"):
+        # "Trabalhou na apresentação de Projeto (entrega 07/10), enrolando um pouco."
+        m = re.match(r"Trabalhou (n[oa]) (.+?) de (.+?) \(entrega", text)
+        no, tarefa, materia = (m.group(1), m.group(2), m.group(3)) if m else ("no", "trabalho", "")
         if "virando a noite" in low:
-            out.append(("medo", "ansiedade", 0.5, "Virando a noite · trabalho da facul", None))
+            out.append(("medo", "ansiedade", 0.5, _motivo(f"Virou a noite {no} {tarefa}", _materias([materia])), None))
         elif "enrolando" in low:
-            out.append(("vergonha", "culpa", 0.2, "Enrolou no trabalho · facul", None))
+            out.append(("vergonha", "culpa", 0.2, _motivo(f"Enrolou {no} {tarefa}", _materias([materia])), None))
         elif "rendendo bem" in low:
-            out.append(("alegria", "orgulho", 0.3, "Rendeu no trabalho · facul", None))
+            out.append(("alegria", "orgulho", 0.3, _motivo(f"Rendeu {no} {tarefa}", _materias([materia])), None))
     elif kind_ev == "social_invite":
         if key.endswith(":convite"):
             out.append(("alegria", "empolgacao", 0.35, _motivo_convite(text), who))
     elif kind_ev == "social_contact":
         if "henrique" in (ev.get("participants_json") or ""):
             if "dinheiro" in low:
-                out.append(("alegria", "gratidao", 0.4, "O pai mandou dinheiro · sem ela pedir", "o pai"))
+                # 06/10 (Patrick, catálogo): igual ao Pix de presente dele; é o dinheiro da comida da semana
+                out.append(("alegria", "gratidao", 0.4,
+                            _motivo("O pai fez um Pix sem ela pedir", ("pra", "Pro mercado e a comida da semana")),
+                            "o pai"))
             elif "saudade" in low or "ligou" in low or "ligação" in low or "telefone" in low:
-                out.append(("afeto", "saudade_casa", 0.3, "Falou com o pai", "o pai"))
+                assunto = text.partition("; assunto: ")[2]
+                out.append(("afeto", "saudade_casa", 0.3,
+                            _motivo("Falou com o pai por telefone", ("assunto", f"Sobre {assunto}" if assunto else "")),
+                            "o pai"))
             else:
                 # 28/09: era "o pai deu bom dia e perguntou dela" a qualquer hora (21h15 inclusive)
-                out.append(("afeto", "carinho", 0.25, "O pai perguntou dela", "o pai"))
+                out.append(("afeto", "carinho", 0.25, _motivo("O pai perguntou dela"), "o pai"))
         elif "conflitos leves" in low:
             out.append(("raiva", "chateacao", 0.3, _motivo_contato(text, who, True), who))
         elif any(t in low for t in ("fofoca", "festas", "música", "moda", "fotografia", "humor")):
@@ -1062,14 +1233,23 @@ PATRICK_EVENTS = {
     "sem_clima":   ([("raiva", "frustracao", 0.2)], {}, False),
 }
 KIND_WORDS["ciume"] = "com ciuminho"
-# 28/09: no padrão dos motivos (3ª pessoa, "o Patrick"; a tela troca por "você")
-DEFAULT_CAUSES = {"elogio": "o Patrick elogiou ela", "cuidado": "o Patrick cuidou dela", "flerte": "o Patrick flertou",
-                  "provocacao": "o Patrick zoou ela", "novidade_boa": "o Patrick contou uma novidade boa",
-                  "ele_mal": "o Patrick não está bem", "ciume": "o Patrick falou de outra garota",
-                  "desconfiou": "o Patrick desconfiou dela",
-                  "grosseria": "o Patrick foi grosso", "esqueceu_importante": "o Patrick esqueceu algo importante",
-                  "briga": "Discutiram", "desculpa": "o Patrick pediu desculpa",
-                  "sem_clima": "o Patrick não entrou no clima"}
+# 06/10 (passo 5): frase inteira, "O Patrick" + verbo no passado + o quê (a tela e o prompt mostram como está)
+DEFAULT_CAUSES = {"elogio": "O Patrick elogiou ela", "cuidado": "O Patrick cuidou dela",
+                  "flerte": "O Patrick flertou com ela", "provocacao": "O Patrick zoou ela",
+                  "novidade_boa": "O Patrick contou uma novidade boa",
+                  "ele_mal": "O Patrick contou que não está bem", "ciume": "O Patrick falou de outra garota",
+                  "desconfiou": "O Patrick desconfiou dela",
+                  "grosseria": "O Patrick foi grosso com ela",
+                  "esqueceu_importante": "O Patrick esqueceu uma coisa importante",
+                  "briga": "Discutiu com o Patrick", "desculpa": "O Patrick pediu desculpa",
+                  "sem_clima": "O Patrick não entrou no clima"}
+
+
+def _causa_do_planner(cause: str) -> str:
+    """O planner escreve a frase; o que ainda vier no jeito antigo ("o Patrick elogiou ela · cabelo") vira frase
+    com o detalhe emendado e maiúscula, sem parênteses."""
+    cause = re.sub(r"\s*\([^)]*\)", "", (cause or "").strip()).replace(" · ", ", ").strip().rstrip(".")
+    return _cap(cause)[:120]
 
 
 def apply_patrick_event(db, event: dict, now: Optional[datetime] = None) -> bool:
@@ -1077,7 +1257,7 @@ def apply_patrick_event(db, event: dict, now: Optional[datetime] = None) -> bool
     if kind not in PATRICK_EVENTS:
         return False
     now = now or datetime.now()
-    cause = str(event.get("cause") or "").strip()[:120] or DEFAULT_CAUSES[kind]
+    cause = _causa_do_planner(str(event.get("cause") or "")) or DEFAULT_CAUSES[kind]
     feelings, bond, grievance = PATRICK_EVENTS[kind]
     engine = EmotionEngine(db)
     if kind == "desculpa":

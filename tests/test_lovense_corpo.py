@@ -267,7 +267,7 @@ class ParadoTests(LovenseBase):
             row = conn.execute("SELECT kind, cause FROM emotion_episodes WHERE source_key LIKE 'lovense:colocou:%'"
                                ).fetchone()
         self.assertEqual(row["kind"], "expectativa")
-        self.assertIn("sem saber quando", row["cause"])
+        self.assertEqual(row["cause"], "Colocou o Lush que o Patrick pediu")   # 06/10 (passo 5): pelo nome
 
 
 class PromptTests(LovenseBase):

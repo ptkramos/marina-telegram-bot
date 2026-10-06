@@ -473,6 +473,8 @@ class DatabaseManager:
                             35: ('lovense_sessoes', {'sentido_json'}),
                             # 05/10: Lovense, passo 5a (a experiência de cada vez)
                             36: ('lovense_sessoes', {'experiencia_json'}),
+                            # 06/10: redesenho dos Bastidores, passo 5 (o detalhe do motivo)
+                            38: ('emotion_episodes', {'detalhe_json'}),
                         }
                         target = replayable.get(version_num)
                         if target is None or "duplicate column name" not in str(e).lower():

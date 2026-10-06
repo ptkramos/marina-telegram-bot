@@ -400,7 +400,7 @@ Responda ESTRITAMENTE neste formato JSON (preserve exatamente os valores de enum
   "resolved_loop_hint": null,
   "shared_topic": "Assunto compartilhado ou null",
   "media_mentioned": {"title": null, "kind": "anime|série|filme|dorama|jogo"},
-  "patrick_event": {"kind": "nenhum|elogio|cuidado|flerte|provocacao|novidade_boa|ele_mal|grosseria|esqueceu_importante|briga|desculpa|ciume|desconfiou|sem_clima", "cause": "o fato em até 6 palavras, em 3ª pessoa: 'o Patrick' pra ele e 'ela' pra ela (ex.: 'o Patrick chamou ela de princesa', 'o Patrick sumiu o dia todo'); detalhe, se precisar, depois de ' · ' (ex.: 'o Patrick elogiou a foto · cabelo')"},
+  "patrick_event": {"kind": "nenhum|elogio|cuidado|flerte|provocacao|novidade_boa|ele_mal|grosseria|esqueceu_importante|briga|desculpa|ciume|desconfiou|sem_clima", "cause": "uma frase curta em 3ª pessoa: quem fez + verbo no passado + o quê, 'O Patrick' pra ele e 'ela' pra ela (ex.: 'O Patrick chamou ela de princesa', 'O Patrick sumiu o dia todo', 'O Patrick elogiou o cabelo dela na foto'); o que ele contou dele vira 'O Patrick contou que…'; sem parênteses nem ' · '"},
   "emotional_deltas": {
     "affection": 0.0,
     "playfulness": 0.0,

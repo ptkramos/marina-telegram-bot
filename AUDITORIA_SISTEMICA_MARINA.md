@@ -3278,6 +3278,52 @@ Por fora `hanger`, Dinheiro `building-bank`, Mundo `users`; a aberta em azul, no
   "Nada acontecendo nem planejado." (Agenda) e "Nenhum lugar neste mês." (Lugares); os títulos "Corpo",
   "Pensando" e "Vocês dois"/"Lugares visitados" saíram de cima dos cards (a pílula já diz).
 
+## Redesenho dos Bastidores, passo 5: os motivos na origem (06/10, frente de apps)
+
+Decidido pelo Patrick no chat (mockups + catálogo numerado de 57 linhas). Detalhe no PLANO_WEBAPP, "Passo 5 feito".
+- **Padrão:** o motivo (`emotion_episodes.cause`) é **uma frase inteira** em 3ª pessoa — quem fez + verbo no passado +
+  o quê ("O Patrick mandou comida de surpresa"), coisa dela sem sujeito ("Furou o rolê"), o que vem com "Tem" ("Tem
+  entrega na quarta") —, sem "·" nem parênteses e sem corte no meio (antes cortava em 42: "O Milo ficou encarando ela
+  até ganhar um"). O detalhe vai à parte, na coluna nova **`detalhe_json`** (`migrations/038_motivo_detalhe.sql`):
+  `[["valor", "De R$ 200"], ["recado", "Pra gastar no shopping"]]`. O tipo dá o ícone na tela (`DETALHE_ICONE`:
+  valor `cash`, recado `note`, pra `shopping-cart`, matéria `book`, assunto `message-circle`, lugar `map-pin`, atraso
+  `clock`, episódio `device-tv`, trabalho `camera`, loja `tools-kitchen-2`, app `moped`, com `users`, caminho `route`,
+  áudio `microphone`, mensagem `message`).
+- **`emotion.py`:** `Motivo(str)` (a frase é a string; `.detalhes` viaja até o `feel`), `_motivo(frase, *detalhes)`,
+  `texto_motivo` (o que o prompt lê: frase + detalhe emendado: …, de R$ 200, com o recado "…"), `_no` (artigo do
+  lugar; o apê dela vira "Em casa"), `_da` (loja), `_valor`, `_recado`, `_materias` ("De X e mais 2"), `_trabalho`,
+  `_no_dia` ("na quarta"), `_entregou`. Reescritos: `appraise_event` e os moldes (`_motivo_generico`, `_contato`,
+  `_convite`, `_tv`, `_refeicao`, novos `_presente` e `_pix`), `_appraise_work` e `_appraise_deadlines` (**dia da
+  semana no lugar de "amanhã"/"em 2 dias"**: o episódio nasce uma vez e o "amanhã" de ontem à noite ficava errado de
+  manhã), `DEFAULT_CAUSES` e `_causa_do_planner` (o que vier no jeito antigo vira frase). `Episode.detalhes` e
+  `.texto`; o `prompt_lines` usa `ep.texto` (limite 120); `panel` e `day_log` passam os detalhes; a fusão de 3 h troca
+  o detalhe junto com a causa.
+- **Fontes:** `planner.py` (regra do `cause`: frase, "O Patrick contou que…" pro que ele conta de si, sem "·"),
+  `agenda_viva` (Furou o rolê + "Com a Bia"; Faltou à(s) aula(s) + matérias), `lovense` (o brinquedo pelo nome:
+  `_quais` → "Gozou com o Lush", "O Patrick exagerou no Lush", "Colocou o Lush esperando o Patrick ligar"; amiga e
+  gozo fora com o lugar embaixo), `tempo_livre`, `agenda_reativa`, `college` (as aulas da falta separadas por vírgula —
+  o nome de uma já tem "e"; o `hoje._aulas` acha pelos nomes e não muda).
+- **Comportamento igual:** o filtro do Lovense que não deixa a raiva do próprio brinquedo virar "briga"
+  (`CAUSA_DO_BRINQUEDO`) procurava "brinquedo" na causa; com o nome no lugar, ganhou "exagerou no" (a pressão do Hush
+  segue contando como antes). **Prompt antes × depois** (a mesma cena de 11 acontecimentos + 3 do Patrick no código de
+  `d701a58` e no novo, `scratchpad/prompt_antes_depois.py`): os mesmos 12 sentimentos, mesma ordem, **intensidades e
+  picos idênticos**; muda só o texto do motivo (ex.: "o Patrick fez um Pix · R$ 1000" → "O Patrick fez um Pix de
+  presente, de R$ 1000, com o recado 'Pra gastar no shopping'"; "Discutiram" → "Discutiu com o Patrick").
+- **Tela:** `webapp_server.motivo_tela(…, detalhes)` devolve `detalhes` [{icone, texto}]; os motivos antigos (de 28/09,
+  "fato · detalhe", e os de antes) passam pelos moldes novos ou mostram o detalhe sem ícone até sumirem (3 dias); a
+  vírgula só vira detalhe no jeito antigo (minúscula). `app.js` (`detalhes`) e `app.css` (`.det`, `.dr-dets`): no
+  Sentindo agora o detalhe com ícone na 3ª linha (tendência na direita); no Já passou hoje, embaixo da frase (sem
+  parênteses).
+- **Testes:** `tests/test_bastidores_motivos.py` (13: catálogo com os resumos reais, padrão das reservas, prompt,
+  coluna nova e fusão, ícone no Sentindo agora, dia da semana, Lovense pelo nome e o filtro da briga); atualizados
+  `test_bastidores_textos` (2), `test_bug_por_dentro_2809`, `test_emotion_d14` (2).
+- **Textos que eu decidi (visíveis e ela lê, pra ele revisar):** "Tem entrega na quarta" / "Tem casting na terça"
+  (no lugar de "em 2 dias"/"amanhã" do catálogo, pelo motivo acima); "Fez a entrega final"; "Entregou a apresentação";
+  "Enrolou/Rendeu/Virou a noite na apresentação" (pelo tipo da tarefa); o pai "Pro mercado e a comida da semana" (o
+  valor não existe: fica fora do saldo dela); Pix "pelo uber" e "que tinha prometido"; "A Lívia fez o Pix do resto do
+  cachê" / "de metade do cachê"; "Fez o job"; "Terminou X e achou só ok"; "A tela do celular trincou e o conserto é
+  caro" + "De R$ 380" (as emergências do `financas` viram a frase); "Usou o Pix do Patrick pra comprar X".
+
 ## Redesenho dos Bastidores, passo 4: os Sentimentos (06/10, frente de apps)
 
 Decidido pelo Patrick nos prints do celular (banco de produção de 06/10, 03:19; a hora de 05/10, 22:50, com o caminho

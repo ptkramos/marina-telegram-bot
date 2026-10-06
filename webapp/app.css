@@ -757,10 +757,13 @@ body.sem-rolar { overflow: hidden; }
 .sp-forca, .sp-desde { font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }
 .sp-mot { font-size: 13.5px; margin-top: 3px; }
 .sp-l3 { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-top: 2px; font-size: 12px; color: var(--muted); }
-.sp-det { min-width: 0; }
+.sp-det { min-width: 0; display: flex; flex-wrap: wrap; column-gap: 10px; row-gap: 1px; }
+.det { display: inline-flex; align-items: center; gap: 3px; }
+.det .ti { font-size: 13px; }
 .sp-tend { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; margin-left: auto; }
 .sp-tend .ti { font-size: 14px; }
 .sp-tend.ate_resolver { color: #c98a16; font-weight: 600; }
 /* já passou hoje: cinza */
 .ja-passou .dr > div { color: var(--muted); }
 .ja-passou .dr-m { display: block; }
+.ja-passou .dr-dets { display: flex; flex-wrap: wrap; justify-content: flex-start; column-gap: 10px; }

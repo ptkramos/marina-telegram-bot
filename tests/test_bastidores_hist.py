@@ -35,7 +35,7 @@ class Base(unittest.TestCase):
 
 class TabelaTests(Base):
     def test_migration_cria_a_tabela(self):
-        self.assertEqual(self.db.get_schema_version(), 37)
+        self.assertEqual(self.db.get_schema_version(), 38)
         self.assertEqual(self.todos("orgasmo"), [])
 
     def test_ref_nao_duplica(self):

@@ -345,7 +345,7 @@ class AgendaReativa:
 
     def _alivio(self, inicio: datetime, fim: datetime, onde: str, chama_ele: bool, *, key: str) -> None:
         """Vale no corpo como a masturbação em casa (gozo, alívio); chamando ele, vira convite."""
-        from emotion import EmotionEngine, RELEASE_KEY, SOLO_TELL_CHANCE
+        from emotion import EmotionEngine, RELEASE_KEY, SOLO_TELL_CHANCE, _motivo
         from tempo_livre import CONVITE_KEY
         tells = chama_ele or _rng(f"conta:{key}").random() < SOLO_TELL_CHANCE
         if chama_ele:
@@ -368,7 +368,7 @@ class AgendaReativa:
         self.db.set_estado_relacional(RELEASE_KEY, gozo.isoformat())
         import bastidores_hist                            # 06/10: calendário de orgasmos (só tela)
         bastidores_hist.orgasmo(self.db, gozo, "sozinha", "fora de casa", onde=onde, chamou=chama_ele or None)
-        EmotionEngine(self.db).feel("alegria", "alivio", 0.3, "se aliviou fora de casa", gozo, source_key=f"{key}:alivio")
+        EmotionEngine(self.db).feel("alegria", "alivio", 0.3, _motivo("Se aliviou fora de casa"), gozo, source_key=f"{key}:alivio")
 
     def marcar_alivio_em_casa(self, chega: datetime, now: datetime, *, chama_ele: bool = False) -> None:
         """O primeiro bloco em casa a partir de `chega` é a masturbação (ela disse que ia se tocar)."""

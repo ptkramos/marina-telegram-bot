@@ -293,6 +293,17 @@ def _feeling(db, now: datetime):
 # Texto interno do turno (eu decido; descreve a sensação e o que ele fez, nunca a fala dela).
 _NOME = {"lush": "o Lush", "hush": "o Hush"}
 _NOME_DE = {"lush": "do Lush", "hush": "do Hush"}
+# a raiva com ele que é do próprio brinquedo não conta como briga (06/10, passo 5: o motivo diz qual brinquedo —
+# "O Patrick exagerou no Lush" — e não tem mais a palavra "brinquedo"; a pressão do Hush segue contando, como antes)
+CAUSA_DO_BRINQUEDO = ("brinquedo", "app", "exagerou no")
+
+
+def _quais(brinquedos, prep: str = "") -> str:
+    """'o Lush', 'o Lush e o Hush'; com prep='no': 'no Lush e no Hush'. Sem saber qual, 'o brinquedo'."""
+    nomes = [_NOME[b] for b in brinquedos if b in _NOME]
+    if prep:
+        nomes = [f"{prep} {n.split(' ', 1)[1]}" for n in nomes]
+    return " e ".join(nomes) or (f"{prep} brinquedo" if prep else "o brinquedo")
 _RITMO = {"classico": "constante", "toque": "no ritmo do dedo dele, mexendo agora",
           "pulso": "em pulsos", "onda": "em ondas que sobem e descem", "fogos": "em estouros sem aviso",
           "terremoto": "tremendo forte, sem ritmo"}
@@ -551,7 +562,7 @@ class Lovense:
             if pend.get("palavra") and (_dt(pend.get("em")) or now - PALAVRA_VALE * 2) >= now - PALAVRA_VALE:
                 self.combinar_palavra(now, pend["palavra"])
             self.db.set_estado_relacional(PALAVRA_KEY, "")
-            self._sentir_colocou(now, origem, sessao_id)
+            self._sentir_colocou(now, origem, sessao_id, brinquedos)
         return {"sessao_id": sessao_id, "brinquedos": brinquedos}
 
     def combinar_palavra(self, now: datetime, palavra: str) -> bool:
@@ -825,11 +836,12 @@ class Lovense:
             if not sessao:
                 conn.commit()
                 return eventos
+            quais = _quais(self._em_uso(conn, sessao), "no")
             eventos += self._encerrar_tirando(conn, sessao, now, em_casa=True, motivo="tirou_incomodada")
             conn.commit()
         try:
-            from emotion import EmotionEngine, PATRICK
-            EmotionEngine(self.db).feel("raiva", "irritacao", 0.35, "o Patrick exagerou no brinquedo", now,
+            from emotion import EmotionEngine, PATRICK, _motivo
+            EmotionEngine(self.db).feel("raiva", "irritacao", 0.35, _motivo(f"O Patrick exagerou {quais}"), now,
                                         target=PATRICK, source_key=f"lovense:tirou:{sessao['id']}")
         except Exception:
             pass
@@ -1057,7 +1069,7 @@ class Lovense:
             conn.commit()
         if motivo == "parado":
             self._sente("raiva", "impaciencia", 0.15 + 0.1 * novo["cutucou"],
-                        "o Patrick sumiu do app com o brinquedo nela", now, f"lovense:parado:{sessao['id']}:{novo['cutucou']}")
+                        f"O Patrick sumiu do app com {_quais(agora)} nela", now, f"lovense:parado:{sessao['id']}:{novo['cutucou']}")
         texto = "; ".join(partes)
         return {"texto": f"[Brinquedo, pelo app do Patrick: {texto[0].upper()}{texto[1:]}]", "motivo": motivo}
 
@@ -1111,10 +1123,11 @@ class Lovense:
                 (key, at.isoformat(), summary, importance, json.dumps(["marina"]), share, at.isoformat()))
             conn.commit()
 
-    def _sentir_colocou(self, now: datetime, origem: str, sessao_id: int) -> None:
+    def _sentir_colocou(self, now: datetime, origem: str, sessao_id: int, brinquedos=()) -> None:
         """A ideia foi dela: expectativa de ele ligar. Pedido dele: a ansiedade gostosa de não saber quando vem."""
-        cause = ("colocou o brinquedo esperando o Patrick ligar pelo app" if origem == "dela"
-                 else "com o brinquedo que o Patrick pediu, sem saber quando ele vai ligar")
+        quais = _quais(brinquedos)
+        cause = (f"Colocou {quais} esperando o Patrick ligar" if origem == "dela"
+                 else f"Colocou {quais} que o Patrick pediu")
         self._sente("alegria", "expectativa", 0.4 if origem == "dela" else 0.35, cause, now,
                     f"lovense:colocou:{sessao_id}")
 
@@ -1272,7 +1285,8 @@ class Lovense:
                 _no_mundo(self.db, now, acabou=True, gozou=True)
             except Exception:
                 pass
-        quais = " e ".join(_NOME[b] for b in em_uso) or "o brinquedo"
+        quais = _quais(em_uso)
+        from emotion import _motivo
         import bastidores_hist                            # 06/10: calendário de orgasmos (só tela)
         bastidores_hist.orgasmo(self.db, now, "patrick", "lovense", brinquedos=sorted(em_uso), publico=publico,
                                 onde=_ONDE_GOZO.get(rec["atividade"], "no meio de gente") if publico else None)
@@ -1281,13 +1295,13 @@ class Lovense:
             onde = _ONDE_GOZO.get(rec["atividade"], "no meio de gente")
             summary = (f"Gozou com {quais} que o Patrick controlava pelo app, {onde}, tentando disfarçar "
                        "(ficou vermelha).")
-            self._sente("vergonha", "vergonha", 0.3, f"gozou {onde} com o brinquedo", now,
+            self._sente("vergonha", "vergonha", 0.3, _motivo(f"Gozou com {quais}", ("lugar", onde)), now,
                         f"lovense:gozo:{sessao['id']}:{exp['gozos']}:vergonha", target=None)
             amiga = self._amiga_percebe(now, rec, f"{sessao['id']}:{exp['gozos']}")
         else:
             summary = f"Gozou com {quais} que o Patrick controlava pelo app."
         self._registra(f"lovense:gozo:{sessao['id']}:{exp['gozos']}", now, summary, importance=0.35)
-        self._sente("alegria", "alivio", 0.3, "gozou com o brinquedo", now,
+        self._sente("alegria", "alivio", 0.3, _motivo(f"Gozou com {quais}"), now,
                     f"lovense:gozo:{sessao['id']}:{exp['gozos']}", target=None)
         return [] if pela_fala else ["gozou"] + amiga
 
@@ -1332,7 +1346,9 @@ class Lovense:
         a = self._json(AMIGAS_KEY)
         a[quem] = {"em": now.isoformat(), "contou": contou, "zoou": False}
         self.db.set_estado_relacional(AMIGAS_KEY, json.dumps(a))
-        self._sente("vergonha", "vergonha", 0.25 if contou else 0.35, f"{nome} percebeu quando ela gozou {onde}",
+        from emotion import _motivo
+        self._sente("vergonha", "vergonha", 0.25 if contou else 0.35,
+                    _motivo(f"{nome_cap} percebeu quando ela gozou", ("lugar", onde)),
                     now, f"lovense:amiga:{chave}", target=None)
         return [f"amiga:{quem}:{'contou' if contou else 'disfarcou'}"]
 
@@ -1357,7 +1373,7 @@ class Lovense:
                 # também, e saudade é vontade dele (achado na pré-visualização, 05/10).
                 chateada = ep.family == "raiva" or ep.kind in ("decepcao", "chateacao")
                 if (ep.target == "o Patrick" and chateada and ep.intensity >= BRIGA
-                        and "brinquedo" not in (ep.cause or "") and "app" not in (ep.cause or "")):
+                        and not any(t in (ep.cause or "") for t in CAUSA_DO_BRINQUEDO)):
                     return "tirou_briga"
         except Exception:
             pass
@@ -1972,7 +1988,7 @@ class Lovense:
         h["gosto"] = round(max(0.0, float(h["gosto"]) + PRESSAO_GOSTO), 4)
         h["nao_desde"] = now.isoformat()
         self.db.set_estado_relacional(DESCOBERTA_KEY, json.dumps(d))
-        self._sente("raiva", "chateacao", 0.25, "o Patrick insistiu no Hush depois que ela disse que não é pra ela",
+        self._sente("raiva", "chateacao", 0.25, "O Patrick insistiu no Hush depois do não dela",
                     now, f"lovense:hush:pressao:{now.isoformat(timespec='minutes')}")
         return True
 
@@ -2278,7 +2294,7 @@ class Lovense:
             _contato_portaria(self.db, f"lovense:{e['pedido_em']}", quando)
         except Exception:
             pass
-        self._sente("alegria", "empolgacao", 0.5, "chegou o Lovense que o Patrick encomendou", quando,
+        self._sente("alegria", "empolgacao", 0.5, "Chegou o Lovense que o Patrick encomendou", quando,
                     f"lovense:entrega:{e['pedido_em']}")
         logger.info("lovense.entrega.recebido esperou=%s", e.get("esperou"))
         return "recebido"

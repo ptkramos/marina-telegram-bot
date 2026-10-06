@@ -347,8 +347,9 @@ class AgendaViva:
                                         else ".") if quem else ""
             self._registra(f"agenda:desistiu:{it['key']}", now,
                            f"Desistiu de ir: {it['texto']} ({porque}).{aviso}", quem=it["com"][:1])
-            self._sente("vergonha", "culpa", 0.15, f"Furou o rolê · com {quem}" if quem else "Furou o rolê",
-                        now, it["key"])   # 28/09: fato · detalhe
+            from emotion import _motivo     # 06/10 (passo 5): frase + detalhe à parte
+            self._sente("vergonha", "culpa", 0.15, _motivo("Furou o rolê", ("com", f"Com {quem}" if quem else "")),
+                        now, it["key"])
             if it["com"]:
                 try:
                     from social_world import SocialWorld
@@ -397,7 +398,10 @@ class AgendaViva:
             self._registra(f"agenda:faltou:{dia.isoformat()}", now,
                            f"Faltou a aula de hoje ({nomes}): {porque}. Vai pegar a matéria com {amiga} depois.",
                            share=0.5)
-            self._sente("vergonha", "culpa", 0.12, f"Faltou a aula · {nomes}", now, it["key"])   # 28/09: fato · detalhe
+            from emotion import _materias, _motivo
+            self._sente("vergonha", "culpa", 0.12,
+                        _motivo("Faltou às aulas de hoje" if len(blocos) > 1 else "Faltou à aula de hoje",
+                                _materias([b["display_name"] for b in blocos])), now, it["key"])
             info["aulas"] = nomes
         elif tipo == "mercado_semana":
             from calendar_world import CalendarWorld

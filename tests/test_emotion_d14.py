@@ -171,7 +171,8 @@ class WorldFeelsTest(unittest.TestCase):
             self.engine._appraise_deadlines(NOW)
         worry = [e for e in self.engine.episodes(NOW) if e.kind == "ansiedade"][0]
         self.assertTrue(worry.sticky)
-        self.assertEqual(worry.cause, "Entrega amanhã · Práticas VI")   # 28/09: fato · detalhe
+        # 06/10 (passo 5): frase + matéria à parte; o dia da semana (o episódio nasce uma vez, "amanhã" envelhecia)
+        self.assertEqual((worry.cause, worry.detalhes), ("Tem entrega na quinta", (("materia", "De Práticas VI"),)))
         after = datetime.combine(due, NOW.time()).replace(hour=19)
         with patch("college.College.assignments", return_value=[item]):
             self.engine._appraise_deadlines(after)
@@ -209,7 +210,7 @@ class PatrickFeelsTest(unittest.TestCase):
         grievance = [e for e in self.engine.episodes(hours_later) if e.target == "o Patrick"][0]
         self.assertAlmostEqual(grievance.intensity, 0.4, places=2, msg="sem reparo, a mágoa não passa sozinha em horas")
         lines = "\n".join(self.engine.prompt_lines(hours_later))
-        self.assertIn("chateada com ele (ele respondeu seco e desdenhou do trabalho dela)", lines)
+        self.assertIn("chateada com ele (Ele respondeu seco e desdenhou do trabalho dela)", lines)
         self.assertIn("sem drama", lines)
         emotion.apply_patrick_event(self.db, {"kind": "desculpa", "cause": "ele pediu desculpa"}, hours_later)
         self.assertLess(self.engine.bond()["hurt"], 0.05)

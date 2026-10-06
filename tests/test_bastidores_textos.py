@@ -92,19 +92,26 @@ class EmocaoTest(unittest.TestCase):
         self.assertEqual(s[0]["quando"], "ontem, 22h01")
 
     def test_motivo_fato_curto_e_detalhe_ao_lado(self):
-        # 28/09 (Patrick): um padrão só — fato curto em voz de painel, detalhe ao lado; os antigos passam pelo molde
-        m = lambda c, t="": w.motivo_tela(c, t)
-        self.assertEqual(m("o Patrick mandou comida · surpresa", "o Patrick"), {"motivo": "O Patrick mandou comida", "detalhe": "surpresa"})
-        self.assertEqual(m("Viu Paradise Kiss · eps 1 e 2"), {"motivo": "Viu Paradise Kiss", "detalhe": "eps 1 e 2"})
-        self.assertEqual(m("Trocou mensagens com a Bia; assunto: conflitos leves"),   # antigo, pelo molde novo
-                         {"motivo": "Se estranhou com a Bia", "detalhe": "por mensagem"})
-        self.assertEqual(m("banho quentinho, se sentiu gente de novo"), {"motivo": "Banho quentinho", "detalhe": ""})
-        self.assertEqual(m("Viu episódios 1 a 2 de Paradise Kiss (começou essa semana)"),
-                         {"motivo": "Viu Paradise Kiss", "detalhe": "eps 1 e 2"})
-        self.assertEqual(m("Ele recuou, dizendo que não queria atrapalhar", "o Patrick"),
-                         {"motivo": "O Patrick recuou", "detalhe": "dizendo que não queria…"})
-        self.assertEqual(m("Encontrou a Bia (Quartinho Bar); assunto: festas"), {"motivo": "Encontrou a Bia", "detalhe": "festas"})
+        # 06/10 (passo 5): frase inteira e o detalhe com ícone; os motivos antigos passam pelos moldes novos e os de
+        # 28/09 ("fato · detalhe") mostram o detalhe sem ícone até sumirem
+        m = lambda c, t="", d=(): w.motivo_tela(c, t, detalhes=d)
+        sem = lambda c, t="": {k: v for k, v in m(c, t).items() if k != "detalhe"}
+        self.assertEqual(m("O Patrick fez um Pix de presente", "o Patrick", (("valor", "De R$ 200"),)),
+                         {"motivo": "O Patrick fez um Pix de presente", "detalhe": "",
+                          "detalhes": [{"icone": "cash", "texto": "De R$ 200"}]})
+        self.assertEqual(m("Viu Paradise Kiss · eps 1 e 2"),
+                         {"motivo": "Viu Paradise Kiss", "detalhe": "eps 1 e 2",
+                          "detalhes": [{"icone": "", "texto": "Eps 1 e 2"}]})
+        self.assertEqual(sem("Trocou mensagens com a Bia; assunto: conflitos leves"),   # antigo, pelo molde novo
+                         {"motivo": "Se estranhou com a Bia", "detalhes": [{"icone": "message", "texto": "Por mensagem"}]})
+        self.assertEqual(sem("banho quentinho, se sentiu gente de novo"),
+                         {"motivo": "Tomou um banho quentinho", "detalhes": []})
+        self.assertEqual(sem("Viu episódios 1 a 2 de Paradise Kiss (começou essa semana)"),
+                         {"motivo": "Viu Paradise Kiss", "detalhes": [{"icone": "device-tv", "texto": "Episódios 1 e 2"}]})
+        self.assertEqual(m("Ele recuou, dizendo que não queria atrapalhar", "o Patrick")["motivo"], "O Patrick recuou")
         self.assertEqual(m("Ele desconfiou de uma foto minha", "o Patrick")["motivo"], "O Patrick desconfiou de uma foto dela")
+        self.assertEqual(m("O Patrick contou que vai ficar sozinho no plantão, coitado", "o Patrick")["detalhes"], [],
+                         "frase nova com vírgula fica inteira")
 
     def test_sentimento_substantivo_e_o_patrick(self):
         # 04/10 (catálogo, leva 2, regras 6 e 11): "Saudade do Patrick", nunca "você"
@@ -127,21 +134,31 @@ class EmocaoTest(unittest.TestCase):
         from emotion import appraise_event
         ev = lambda k, t, s, p="[]": [(c, tg) for _f, _k, _i, c, tg in appraise_event(
             {"event_key": k, "event_type": t, "summary": s, "participants_json": p})]
-        self.assertEqual(ev("tv:2026-09-27", "routine", "Viu episódios 1 a 2 de Paradise Kiss (começou essa semana)"),
-                         [("Viu Paradise Kiss · eps 1 e 2", None)])
-        self.assertEqual(ev("social:1", "social_contact", "Trocou mensagens com a Bia; assunto: festas",
-                            '["marina","bia_andrade"]')[0][0], "Mensagens com a Bia · festas")
-        self.assertEqual(ev("social:2", "social_contact", "Trocou mensagens com a Bia; assunto: conflitos leves",
-                            '["marina","bia_andrade"]')[0][0], "Se estranhou com a Bia · por mensagem")
-        self.assertEqual(ev("outing:1:convite", "social_invite",
-                            "A Bia te chamou: Saindo com a Bia no Quartinho Bar (hoje às 21:00)", '["marina","bia_andrade"]')[0][0],
-                         "A Bia chamou pra sair · Quartinho Bar")
-        self.assertEqual(ev("meal:1:almoco", "meal", "Almoço em casa: um poke pedido no iFood; comeu além da conta")[0][0],
-                         "Almoçou um poke · comeu demais")
+        com = lambda r: (str(r[0]), r[0].detalhes)
+        self.assertEqual(com(ev("tv:2026-09-27", "routine", "Viu episódios 1 a 2 de Paradise Kiss (começou essa semana)")[0]),
+                         ("Viu Paradise Kiss", (("episodio", "Episódios 1 e 2"),)))
+        self.assertEqual(com(ev("social:1", "social_contact", "Trocou mensagens com a Bia; assunto: festas",
+                                '["marina","bia_andrade"]')[0]),
+                         ("Trocou mensagens com a Bia", (("assunto", "Sobre festas"),)))
+        self.assertEqual(com(ev("social:2", "social_contact", "Trocou mensagens com a Bia; assunto: conflitos leves",
+                                '["marina","bia_andrade"]')[0]),
+                         ("Se estranhou com a Bia", (("mensagem", "Por mensagem"),)))
+        self.assertEqual(com(ev("outing:1:convite", "social_invite",
+                                "A Bia te chamou: Saindo com a Bia no Quartinho Bar (hoje às 21:00)",
+                                '["marina","bia_andrade"]')[0]),
+                         ("A Bia chamou ela pra sair", (("lugar", "No Quartinho Bar"),)))
+        self.assertEqual(com(ev("meal:1:almoco", "meal", "Almoço em casa: um poke pedido no iFood; comeu além da conta")[0]),
+                         ("Almoçou um poke e comeu demais", (("app", "Pelo iFood"),)))
         self.assertEqual(ev("social:3", "social_contact", "O pai mandou mensagem", '["marina","henrique_salles"]')[0][0],
                          "O pai perguntou dela", "nada de 'bom dia' às 21h")
-        self.assertEqual(ev("presente:2026-09-27T22:01", "gift", "O Patrick mandou de surpresa um lanche")[0],
-                         ("o Patrick mandou comida · surpresa", "o Patrick"))
+        self.assertEqual(ev("presente:2026-09-27T22:01", "gift",
+                            "O Patrick mandou de surpresa Cappuccino do Rei do Mate pelo app")[0],
+                         ("O Patrick mandou comida de surpresa", "o Patrick"))
+        for causa in [c for x in ("Viu episódios 1 a 2 de Paradise Kiss", "Almoço no shopping: hambúrguer")
+                      for c, _ in ev("tv:1" if x.startswith("Viu") else "meal:2:almoco",
+                                     "routine" if x.startswith("Viu") else "meal", x)]:
+            self.assertNotIn("·", causa)
+            self.assertNotIn("(", causa)
 
 
 class PorDentroTest(unittest.TestCase):
@@ -177,7 +194,8 @@ class PorDentroTest(unittest.TestCase):
         self.assertEqual(d["titulo"], "Ontem por dentro", "madrugada ainda é a noite anterior; hoje está vazio")
         self.assertEqual([x["hora"] for x in d["itens"]], ["00:06", "23:02", "18:00"])
         self.assertEqual(d["itens"][1]["texto"], "Ciúme do Patrick")
-        self.assertEqual((d["itens"][2]["motivo"], d["itens"][2]["detalhe"]), ("Mensagens com a Bia", "festas"))
+        self.assertEqual((d["itens"][2]["motivo"], d["itens"][2]["detalhes"]),       # 06/10 (passo 5)
+                         ("Trocou mensagens com a Bia", [{"icone": "message-circle", "texto": "Sobre festas"}]))
         eng.feel("alegria", "empolgacao", 0.4, "saiu episódio novo", datetime(2026, 9, 28, 9, 0))
         d = pd.diario_view(self.db, datetime(2026, 9, 28, 10, 0))
         self.assertEqual((d["titulo"], len(d["itens"])), ("Hoje por dentro", 1))

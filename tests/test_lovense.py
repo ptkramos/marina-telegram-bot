@@ -41,7 +41,7 @@ class LovenseBase(unittest.TestCase):
 
 class EstadoTests(LovenseBase):
     def test_migration_cria_brinquedos_e_confianca(self):
-        self.assertEqual(self.db.get_schema_version(), 37)
+        self.assertEqual(self.db.get_schema_version(), 38)
         est = self.lv.estado(T0)
         self.assertFalse(est["conectada"])
         self.assertEqual(est["estado"], "desconectada")

@@ -1471,6 +1471,24 @@ caminho refeito só na cópia). Servidor em `bastidores_sentimentos.py` (`sentim
 20 testes em `tests/test_bastidores_sentimentos.py`. Os motivos ainda são os de antes (o padrão novo é o passo 5).
 Próximo: **passo 5, os motivos na origem** ("bora na frente de apps: redesenho dos Bastidores, passo 5").
 
+**Passo 5 feito (06/10) ✅ — os motivos na origem:** decidido pelo Patrick no chat. O motivo de cada sentimento é
+**uma frase inteira** (quem fez + verbo no passado + o quê; coisa dela sem sujeito; o que vem com "Tem"), sem "·"
+nem parênteses e sem corte; o **detalhe vai à parte, com ícone pelo tipo e a preposição** (ele: "a linha tem espaço
+pros dois"): `cash` "De R$ 200", `note` recado do Pix, `message-circle` "Sobre fofocas", `map-pin` "No Quartinho
+Bar", `book` "De Desenho Técnico", `clock` "Com 22 minutos de atraso", `device-tv` "Episódios 5 e 6", `camera` "De
+campanha de uma marca de óculos", `tools-kitchen-2` "Do Megamatte", `moped` "Pelo iFood", `users` "Com a Bia",
+`route` "Voltando da PUC", `microphone`/`message` "Por áudio"/"Por mensagem". No **Sentindo agora** o detalhe fica na
+3ª linha, com a tendência na direita (opção C dele); no **Já passou hoje**, embaixo da frase, sem parênteses.
+Catálogo de 57 linhas aprovado com dois ajustes dele: o dinheiro do pai vem **igual ao Pix de presente do Patrick**
+("O pai fez um Pix sem ela pedir" + "Pro mercado e a comida da semana") e o **brinquedo pelo nome** ("Gozou com o
+Lush"; também "O Patrick exagerou no Lush", "Colocou o Lush esperando o Patrick ligar"). Exemplos: "O Patrick mandou
+comida de surpresa" / "Do Megamatte"; "Trocou mensagens com a Bia" / "Sobre fofocas"; "Encontrou a Júlia" / "Na
+PUC-Rio", "Sobre fotografia"; "Faltou às aulas de hoje" / "De Acessórios de Moda e mais 2"; "Tomou um banho
+quentinho"; "O Patrick contou que vai ficar sozinho no plantão". Ela lê a frase com o detalhe emendado ("O Patrick fez
+um Pix de presente, de R$ 200"); comparado o prompt antes e depois na mesma cena: só o texto muda. Código na Auditoria
+("passo 5"). 13 testes em `tests/test_bastidores_motivos.py`. Próximo: **passo 6, Pensando + Planos do Mundo na
+origem** ("bora na frente de apps: redesenho dos Bastidores, passo 6").
+
 **Textos que eu decidi (pra ele revisar):** "Dormiu por volta de 7 horas e 45 minutos" / "Dormindo há 5 horas e 10
 minutos" (o cochilo só na faixa); "Menstruação em 4 dias"; "Último orgasmo: dia 3, sozinha"; "Excitada desde 21:40";
 etiquetas da vontade ("2 dias sem gozar", "Saudade do Patrick", "Fase fértil", "Cansaço", "Cólica", "Mágoa");

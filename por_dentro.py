@@ -109,7 +109,8 @@ def diario_view(db, now: datetime) -> dict:
         itens, titulo = do_dia(hoje - timedelta(days=1)), "Ontem por dentro"
     return {"titulo": titulo,
             "itens": [{"hora": f"{x['at']:%H:%M}", "texto": _sentimento(x["word"], x["target"]),
-                       **motivo_tela(x["cause"], x["target"] or "")} for x in itens]}
+                       **motivo_tela(x["cause"], x["target"] or "", detalhes=x.get("detalhes") or ())}
+                      for x in itens]}
 
 
 # ------------------------------------------------------------------ Na cabeça --

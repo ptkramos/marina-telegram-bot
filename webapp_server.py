@@ -398,43 +398,53 @@ def _voz_tela(txt: str) -> str:
 
 
 FATO_MAX, DETALHE_MAX = 42, 22
-# motivos gravados antes do padrão (28/09): as frases fixas antigas e os resumos do mundo passam pelo molde novo
-LEGADO = {"banho quentinho, se sentiu gente de novo": "Banho quentinho",
+# motivos gravados antes do padrão: as frases fixas antigas (antes de 28/09 e as de 28/09, "fato · detalhe") e os
+# resumos do mundo passam pelo molde novo (06/10, passo 5: frase inteira); somem sozinhos em 3 dias
+LEGADO = {"banho quentinho, se sentiu gente de novo": "Tomou um banho quentinho",
+          "Banho quentinho": "Tomou um banho quentinho",
           "o pai deu bom dia e perguntou dela": "O pai perguntou dela",
-          "a surpresa do delivery": "Delivery surpresa",
-          "o Patrick mandou comida de surpresa pra ela": "o Patrick mandou comida · surpresa",
-          "o Patrick fez um pix pra ela": "o Patrick fez um Pix", "falou com o pai": "Falou com o pai",
-          "o apê ficou arrumado e cheiroso": "Apê arrumado e cheiroso"}
+          "a surpresa do delivery": "Chegou a comida surpresa", "Delivery surpresa": "Chegou a comida surpresa",
+          "o Patrick mandou comida de surpresa pra ela": "O Patrick mandou comida de surpresa",
+          "o Patrick mandou comida · surpresa": "O Patrick mandou comida de surpresa",
+          "o Patrick fez um pix pra ela": "O Patrick fez um Pix", "falou com o pai": "Falou com o pai",
+          "o apê ficou arrumado e cheiroso": "O apê ficou arrumado e cheiroso",
+          "Apê arrumado e cheiroso": "O apê ficou arrumado e cheiroso"}
 
 
 def _legado(txt: str) -> str:
     if txt in LEGADO:
         return LEGADO[txt]
     try:
-        from emotion import _motivo_convite, _motivo_refeicao, _motivo_tv
-        if re.match(r"(Viu (o )?epis|Saiu episódio novo)", txt):
+        from emotion import _motivo_contato, _motivo_convite, _motivo_refeicao, _motivo_tv
+        if re.match(r"(Viu (o )?epis|Saiu episódio novo .* hoje)", txt):
             return _motivo_tv(txt)
         if " te chamou: " in txt:
             return _motivo_convite(txt)
         if re.match(r"(Almoço|Jantar|Café|Lanche)\b[^:]*: ", txt):
             return _motivo_refeicao(txt)
-        if txt.startswith("Trocou mensagens com ") and "; assunto: " in txt:
-            base, _, assunto = txt.partition("; assunto: ")
-            quem = base.split(" com ", 1)[-1]
-            if assunto.startswith("conflitos"):
-                return f"Se estranhou com {quem} · por mensagem"
-            return f"Mensagens com {quem} · {assunto.split(',')[0]}"
+        if txt.startswith(("Trocou mensagens com ", "Trocou áudios com ")) and "; assunto: " in txt:
+            quem = txt.partition("; assunto: ")[0].split(" com ", 1)[-1]
+            return _motivo_contato(txt, quem, txt.partition("; assunto: ")[2].startswith("conflitos"))
     except Exception:
         logger.debug("motivo.legado", exc_info=True)
     return txt
 
 
-def motivo_tela(cause: str, target: str = "", fato_max: int = FATO_MAX, detalhe_max: int = DETALHE_MAX) -> dict:
-    """28/09 (Patrick): o motivo segue um padrão só — o fato curto em voz de painel e o detalhe ao lado, em
-    cinza ({"motivo": "Viu Paradise Kiss", "detalhe": "eps 1 e 2"}). O mundo e o planner já gravam "fato ·
-    detalhe" em 3ª pessoa ("o Patrick mandou comida · surpresa" → "O Patrick mandou comida"); os motivos antigos
-    ("Trocou mensagens com a Bia; assunto: festas", "Ele provocou, insinuando que…") passam pelo mesmo molde."""
-    txt = _legado((cause or "").strip().rstrip("."))
+def motivo_tela(cause: str, target: str = "", fato_max: int = FATO_MAX, detalhe_max: int = DETALHE_MAX,
+                detalhes=()) -> dict:
+    """06/10 (Patrick, redesenho dos Bastidores, passo 5): o motivo é uma frase inteira e os detalhes vêm à parte,
+    cada um com o ícone do tipo ({"motivo": "Viu Paradise Kiss", "detalhes": [{"icone": "device-tv", "texto":
+    "Episódios 5 e 6"}]}). Antes (28/09) o mundo gravava "fato · detalhe" numa string só; esses e os motivos mais
+    antigos ("Trocou mensagens com a Bia; assunto: festas", "Ele provocou, insinuando que…") passam pelo molde de
+    antes e o detalhe vem sem ícone."""
+    from emotion import DETALHE_ICONE
+    txt = (cause or "").strip().rstrip(".")
+    if not detalhes:
+        txt = _legado(txt)                       # os resumos antigos do mundo saem pelos moldes novos do emotion
+        detalhes = getattr(txt, "detalhes", ())
+    if detalhes:
+        return {"motivo": _corta(_voz_tela(str(txt)), fato_max), "detalhe": "",
+                "detalhes": [{"icone": DETALHE_ICONE.get(t, ""), "texto": x} for t, x in detalhes]}
     base, _, assunto = txt.partition("; assunto: ")
     if assunto:
         txt = f"{base} · {assunto}"
@@ -442,11 +452,13 @@ def motivo_tela(cause: str, target: str = "", fato_max: int = FATO_MAX, detalhe_
     if target == "o Patrick":
         txt = re.sub(r"^[Ee]le\b", "o Patrick", txt)            # planner antigo: "Ele provocou…"
     txt = re.sub(r"\bminha\b", "dela", txt)
-    if " · " not in txt and len(txt) > FATO_MAX and ", " in txt:
-        txt = txt.replace(", ", " · ", 1)                     # "Ele recuou, dizendo que…" → fato · detalhe
+    # só o jeito antigo (minúscula ou "Ele…") vira "fato · detalhe" na vírgula; a frase nova fica inteira
+    if " · " not in txt and len(txt) > FATO_MAX and ", " in txt and txt[:1].islower():
+        txt = txt.replace(", ", " · ", 1)                     # "o Patrick recuou, dizendo que…" → fato · detalhe
     fato, _, detalhe = txt.partition(" · ")
-    fato, detalhe = _voz_tela(fato.strip()), detalhe.strip()
-    return {"motivo": _corta(fato, fato_max), "detalhe": _corta(detalhe, detalhe_max)}
+    fato, detalhe = _voz_tela(fato.strip()), _corta(detalhe.strip(), detalhe_max)
+    return {"motivo": _corta(fato, fato_max), "detalhe": detalhe,
+            "detalhes": [{"icone": "", "texto": cap(detalhe)}] if detalhe else []}
 
 
 def _corta(txt: str, n: int) -> str:
@@ -508,7 +520,8 @@ def emocao_view(e: dict, dormindo: bool, now: Optional[datetime] = None, ciclo: 
         linhas.append(["bandage", "Mal-estar", _desconforto(e["discomfort_why"], fase if ciclo else "")])
     from por_dentro import quando
     sentindo = [{"texto": sentimento_tela(f["word"], f["target"]),
-                 **motivo_tela(f.get("cause_raw") or f["cause"], f["target"] or ""), "valor": f["value"],
+                 **motivo_tela(f.get("cause_raw") or f["cause"], f["target"] or "",
+                               detalhes=f.get("detalhes") or ()), "valor": f["value"],
                  "vezes": f["count"], "ate_resolver": f["until_resolved"],
                  "quando": quando(f["at"], now) if f.get("at") and now else ""}
                 for f in e["feelings"]]

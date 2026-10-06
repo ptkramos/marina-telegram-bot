@@ -202,7 +202,7 @@ def sentindo(db, now: datetime) -> list[dict]:
         blocos.setdefault(target or "", []).append({
             "nome": cap(SENTIMENTO_TELA.get(ultimo.word, ultimo.word)),
             "bolinhas": n + 1, "forca": FORCA[n][1],
-            **motivo_tela(ultimo.cause, target or "", MOTIVO_MAX, DETALHE_MAX),
+            **motivo_tela(ultimo.cause, target or "", MOTIVO_MAX, DETALHE_MAX, ultimo.detalhes),
             "desde": _desde(min(e.started_at for e in eps), now),
             "tendencia": "ate_resolver" if ate_resolver else _tendencia(valor, antes.get(chave, 0.0)),
             "bom": FAMILIES[ultimo.family]["valence"] > 0})
@@ -223,7 +223,7 @@ def ja_passou(db, now: datetime, dia_ini: datetime) -> list[dict]:
             continue
         vistos.add((chave, x["cause"]))
         out.append({"hora": f"{x['at']:%H:%M}", "texto": sentimento_tela(x["word"], x["target"]),
-                    **motivo_tela(x["cause"], x["target"] or "", MOTIVO_MAX, DETALHE_MAX)})
+                    **motivo_tela(x["cause"], x["target"] or "", MOTIVO_MAX, DETALHE_MAX, x["detalhes"])})
     return out
 
 

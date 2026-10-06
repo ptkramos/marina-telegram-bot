@@ -169,7 +169,7 @@ class FusaoTest(Base):
         for _ in range(4):
             e.feel(*comida, at(27, 22, 1), target="o Patrick", source_key="ev:presente:2026-09-27T22:01:carinho")
         manha = self._eps()[-1]
-        self.assertEqual(manha["cause"], "o Patrick pediu pra ela comer")
+        self.assertEqual(manha["cause"], "O Patrick pediu pra ela comer")   # 06/10 (passo 5): frase com maiúscula
         self.assertEqual(manha["started_at"][:16], "2026-09-28T08:27")
         self.assertAlmostEqual(manha["intensity"], 0.4)
         self.assertAlmostEqual(self._eps()[0]["intensity"], 0.66)      # 0.6 + 10%, uma vez só
