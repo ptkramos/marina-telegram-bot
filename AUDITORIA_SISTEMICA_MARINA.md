@@ -3171,6 +3171,8 @@ múltipla escolha, tudo "pelo que ela sente") no PLANO_WEBAPP, "passo 5b feito".
 
 ## Lovense: a estreia que não aconteceu + o Hush no receio + a suíte de testes (06/10, madrugada, frente de apps)
 
+**No ar: ter 06/10, 00:22** (`08d6eba`). Suíte inteira: 1780 OK em 608 s (era 2033 s).
+
 **Bug (FRENTES, seção 5, item 29):** ela combinou "abacaxi", prometeu três vezes e dormiu às 22:56. Causa: o 5a só
 reconhecia a conversa do brinquedo pelo nome. Conserto em `lovense.py`: `FORTE_RE` (palavra de segurança começa o
 assunto), `BRINCADEIRA_RE` e a palavra combinada (`PALAVRA_ULTIMA_KEY`) mantêm o assunto vivo (`ASSUNTO_VALE` 2 h,

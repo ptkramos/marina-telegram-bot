@@ -838,6 +838,7 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       boa noite automático espera; exausta (energia < 0,2) ou passando do limite da noite, ela desiste e **diz**
       (iniciativa `lovense_desistiu`, que vale como boa noite). Com o brinquedo dentro, tira pra dormir como sempre.
     - A noite de ontem ficou como aconteceu (decisão dele): ela lembra que capotou e te deixou na expectativa.
+    - **No ar: ter 06/10, 00:22** (`08d6eba`); "abacaxi" gravada como a última palavra combinada (OK dele).
 
 **Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo); M4 e M5 do dia 5 e os anotados do
 dia 6 (frente da voz).
