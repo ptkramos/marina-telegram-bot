@@ -4664,6 +4664,10 @@ _PROACTIVE_INSTRUCTIONS = {
                          "novo."),
     'lovense_bolsa': ("{detail} Conte pra ele numa mensagem curtinha, provocando: ele fica sabendo que pode rolar. "
                       "Não está dentro de você, está na bolsa. Não invente acontecimento novo."),
+    # 06/10 (bug da estreia): combinaram de brincar e ela está caindo de sono — desiste, mas diz de verdade.
+    'lovense_desistiu': ("{detail} Diga pra ele agora, do seu jeito e curto, que não vai dar hoje e que vai dormir: "
+                         "sincera, com carinho (pode pedir desculpa e prometer amanhã). É também o seu boa noite. "
+                         "Não invente acontecimento novo."),
     # 25/09: ela mandou algo de surpresa pro Patrick (pedido_dela.py); a mensagem leva o link de acompanhar.
     'surpresa_pra_ele': ("{detail} Conte pra ele numa mensagem curtinha, do seu jeito (carinho, um pouco de marra, "
                          "mistério: 'fiz uma coisinha pra você', 'acompanha aí', 'abre a porta daqui a pouco'). "
@@ -5484,6 +5488,11 @@ async def lovense_routine(application: Application) -> None:
             feito = await asyncio.to_thread(lv.pendentes, now, await asyncio.to_thread(_lovense_atividade, now))
             if feito:
                 logger.info("lovense.pendente %s", ",".join(feito))
+            if "colocou" in feito:
+                # 06/10 (bug da estreia): "vou ligar agora e te aviso" — colocou, e agora avisa de verdade.
+                aviso = await asyncio.to_thread(lv.aviso_colocou, now)
+                if aviso:
+                    _turno_do_app(application, aviso)
         if not await asyncio.to_thread(lv.sessao_ativa):
             return
         now = datetime.now()
@@ -5719,6 +5728,18 @@ async def _lovense_rotina(application: Application, lv, now: datetime) -> None:
     voltando com o tempo. Jogou o Lush na bolsa com vontade de contar: conta — com ele conversando, fica pro
     prompt ("ele ainda não sabe")."""
     atividade = await asyncio.to_thread(_lovense_atividade, now)
+    # 06/10 (bug da estreia): com a brincadeira combinada ou rolando, o sono espera; exausta, ela desiste e diz.
+    sono = await asyncio.to_thread(lv.sono, now)
+    if sono.get("desistiu"):
+        text = await asyncio.to_thread(_proactive_text, 'lovense_desistiu', sono["desistiu"],
+                                       "amor tô morta… amanhã a gente testa, prometo")
+        sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
+        if isinstance(getattr(sent, 'message_id', None), int) and sent.message_id > 0:
+            memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
+            noite = (now.date() - timedelta(days=1)) if now.hour < 12 else now.date()
+            from rituals import Rituals, PREFIX           # o boa noite foi junto: não sai outro
+            Rituals(memory_manager.db)._set(f"{PREFIX}{noite.isoformat()}:boa_noite", "skipped:lovense_desistiu", now)
+            logger.info("lovense.sono.desistiu")
     out = await asyncio.to_thread(lv.rotina, now, atividade)
     if not out.get("contar"):
         return

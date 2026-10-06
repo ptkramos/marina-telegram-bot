@@ -9,7 +9,8 @@ import json
 from datetime import timedelta
 from unittest.mock import patch
 
-from lovense import (AMIGAS_KEY, BOLSA_KEY, DESCOBERTA_KEY, PROPOSTA_KEY, SOZINHA_KEY, VONTADE_KEY)
+from lovense import (AMIGAS_KEY, BOLSA_KEY, DESCOBERTA_KEY, PALAVRA_KEY, PALAVRA_ULTIMA_KEY, PROPOSTA_KEY,
+                     SOZINHA_KEY, VONTADE_KEY)
 from tests.test_lovense import LovenseBase, T0, s
 from tests.test_lovense_corpo import FalsoLLM, com
 
@@ -218,6 +219,81 @@ class HushOpiniaoTests(Base):
             self.assertEqual(self.estagio(), "nao_e_pra_mim")
             self.lv._curiosidade_com_o_tempo(T0 + timedelta(days=22))
         self.assertEqual(self.estagio(), "descobrindo")
+
+
+class EstreiaTests(Base):
+    """06/10: a estreia de 05/10 à noite — ela combinou "abacaxi", disse 3x que ia usar e te avisar, e dormiu. A
+    conversa nunca disse "lush"/"brinquedo": o leitor não rodava, o bloco saiu do prompt, o boa noite automático
+    saiu no meio e o sono não esperou."""
+
+    def test_a_conversa_sem_o_nome_do_brinquedo(self):
+        llm = FalsoLLM({})
+        self.lv.observe_conversa("Mas antes de começar a brincadeira, a gente combina uma palavra de segurança, tá?",
+                                 "Mds eu já tô maluco pra gente brincar junto", s(0), atividade="HOME_RELAXING",
+                                 llm=llm)
+        self.assertEqual(len(llm.prompts), 1, "palavra de segurança começa o assunto")
+        llm.resposta = {"palavra": "abacaxi", "ideia": "dela"}
+        t = T0 + timedelta(minutes=110)
+        self.assertIn("palavra", self.lv.observe_conversa("Fechado, abacaxi é a nossa palavra 😏", "Abacaxi então 😏",
+                                                          t, atividade="HOME_RELAXING", llm=llm))
+        with patch("lovense._feeling", return_value=com(libido=0.5)):
+            bloco = self.lv.prompt(t + timedelta(minutes=25), "HOME_RELAXING", "Quando quiser viu?")
+        self.assertIn("Vocês já combinaram a palavra de segurança desta vez: \"abacaxi\"", bloco)
+        self.assertEqual(self.lv.plano_em_andamento(t + timedelta(minutes=30)), "palavra")
+        # "Vou ligar agora e te aviso" → colocar daqui a pouco → colocou → ela avisa de verdade.
+        llm.resposta = {"colocou": ["lush"], "quando": "daqui_a_pouco", "ideia": "dela"}
+        t2 = t + timedelta(minutes=45)
+        self.assertIn("vai_colocar", self.lv.observe_conversa(
+            "Vou ligar agora e te aviso quando estiver funcionando, fechado?", "Vc tá cansada?", t2,
+            atividade="HOME_RELAXING", llm=llm))
+        self.assertEqual(self.lv.pendentes(t2 + timedelta(minutes=3), "HOME_RELAXING"), ["colocou"])
+        aviso = self.lv.aviso_colocou(t2 + timedelta(minutes=3))
+        self.assertIn("acabou de colocar o Lush", aviso)
+        self.assertIn("abacaxi", aviso)
+        self.assertEqual(self.lv.plano_em_andamento(t2 + timedelta(minutes=4)), "sessao")
+
+    def test_conversa_comum_depois_nao_chama_o_modelo(self):
+        llm = FalsoLLM({})
+        self.lv.observe_conversa("bora comer?", "tô com fome", s(0), llm=llm)
+        self.assertEqual(llm.prompts, [])
+
+    def sono(self, energia, teto_em=timedelta(hours=3)):
+        acomp = []
+        with patch("sleep_plan.enabled", return_value=True), \
+                patch("sleep_plan.SleepPlan._bed_ceiling", return_value=s(0) + teto_em), \
+                patch("sleep_plan.SleepPlan.acompanha", side_effect=lambda i, f: acomp.append((i, f))), \
+                patch("lovense._feeling", return_value=com(libido=0.6, energia=energia)):
+            return self.lv.sono(s(60)), acomp
+
+    def test_o_sono_espera_a_brincadeira_combinada(self):
+        self.assertEqual(self.sono(0.5)[0], {"segura": False, "desistiu": None}, "sem plano, nada muda")
+        self.db.set_estado_relacional(PALAVRA_KEY, json.dumps({"palavra": "abacaxi", "em": T0.isoformat()}))
+        r, acomp = self.sono(0.5)
+        self.assertTrue(r["segura"])
+        self.assertEqual(acomp, [(s(60), s(60) + timedelta(minutes=15))])
+
+    def test_exausta_desiste_e_diz_uma_vez(self):
+        self.db.set_estado_relacional(PALAVRA_KEY, json.dumps({"palavra": "abacaxi", "em": T0.isoformat()}))
+        r, acomp = self.sono(0.1)
+        self.assertFalse(r["segura"])
+        self.assertIn("exausta", r["desistiu"])
+        self.assertEqual(acomp, [])
+        self.assertIsNone(self.lv.plano_em_andamento(s(61)))
+        self.assertIsNone(self.sono(0.1)[0]["desistiu"], "diz uma vez só")
+
+    def test_com_o_brinquedo_dentro_exausta_nao_desiste_por_mensagem(self):
+        self.lv.colocar(T0, ["lush"])
+        r, _ = self.sono(0.1)
+        self.assertEqual(r, {"segura": False, "desistiu": None}, "ela tira pra dormir pelo caminho de sempre")
+
+    def test_hush_no_receio_so_com_tesao_alto(self):
+        from tests.test_lovense_corpo import ep
+        feliz = [ep("alegria", "diversao", 0.95, "o Patrick brincou"), ep("alegria", "empolgacao", 0.5, "ele")]
+        d = self.lv.disposicao(s(0), ["hush"], "HOME_RELAXING", feeling=com(libido=0.63, episodes=feliz))
+        self.assertFalse(d["topa"])
+        self.assertIn("muito tesão", d["motivo"])
+        self.assertTrue(self.lv.disposicao(s(0), ["hush"], "HOME_RELAXING",
+                                           feeling=com(libido=0.8, episodes=feliz))["topa"])
 
 
 class AmigaTests(Base):

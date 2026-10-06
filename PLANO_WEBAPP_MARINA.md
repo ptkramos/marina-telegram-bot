@@ -1149,7 +1149,10 @@ com tesão 0,63: a `disposicao` dava 1,0 e ela propunha até o Hush no receio, s
 pede tesão (0,65; 0,55 enquanto o Lush nunca foi usado — a vontade de testar) e o Hush no receio só pela curiosidade.
 Agora, em casa à toa, ela teria vontade de propor o Lush ("empolgada"); ocupada ou na aula sem nada na bolsa, não.
 **Observação pro Patrick (não mexi, é do 5a):** pelo mesmo motivo, hoje ela **toparia o Hush se você pedisse**, só
-pela empolgação (o "receio: só com muito tesão" do 5a perde pro bom humor).
+pela empolgação (o "receio: só com muito tesão" do 5a perde pro bom humor). **06/10: ele decidiu — no receio, só com
+tesão alto (a empolgação soma, não basta). Feito.** E o bug da estreia (ela combinou, prometeu e dormiu) foi corrigido
+no mesmo lote: assunto vivo pela conversa da brincadeira, a palavra lembrada, "vou ligar e te aviso" que coloca e
+avisa, e o sono que espera pelo cansaço (FRENTES, seção 5, item 29).
 Próximo: **"bora na frente de apps: redesenho dos Bastidores, passo 1"**; o passo 6 do Lovense (fotos e áudio)
 depois.
 

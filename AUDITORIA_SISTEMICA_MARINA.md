@@ -3169,6 +3169,30 @@ múltipla escolha, tudo "pelo que ela sente") no PLANO_WEBAPP, "passo 5b feito".
   percebeu"; Por dentro (motivos): "a Bia percebeu quando ela gozou no meio das amigas", "o Patrick insistiu no Hush
   depois que ela disse que não é pra ela" — entram no catálogo no passo 7.
 
+## Lovense: a estreia que não aconteceu + o Hush no receio + a suíte de testes (06/10, madrugada, frente de apps)
+
+**Bug (FRENTES, seção 5, item 29):** ela combinou "abacaxi", prometeu três vezes e dormiu às 22:56. Causa: o 5a só
+reconhecia a conversa do brinquedo pelo nome. Conserto em `lovense.py`: `FORTE_RE` (palavra de segurança começa o
+assunto), `BRINCADEIRA_RE` e a palavra combinada (`PALAVRA_ULTIMA_KEY`) mantêm o assunto vivo (`ASSUNTO_VALE` 2 h,
+`marcar_assunto` / `assunto_vivo`, marcado também nas iniciativas da entrega, da proposta e da bolsa); o bloco do
+prompt sem sessão entra com o assunto vivo e diz a palavra desta vez (ou a última, pra confirmar) e o "está colocando";
+o classificador conta "vou ligar/conectar" dela como colocar (`COLOCOU_RE` + texto); `aviso_colocou` (o turno "avise
+ele agora", disparado no `lovense_routine` quando o pendente coloca); `plano_em_andamento` (sessão, pendente, palavra
+há até 2 h) e `sono` (empurra o deitar com `SleepPlan.acompanha` 15 min por vez; exausta < 0,2 ou depois do teto da
+noite, desiste uma vez e limpa o plano). `rituals._boa_noite` espera o plano; `bot.py`: `_lovense_rotina` chama o
+`sono` e manda `lovense_desistiu` (e marca o boa noite da noite como dado). Testes `EstreiaTests` (6).
+**Hush no receio (Patrick, 06/10):** `disposicao` só topa o Hush no receio com tesão ≥ 0,75 (a empolgação soma, não
+basta) — motivo "com medo do Hush (só toparia com muito tesão)".
+**Suíte de testes:** cada banco novo rodava as 36 migrations (~0,8 s no Windows) e quase todo teste cria um. Sob
+teste, `db._copiar_modelo` faz as migrations uma vez num banco-modelo e copia o arquivo; o seed continua por banco.
+Conferido: banco copiado × feito do zero, 224 linhas do dump, 0 diferenças (sem os horários). Os 111 testes do
+Lovense: 177 s → 49 s. `MARINA_TESTE_SEM_MODELO=1` volta ao jeito antigo.
+**Textos que eu decidi (internos):** o turno "[Brinquedo: você acabou de colocar… Avise ele agora.]", as linhas do
+prompt ("Vocês já combinaram a palavra de segurança desta vez…", "A última palavra… confirme com ele…", "Você disse
+que ia colocar agora: está colocando"), o detalhe e a instrução `lovense_desistiu` (reserva "amor tô morta… amanhã a
+gente testa, prometo"); visível no Por dentro: "com medo do Hush (só toparia com muito tesão)" não aparece (é motivo
+do prompt).
+
 ## Lovense, fotos do Hush e do Lush (05/10, noite, frente de imagens)
 
 Teste de texto pras fotos com os brinquedos (o passo 6 do Lovense vai ler o estado e usar). 16 gerações + 1 edição,

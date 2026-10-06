@@ -159,6 +159,39 @@ def _install_test_cleanup_hooks() -> None:
 _REUSE_IN_TESTS = _running_under_tests()
 if _REUSE_IN_TESTS:
     _install_test_cleanup_hooks()
+
+# 06/10 (Patrick: "a demora absurda na suíte"): cada banco novo de teste rodava as 36 migrations (~0,8 s no Windows,
+# um fsync por passo) e quase todo teste cria um. Sob teste, as migrations rodam uma vez num banco-modelo e cada banco
+# novo começa como cópia dele; o seed (com a hora de agora) continua rodando em cada um, então o resultado é o mesmo.
+_MODELO: dict = {}
+
+
+def _copiar_modelo(destino: Path) -> bool:
+    if not _running_under_tests() or os.environ.get("MARINA_TESTE_SEM_MODELO") or _MODELO.get("construindo"):
+        return False
+    import shutil
+    import tempfile
+    modelo = _MODELO.get("path")
+    if modelo is None:
+        _MODELO["construindo"] = True
+        try:
+            pasta = Path(tempfile.mkdtemp(prefix="marina_modelo_"))
+            m = DatabaseManager(pasta / "modelo.db")
+            m.close()
+            with closing(sqlite3.connect(pasta / "modelo.db")) as raw:
+                raw.execute("PRAGMA wal_checkpoint(TRUNCATE);")
+            modelo = _MODELO["path"] = pasta / "modelo.db"
+        except Exception:
+            logger.exception("db.modelo_de_teste")
+            return False
+        finally:
+            _MODELO["construindo"] = False
+    try:
+        shutil.copyfile(modelo, destino)
+        return True
+    except Exception:
+        logger.exception("db.modelo_de_teste.copia")
+        return False
 MIGRATIONS_DIR = BASE_DIR / "migrations"
 
 # 28/09 (frente de infra): contador de gravações por arquivo de banco. A rodada (DatabaseManager.rodada) guarda o
@@ -359,7 +392,9 @@ class DatabaseManager:
 
     def _init_db(self):
         is_new = not self.db_path.exists()
-        
+        if is_new:
+            _copiar_modelo(Path(self.db_path))
+
         # Configura WAL mode persistente
         with closing(sqlite3.connect(self.db_path, timeout=5.0)) as raw_conn:
             raw_conn.execute("PRAGMA journal_mode=WAL;")
@@ -367,7 +402,7 @@ class DatabaseManager:
         # Executa migrações estruturadas
         self._run_migrations()
 
-        if is_new:
+        if is_new and not _MODELO.get("construindo"):
             logger.info("Banco SQLite criado com sucesso! Inicializando dados padrão...")
             self._seed_default_profile()
 

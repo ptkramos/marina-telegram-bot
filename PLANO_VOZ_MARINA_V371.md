@@ -1689,6 +1689,12 @@ bem: não insista") ou com o Lush calado na bolsa. O convite do sexting, com sau
 "coloquei, assume pelo app". Ela não insiste: propôs, espera 4 h (12 h se ele deixou passar). Detalhe no
 PLANO_WEBAPP, "passo 5b feito". No ar desde 23:43.
 
+**06/10, madrugada — a estreia que não aconteceu (bug):** ela combinou "abacaxi", disse 3x que ia usar e te avisar,
+e o boa noite automático saiu no meio; dormiu sem usar. Agora o bloco do Lovense fica no prompt enquanto vocês falam
+da brincadeira (mesmo sem dizer "lush"), lembra a palavra já combinada, "vou ligar agora e te aviso" coloca e ela
+avisa de verdade, e o sono e o boa noite esperam o combinado — exausta, ela desiste e diz (`lovense_desistiu`). E o
+Hush no receio só com tesão alto. Detalhe na Auditoria e no FRENTES (seção 5, item 29).
+
 **05/10, noite — a encomenda do Lovense:** até chegar, o prompt diz que o Patrick encomendou e que ela ainda não está
 com eles (não diz que abriu, colocou ou testou); quando ele avisa "chegou", o Seu Jorge interfona e ela manda uma
 iniciativa nova (`lovense_chegou`) contando que pegou e pôs pra carregar. Detalhe na Auditoria, "a encomenda chega".

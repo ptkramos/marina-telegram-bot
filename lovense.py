@@ -128,7 +128,11 @@ ENTREGA_DEPOIS_DO_AVISO = timedelta(minutes=3)   # ele avisa que chegou → o Se
 ENTREGA_AVISO_RE = re.compile(r"\b(?:chegou|chegaram|entreg(?:aram|ou|ue)|confirmaram|portaria|interfon\w*|"
                               r"desce\s+(?:l[aá]\s+)?(?:pra\s+)?pegar|j[aá]\s+t[aá]\s+a[ií])\b", re.IGNORECASE)
 ASSUNTO_KEY = "lovense_assunto_em"           # última vez que a conversa falou do brinquedo
-ASSUNTO_VALE = timedelta(minutes=30)
+# 06/10 (bug da estreia, 05/10 à noite): "abacaxi é a nossa palavra", "vou terminar de carregar e te aviso", "vou
+# ligar agora e te aviso" — a conversa toda sem dizer "lush"/"brinquedo", o leitor nem rodou e o bloco saiu do
+# prompt. O assunto continua vivo pelas palavras da brincadeira (e pela palavra combinada) e vale 2 h.
+ASSUNTO_VALE = timedelta(hours=2)
+PALAVRA_ULTIMA_KEY = "lovense_palavra_ultima"   # a última palavra combinada (o prompt lembra; ela confirma)
 DAQUI_A_POUCO = timedelta(minutes=2)          # em casa, "vou colocar" → colocou
 # O Hush é descoberta dela (Patrick: "a marina ainda precisa descobrir se gosta ou não de anal… se ela usar e eu
 # respeitar ela pode acabar gostando… vai ser dela a decisão e a opinião"). O gosto (0–1) anda com a experiência
@@ -158,7 +162,17 @@ PARADO_CUTUCA = 2
 BRINQUEDO_RE = re.compile(r"\b(?:lush|hush|lovense|brinquedo\w*|vibrador\w*|plug)\b", re.IGNORECASE)
 ACAO_RE = re.compile(r"\b(?:coloc\w*|coloqu\w*|bot(?:ei|ar|ando)|tir(?:ei|ar|ando|o)|palavra|liber\w*|dentro|"
                      r"pode\s+(?:voltar|ligar|continuar))\b", re.IGNORECASE)
-COLOCOU_RE = re.compile(r"\b(?:coloc\w*|coloqu\w*|bot(?:ei|ando|ar|o)|pus|pondo|dentro|enfiei)\b", re.IGNORECASE)
+COLOCOU_RE = re.compile(r"\b(?:coloc\w*|coloqu\w*|bot(?:ei|ando|ar|o)|pus|pondo|dentro|enfiei|"
+                        r"lig(?:ar|o|uei|ando)|conect\w*)\b", re.IGNORECASE)
+# 06/10: a conversa da brincadeira sem o nome do brinquedo. FORTE começa o assunto sozinha; BRINCADEIRA só continua.
+FORTE_RE = re.compile(r"palavra\s+de\s+seguran[cç]a|safe\s*word|escorreg\w*\s+(?:pra|para)\s+dentro", re.IGNORECASE)
+BRINCADEIRA_RE = re.compile(r"\b(?:brinc\w*|test\w*|control\w*|lig(?:a|ar|o|ou|uei|ando|ad[oa])|conect\w*|vibr\w*|"
+                            r"escorreg\w*|dentro|palavra|seguran[cç]a|app|pronta|estreia|carreg\w*)\b", re.IGNORECASE)
+# Sono (06/10, Patrick: "o sono espera, pelo cansaço"): com a brincadeira combinada ou rolando, a hora de deitar
+# vai sendo empurrada e o boa noite automático espera; exausta (ou passando do limite da noite), ela desiste e diz.
+SONO_EMPURRA = timedelta(minutes=15)
+EXAUSTA = 0.2
+DESISTIU_KEY = "lovense_desistiu_em"
 TIROU_RE = re.compile(r"\b(?:tir(?:ei|ar|ando|o|ou)|tirad[oa])\b", re.IGNORECASE)
 CONVERSA_RE = re.compile(r"\b(?:desculp\w*|perd[aã]o|convers\w*|errei|erro|magoad\w*|chatead\w*|confian\w*|"
                          r"palavra|aquilo|respeit\w*)\b", re.IGNORECASE)
@@ -1427,9 +1441,13 @@ class Lovense:
         if ctx["publico"]:
             fat.append(("ousadia", "nervosa de usar no meio de gente" if desc["fora"]["ousadia"] < 0.5
                         else "já pegou o jeito de usar fora", -0.2 * (1 - desc["fora"]["ousadia"]) + 0.05))
-        recusa = None
+        recusa = medo = None
         if "hush" in brinquedos:
             estagio = self.estagio_hush(desc)
+            # 06/10 (Patrick): no receio, só com tesão alto — o bom humor e a empolgação somam, mas não bastam.
+            tesao_agora = max(float(f.libido), float(f.excitation)) if f is not None else 0.5
+            if estagio == "receio" and tesao_agora < CURIOSA_TESAO:
+                medo = "com medo do Hush (só toparia com muito tesão)"
             if estagio == "nao_e_pra_mim":
                 recusa = "não curtiu o Hush e não quer usar de novo"
             else:
@@ -1441,9 +1459,9 @@ class Lovense:
         # Neutro um pouco abaixo de topar: com o humor de sempre, precisa de um pouco de tesão (ou de saudade dele,
         # de tédio) pra topar.
         vontade = max(0.0, min(1.0, BASE_VONTADE + sum(x[2] for x in fat)))
-        topa = vontade >= TOPA and not recusa and not impossivel
+        topa = vontade >= TOPA and not recusa and not impossivel and not medo
         cands = [x for x in fat if (x[2] > 0) == topa and x[2] != 0]
-        motivo = recusa or impossivel or (max(cands, key=lambda x: abs(x[2]))[1] if cands else "")
+        motivo = recusa or impossivel or medo or (max(cands, key=lambda x: abs(x[2]))[1] if cands else "")
         return {"vontade": round(vontade, 3), "topa": topa, "motivo": motivo, "impossivel": impossivel,
                 "recusa": recusa}
 
@@ -1485,7 +1503,8 @@ class Lovense:
             bolsa = self._json(BOLSA_KEY)
             calada = bool(bolsa.get("levou") and not bolsa.get("contou")
                           and any(bat[b]["onde"] == "bolsa" for b in bolsa["levou"]))
-            if not (BRINQUEDO_RE.search(conversa or "") or vontade["quer"] or calada):
+            if not (BRINQUEDO_RE.search(conversa or "") or FORTE_RE.search(conversa or "") or vontade["quer"]
+                    or calada or self.assunto_vivo(now)):
                 return None
             onde = {"gaveta": "na gaveta", "carregador": "no carregador", "bolsa": "na sua bolsa", "nela": "em você"}
             linhas = ["[BRINQUEDO — LOVENSE, controlado pelo app do Patrick]",
@@ -1504,6 +1523,16 @@ class Lovense:
                           "(sugere uma ou pergunta qual vai ser). Em casa você coloca na hora e conta pra ele quando "
                           "colocou; fora de casa, só se o brinquedo estiver na sua bolsa. Só diga que colocou se "
                           "colocou mesmo.")
+            combinada = self._json(PALAVRA_KEY)
+            ultima = self._json(PALAVRA_ULTIMA_KEY)
+            if combinada.get("palavra") and (_dt(combinada.get("em")) or now - 2 * PALAVRA_VALE) >= now - PALAVRA_VALE:
+                linhas.append(f"- Vocês já combinaram a palavra de segurança desta vez: \"{combinada['palavra']}\". "
+                              "Não precisa combinar de novo.")
+            elif ultima.get("palavra"):
+                linhas.append(f"- A última palavra de segurança que vocês combinaram foi \"{ultima['palavra']}\": "
+                              "desta vez, confirme com ele se continua valendo (ou combinem outra).")
+            if self.tem_pendente() and self._json(PENDENTE_KEY).get("acao") == "colocar":
+                linhas.append("- Você disse que ia colocar agora: está colocando (já já ele vê no app).")
             if calada:
                 linhas.append(f"- Você jogou {' e '.join(_NOME[b] for b in bolsa['levou'])} na bolsa antes de sair, "
                               "pensando que podia rolar; ele ainda não sabe. Conte se der vontade.")
@@ -1689,6 +1718,82 @@ class Lovense:
 
     def marcar_proposta(self, now: datetime, proposta: dict) -> None:
         self._marcar_proposta(now, "iniciativa", proposta.get("brinquedos") or (), proposta.get("ocasiao"))
+        self.marcar_assunto(now, "Marina propôs usar o brinquedo")
+
+    # ---------------------------------------------------------------- o assunto, o aviso e o sono (06/10)
+
+    def marcar_assunto(self, now: datetime, trecho: str) -> None:
+        self.db.set_estado_relacional(ASSUNTO_KEY, json.dumps({"em": now.isoformat(), "trecho": trecho[:340]},
+                                                              ensure_ascii=False))
+
+    def assunto_vivo(self, now: datetime) -> bool:
+        em = _dt(self._json(ASSUNTO_KEY).get("em"))
+        return bool(em and now - em <= ASSUNTO_VALE)
+
+    def aviso_colocou(self, now: datetime) -> Optional[str]:
+        """Ela disse "vou colocar e te aviso" e colocou (pendente): o turno pra ela avisar de verdade."""
+        st = self.estado(now)
+        quais = [b["nome"] for b in st["brinquedos"] if b["em_uso"]]
+        if not st["conectada"] or not quais:
+            return None
+        nomes = " e ".join(_NOME[b] for b in quais)
+        palavra = (f" A palavra de segurança desta vez é \"{st['palavra']}\"." if st["palavra"]
+                   else " Vocês ainda não combinaram a palavra de segurança desta vez: combine antes de ele ligar.")
+        return (f"[Brinquedo: você acabou de colocar {nomes}, como tinha dito pro Patrick; o app dele já mostra você "
+                f"conectada e ele pode ligar quando quiser.{palavra} Avise ele agora.]")
+
+    def plano_em_andamento(self, now: datetime) -> Optional[str]:
+        """A brincadeira combinada ou rolando: sessão aberta, "vou colocar" pendente ou a palavra combinada há
+        pouco (2 h). Segura o sono e o boa noite automático."""
+        if self.sessao_ativa():
+            return "sessao"
+        if self.tem_pendente():
+            return "pendente"
+        p = self._json(PALAVRA_KEY)
+        em = _dt(p.get("em"))
+        if p.get("palavra") and em and now - em <= PALAVRA_VALE:
+            return "palavra"
+        return None
+
+    def sono(self, now: datetime) -> dict:
+        """Pelo cansaço (Patrick, 06/10): com a brincadeira combinada ou rolando, a hora de deitar vai sendo
+        empurrada; exausta ou passando do limite da noite (o despertador de amanhã), ela desiste — e diz. Com o
+        brinquedo dentro, ela só tira na hora de dormir (o caminho de sempre). {segura, desistiu: detail|None}."""
+        plano = self.plano_em_andamento(now)
+        if not plano:
+            return {"segura": False, "desistiu": None}
+        try:
+            from sleep_plan import SleepPlan, enabled
+            if not enabled():
+                return {"segura": False, "desistiu": None}
+            sp = SleepPlan(self.db)
+            noite = now.date() - timedelta(days=1) if now.hour < 12 else now.date()
+            teto = sp._bed_ceiling(noite)
+        except Exception:
+            logger.exception("lovense.sono")
+            return {"segura": False, "desistiu": None}
+        try:
+            energia = float(_feeling(self.db, now).energy)
+        except Exception:
+            energia = 0.5
+        if energia < EXAUSTA or now >= teto:
+            if plano == "sessao":
+                return {"segura": False, "desistiu": None}
+            ja = _dt(self.db.get_estado_relacional(DESISTIU_KEY))
+            self.db.set_estado_relacional(PALAVRA_KEY, "")
+            self.db.set_estado_relacional(PENDENTE_KEY, "")
+            if ja and now - ja < timedelta(hours=6):
+                return {"segura": False, "desistiu": None}
+            self.db.set_estado_relacional(DESISTIU_KEY, now.isoformat())
+            por = "está exausta, caindo de sono" if energia < EXAUSTA else "já passou muito da sua hora e amanhã acorda cedo"
+            return {"segura": False, "desistiu": (
+                f"Vocês tinham combinado de brincar com o Lovense agora, mas você {por}. Você vai deixar pra amanhã "
+                "e dormir.")}
+        try:
+            sp.acompanha(now, now + SONO_EMPURRA)
+        except Exception:
+            logger.exception("lovense.sono.acompanha")
+        return {"segura": True, "desistiu": None}
 
     # ---------------------------------------------------------------- o mundo dela (passo 5b, a cada minuto)
 
@@ -1762,6 +1867,7 @@ class Lovense:
             bolsa["contou"] = now.isoformat()
             self.db.set_estado_relacional(BOLSA_KEY, json.dumps(bolsa))
         self._marcar_proposta(now, "bolsa", bolsa.get("levou") or ("lush",), "fora_bolsa")
+        self.marcar_assunto(now, "Marina contou que levou o brinquedo na bolsa")
 
     # ---------------------------------------------------------------- sozinha (passo 5b)
 
@@ -1914,6 +2020,10 @@ class Lovense:
         quando = _dt(assunto.get("em"))
         antes = assunto.get("trecho", "") if quando and now - quando <= ASSUNTO_VALE else ""
         no_assunto = st["conectada"] or bool(antes)
+        ultima = self._json(PALAVRA_ULTIMA_KEY).get("palavra") or ""
+        fala_a_palavra = bool(ultima) and bool(re.search(rf"\b{re.escape(_norm(ultima))}\b", _norm(junto)))
+        falando = bool(BRINQUEDO_RE.search(junto) or FORTE_RE.search(junto)
+                       or (no_assunto and (ACAO_RE.search(fala) or BRINCADEIRA_RE.search(junto) or fala_a_palavra)))
         if not st["conectada"] and BRINQUEDO_RE.search(fala):
             # Passo 5b: com a vontade no prompt, falar do brinquedo é a proposta dela (a vontade espera de novo);
             # com o Lush na bolsa calado, falar dele é contar.
@@ -1926,10 +2036,8 @@ class Lovense:
             if bolsa.get("levou") and not bolsa.get("contou"):
                 bolsa["contou"] = now.isoformat()
                 self.db.set_estado_relacional(BOLSA_KEY, json.dumps(bolsa))
-        if BRINQUEDO_RE.search(junto) or (no_assunto and ACAO_RE.search(fala)):
-            self.db.set_estado_relacional(ASSUNTO_KEY, json.dumps(
-                {"em": now.isoformat(), "trecho": f"Patrick: {(msg_dele or '')[:160]} / Marina: {fala[:160]}"},
-                ensure_ascii=False))
+        if falando:
+            self.marcar_assunto(now, f"Patrick: {(msg_dele or '')[:160]} / Marina: {fala[:160]}")
         elif not (pend and CONVERSA_RE.search(junto)):
             return feito
         decisao = self._classifica(fala, msg_dele, now, st, bool(pend), atividade, llm=llm, antes=antes)
@@ -1963,7 +2071,9 @@ class Lovense:
             + (", \"hush\": \"carinho\"|\"pressao\"|null" if hush_nao else "") + "}.\n"
             "Regras: vale só o que está na ÚLTIMA fala da Marina; o \"pouco antes\" serve só pra entender do que "
             "estão falando (o que ela já fez antes não conta de novo). colocou = ela disse que colocou, está colocando ou vai colocar agora (\"coloquei\", \"pronto, tá "
-            "dentro\", \"peraí que vou colocar\" → daqui_a_pouco); hipótese, provocação (\"imagina se eu "
+            "dentro\", \"peraí que vou colocar\" → daqui_a_pouco; ela dizer que vai \"ligar\"/\"conectar\" o brinquedo "
+            "agora também é colocar — ela coloca e conecta, quem controla é ele: \"vou ligar agora e te aviso\" → "
+            "daqui_a_pouco); hipótese, provocação (\"imagina se eu "
             "colocasse\"), pergunta ou \"talvez\" não vale. tirou = ela disse que tirou ou vai tirar agora. palavra = "
             "só se a palavra de segurança ficou combinada (ela sugeriu e ele aceitou, ou ele sugeriu e ela aceitou, "
             "ou ela definiu); a palavra em si, sem aspas. liberou = depois de ter dito a palavra, ela liberou ele pra "
@@ -2017,6 +2127,8 @@ class Lovense:
                 self.combinar_palavra(now, palavra)
             else:
                 self.db.set_estado_relacional(PALAVRA_KEY, json.dumps({"palavra": palavra, "em": now.isoformat()}))
+            self.db.set_estado_relacional(PALAVRA_ULTIMA_KEY, json.dumps({"palavra": palavra, "em": now.isoformat()},
+                                                                         ensure_ascii=False))
             out.append("palavra")
         if dec.get("liberou") and "pediu_parar" not in feito and self.liberar(now):
             out.append("liberou")
@@ -2177,6 +2289,7 @@ class Lovense:
         if e:
             e["anunciada"] = True
             self.db.set_estado_relacional(ENTREGA_KEY, json.dumps(e))
+            self.marcar_assunto(datetime.now(), "Marina contou que o Lovense chegou e está carregando")
 
     # ---------------------------------------------------------------- painel
 

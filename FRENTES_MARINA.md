@@ -821,6 +821,23 @@ Bug do uso real: capturar primeiro (banco, mundo e log da produção), depois di
       oito áudios seguidos no flerte.
     - No banco (OK do Patrick): assunto 46 com dono, fato 111 desativado; originais em `soak/originais-2026-10-04.json`.
     - Relatório do soak: "short robe" não é short; foto do Milo pedida × foto que chegou.
+29. ✅ **Estreia do Lovense (seg 05/10, 20:10–22:56) — ela combinou, prometeu 3x e dormiu** — corrigido em 06/10 na
+    frente de apps (`EstreiaTests` em `tests/test_lovense_5b.py`). Os brinquedos chegaram 20:10 e carregaram a 100%;
+    "abacaxi é a nossa palavra" (22:01), "te aviso quando eu estiver pronta" (22:23), "vou ligar agora e te aviso"
+    (22:46), e às 22:44 o boa noite automático no meio; dormiu 22:56. Quatro falhas do 5a, todas da conversa que não
+    dizia o nome do brinquedo:
+    - **O leitor da conversa só rodava com "lush/hush/brinquedo"** — em 1h45 rodou uma vez; a palavra nunca foi
+      gravada. Agora "palavra de segurança" começa o assunto e as palavras da brincadeira (brincar, testar, ligar,
+      controle, dentro, a palavra combinada…) o mantêm vivo por 2 h. Camada: mundo.
+    - **O bloco do Lovense saiu do prompt** pelo mesmo motivo: ela inventou "tá carregando". Agora entra com o assunto
+      vivo e diz a palavra já combinada (ou a última, pra confirmar). Camada: prompt.
+    - **"Vou ligar agora e te aviso"** não era colocar (só "coloquei/dentro"), e o colocar pendente não avisava ninguém.
+      Agora "ligar/conectar" dela é colocar daqui a pouco, e ao colocar ela recebe o turno "avise ele agora". Camada: mundo.
+    - **O sono e o boa noite não esperavam o combinado.** Decisão do Patrick: "o sono espera, pelo cansaço" — com a
+      brincadeira combinada (palavra há até 2 h, "vou colocar" pendente) ou rolando, o deitar vai sendo empurrado e o
+      boa noite automático espera; exausta (energia < 0,2) ou passando do limite da noite, ela desiste e **diz**
+      (iniciativa `lovense_desistiu`, que vale como boa noite). Com o brinquedo dentro, tira pra dormir como sempre.
+    - A noite de ontem ficou como aconteceu (decisão dele): ela lembra que capotou e te deixou na expectativa.
 
 **Abertos:** o preparo pra dormir que volta de passo (item 24, frente do mundo); M4 e M5 do dia 5 e os anotados do
 dia 6 (frente da voz).

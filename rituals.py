@@ -339,6 +339,14 @@ class Rituals:
         at = bed - timedelta(minutes=rng.randint(*BOA_NOITE_BEFORE_MIN))
         if not (at <= now < bed):
             return None
+        try:
+            # 06/10 (bug da estreia do Lovense): "Vou deitar, amor / Boa noite" saiu no meio da combinação. Com a
+            # brincadeira combinada ou rolando, o boa noite espera (o sono também: Lovense.sono empurra o deitar).
+            from lovense import Lovense
+            if Lovense(self.db).plano_em_andamento(now):
+                return None
+        except Exception:
+            logger.exception("rituals.boa_noite.lovense")
         if rng.random() >= DAILY_CHANCE["boa_noite"]:
             self._set(key, "skipped:dia_sem_ritual", now)
             return None
