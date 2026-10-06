@@ -1152,7 +1152,7 @@ Agora, em casa à toa, ela teria vontade de propor o Lush ("empolgada"); ocupada
 pela empolgação (o "receio: só com muito tesão" do 5a perde pro bom humor). **06/10: ele decidiu — no receio, só com
 tesão alto (a empolgação soma, não basta). Feito.** E o bug da estreia (ela combinou, prometeu e dormiu) foi corrigido
 no mesmo lote: assunto vivo pela conversa da brincadeira, a palavra lembrada, "vou ligar e te aviso" que coloca e
-avisa, e o sono que espera pelo cansaço (FRENTES, seção 5, item 29).
+avisa, e o sono que espera pelo cansaço (FRENTES, seção 5, item 29). No ar desde ter 06/10, 00:22 (`08d6eba`).
 Próximo: **"bora na frente de apps: redesenho dos Bastidores, passo 1"**; o passo 6 do Lovense (fotos e áudio)
 depois.
 

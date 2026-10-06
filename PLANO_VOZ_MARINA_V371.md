@@ -1693,7 +1693,7 @@ PLANO_WEBAPP, "passo 5b feito". No ar desde 23:43.
 e o boa noite automático saiu no meio; dormiu sem usar. Agora o bloco do Lovense fica no prompt enquanto vocês falam
 da brincadeira (mesmo sem dizer "lush"), lembra a palavra já combinada, "vou ligar agora e te aviso" coloca e ela
 avisa de verdade, e o sono e o boa noite esperam o combinado — exausta, ela desiste e diz (`lovense_desistiu`). E o
-Hush no receio só com tesão alto. Detalhe na Auditoria e no FRENTES (seção 5, item 29).
+Hush no receio só com tesão alto. Detalhe na Auditoria e no FRENTES (seção 5, item 29). No ar desde 00:22.
 
 **05/10, noite — a encomenda do Lovense:** até chegar, o prompt diz que o Patrick encomendou e que ela ainda não está
 com eles (não diz que abriu, colocou ou testou); quando ele avisa "chegou", o Seu Jorge interfona e ela manda uma
