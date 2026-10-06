@@ -3116,6 +3116,8 @@ chegando", 19:17), e o deploy pôs os dois direto na gaveta. Agora a encomenda �
 
 ## Lovense, passo 5b: ela mesma (05/10, noite, frente de apps)
 
+**No ar: seg 05/10, 23:43** (`2bbd17b`); na VPS as rotinas (`lovense_routine`, `delivery_gift_routine` com a `_lovense_rotina`) rodando sem erro.
+
 Ela propõe, leva na bolsa, usa sozinha, muda de opinião sobre o Hush e a amiga percebe. Decisões do Patrick (mockup +
 múltipla escolha, tudo "pelo que ela sente") no PLANO_WEBAPP, "passo 5b feito".
 - `lovense.py`: `vontade_de_propor(now, atividade)` (disposicao + ocasião + curiosidade do Hush; piso de tesão;

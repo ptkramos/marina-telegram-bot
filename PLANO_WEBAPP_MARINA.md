@@ -1109,7 +1109,7 @@ quando sai sabendo que pode rolar, usar sozinha (o `tempo_livre` com o brinquedo
 conversando (com ele ou com a Bia) e a amiga perceber quando ela goza perto. Depois: passo 6 (fotos e áudio) e 7
 (Bastidores e catálogo de textos).
 
-**05/10, noite — passo 5b feito ✅ (ela mesma; sem deploy ainda):** decisões do Patrick (mockup + múltipla escolha),
+**05/10, noite — passo 5b feito ✅ (ela mesma; no ar desde 23:43, `2bbd17b`):** decisões do Patrick (mockup + múltipla escolha),
 todas "pelo que ela sente":
 - **Como ela propõe:** mensagem dela quando vocês não estão conversando (iniciativa nova `lovense_proposta`) **e**
   dentro da conversa quando o assunto der brecha (linha no bloco do prompt: "Agora você está com vontade de usar o

@@ -1687,7 +1687,7 @@ palavra") e `lovense_bolsa` ("joguei o lush na bolsa", quando sai pra algo longo
 o bloco do Lovense entra também quando ela está com vontade ("proponha do seu jeito; se ele não quiser agora, tudo
 bem: não insista") ou com o Lush calado na bolsa. O convite do sexting, com saudade dele e o Lush em casa, vira
 "coloquei, assume pelo app". Ela não insiste: propôs, espera 4 h (12 h se ele deixou passar). Detalhe no
-PLANO_WEBAPP, "passo 5b feito".
+PLANO_WEBAPP, "passo 5b feito". No ar desde 23:43.
 
 **05/10, noite — a encomenda do Lovense:** até chegar, o prompt diz que o Patrick encomendou e que ela ainda não está
 com eles (não diz que abriu, colocou ou testou); quando ele avisa "chegou", o Seu Jorge interfona e ela manda uma
