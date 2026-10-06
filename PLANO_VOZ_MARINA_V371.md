@@ -1695,6 +1695,11 @@ da brincadeira (mesmo sem dizer "lush"), lembra a palavra já combinada, "vou li
 avisa de verdade, e o sono e o boa noite esperam o combinado — exausta, ela desiste e diz (`lovense_desistiu`). E o
 Hush no receio só com tesão alto. Detalhe na Auditoria e no FRENTES (seção 5, item 29). No ar desde 00:22.
 
+**06/10 — Redesenho dos Bastidores, passo 4 (os Sentimentos):** nada muda na fala nem no que ela lê. O humor dela
+vira uma grade 3×3 na tela (as palavras da grade são só da tela; o prompt segue com o `mood_words`), o relógio de
+10 min guarda a casa do humor quando muda (só pra tela, nunca dormindo) e o Sentindo agora vira por pessoa com força
+e tendência. Detalhe na Auditoria, "Redesenho dos Bastidores, passo 4".
+
 **06/10 — Redesenho dos Bastidores, passo 3 (o Corpo):** nada muda na fala nem no que ela lê. O `EmotionEngine`
 passa a anotar quanto cada coisa empurrou a vontade (`libido_termos`, só pra as etiquetas da tela; a conta é a mesma).
 A sub-aba Corpo vira desenhos: faixa do sono, 28 dias do ciclo, velocímetro da vontade e da excitação, calendário

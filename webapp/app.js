@@ -95,7 +95,7 @@ const nota = (n) => String(n).replace(".", ",");
 const abreAs = (h) => `Abre às ${String(h).padStart(2, "0")}:00`;
 
 const HOJE_ABERTOS = new Set();   // períodos passados que ele abriu no Hoje (sobrevivem à recarga de 30 s)
-let DIARIO_ABERTO = false;        // "Ver o dia todo" no Hoje por dentro (idem)
+let DIARIO_ABERTO = false;        // "Ver o dia todo" no Já passou hoje (idem)
 const EXTRATO_ABERTOS = new Set(); // saídas abertas no extrato da aba Dinheiro (idem)
 
 // 28/09 (Patrick): na recarga dos Bastidores a barra desliza do valor antigo pro novo, em vez de pular.
@@ -391,6 +391,65 @@ function desenhaCorpo(c) {
   }));
 }
 
+// ------------------------------------------------------------- Sentimentos --
+// 06/10 (redesenho, passo 4, PLANO_WEBAPP): humor em grade 3×3 com o caminho do dia em setinhas nos vãos,
+// Brincadeira e Bateria social, Sentindo agora por pessoa (bolinhas da força, motivo, desde, tendência) e o que já
+// passou hoje em cinza. O servidor (bastidores_sentimentos.py) manda as casas, as setas e os textos.
+const GR_VAO = 8, GR_ALT = 76;                          // vão entre as casas e altura de cada uma (px)
+// posição no eixo: k em meias-casas (1 = centro da 1ª casa, 2 = vão entre a 1ª e a 2ª…), pra coluna (% da largura)
+const grX = (k) => `calc((100% - ${2 * GR_VAO}px) * ${k / 6} + ${GR_VAO * (Math.floor(k / 2) - (k % 2 ? 0 : 0.5))}px)`;
+const grY = (k) => `${GR_ALT * k / 2 + GR_VAO * (Math.floor(k / 2) - (k % 2 ? 0 : 0.5))}px`;
+
+function gradeHumor(h) {
+  // a seta fica no vão (reta) ou no cruzamento das quatro casas (diagonal)
+  const seta = (s) => {
+    const x = 2 * s.c + 1 + s.dc, y = 2 * s.l + 1 + s.dl;
+    const giro = Math.round(Math.atan2(s.dl, s.dc) * 180 / Math.PI);
+    return `<span class="gr-seta" style="left:${grX(x)};top:${grY(y)}"><i class="ti ti-${s.ida_volta ? "arrows-left-right" : "arrow-right"}" style="transform:rotate(${giro}deg)"></i></span>`;
+  };
+  return `<div class="gr" style="--vao:${GR_VAO}px;--alt:${GR_ALT}px">
+    ${h.grade.map((c) => `<div class="gr-c${c.agora ? " agora" : c.hora ? " passou" : ""}">${ic(c.icone)}
+      <span class="gr-p">${esc(c.palavra)}</span>${c.agora ? (h.desde ? `<span class="gr-h">${esc(h.desde)}</span>` : "")
+        : c.hora ? `<span class="gr-h">${esc(c.hora)}</span>` : ""}</div>`).join("")}
+    ${h.setas.map(seta).join("")}</div>${h.dormindo ? linhaC(ic("moon") + " " + esc(h.dormindo)) : ""}`;
+}
+
+const TENDENCIA = { crescendo: ["trending-up", "Crescendo"], estavel: ["minus", "Estável"],
+  passando: ["trending-down", "Passando"], ate_resolver: ["lock", "Até resolver"] };
+
+function pessoaSentindo(p) {
+  const av = p.foto ? `<img class="avatar-ini avatar-foto" src="/static/${esc(p.foto)}" alt="">`
+    : `<span class="avatar-ini">${p.icone ? ic(p.icone) : esc(p.iniciais)}</span>`;
+  return `<div class="card sp"><div class="sp-quem">${av}<b>${esc(p.nome)}</b></div>
+    ${p.sentimentos.map((f) => { const [ti, tt] = TENDENCIA[f.tendencia];
+      // 06/10 (Patrick, nos prints): bolinhas na linha do nome e o "Desde" na direita; motivo e detalhe cinza com
+      // uma linha cada, sem cortar; a tendência na linha do detalhe, na direita
+      return `<div class="sp-f ${f.bom ? "bom" : "ruim"}">
+        <div class="sp-l1"><span class="sp-nome">${esc(f.nome)}<span class="sp-bol">${[1, 2, 3, 4, 5].map((n) => `<i class="${n <= f.bolinhas ? "on" : ""}"></i>`).join("")}</span><span class="sp-forca">${esc(f.forca)}</span></span>
+          <span class="sp-desde">${esc(f.desde)}</span></div>
+        <div class="sp-mot">${esc(f.motivo)}</div>
+        <div class="sp-l3"><span class="sp-det">${esc(f.detalhe)}</span><span class="sp-tend ${f.tendencia}">${ic(ti)}${tt}</span></div></div>`; }).join("")}</div>`;
+}
+
+function desenhaSentimentos(s) {
+  if (!s) { $("bd-sentimentos").innerHTML = ""; return; }
+  const barras = (s.barras || []).map((b) => `<div class="bar-row"><span class="br-ic">${ic(b.icone)}${esc(b.label)}</span>
+    <div class="bar"><i style="width:${pct(b.value)}%"></i></div><span class="w">${esc(b.word)}</span></div>`).join("");
+  const humor = s.humor ? `<h2>Humor</h2><div class="card" id="bse-humor">${gradeHumor(s.humor)}
+    ${barras ? `<div class="gr-barras">${barras}</div>` : ""}</div>` : "";
+  const sentindo = s.sentindo ? `<h2>Sentindo agora</h2>${s.sentindo.length ? s.sentindo.map(pessoaSentindo).join("")
+    : `<div class="card">${vazio("Nada marcante até o momento.")}</div>`}` : "";
+  const ps = s.passou || [];
+  const todos = DIARIO_ABERTO || ps.length <= 6;
+  const passou = ps.length ? `<h2>Já passou hoje</h2><div class="card ja-passou">${(todos ? ps : ps.slice(0, 5)).map((x) => `<div class="dr">
+      <span class="dr-h">${esc(x.hora)}</span><div><div>${esc(x.texto)}</div>
+      <div class="dr-m">${esc(x.motivo)}${x.detalhe ? ` (${esc(x.detalhe)})` : ""}</div></div></div>`).join("")}
+    ${ps.length > 6 ? `<button class="dr-mais">${DIARIO_ABERTO ? "Mostrar menos" : `Ver o dia todo (${ps.length})`}</button>` : ""}</div>` : "";
+  $("bd-sentimentos").innerHTML = humor + sentindo + passou;
+  const b = $("bd-sentimentos").querySelector(".dr-mais");
+  if (b) b.addEventListener("click", () => { DIARIO_ABERTO = !DIARIO_ABERTO; desenhaSentimentos(s); });
+}
+
 const BAST_TELAS = {
   async agora() {
     const d = await api("/api/bastidores?tela=agora");
@@ -455,14 +514,7 @@ const BAST_TELAS = {
     const d = await api("/api/bastidores?tela=dentro");
     const e = d.emocao;
     desenhaCorpo(d.corpo);
-    $("bd-humor").innerHTML = `<div class="big">${esc(e.humor)}</div>` + e.humor_barras.map((b) => bar(b.label, b.value)).join("");
-    // 28/09 (Patrick): o motivo ganha quando começou, na direita. 04/10 (catálogo, leva 2): "2x" antes do
-    // sentimento, na mesma linha (só de 2 vezes pra cima); o detalhe entre parênteses
-    $("bd-sentindo").innerHTML = e.sentindo.length ? e.sentindo.map((f) => `<div class="feel">
-      <div class="head"><span class="t">${f.vezes > 1 ? `<span class="vezes">${f.vezes}x</span>` : ""}${esc(f.texto)}</span><div class="bar"><i style="width:${pct(f.valor)}%"></i></div></div>
-      <div class="why"><span>${esc(f.motivo)}${f.detalhe ? `<span class="dt"> (${esc(f.detalhe)})</span>` : ""}</span>${f.quando ? `<span class="qd">${esc(f.quando)}</span>` : ""}</div>
-      ${f.ate_resolver ? '<div class="pilulas"><span class="pilula">até resolver</span></div>' : ""}</div>`).join("")
-      : vazio("Nada marcante até o momento.");
+    desenhaSentimentos(d.sentimentos);
     // 28/09 (Patrick): Na cabeça — o que vem pela frente e a vontade dela de ir (agenda viva).
     // O mais curto possível: título | quando; embaixo estado | barra | motivo (coluna da direita, como no Corpo)
     const cb = d.cabeca || [];
@@ -470,20 +522,6 @@ const BAST_TELAS = {
       ${x.estado || x.vontade != null || x.detalhe ? `<div class="nc-s"><span class="nc-e">${esc(x.estado)}</span>${x.vontade != null
         ? `<div class="bar"><i style="width:${pct(x.vontade)}%"></i></div>` : "<span></span>"}<span class="w">${esc(x.detalhe)}</span></div>` : ""}</div>`).join("")
       : vazio("Nada pela frente.");
-    // 28/09 (Patrick): Hoje por dentro — tudo o que ela sentiu no dia, mesmo o que já passou (5 + ver o dia todo)
-    const di = d.diario || { itens: [] };
-    $("bd-diario-t").hidden = $("bd-diario").hidden = !di.itens.length;
-    $("bd-diario-t").textContent = di.titulo || "Hoje por dentro";
-    const desenhaDiario = () => {
-      const todos = DIARIO_ABERTO || di.itens.length <= 6;
-      $("bd-diario").innerHTML = (todos ? di.itens : di.itens.slice(0, 5)).map((x) => `<div class="dr">
-        <span class="dr-h">${esc(x.hora)}</span><div><div>${esc(x.texto)}</div><div class="dr-m"><span>${esc(x.motivo)}</span>
-        ${x.detalhe ? `<span class="dr-d">${esc(x.detalhe)}</span>` : ""}</div></div></div>`).join("")
-        + (di.itens.length > 6 ? `<button class="dr-mais">${DIARIO_ABERTO ? "Mostrar menos" : `Ver o dia todo (${di.itens.length})`}</button>` : "");
-      const b = $("bd-diario").querySelector(".dr-mais");
-      if (b) b.addEventListener("click", () => { DIARIO_ABERTO = !DIARIO_ABERTO; desenhaDiario(); });
-    };
-    desenhaDiario();
     $("bd-voces").innerHTML = e.voces.map((b) => bar(b.label, b.value, null, b.label === "Desejo")).join("")
       + ((e.voces_linhas || []).length ? `<div class="linhas sep">${e.voces_linhas.map(([i, r, v]) => linha(i, r, v)).join("")}</div>` : "");
   },

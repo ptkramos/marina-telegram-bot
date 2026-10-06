@@ -1435,10 +1435,39 @@ pós-gozo que já existia). O calendário puxa 60 dias do `bastidores_hist` e, d
 `libido_release_at`. 18 testes em `tests/test_bastidores_corpo.py`. Próximo: **passo 4, os Sentimentos** ("bora na
 frente de apps: redesenho dos Bastidores, passo 4").
 
+**Passo 4 feito (06/10) ✅ — os Sentimentos:** decidido pelo Patrick nos prints (banco real de 05/10, 22:50, com o
+caminho refeito só na cópia). Servidor em `bastidores_sentimentos.py` (`sentimentos_view`, chave `sentimentos` do
+`/api/bastidores?tela=dentro`; uma seção com erro some sozinha):
+- **Humor** em grade 3×3 (agitada em cima, bem à direita; cortes 0,45/0,62 no bem-estar e 0,40/0,62 na agitação,
+  os mesmos do `mood_words`; o prompt não muda). Casa de agora em azul com o "desde", casas do dia clarinhas com a
+  hora (volta a uma casa: vale a mais nova), o caminho em setinhas nos vãos (diagonal no cruzamento das quatro casas,
+  salto = uma seta por casa, só os últimos 4 passos; **foi e voltou pelo mesmo vão = uma seta de ida e volta**,
+  `arrows-left-right`). O caminho vem do `bastidores_hist` (chave nova `humor`, a casa gravada quando muda: pelo
+  relógio de 10 min e quando a tela abre), não do `feeling` refeito. Sem histórico ainda, a tela não inventa o
+  "desde". **Dormindo (Patrick):** o motor não olha o sono (de madrugada ela aparecia "Inquieta"), então fica pintada
+  a casa em que ela pegou no sono, "até 22:54", com "Dormindo desde 22:54" embaixo, e o caminho para (o relógio não
+  grava dormindo). Embaixo da grade, **Brincadeira** e **Bateria social** com ícone (`mood-tongue`, `battery-3`) e
+  palavra.
+- **Sentindo agora por pessoa:** um cartão por pessoa (Patrick primeiro, Dela no fim, iniciais ou foto como no
+  Mundo; Dela com o ícone `user`). Layout do Patrick nos prints: **1ª linha** sentimento (substantivo, azul pros bons,
+  coral pros ruins) + 5 bolinhas + força (Leve / Moderada / Forte / Muito forte / Intensa) e "Desde 22:46" / "Desde
+  ontem, 21:30" na direita; **2ª** o motivo inteiro; **3ª** o detalhe cinza inteiro e a tendência na direita
+  (**Crescendo** `trending-up` = subiu na última hora, **Estável** `minus` = ainda tem 90% de 1 h atrás, **Passando**
+  `trending-down`, **Até resolver** âmbar com `lock`). O que fica "até resolver" é um por causa (a ansiedade da
+  entrega e a do casting não viram uma só).
+- **Já passou hoje** (era "Hoje por dentro"): o que ela sentiu desde as 5h e já esfriou, cinza, sem repetir o que
+  está no Sentindo agora; 5 + "Ver o dia todo". O `diario` saiu da rota (o `por_dentro.diario_view` fica, sem uso na
+  tela).
+20 testes em `tests/test_bastidores_sentimentos.py`. Os motivos ainda são os de antes (o padrão novo é o passo 5).
+Próximo: **passo 5, os motivos na origem** ("bora na frente de apps: redesenho dos Bastidores, passo 5").
+
 **Textos que eu decidi (pra ele revisar):** "Dormiu por volta de 7 horas e 45 minutos" / "Dormindo há 5 horas e 10
 minutos" (o cochilo só na faixa); "Menstruação em 4 dias"; "Último orgasmo: dia 3, sozinha"; "Excitada desde 21:40";
 etiquetas da vontade ("2 dias sem gozar", "Saudade do Patrick", "Fase fértil", "Cansaço", "Cólica", "Mágoa");
-"Já passou hoje"; "Desde 14:10" / "Desde ontem, 21:30"; Crescendo / Estável / Passando; "Relutante", "Desistiu";
+"Já passou hoje"; "Desde 14:10" / "Desde ontem, 21:30"; Crescendo / Estável / Passando; passo 4: "Desde
+segunda, 21:30" (mais de um dia), "até 22:54", "Dormindo desde 22:54", "Dela", força Leve / Moderada / Forte / Muito
+forte / Intensa, Brincadeira Séria / Na dela / Brincalhona / Zoeira, Bateria social Esgotada / Na reserva / De boa /
+Carregada; "Relutante", "Desistiu";
 "Gravar um vídeo", "Fazer um ensaio fotográfico"; "Igual", "Desde sábado", "4 horas sem notícias"; "Pendente entre
 vocês"; "Molhado / Úmido / Seco"; "Lavar amanhã", "Hidratar em 9 dias", "Cortar em 6 semanas", "Retocar em 1
 semana", "refazer em 4"; "Folga de 1,6 kg; na balança, 54,0 kg há 9 dias"; Parte de cima / Parte de baixo /

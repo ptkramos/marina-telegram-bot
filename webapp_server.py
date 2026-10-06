@@ -429,7 +429,7 @@ def _legado(txt: str) -> str:
     return txt
 
 
-def motivo_tela(cause: str, target: str = "") -> dict:
+def motivo_tela(cause: str, target: str = "", fato_max: int = FATO_MAX, detalhe_max: int = DETALHE_MAX) -> dict:
     """28/09 (Patrick): o motivo segue um padrão só — o fato curto em voz de painel e o detalhe ao lado, em
     cinza ({"motivo": "Viu Paradise Kiss", "detalhe": "eps 1 e 2"}). O mundo e o planner já gravam "fato ·
     detalhe" em 3ª pessoa ("o Patrick mandou comida · surpresa" → "O Patrick mandou comida"); os motivos antigos
@@ -446,7 +446,7 @@ def motivo_tela(cause: str, target: str = "") -> dict:
         txt = txt.replace(", ", " · ", 1)                     # "Ele recuou, dizendo que…" → fato · detalhe
     fato, _, detalhe = txt.partition(" · ")
     fato, detalhe = _voz_tela(fato.strip()), detalhe.strip()
-    return {"motivo": _corta(fato, FATO_MAX), "detalhe": _corta(detalhe, DETALHE_MAX)}
+    return {"motivo": _corta(fato, fato_max), "detalhe": _corta(detalhe, detalhe_max)}
 
 
 def _corta(txt: str, n: int) -> str:
@@ -569,14 +569,15 @@ async def api_bastidores(request: web.Request) -> web.Response:
                                         _dormiu_em(hooks.db, now) if status["dormindo"] else None)
             import bastidores_corpo                  # 06/10 (redesenho, passo 3): o Corpo em desenhos
             out["corpo"] = bastidores_corpo.corpo_view(hooks.db, now, panel, out["emocao"]["body"], status["dormindo"])
+            import bastidores_sentimentos            # 06/10 (redesenho, passo 4): os Sentimentos
+            out["sentimentos"] = bastidores_sentimentos.sentimentos_view(
+                hooks.db, now, panel, _dormiu_em(hooks.db, now) if status["dormindo"] else None)
             try:
-                import por_dentro                    # 28/09 (Patrick): Hoje por dentro, Na cabeça, Vocês dois
-                out["diario"] = por_dentro.diario_view(hooks.db, now)
+                import por_dentro                    # Na cabeça, Vocês dois (o Hoje por dentro virou o Já passou hoje)
                 out["cabeca"] = por_dentro.cabeca_view(hooks.db, now, status["dormindo"])
                 out["emocao"]["voces_linhas"] = por_dentro.voces_linhas(hooks.db, now)
             except Exception:
                 logger.exception("webapp.por_dentro.error")
-                out.setdefault("diario", {"titulo": "Hoje por dentro", "itens": []})
                 out.setdefault("cabeca", [])
         if "fora" in telas:
             try:

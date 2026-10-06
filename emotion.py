@@ -747,6 +747,7 @@ class EmotionEngine:
             "phase": PHASE_NAMES.get(f.cycle_phase, f.cycle_phase),
             "discomfort_why": f.discomfort_why,
             "mood": self.mood_words(f.valence, f.arousal),
+            "valence": f.valence, "arousal": f.arousal,      # 06/10 (passo 4): a grade do humor (só tela)
             "mood_bars": [{"label": "Brincadeira", "value": f.playfulness},
                           {"label": "Pique social", "value": f.social_battery}],
             "feelings": feelings,

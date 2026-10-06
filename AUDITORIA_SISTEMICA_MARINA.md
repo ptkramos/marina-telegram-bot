@@ -3278,6 +3278,35 @@ Por fora `hanger`, Dinheiro `building-bank`, Mundo `users`; a aberta em azul, no
   "Nada acontecendo nem planejado." (Agenda) e "Nenhum lugar neste mês." (Lugares); os títulos "Corpo",
   "Pensando" e "Vocês dois"/"Lugares visitados" saíram de cima dos cards (a pílula já diz).
 
+## Redesenho dos Bastidores, passo 4: os Sentimentos (06/10, frente de apps)
+
+Decidido pelo Patrick nos prints do celular (banco de produção de 06/10, 03:19; a hora de 05/10, 22:50, com o caminho
+do humor refeito de 20 em 20 min só na cópia). Detalhe das seções no PLANO_WEBAPP, "Passo 4 feito".
+- **Servidor:** `bastidores_sentimentos.py` monta `sentimentos` = humor / barras / sentindo / passou, cada seção num
+  `try` (`bastidores_sentimentos.<seção>` no log). Só leitura do `EmotionEngine` (`episodes` agora e 1 h atrás pra
+  tendência, `day_log`), de `world_characters` (nome, iniciais, foto) e do `bastidores_hist`. O `motivo_tela` ganhou
+  `fato_max`/`detalhe_max` (padrão igual ao de antes; a tela nova passa 90/60 e não corta).
+- **Histórico:** chave nova `humor` no `bastidores_hist` (`humor(db, em, linha, coluna)`, grava só quando a casa
+  muda). O `retrato` (relógio de 10 min) grava a casa do `feeling` — **menos dormindo** (`webapp_server._dormiu_em`);
+  a tela também grava ao abrir, acordada. Sem migração (a tabela é a do passo 1).
+- **`emotion.py`:** o `panel` passa `valence` e `arousal` (só leitura). Ela não lê nada disso: o prompt segue com o
+  `mood_words` (teste confere).
+- **Rota:** `?tela=dentro` manda `sentimentos` e não manda mais o `diario` (o "Hoje por dentro" virou o "Já passou
+  hoje"); `test_bastidores_cada_tela_pede_so_o_seu` atualizado.
+- **Front:** `desenhaSentimentos`/`gradeHumor`/`pessoaSentindo` no `app.js` (setas posicionadas por `calc` no vão
+  entre as casas), CSS novo no fim do `app.css`; `index.html` com um `#bd-sentimentos` só.
+- **Visto no banco real:** o humor passa quase o dia todo em "Animada" (bem-estar 0,67–0,99 e agitação 0,62–0,80 em
+  05/10): é o motor como está (linha de base 0,62/0,52 + episódios bons). Recalibrar é a fila (recalibrar 1–4).
+  Duas ansiedades "até resolver" (entrega e casting) viravam uma linha só com a causa da mais nova: separadas na tela.
+- **Testes:** `tests/test_bastidores_sentimentos.py` (20: cortes da grade, setas e ida e volta, caminho com horas,
+  sem histórico, de ontem, dormindo, relógio dormindo, por pessoa, tendência, até resolver por causa, motivo inteiro,
+  desde de ontem, já passou sem repetir, seção com erro, prompt igual).
+- **Textos que eu decidi (visíveis, pra ele revisar):** as 9 casas (Irritada, Inquieta, Animada, Chateada, Normal,
+  Feliz, Desanimada, Preguiçosa, Relaxada — do plano); "desde 22:40", "até 22:54", "Dormindo desde 22:54"; força
+  Leve / Moderada / Forte / Muito forte / Intensa; "Desde 22:46", "Desde ontem, 21:30", "Desde segunda, 21:30";
+  Crescendo / Estável / Passando / Até resolver; "Dela"; Brincadeira Séria / Na dela / Brincalhona / Zoeira;
+  Bateria social Esgotada / Na reserva / De boa / Carregada; títulos "Humor", "Sentindo agora", "Já passou hoje".
+
 ## Redesenho dos Bastidores, passo 3: o Corpo (06/10, frente de apps)
 
 Aprovado pelo Patrick nos prints do celular (banco de produção de 06/10, 01:32, e uma cópia com gozos e excitação

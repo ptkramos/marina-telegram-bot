@@ -719,3 +719,48 @@ body.sem-rolar { overflow: hidden; }
 .cal-leg { display: flex; justify-content: center; gap: 14px; margin-top: 10px; font-size: 11px; color: var(--muted); }
 .cal-leg span { display: inline-flex; align-items: center; gap: 3px; }
 .cal-leg b { width: 10px; height: 10px; border-radius: 50%; background: color-mix(in srgb, #d64545 22%, transparent); }
+
+/* 06/10 (redesenho, passo 4, PLANO_WEBAPP): os Sentimentos. Humor em grade 3×3 (agitada em cima, bem à direita) com
+   o caminho do dia em setinhas nos vãos; por pessoa, azul pros bons e coral pros ruins */
+.sentimentos .bar { height: 10px; }
+.gr { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: var(--alt); gap: var(--vao); }
+.gr-c { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 12px;
+  background: color-mix(in srgb, var(--muted) 9%, transparent); color: var(--muted); min-width: 0; }
+.gr-c .ti { font-size: 22px; }
+.gr-p { font-size: 12.5px; font-weight: 600; }
+.gr-h { font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.gr-c.passou { background: color-mix(in srgb, var(--accent) 13%, transparent); color: color-mix(in srgb, var(--accent) 80%, var(--fg)); }
+.gr-c.agora { background: var(--accent); color: var(--on-accent); }
+.gr-c.agora .gr-h { opacity: .9; }
+.gr-seta { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; background: var(--fg);
+  color: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1;
+  box-shadow: 0 0 0 2px var(--bg2); }
+.gr-seta .ti { font-size: 13px; }
+.gr-barras { margin-top: 14px; }
+.gr-barras .bar-row { grid-template-columns: 128px 1fr 92px; }
+.br-ic { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.br-ic .ti { font-size: 16px; color: var(--muted); }
+/* sentindo agora, por pessoa */
+.sp { padding-top: 10px; padding-bottom: 4px; }
+.sp-quem { display: flex; align-items: center; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.sp-quem .avatar-ini { width: 30px; height: 30px; font-size: 12px; }
+.sp-quem .avatar-ini .ti { font-size: 17px; }
+.sp-quem b { font-size: 15px; }
+.sp-f { padding: 9px 0; border-bottom: 1px solid var(--line); --cor: #3b7fd9; }
+.sp-f:last-child { border-bottom: 0; }
+.sp-f.ruim { --cor: #e0664f; }
+.sp-l1 { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.sp-nome { display: inline-flex; align-items: center; font-weight: 600; font-size: 15px; color: var(--cor); }
+.sp-bol { display: inline-flex; gap: 3px; margin: 0 6px 0 9px; }
+.sp-bol i { width: 8px; height: 8px; border-radius: 50%; background: color-mix(in srgb, var(--muted) 25%, transparent); }
+.sp-bol i.on { background: var(--cor); }
+.sp-forca, .sp-desde { font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }
+.sp-mot { font-size: 13.5px; margin-top: 3px; }
+.sp-l3 { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.sp-det { min-width: 0; }
+.sp-tend { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; margin-left: auto; }
+.sp-tend .ti { font-size: 14px; }
+.sp-tend.ate_resolver { color: #c98a16; font-weight: 600; }
+/* já passou hoje: cinza */
+.ja-passou .dr > div { color: var(--muted); }
+.ja-passou .dr-m { display: block; }

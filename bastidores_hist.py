@@ -12,6 +12,8 @@ e um erro aqui nunca derruba quem chamou (cada função engole e loga).
 * `excitacao`: a hora em que acendeu (passou de ACESA vindo de baixo); a tela mostra o "desde" enquanto segue acesa.
 * `retrato`: o relógio de 10 em 10 min grava o vínculo da hora (um por hora) e o peso do dia (um por dia).
 * `pesagem`: a balança da academia (a bolinha vazia na linha do peso).
+* `humor` (passo 4): a casa da grade 3×3 dos Sentimentos (linha, coluna), gravada quando muda — pelo relógio e
+  quando a tela abre. É o caminho do dia.
 """
 from __future__ import annotations
 
@@ -118,7 +120,24 @@ def retrato(db, now: Optional[datetime] = None) -> None:
         gravar(db, "peso", now, {"kg": float(Meals(db).weight()["kg"])}, ref=now.date().isoformat())
     except Exception:
         logger.exception("bastidores_hist.retrato.peso")
+    try:
+        from bastidores_sentimentos import casa
+        from emotion import EmotionEngine
+        from webapp_server import _dormiu_em
+        if _dormiu_em(db, now) is None:                 # dormindo, o caminho do humor para (Patrick, 06/10)
+            f = EmotionEngine(db).feeling(now)
+            humor(db, now, *casa(f.valence, f.arousal))
+    except Exception:
+        logger.exception("bastidores_hist.retrato.humor")
 
 
 def pesagem(db, em: datetime, kg: float) -> None:
     gravar(db, "pesagem", em, {"kg": round(float(kg), 1)}, ref=em.date().isoformat())
+
+
+def humor(db, em: datetime, linha: int, coluna: int) -> None:
+    """A casa do humor, só quando muda (o caminho do dia na grade dos Sentimentos)."""
+    antes = ultimo(db, "humor", em)
+    if antes and (antes.get("l"), antes.get("c")) == (linha, coluna):
+        return
+    gravar(db, "humor", em, {"l": linha, "c": coluna})
