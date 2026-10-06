@@ -266,6 +266,14 @@ class ProactivityService:
         except Exception:
             logger.exception("proactivity.sexting_solo")
 
+        # 05/10 (Lovense, passo 5b): ela mesma propõe pela vontade (tesão, ocasião, confiança, curiosidade). Com ele
+        # conversando, a proposta sai dentro da conversa (prompt); ignorou duas iniciativas, ela não insiste.
+        try:
+            if not esperando and self.lovense_proposta(dt):
+                return True, "lovense_proposta"
+        except Exception:
+            logger.exception("proactivity.lovense_proposta")
+
         if not esperando and self.tesao_initiative(dt):
             # Assunto importante dele (compromisso pra perguntar como foi) vem antes.
             if self.determine_living_world_candidate(dt).get("rank", 0) < 70:
@@ -367,6 +375,19 @@ class ProactivityService:
         if last and now - last < timedelta(hours=self.TESAO_GAP_HOURS):
             return False
         return random.random() < self.TESAO_CHANCE_PER_CHECK
+
+    def lovense_proposta(self, now: datetime) -> Optional[dict]:
+        """A proposta do Lovense que ela manda (passo 5b), ou None. Só com ele fora da conversa."""
+        last_user, _last_auto = self.get_last_messages_timestamps()
+        idle = max(10, int(getattr(settings, "USER_IDLE_MINUTES_BEFORE_PROACTIVE", 10)))
+        if last_user and now - last_user < timedelta(minutes=idle):
+            return None
+        if self._unanswered_initiatives(last_user) >= 2:
+            return None
+        from lovense import Lovense
+        from response_availability import ResponseAvailabilityPolicy
+        atividade = ResponseAvailabilityPolicy(self.db)._resolve_activity(now)[0]
+        return Lovense(self.db).proposta(now, atividade)
 
     def _unanswered_initiatives(self, since: Optional[datetime]) -> int:
         with self.db.get_connection() as conn:

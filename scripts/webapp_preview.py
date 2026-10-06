@@ -223,7 +223,13 @@ async def _serve(db, port: int, status, fixo) -> None:
                    "pendentes": lambda: lv.pendentes(now, lv_onde["a"]),
                    "prompt": lambda: lv.prompt(now, lv_onde["a"], request.query.get("c", "")),
                    "disposicao": lambda: lv.disposicao(now, bs, lv_onde["a"]),
-                   "descoberta": lambda: lv._descoberta()}[acao]()
+                   "descoberta": lambda: lv._descoberta(),
+                   # passo 5b: ela propõe (vontade/proposta), a bolsa ao sair (rotina), sozinha, a amiga (q=bia_andrade)
+                   "vontade": lambda: lv.vontade_de_propor(now, lv_onde["a"]),
+                   "proposta": lambda: lv.proposta(now, lv_onde["a"]),
+                   "rotina": lambda: lv.rotina(now, lv_onde["a"]),
+                   "sozinha": lambda: lv.sozinha(now, bool(request.query.get("ele"))),
+                   "amiga": lambda: lv.conversa_com_amiga(now, request.query.get("q", "bia_andrade"))}[acao]()
         except (KeyError, ValueError) as e:
             return web.json_response({"erro": str(e)}, status=400)
         return web.json_response({"res": res, "estado": lv.estado(now)}, dumps=lambda d: json.dumps(d, default=str))

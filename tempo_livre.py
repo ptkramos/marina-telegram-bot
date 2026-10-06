@@ -104,6 +104,7 @@ class Bloco:
     leitura: Optional[dict] = None  # leitura: título, volume, páginas (início → fim)
     jogo: Optional[str] = None      # jogo do Botafogo (id da ESPN)
     gozou: bool = False             # sexting: ela gozou
+    brinquedos: Optional[list] = None   # masturbação com o Lovense (passo 5b): no controle dela ou chamando ele
 
     @property
     def comodo_nome(self) -> str:
@@ -263,6 +264,15 @@ class TempoLivre:
             if musica_dele and any(t[0] == "musica" for t in opcoes) and rng.random() < 0.7:
                 tipo = next(t for t in TIPOS if t[0] == "musica")   # o Patrick mandou música: ela vai ouvir
         chave, texto, comodos, aparelho, _, _, mins = tipo
+        brinquedos = None
+        if tipo is MASTURBANDO:                           # Lovense, passo 5b: sozinha com o brinquedo, pelo tesão
+            try:
+                from lovense import Lovense, _NOME
+                brinquedos = Lovense(self.db).sozinha(inicio, bool(chama_ele)) or None
+                if brinquedos:
+                    texto = f"{texto} com " + " e ".join(_NOME[b] for b in brinquedos)
+            except Exception:
+                logger.exception("tempo_livre.lovense")
         texto = texto.format(marca=rng.choice(MARCAS), artista=rng.choice(ARTISTAS), leitura=rng.choice(LEITURAS),
                              jogo=rng.choice(JOGOS))
         comodo = rng.choice(comodos)
@@ -287,7 +297,7 @@ class TempoLivre:
             else:                                         # nada pra ler em casa: fica no celular
                 chave, texto, aparelho, pelo_celular = "instagram", "Olhando o Instagram", "celular", True
         return Bloco(f"livre:{dia.isoformat()}:{i}", chave, texto, comodo, aparelho, pelo_celular, inicio,
-                     fim, bool(chama_ele), faixas, leitura)
+                     fim, bool(chama_ele), faixas, leitura, brinquedos=brinquedos)
 
     def _ate(self, inicio: datetime, fim: datetime) -> datetime:
         """27/09 (linha do tempo de 26/09): "Montou looks" até 15:11 com a academia saindo às 14:53. O bloco
@@ -628,18 +638,26 @@ class TempoLivre:
         key = f"solo:{b.chave}"
         rng = _rng(self._dia(b.inicio), f"conta:{b.chave}")
         tells = b.chama_ele or rng.random() < SOLO_TELL_CHANCE
+        com = ""
+        if b.brinquedos:
+            from lovense import _NOME
+            com = " com " + " e ".join(_NOME[x] for x in b.brinquedos)
         if b.chama_ele:
             summary = (f"Com tesão e querendo o Patrick, se masturbou {onde} e chamou ele pra entrar no clima "
-                       "junto (sexting).")
+                       "junto (sexting)." if not b.brinquedos else
+                       f"Com tesão e querendo o Patrick, se masturbou {onde}{com} e chamou ele pra assumir o "
+                       "controle pelo app.")
             self.db.set_estado_relacional(CONVITE_KEY, json.dumps(
-                {"key": key, "inicio": b.inicio.isoformat(), "fim": b.fim.isoformat(), "enviado": False}))
+                {"key": key, "inicio": b.inicio.isoformat(), "fim": b.fim.isoformat(), "enviado": False,
+                 "lovense": b.brinquedos or []}))
             try:                                  # 28/09 (Patrick): chamando ele, veste algo pra provocar (roupa.py)
                 from roupa import Roupa
                 Roupa(self.db).provocar(max(b.inicio, min(now, b.fim)), "sexting")
             except Exception:
                 logger.exception("tempo_livre.roupa.provocar")
         else:
-            summary = (f"Com tesão, se masturbou {onde} pensando no Patrick."
+            summary = (f"Com tesão, se masturbou {onde}{com}{' (no controle dela)' if com else ''} pensando no "
+                       "Patrick."
                        + (" Pode contar pra ele, do jeito dela, se vier a calhar." if tells
                           else " Guardou só pra ela: não conta pro Patrick."))
         with self.db.get_connection() as conn:
@@ -651,6 +669,12 @@ class TempoLivre:
             conn.commit()
         if not cur.rowcount:
             return
+        if b.brinquedos and not b.chama_ele:              # chamando ele, o brinquedo vira sessão no convite
+            try:
+                from lovense import Lovense
+                Lovense(self.db).usou_sozinha(b.inicio, b.fim, b.brinquedos, b.chave, now)
+            except Exception:
+                logger.exception("tempo_livre.lovense_sozinha")
         if not tells:
             try:
                 from social_day import SocialDay

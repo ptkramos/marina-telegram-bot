@@ -93,7 +93,8 @@ class MasturbacaoTest(unittest.TestCase):
             conn.commit()
 
     def test_vale_no_corpo(self):
-        with patch.object(TempoLivre, "_quer_se_masturbar", return_value=False):
+        with patch.object(TempoLivre, "_quer_se_masturbar", return_value=False), \
+                patch("lovense.Lovense.sozinha", return_value=[]):
             b = TempoLivre(self.db).agora(T)
         self.assertEqual((b.tipo, b.texto, b.comodo), ("masturbando", "Se masturbando", "quarto"))
         self.assertEqual(b.atividade, "em casa, se masturbando (quarto)")
@@ -105,6 +106,26 @@ class MasturbacaoTest(unittest.TestCase):
             row = conn.execute("SELECT summary FROM life_events WHERE event_key=?", (f"solo:{b.chave}",)).fetchone()
         self.assertIn("se masturbou no quarto", row["summary"])
         self.assertIsNone(tempo_livre.convite_sexting(self.db, b.inicio + timedelta(minutes=2)))
+
+    def test_com_o_lush_no_controle_dela(self):
+        """Lovense, passo 5b: as primeiras vezes sozinha ela usa o Lush (curiosa); a bateria gasta."""
+        with patch.object(TempoLivre, "_quer_se_masturbar", return_value=False):
+            b = TempoLivre(self.db).agora(T)
+        self.assertEqual((b.texto, b.brinquedos), ("Se masturbando com o Lush", ["lush"]))
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT summary FROM life_events WHERE event_key=?", (f"solo:{b.chave}",)).fetchone()
+            bat = conn.execute("SELECT bateria FROM lovense_brinquedos WHERE brinquedo='lush'").fetchone()[0]
+        self.assertIn("se masturbou no quarto com o Lush (no controle dela)", row["summary"])
+        self.assertLess(bat, 1.0)
+
+    def test_com_saudade_coloca_o_lush_e_chama_ele_pro_app(self):
+        with patch.object(TempoLivre, "_quer_se_masturbar", return_value=True):
+            b = TempoLivre(self.db).agora(T)
+        convite = tempo_livre.convite_sexting(self.db, b.inicio + timedelta(minutes=2))
+        self.assertEqual(convite["lovense"], ["lush"])
+        with self.db.get_connection() as conn:
+            row = conn.execute("SELECT summary FROM life_events WHERE event_key=?", (f"solo:{b.chave}",)).fetchone()
+        self.assertIn("assumir o controle pelo app", row["summary"])
 
     def test_sem_cota_por_dia(self):
         with patch.object(TempoLivre, "_quer_se_masturbar", return_value=False):

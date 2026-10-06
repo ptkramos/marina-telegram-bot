@@ -3114,6 +3114,59 @@ chegando", 19:17), e o deploy pôs os dois direto na gaveta. Agora a encomenda �
 
 - **Cor do Hush (Patrick, 05/10, noite): o Lush é rosa, o Hush é PRETO** (o "os dois rosa" de 04/10 estava errado). Corrigido no texto da entrega, no bloco do prompt e na mensagem de quando chega. Ele recarregou o Civitai (membro de US$ 10 e ~5 mil Buzz amarelo): a foto do Hush (preto) fica pra frente de imagens.
 
+## Lovense, passo 5b: ela mesma (05/10, noite, frente de apps)
+
+Ela propõe, leva na bolsa, usa sozinha, muda de opinião sobre o Hush e a amiga percebe. Decisões do Patrick (mockup +
+múltipla escolha, tudo "pelo que ela sente") no PLANO_WEBAPP, "passo 5b feito".
+- `lovense.py`: `vontade_de_propor(now, atividade)` (disposicao + ocasião + curiosidade do Hush; piso de tesão;
+  espera depois de propor), `_ocasiao` (acordando, em casa à toa, antes de sair pra algo longo, fora com ele na
+  bolsa), `_saida` (`Commute.legs_on`: a ida que sai de casa em até 1 h 30 e se fica 2 h+ fora), `proposta` /
+  `marcar_proposta` (texto da iniciativa), `rotina` (a cada minuto: bolsa ao sair, de volta pro carregador em casa,
+  curiosidade do Hush com o tempo), `_decidir_bolsa`, `bolsa_contada`, `sozinha` / `usou_sozinha`, `reabrir_hush` /
+  `_pressao_hush` / `_curiosidade_com_o_tempo`, `conversa_com_amiga`, `_amigas_perto` (world_state
+  `active_people_json`) / `_amiga_percebe` (evento de turno `amiga:<quem>:<contou|disfarcou>`). `_descobrir` ganhou
+  `sozinha` e guarda `nao_desde`. O prompt sem sessão entra também com a vontade de propor ou com o Lush calado na
+  bolsa; `observe_conversa` marca a proposta (falou do brinquedo com a vontade no prompt) e o contar da bolsa; o
+  classificador ganha `hush: carinho|pressao` só quando ela concluiu "não é pra mim" e o assunto é o Hush.
+- `tempo_livre.py`: `Bloco.brinquedos`; o bloco de masturbação decide o brinquedo (`Lovense.sozinha`), o texto vira
+  "Se masturbando com o Lush", gasta a bateria e anda a descoberta (`usou_sozinha`, depois do INSERT idempotente);
+  chamando ele, o convite leva `lovense` e não gasta sozinha.
+- `social_day.py`: `_record` acrescenta ao resumo do contato o que o Lovense devolve (o Hush com a Bia; a amiga zoa).
+- `proactivity_service.py`: `lovense_proposta(now)` (ele fora da conversa há 10 min+, menos de 2 iniciativas sem
+  resposta, atividade pela `ResponseAvailabilityPolicy`), antes do tesão.
+- `bot.py`: iniciativas `lovense_proposta` e `lovense_bolsa`; no `sexting_solo` com `lovense`, `colocar` (origem
+  dela) e o detalhe "chame ele pra ligar"; `_lovense_rotina` no `_lovense_entrega_tick` (1 min).
+- `scripts/webapp_preview.py`: `acao=vontade | proposta | rotina | sozinha&ele=1 | amiga&q=…`.
+- Testes: `tests/test_lovense_5b.py` (24); suíte inteira 1774 OK; `test_tempo_livre` +2 (com o Lush; com saudade chama pro app) e o antigo
+  sem brinquedo; `test_lovense_corpo` (o prompt sem vontade de propor).
+- **Achado com o banco da produção (cópia, 22:58):** diversão 0,95 + empolgação com ele + tesão 0,63 → a
+  `disposicao` (feita pra sair de casa) dava 1,0 e ela propunha o Hush no receio. Corrigido com `PROPOR_TESAO` /
+  `NOVIDADE_TESAO` e "no receio, o Hush só pela curiosidade". 🟡 **Fica (5a, sem mexer):** pedido dele, ela topa o
+  Hush no receio só pela empolgação — conversar com o Patrick.
+- **Números que eu decidi (internos, calibrar no uso):** propor ≥ 0,7 (topar é 0,55); tesão pra propor 0,65 (0,55 com
+  o Lush nunca usado); ocasião +0,05 (acordando, em casa), +0,08 (antes de sair, fora com bolsa); antes de sair, a
+  ousadia −0,2 × (1 − ousadia) + 0,05; curiosidade do Hush +0,2 receio (só com tesão ≥ 0,75 e confiança ≥ 0,78), +0,15
+  descobrindo, +0,05 adora; espera 4 h (topou: sessão até 2 h depois) / 12 h; o prompt "com vontade" vale 15 min.
+  Bolsa: saída ≥ 2 h, decide ao sair de casa, leva com vontade ≥ 0,6 e bateria ≥ 30%, conta com ≥ 0,7; o Hush junto
+  se gosta e ousadia ≥ 0,5. Sozinha: as 3 primeiras com o Lush, depois tesão ≥ 0,85; bateria ≥ 15%; gasta como nível
+  médio; Hush sozinha nota +0,3, a cada 3 dias, se a última não foi ruim. Reabrir: Bia 2 dias, ele 12 h, tempo 21 dias
+  (tesão ≥ 0,75), gosto volta a 0,25; pressão −0,02 e chateação 0,25. Amiga percebe com o brinquedo ≥ 0,5 do máximo ou
+  ousadia < 0,5; conta pra Bia com ousadia ≥ 0,4, pra outra ≥ 0,7; zoa até 3 dias depois, uma vez.
+- **Textos que eu decidi:** internos — a linha "Agora você está com vontade de usar…", a da bolsa calada, o "curiosa de
+  novo (conversando com a Bia)", os detalhes das iniciativas e as instruções `lovense_proposta` / `lovense_bolsa`
+  (frases de reserva "tô com uma vontade de brincar com o app… 👀" e "joguei o lush na bolsa 😇"), o detalhe do
+  convite com o Lush, os turnos da amiga, o pedaço novo do classificador. Visíveis — Hoje: "Se masturbando com o Lush"
+  (e "com o Lush e o Hush"); Hoje/Mundo (acontecimentos): "Com tesão, se masturbou no quarto com o Lush (no controle
+  dela) pensando no Patrick.", "…se masturbou no quarto com o Lush e chamou ele pra assumir o controle pelo app.",
+  "Usou o Hush pela primeira vez, sozinha, no controle dela, devagar, e…", "Saindo pra {destino}, jogou o Lush na bolsa,
+  pensando que podia rolar…", "A Bia percebeu quando ela gozou com o brinquedo no meio das amigas (olhou desconfiada);
+  ela disfarçou e não contou. / …ela acabou contando do Lovense, baixinho, e ficou segredo das duas.", "Conversando
+  com a Bia, o assunto caiu no Hush: a Bia contou que nas primeiras vezes também não curtiu e que depois mudou de
+  ideia. A Marina ficou curiosa de novo.", "Conversou com o Patrick sobre o Hush, sem pressão, e ficou curiosa de
+  novo.", "Com o tempo, a curiosidade pelo Hush voltou…", e no contato com a amiga "; a Bia zoou ela pelo que
+  percebeu"; Por dentro (motivos): "a Bia percebeu quando ela gozou no meio das amigas", "o Patrick insistiu no Hush
+  depois que ela disse que não é pra ela" — entram no catálogo no passo 7.
+
 ## Lovense, fotos do Hush e do Lush (05/10, noite, frente de imagens)
 
 Teste de texto pras fotos com os brinquedos (o passo 6 do Lovense vai ler o estado e usar). 16 gerações + 1 edição,

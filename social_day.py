@@ -835,6 +835,13 @@ class SocialDay:
         }[contact.channel] + f"; assunto: {contact.topic}"
         if contact.about:
             summary += f", e falaram {self._de(contact.about)}"
+        try:                                     # Lovense, passo 5b: o Hush com a Bia; a amiga que percebeu zoa
+            from lovense import Lovense
+            extra = Lovense(self.db).conversa_com_amiga(contact.at, contact.character_key)
+            if extra:
+                summary += f"; {extra}"
+        except Exception:
+            logger.exception("social_day.lovense")
         summary += "."
         with self.db.get_connection() as conn:
             conn.execute(

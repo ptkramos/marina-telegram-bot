@@ -4657,6 +4657,13 @@ _PROACTIVE_INSTRUCTIONS = {
     'lovense_chegou': ("{detail} Ele sabia que ia chegar hoje e você estava curiosa (e com vontade de testar). Conte "
                        "pra ele do seu jeito, numa mensagem curtinha (curiosidade, malícia, provocação). Não diga que "
                        "já colocou nem testou. Não invente detalhe além do que está aqui."),
+    # 05/10 (Lovense, passo 5b): ela mesma propõe, pela vontade; e o Lush que ela jogou na bolsa ao sair.
+    'lovense_proposta': ("{detail} Proponha pro Patrick do seu jeito, numa mensagem curtinha (malícia, provocação, "
+                         "curiosidade): que você quer que ele ligue o app. Ainda não colocou: quando ele topar, vocês "
+                         "combinam a palavra de segurança (você puxa) e aí você coloca. Não invente acontecimento "
+                         "novo."),
+    'lovense_bolsa': ("{detail} Conte pra ele numa mensagem curtinha, provocando: ele fica sabendo que pode rolar. "
+                      "Não está dentro de você, está na bolsa. Não invente acontecimento novo."),
     # 25/09: ela mandou algo de surpresa pro Patrick (pedido_dela.py); a mensagem leva o link de acompanhar.
     'surpresa_pra_ele': ("{detail} Conte pra ele numa mensagem curtinha, do seu jeito (carinho, um pouco de marra, "
                          "mistério: 'fiz uma coisinha pra você', 'acompanha aí', 'abre a porta daqui a pouco'). "
@@ -4870,12 +4877,30 @@ async def _autonomous_routine_v36(application: Application):
             from tempo_livre import marca_convite_enviado
             from tempo_livre import convite_sexting
             # 26/09 (agenda reativa): o convite pode vir de um banheiro fora de casa, não só do quarto
-            onde = (convite_sexting(memory_manager.db, now) or {}).get("onde") or "no seu quarto"
-            candidate = dict(candidate, reason='sexting_solo',
-                             detail=f"Você está {onde}. " + EmotionEngine(memory_manager.db).tesao_detail(now),
-                             event_id=None, loop_id=None)
+            convite = convite_sexting(memory_manager.db, now) or {}
+            onde = convite.get("onde") or "no seu quarto"
+            detail = f"Você está {onde}. " + EmotionEngine(memory_manager.db).tesao_detail(now)
+            if convite.get("lovense"):
+                # 05/10 (Lovense, passo 5b): com saudade dele, ela coloca o Lush e chama ele pra assumir pelo app.
+                try:
+                    from lovense import Lovense, _NOME
+                    Lovense(memory_manager.db).colocar(now, convite["lovense"], lugar="casa", origem="dela")
+                    nomes = " e ".join(_NOME[b] for b in convite["lovense"])
+                    detail += (f" Você colocou {nomes} e quer que ele assuma o controle pelo app dele: chame ele "
+                               "pra ligar (antes, combinem a palavra de segurança desta vez, você puxa).")
+                except Exception:
+                    logger.exception("lovense.convite.colocar")
+            candidate = dict(candidate, reason='sexting_solo', detail=detail, event_id=None, loop_id=None)
             memory_manager.db.set_estado_relacional(TESAO_KEY, now.isoformat())
             marca_convite_enviado(memory_manager.db)
+        if why == 'lovense_proposta':
+            from lovense import Lovense
+            proposta = await asyncio.to_thread(proactivity_service.lovense_proposta, now)
+            if not proposta:
+                return
+            candidate = dict(candidate, reason='lovense_proposta', event_id=None, loop_id=None,
+                             detail=proposta['detail'])
+            Lovense(memory_manager.db).marcar_proposta(now, proposta)
         if why == 'saudade' and candidate['reason'] in ('light_affection', 'no_candidate'):
             s = proactivity_service.saudade(now)
             sem = (f"Faz {s['hours']:.0f}h que o Patrick não fala com você"
@@ -4931,6 +4956,8 @@ async def _autonomous_routine_v36(application: Application):
                 fallback = "amor tô atrasada… depois te conto"
             elif reason == 'sexting_solo':
                 fallback = "Amor… tô aqui me tocando pensando em você. Vem cá?"
+            elif reason == 'lovense_proposta':
+                fallback = "tô com uma vontade de brincar com o app… 👀"
             elif reason == 'unhas_cor':
                 from unhas import nome as nome_cor
                 a, b = (nome_cor(c).lower() for c in (pergunta or {}).get('opcoes', ('vermelho', 'nude')))
@@ -5687,6 +5714,25 @@ def _pode_receber_entrega(now: datetime) -> tuple[bool, str]:
     return home and not asleep and not shower, why
 
 
+async def _lovense_rotina(application: Application, lv, now: datetime) -> None:
+    """Lovense, passo 5b (05/10): a bolsa ao sair (e de volta pro carregador em casa) e a curiosidade pelo Hush
+    voltando com o tempo. Jogou o Lush na bolsa com vontade de contar: conta — com ele conversando, fica pro
+    prompt ("ele ainda não sabe")."""
+    atividade = await asyncio.to_thread(_lovense_atividade, now)
+    out = await asyncio.to_thread(lv.rotina, now, atividade)
+    if not out.get("contar"):
+        return
+    last_user, _ = proactivity_service.get_last_messages_timestamps()
+    if last_user and now - last_user < timedelta(minutes=3):
+        return
+    text = await asyncio.to_thread(_proactive_text, 'lovense_bolsa', out["contar"], "joguei o lush na bolsa 😇")
+    sent = await send_human_messages(settings.TARGET_CHAT_ID, application.bot, text)
+    if isinstance(getattr(sent, 'message_id', None), int) and sent.message_id > 0:
+        memory_manager.db.registrar_iniciativa_marina(text, media_type='text')
+        await asyncio.to_thread(lv.bolsa_contada, now)
+        logger.info("lovense.bolsa.contou")
+
+
 async def _lovense_entrega_tick(application: Application, now: datetime) -> None:
     """05/10: a encomenda do Lovense chega (o Seu Jorge interfona) e ela conta pra ele quando pega."""
     from lovense import Lovense
@@ -5695,6 +5741,7 @@ async def _lovense_entrega_tick(application: Application, now: datetime) -> None
     if e.get("status") in ("a_caminho", "portaria") and datetime.fromisoformat(e["chega_em"]) <= now:
         pode, why = await asyncio.to_thread(_pode_receber_entrega, now)
         await asyncio.to_thread(lv.entrega_tick, now, pode_pegar=pode, por_que=why)
+    await _lovense_rotina(application, lv, now)
     e = await asyncio.to_thread(lv.entrega_a_anunciar)
     if not e:
         return

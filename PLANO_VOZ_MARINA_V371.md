@@ -1681,6 +1681,14 @@ não respeitou reconstrói a confiança. Ela goza pelo corpo (o turno avisa) ou 
 sumido do app, ela cutuca. Detalhe no PLANO_WEBAPP, "passo 5a feito".
 No ar desde seg 05/10, 19:28 (corte do relatório do dia 7).
 
+**05/10, noite — Lovense, passo 5b (ela mesma):** duas iniciativas novas — `lovense_proposta` (ela propõe pela
+vontade: tesão, ocasião, confiança e, no Hush, a curiosidade; "ainda não colocou: quando ele topar, vocês combinam a
+palavra") e `lovense_bolsa` ("joguei o lush na bolsa", quando sai pra algo longo já com vontade de propor). Na conversa,
+o bloco do Lovense entra também quando ela está com vontade ("proponha do seu jeito; se ele não quiser agora, tudo
+bem: não insista") ou com o Lush calado na bolsa. O convite do sexting, com saudade dele e o Lush em casa, vira
+"coloquei, assume pelo app". Ela não insiste: propôs, espera 4 h (12 h se ele deixou passar). Detalhe no
+PLANO_WEBAPP, "passo 5b feito".
+
 **05/10, noite — a encomenda do Lovense:** até chegar, o prompt diz que o Patrick encomendou e que ela ainda não está
 com eles (não diz que abriu, colocou ou testou); quando ele avisa "chegou", o Seu Jorge interfona e ela manda uma
 iniciativa nova (`lovense_chegou`) contando que pegou e pôs pra carregar. Detalhe na Auditoria, "a encomenda chega".

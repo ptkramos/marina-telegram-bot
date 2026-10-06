@@ -17,9 +17,10 @@ ela recebe com 60%, põe pra carregar e manda mensagem (`lovense_chegou`). No di
 Fila depois: consertos do dia 7 → recalibrar 1 (vínculo; adota a `trust` que o Lovense cria) → recalibrar 2 → 3 → 4
 (as barras novas entram no desenho novo) → Hoje com "Em casa" → banco dela e iFood da Ma.
 **Próximas conversas:** o **passo 5a do Lovense está feito e no ar desde 19:28**; a **encomenda** chega de verdade (a caminho até o Patrick avisar "chegou", ou 21:00; Auditoria, "a encomenda chega") (05/10, noite: ela coloca e tira pela fala, a palavra
-para, goza pelo corpo, o Hush é descoberta dela, ousadia fora — PLANO_WEBAPP, "passo 5a feito"); o 5b (ela propor
-pela curiosidade, bolsa, sozinha, mudar de opinião com a Bia) vem em **"bora na frente de apps: Lovense, passo 5b"**;
-depois, **"bora na frente de apps: redesenho dos Bastidores, passo 1"**; **terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o
+para, goza pelo corpo, o Hush é descoberta dela, ousadia fora — PLANO_WEBAPP, "passo 5a feito"); o **5b está feito**
+(05/10, noite: ela propõe pela vontade — mensagem dela ou na conversa —, leva o Lush na bolsa, usa sozinha, o Hush
+volta à curiosidade com a Bia/ele/o tempo, a amiga percebe o gozo — PLANO_WEBAPP, "passo 5b feito"; pendente pro
+Patrick: ela topa o Hush no receio só pela empolgação, regra do 5a); depois, **"bora na frente de apps: redesenho dos Bastidores, passo 1"**; **terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o
 código novo volta, um por vez, na fila da seção 0. No lote do dia 7 (conserto, sem esperar): o extrato do Dinheiro
 com "Foi no Agência boutique da Lívia (fictícia)" (`extrato._lugar_do_uber` não tira o "(fictícia)" e erra o artigo);
 o "Rolando agora" do Mundo mostrando toda história aberta sem olhar se ela já contou (`social_news_shared`) nem se é

@@ -1109,6 +1109,50 @@ quando sai sabendo que pode rolar, usar sozinha (o `tempo_livre` com o brinquedo
 conversando (com ele ou com a Bia) e a amiga perceber quando ela goza perto. Depois: passo 6 (fotos e áudio) e 7
 (Bastidores e catálogo de textos).
 
+**05/10, noite — passo 5b feito ✅ (ela mesma; sem deploy ainda):** decisões do Patrick (mockup + múltipla escolha),
+todas "pelo que ela sente":
+- **Como ela propõe:** mensagem dela quando vocês não estão conversando (iniciativa nova `lovense_proposta`) **e**
+  dentro da conversa quando o assunto der brecha (linha no bloco do prompt: "Agora você está com vontade de usar o
+  Lush… proponha do seu jeito; se ele não quiser agora, tudo bem: não insista").
+- **Ocasiões (as quatro):** em casa à toa, acordando (de manhã, ainda na cama), antes de sair pra algo longo (2 h+
+  fora; ela pensa em ir já com ele dentro) e já fora com o Lush na bolsa (vai ao banheiro colocar).
+- **A vontade de propor** = a vontade da `disposicao` (tesão, humor, confiança, novidade, ousadia fora) + a ocasião
+  + no Hush a curiosidade; **piso de tesão** pra propor (o bom humor sozinho não basta — achado com o banco da
+  produção, abaixo). No receio o Hush só vem pela curiosidade (tesão alto + confiança); descobrindo, a curiosidade é o
+  motor; gostando/adora, os dois juntos; "não é pra mim", nunca. A descoberta do Hush começa em casa (fora, só
+  quando ela já sabe que gosta). Depois de propor, espera 4 h se ele topou, 12 h se recusou ou deixou passar.
+- **Bolsa (pelo que ela sente):** saindo pra algo longo com vontade de "vai que rola", joga o Lush na bolsa (o Hush
+  também, se já gosta e tem ousadia); com a vontade já de propor, **conta** ("joguei o lush na bolsa", iniciativa
+  `lovense_bolsa`; com ele conversando, fica pra conversa); senão **leva calada** e o prompt sabe ("ele ainda não
+  sabe; conte se der vontade"). Em casa, a bolsa volta pro carregador.
+- **Sozinha (pelo que ela sente):** no tempo livre, se masturbando, as primeiras 3 vezes com o Lush pela curiosidade,
+  depois quando o tesão está alto; o **Hush sozinha pode ser a primeira vez** (curiosidade, no controle dela, devagar
+  — conta como uma vez boa na descoberta; no máximo a cada 3 dias). O Hoje mostra "Se masturbando com o Lush".
+  **Com saudade dele** (o convite do sexting), ela coloca o Lush e chama ele pra assumir pelo app (a sessão abre).
+- **A opinião do Hush (as três):** "não é pra mim" volta a "curiosa de novo" conversando com **a Bia** (num contato
+  do dia, 2 dias depois de concluir), com **ele, com carinho** (o modelo barato lê "carinho" × "pressão"; 12 h depois)
+  ou **com o tempo** (3 semanas, com tesão). **Insistir afasta:** o gosto desce um pouco, o tempo recomeça e ela fica
+  chateada com ele.
+- **A amiga percebe (pelo que ela sente):** gozou fora com amiga do lado (quem está com ela no mundo) — forte, ou ela
+  ainda nervosa de usar fora — a amiga percebe; ela conta (pra Bia com ousadia 0,4; pra outra, 0,7) ou disfarça. Vira
+  acontecimento, entra no turno ("a Bia estava do seu lado e percebeu…") e a amiga zoa ela no contato seguinte.
+
+Código (lista técnica na Auditoria, "Lovense, passo 5b"): `lovense.py` — `vontade_de_propor`, `proposta`,
+`_ocasiao`, `_saida` (commute: a ida que sai de casa e se é longa), `_espera_proposta`, `rotina` (bolsa, guardar,
+curiosidade com o tempo), `_decidir_bolsa`, `sozinha`/`usou_sozinha`, `reabrir_hush`/`_pressao_hush`,
+`conversa_com_amiga`, `_amiga_percebe`; `tempo_livre.py` (o bloco com o brinquedo), `social_day.py` (o contato com a
+amiga), `proactivity_service.py` (`lovense_proposta`), `bot.py` (as duas iniciativas, o convite com o Lush e a
+`_lovense_rotina` a cada minuto). Pré-visualização: `/dev/lovense?acao=vontade | proposta | rotina | sozinha |
+amiga&q=bia_andrade`. Testes: `tests/test_lovense_5b.py` (24) e dois novos no `test_tempo_livre`.
+**Conferido com o banco da produção (05/10, 22:58):** ela estava muito feliz com você (diversão 0,95, empolgação) e
+com tesão 0,63: a `disposicao` dava 1,0 e ela propunha até o Hush no receio, só pela empolgação. Corrigido: propor
+pede tesão (0,65; 0,55 enquanto o Lush nunca foi usado — a vontade de testar) e o Hush no receio só pela curiosidade.
+Agora, em casa à toa, ela teria vontade de propor o Lush ("empolgada"); ocupada ou na aula sem nada na bolsa, não.
+**Observação pro Patrick (não mexi, é do 5a):** pelo mesmo motivo, hoje ela **toparia o Hush se você pedisse**, só
+pela empolgação (o "receio: só com muito tesão" do 5a perde pro bom humor).
+Próximo: **"bora na frente de apps: redesenho dos Bastidores, passo 1"**; o passo 6 do Lovense (fotos e áudio)
+depois.
+
 ### Hoje com o bloco "Em casa" — plano (04/10, noite, frente de apps; sem código até o soak fechar) 📝
 Primeiro da frente de apps depois do soak. Base: respostas dele de 02/10 (`ideias_pos_soak/ideias/em_casa.json`: o
 bloco abre quando ela **chega** em casa e fecha quando ela **sai**; dentro, tudo o que ela faz **dentro do

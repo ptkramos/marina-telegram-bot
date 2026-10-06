@@ -272,8 +272,9 @@ class ParadoTests(LovenseBase):
 
 class PromptTests(LovenseBase):
     def test_sem_sessao_so_quando_fala_de_brinquedo(self):
-        with patch("lovense._feeling", return_value=com(libido=0.8)):
+        with patch("lovense._feeling", return_value=com(libido=0.6)):   # sem vontade de propor (passo 5b)
             self.assertIsNone(self.lv.prompt(s(0), "HOME_RELAXING", "e aí, como foi a aula?"))
+        with patch("lovense._feeling", return_value=com(libido=0.8)):
             p = self.lv.prompt(s(0), "HOME_RELAXING", "usa o lush pra mim?")
         self.assertIn("Se ele pedir pra você usar o Lush agora: você topa", p)
         self.assertIn("você puxa", p)

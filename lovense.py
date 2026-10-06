@@ -24,6 +24,13 @@ O brinquedo é o dela na história e o Patrick controla pelo app. Este módulo �
   (receio → descobrindo → gostando → adora, ou "não é pra mim") e usar fora de casa é ousadia que cresce com as
   vezes boas (`_descoberta`). O bloco do prompt (`prompt`) diz o que ela sabe.
 
+- Ela mesma (passo 5b): propõe pela vontade (`vontade_de_propor`: tesão, ocasião, confiança e, no Hush, a
+  curiosidade; a novidade cansa; depois de propor ela espera — mais se ele deixou passar), por mensagem dela
+  (proactivity) ou dentro da conversa (prompt); joga o Lush na bolsa quando sai pra algo longo e "pode rolar", e
+  conta ou não pelo que sente (`rotina`); usa sozinha no tempo livre (`sozinha`/`usou_sozinha`; com saudade dele,
+  coloca e chama ele pro app); a opinião do Hush pode voltar à curiosidade (a Bia, ele com carinho, o tempo —
+  `reabrir_hush`); e a amiga do lado pode perceber quando ela goza fora (`_amiga_percebe`).
+
 Quem chama: o Mini App manda os comandos; o bot transforma os eventos em turno (o que ela sente, `sentir`), lê
 a fala dela depois de cada resposta (`observe_conversa`) e põe o bloco no prompt. Nada aqui fala por ela: o turno
 descreve a sensação, nunca a fala.
@@ -87,7 +94,9 @@ EVENTOS_DE_TURNO = ("respeitou", "parou_tarde", "parou_depois_da_bronca", "relig
                     "sessao_acabou_bateria",       # + bateria_acabou:<brinquedo>; os dela (pediu_parar,
                                                    # tirou) ela já sabe
                     # passo 5a: o que o corpo e o mundo fazem sem ela falar (ela conta pra ele)
-                    "gozou", "tirou_academia", "tirou_dormir", "tirou_briga", "tirou_hush")
+                    "gozou", "tirou_academia", "tirou_dormir", "tirou_briga", "tirou_hush",
+                    # passo 5b: + amiga:<quem>:<contou|disfarcou> (a amiga do lado percebeu o gozo)
+                    )
 
 # Passo 4 (Patrick, 05/10): como ela está recebendo decide quando ela responde. Tudo depende de ela estar
 # gostando ou não: o PONTO BOM dela muda o tempo todo — sobe com o tesão; desce em lugar com gente (forte demais
@@ -153,6 +162,56 @@ COLOCOU_RE = re.compile(r"\b(?:coloc\w*|coloqu\w*|bot(?:ei|ando|ar|o)|pus|pondo|
 TIROU_RE = re.compile(r"\b(?:tir(?:ei|ar|ando|o|ou)|tirad[oa])\b", re.IGNORECASE)
 CONVERSA_RE = re.compile(r"\b(?:desculp\w*|perd[aã]o|convers\w*|errei|erro|magoad\w*|chatead\w*|confian\w*|"
                          r"palavra|aquilo|respeit\w*)\b", re.IGNORECASE)
+
+# Passo 5b (05/10, noite; decisões do Patrick por múltipla escolha). Números meus (calibrar no uso).
+# Ela propõe pela vontade (a mesma escala da `disposicao`), sem sorteio: tesão + ocasião + confiança e, no Hush, a
+# curiosidade (Patrick: "se eu tiver que ficar pedindo vai parecer muito forçado"); a novidade cansa. Propôs: a
+# vontade de propor de novo espera — mais se ele recusou ou deixou passar (ela não insiste).
+PROPOSTA_KEY = "lovense_proposta_json"     # a última vez que ela propôs (iniciativa, conversa, bolsa)
+VONTADE_KEY = "lovense_vontade_em"         # o prompt disse que ela está com vontade de propor
+VONTADE_VALE = timedelta(minutes=15)
+PROPOR = 0.7
+PROPOR_DE_NOVO = timedelta(hours=4)        # propôs e ele topou
+PROPOR_SEM_RESPOSTA = timedelta(hours=12)  # ele recusou ou deixou passar
+TOPOU_EM = timedelta(hours=2)              # sessão aberta até 2 h depois da proposta = ele topou
+OCASIOES = {"acordando": 0.05, "em_casa": 0.05, "antes_de_sair": 0.08, "fora_bolsa": 0.08}
+CURIOSIDADE_HUSH = {"receio": 0.2, "descobrindo": 0.15, "gostando": 0.0, "adora": 0.05}
+PROPOR_TESAO = 0.65                        # propor é coisa do tesão: o bom humor sozinho não basta (a disposicao
+NOVIDADE_TESAO = 0.55                      # pesa o humor como pra sair); o Lush nunca usado: a vontade de testar
+CURIOSA_TESAO = 0.75                       # no receio, a curiosidade só pesa com tesão alto…
+CURIOSA_CONFIANCA = 0.78                   # …e confiando nele
+# Bolsa: sai pra algo longo (2 h+) com vontade de "vai que rola" → o Lush vai junto; conta pra ele quando a
+# vontade já é de propor, senão leva calada (e o prompt sabe).
+BOLSA_KEY = "lovense_bolsa_json"
+LEVAR = 0.6
+SAIDA_LONGA = timedelta(hours=2)
+ANTES_DE_SAIR = timedelta(minutes=90)
+# Sozinha, no tempo livre (Patrick: "pelo que ela sente"): as primeiras vezes por curiosidade, depois com o tesão
+# alto; o Hush também, pela curiosidade (no controle dela, devagar: conta como uma vez boa na descoberta). Com
+# saudade dele (o `chama_ele` do tempo_livre), ela coloca o Lush e chama ele pra assumir pelo app.
+SOZINHA_KEY = "lovense_sozinha_json"
+SOZINHA_NOVIDADE = 3
+SOZINHA_TESAO = 0.85
+SOZINHA_BATERIA = 0.15
+SOZINHA_NIVEL = 0.5
+SOZINHA_NOTA = 0.3
+HUSH_SOZINHA_DE_NOVO = timedelta(days=3)
+# "Não é pra mim" volta à curiosidade (Patrick: a Bia, ele com carinho e ela mesma com o tempo); insistir afasta.
+REABRIR_BIA = timedelta(days=2)
+REABRIR_ELE = timedelta(hours=12)
+REABRIR_TEMPO = timedelta(days=21)
+GOSTO_REABERTO = 0.25
+PRESSAO_GOSTO = -0.02
+# A amiga do lado percebe quando ela goza fora (forte, ou ela ainda nervosa de usar fora); ela conta pra amiga ou
+# disfarça pela ousadia (pra Bia, a melhor amiga, conta antes). A amiga zoa no próximo contato.
+AMIGA_PERCEBE_FORTE = 0.5
+AMIGA_PERCEBE_OUSADIA = 0.5
+CONTA_PRA_BIA = 0.4
+CONTA_PRA_OUTRA = 0.7
+ZOA_DEPOIS = timedelta(days=3)
+AMIGAS_KEY = "lovense_amigas_json"         # quem percebeu e se já zoou
+_OCASIAO_TEXTO = {"acordando": "acordando, ainda na cama", "em_casa": "em casa, à toa",
+                  "antes_de_sair": "se arrumando pra sair", "fora_bolsa": "fora de casa, com {bolsa} na bolsa"}
 
 
 def _norm(texto: str) -> str:
@@ -251,6 +310,25 @@ _EVENTO_TEXTO = {
 _ONDE_GOZO = {"CLASS": "no meio da aula", "WORK": "no meio do trabalho", "SOCIAL": "no meio das amigas",
               "MEAL": "na mesa, comendo", "MANICURE": "na manicure", "GYM": "na academia",
               "COMMUTE": "no caminho", "OUT_SOLO": "na rua", "PET_WALK": "passeando com o Milo"}
+
+
+def _quem(chave: str) -> str:
+    try:
+        from social_day import short_name
+        return short_name(chave)
+    except Exception:
+        return "sua amiga"
+
+
+def _texto_amiga(evento: str) -> str:
+    """amiga:<quem>:<contou|disfarcou> → o que aconteceu do lado dela (texto interno do turno)."""
+    _, quem, como = (evento.split(":") + ["", ""])[:3]
+    nome = _quem(quem)
+    if como == "contou":
+        return (f"{nome} estava do seu lado e percebeu (te olhou desconfiada); você acabou contando do brinquedo "
+                "pra ela, baixinho, e ficou segredo das duas")
+    return (f"{nome} estava do seu lado e percebeu alguma coisa (te olhou desconfiada); você disfarçou e não "
+            "contou do brinquedo")
 
 
 def _intensidade(e: float) -> tuple[str, str]:
@@ -876,8 +954,8 @@ class Lovense:
         (`sentido_json`), então a rajada de comandos e o que mudou no intervalo entram juntos no turno seguinte.
         Com `atividade` (passo 4), o turno diz como ela está recebendo, e começar a incomodar sem ele mexer (cansou,
         ficou sensível, chegou na aula) também vira turno."""
-        eventos = list(dict.fromkeys(e for e in eventos
-                                     if e in EVENTOS_DE_TURNO or e.startswith("bateria_acabou:")))
+        eventos = list(dict.fromkeys(e for e in eventos if e in EVENTOS_DE_TURNO
+                                     or e.startswith(("bateria_acabou:", "amiga:"))))
         rec = self.recepcao(now, atividade) if atividade is not None else None
         with self.db.get_connection() as conn:
             sessao = self._ativa(conn)
@@ -909,7 +987,7 @@ class Lovense:
                                 if publico else ""),
                        "fora": " no banheiro" if ctx and not ctx["em_casa"] else "",
                        "resto": "; o Lush continua" if "lush" in em_uso else "; o app dele desconectou"}
-                partes = [_EVENTO_TEXTO[e.partition(":")[0]].format(
+                partes = [_texto_amiga(e) if e.startswith("amiga:") else _EVENTO_TEXTO[e.partition(":")[0]].format(
                     nome_de=_NOME_DE.get(e.partition(":")[2], "do brinquedo"), **fmt) for e in eventos]
                 if any(e in ("religou", "firme", "bronca") for e in eventos):
                     ligados = [_sensacao(b, *agora[b]) for b in em_uso if agora[b][0] > 0]
@@ -1112,7 +1190,8 @@ class Lovense:
                 conn.commit()
         self.db.set_estado_relacional(DESCOBERTA_KEY, json.dumps(d))
 
-    def _descobrir(self, d: dict, parte: str, nota: float, sessao_id: int, now: datetime) -> None:
+    def _descobrir(self, d: dict, parte: str, nota: float, sessao_id, now: datetime, *,
+                   sozinha: bool = False) -> None:
         if parte == "hush":
             h = d["hush"]
             antes = self.estagio_hush(d)
@@ -1126,14 +1205,18 @@ class Lovense:
             vez = "pela primeira vez" if vezes == 0 else "de novo"
             if h["nao_e_pra_mim"] and antes != "nao_e_pra_mim":
                 opiniao = "e concluiu que o Hush não é pra ela: não curtiu"
+                h["nao_desde"] = now.isoformat()
+                h.pop("reabriu_por", None)
             elif nota >= 0.4:
                 opiniao = "e gostou mais do que esperava"
             elif nota >= 0:
                 opiniao = "e ainda não sabe se gosta: foi estranho e gostoso ao mesmo tempo"
             else:
                 opiniao = "e não curtiu desta vez: incomodou"
+            como = ("sozinha, no controle dela, devagar" if sozinha
+                    else "com o Patrick controlando pelo app")
             self._registra(f"lovense:hush:{sessao_id}", now,
-                           f"Usou o Hush {vez}, com o Patrick controlando pelo app, {opiniao}. A opinião é dela: "
+                           f"Usou o Hush {vez}, {como}, {opiniao}. A opinião é dela: "
                            "conta pra ele se quiser.", importance=0.35)
         else:
             f = d["fora"]
@@ -1176,18 +1259,65 @@ class Lovense:
             except Exception:
                 pass
         quais = " e ".join(_NOME[b] for b in em_uso) or "o brinquedo"
+        amiga = []
         if publico:
             onde = _ONDE_GOZO.get(rec["atividade"], "no meio de gente")
             summary = (f"Gozou com {quais} que o Patrick controlava pelo app, {onde}, tentando disfarçar "
                        "(ficou vermelha).")
             self._sente("vergonha", "vergonha", 0.3, f"gozou {onde} com o brinquedo", now,
                         f"lovense:gozo:{sessao['id']}:{exp['gozos']}:vergonha", target=None)
+            amiga = self._amiga_percebe(now, rec, f"{sessao['id']}:{exp['gozos']}")
         else:
             summary = f"Gozou com {quais} que o Patrick controlava pelo app."
         self._registra(f"lovense:gozo:{sessao['id']}:{exp['gozos']}", now, summary, importance=0.35)
         self._sente("alegria", "alivio", 0.3, "gozou com o brinquedo", now,
                     f"lovense:gozo:{sessao['id']}:{exp['gozos']}", target=None)
-        return [] if pela_fala else ["gozou"]
+        return [] if pela_fala else ["gozou"] + amiga
+
+    # ---------------------------------------------------------------- a amiga do lado (passo 5b)
+
+    def _amigas_perto(self, now: datetime) -> list[str]:
+        """Quem está com ela agora (world_state.active_people_json), só as amigas."""
+        try:
+            from agenda_viva import AMIGAS
+            with self.db.get_connection() as conn:
+                row = conn.execute("""SELECT active_people_json FROM world_state WHERE observed_at<=?
+                                      ORDER BY observed_at DESC, id DESC LIMIT 1""", (now.isoformat(),)).fetchone()
+            gente = json.loads(row["active_people_json"] or "[]") if row else []
+        except Exception:
+            return []
+        return [p for p in gente if p in AMIGAS]
+
+    def _amiga_percebe(self, now: datetime, rec: dict, chave: str) -> list[str]:
+        """Gozou fora com amiga do lado: forte demais ou ela ainda nervosa de usar fora → a amiga percebe. Ela conta
+        ou disfarça pela ousadia (pra Bia, a melhor amiga, conta antes). Vira história e a amiga zoa depois."""
+        perto = self._amigas_perto(now)
+        if not perto:
+            return []
+        ousadia = float(self._descoberta()["fora"]["ousadia"])
+        if rec["e"] < AMIGA_PERCEBE_FORTE and ousadia >= AMIGA_PERCEBE_OUSADIA:
+            return []
+        quem = "bia_andrade" if "bia_andrade" in perto else perto[0]
+        contou = ousadia >= (CONTA_PRA_BIA if quem == "bia_andrade" else CONTA_PRA_OUTRA)
+        nome = _quem(quem)
+        nome_cap = nome[:1].upper() + nome[1:]
+        onde = _ONDE_GOZO.get(rec["atividade"], "no meio de gente")
+        summary = (f"{nome_cap} percebeu quando ela gozou com o brinquedo {onde} (olhou desconfiada); "
+                   + ("ela acabou contando do Lovense, baixinho, e ficou segredo das duas."
+                      if contou else "ela disfarçou e não contou."))
+        with self.db.get_connection() as conn:
+            conn.execute(
+                """INSERT OR IGNORE INTO life_events(event_key,event_at,event_type,title,summary,source_type,
+                   autonomy_level,importance,participants_json,share_worthy,created_at)
+                   VALUES (?,?,'routine','lovense',?,'simulated',1,0.35,?,0.7,?)""",
+                (f"lovense:amiga:{chave}", now.isoformat(), summary, json.dumps(["marina", quem]), now.isoformat()))
+            conn.commit()
+        a = self._json(AMIGAS_KEY)
+        a[quem] = {"em": now.isoformat(), "contou": contou, "zoou": False}
+        self.db.set_estado_relacional(AMIGAS_KEY, json.dumps(a))
+        self._sente("vergonha", "vergonha", 0.25 if contou else 0.35, f"{nome} percebeu quando ela gozou {onde}",
+                    now, f"lovense:amiga:{chave}", target=None)
+        return [f"amiga:{quem}:{'contou' if contou else 'disfarcou'}"]
 
     def gozou_pela_fala(self, now: datetime, atividade: Optional[str] = None) -> bool:
         """Ela escreveu que gozou com o brinquedo nela (o intimacy já marcou o clímax): vale no mundo também."""
@@ -1326,7 +1456,11 @@ class Lovense:
         desc = self._descoberta()
         estagio = self.estagio_hush(desc)
         bat = {b["nome"]: b for b in st["brinquedos"]}
-        hush_linha = (f"- Hush (plug anal vibratório): você {HUSH_ESTAGIO_TEXTO[estagio]}. A opinião sobre ele é sua "
+        estagio_txt = HUSH_ESTAGIO_TEXTO[estagio]
+        if estagio == "descobrindo" and desc["hush"].get("reabriu_por"):
+            estagio_txt = ("não curtiu das primeiras vezes e tinha concluído que não era pra você, mas ficou curiosa "
+                           f"de novo ({desc['hush']['reabriu_por']})")
+        hush_linha = (f"- Hush (plug anal vibratório): você {estagio_txt}. A opinião sobre ele é sua "
                       "e vai se formando com as vezes que você usa.")
         if not st["conectada"]:
             e = self.entrega()
@@ -1342,7 +1476,16 @@ class Lovense:
                           "- Você ainda não está com eles: não diga que já abriu, colocou ou testou.",
                           hush_linha]
                 return "\n".join(linhas)
-            if not BRINQUEDO_RE.search(conversa or ""):
+            # Passo 5b: entra também quando ela está com vontade de propor, ou levou na bolsa calada.
+            try:
+                vontade = self.vontade_de_propor(now, atividade)
+            except Exception:
+                logger.exception("lovense.vontade")
+                vontade = {"quer": False}
+            bolsa = self._json(BOLSA_KEY)
+            calada = bool(bolsa.get("levou") and not bolsa.get("contou")
+                          and any(bat[b]["onde"] == "bolsa" for b in bolsa["levou"]))
+            if not (BRINQUEDO_RE.search(conversa or "") or vontade["quer"] or calada):
                 return None
             onde = {"gaveta": "na gaveta", "carregador": "no carregador", "bolsa": "na sua bolsa", "nela": "em você"}
             linhas = ["[BRINQUEDO — LOVENSE, controlado pelo app do Patrick]",
@@ -1361,6 +1504,14 @@ class Lovense:
                           "(sugere uma ou pergunta qual vai ser). Em casa você coloca na hora e conta pra ele quando "
                           "colocou; fora de casa, só se o brinquedo estiver na sua bolsa. Só diga que colocou se "
                           "colocou mesmo.")
+            if calada:
+                linhas.append(f"- Você jogou {' e '.join(_NOME[b] for b in bolsa['levou'])} na bolsa antes de sair, "
+                              "pensando que podia rolar; ele ainda não sabe. Conte se der vontade.")
+            if vontade["quer"]:
+                linhas.append(f"- Agora você está com vontade de usar {vontade['nomes']} com ele controlando "
+                              f"({vontade['motivo']}). Se a conversa der brecha, proponha do seu jeito; se ele não "
+                              "quiser agora, tudo bem: não insista.")
+                self.db.set_estado_relacional(VONTADE_KEY, now.isoformat())
             return "\n".join(linhas)
         rec = self.recepcao(now, atividade)
         quais = [b for b in BRINQUEDOS if bat[b]["em_uso"]]
@@ -1405,6 +1556,344 @@ class Lovense:
                           "conversando de verdade.")
         return "\n".join(linhas)
 
+    # ---------------------------------------------------------------- ela propõe (passo 5b)
+
+    def _saida(self, now: datetime) -> Optional[dict]:
+        """A saída de casa em andamento ou que começa na próxima 1 h 30 (a ida que sai de casa), e se é longa."""
+        try:
+            from commute import Commute
+            legs = Commute(self.db).legs_on(now.date())
+        except Exception:
+            logger.exception("lovense.saida")
+            return None
+        for ida in sorted((leg for leg in legs if leg.direction == "ida" and not leg.origem), key=lambda x: x.start):
+            if ida.end <= now or ida.start - now > ANTES_DE_SAIR:
+                continue
+            volta = min((leg for leg in legs if leg.direction == "volta" and leg.start >= ida.end),
+                        key=lambda x: x.start, default=None)
+            fora = (volta.start - ida.end) if volta else SAIDA_LONGA     # volta depois da meia-noite: longa
+            return {"key": ida.key, "destino": ida.destination, "inicio": ida.start, "longa": fora >= SAIDA_LONGA,
+                    "saindo": ida.start <= now}
+        return None
+
+    def _ocasiao(self, now: datetime, atividade: Optional[str]) -> Optional[str]:
+        """A ocasião de agora (Patrick: acordando, em casa à toa, antes de sair pra algo longo, fora com ele na
+        bolsa). Fora dessas, ela não pensa em propor."""
+        a = atividade or "UNKNOWN"
+        if a in ("WAKING", "MICRO_WAKE") and 5 <= now.hour < 12:
+            return "acordando"
+        if a in ("HOME_RELAXING", "SOLO"):
+            return "em_casa"
+        if a == "GETTING_READY":
+            s = self._saida(now)
+            return "antes_de_sair" if s and s["longa"] else None
+        if a in ("CLASS", "SOCIAL", "MEAL", "WORK", "MANICURE"):
+            with self.db.get_connection() as conn:
+                estoque = self._brinquedos(conn)
+            return "fora_bolsa" if any(r["onde"] == "bolsa" for r in estoque.values()) else None
+        return None
+
+    def _espera_proposta(self, now: datetime) -> Optional[str]:
+        """Propôs há pouco: espera 4 h se ele topou (abriu sessão em até 2 h), 12 h se recusou ou deixou passar."""
+        em = _dt(self._json(PROPOSTA_KEY).get("em"))
+        if not em:
+            return None
+        with self.db.get_connection() as conn:
+            topou = conn.execute("SELECT 1 FROM lovense_sessoes WHERE desde>=? AND desde<=? LIMIT 1",
+                                 (em.isoformat(), (em + TOPOU_EM).isoformat())).fetchone()
+        espera = PROPOR_DE_NOVO if topou else PROPOR_SEM_RESPOSTA
+        return "propôs há pouco" if now - em < espera else None
+
+    def _marcar_proposta(self, now: datetime, como: str, brinquedos: Iterable[str] = (),
+                         ocasiao: Optional[str] = None) -> None:
+        self.db.set_estado_relacional(PROPOSTA_KEY, json.dumps(
+            {"em": now.isoformat(), "como": como, "brinquedos": list(brinquedos), "ocasiao": ocasiao}))
+
+    def vontade_de_propor(self, now: datetime, atividade: Optional[str] = None, *, feeling=None) -> dict:
+        """Ela mesma quer propor agora? A vontade da `disposicao` (tesão, humor, confiança, novidade, ousadia fora)
+        mais a ocasião e, no Hush, a curiosidade (no receio, só com tesão alto e confiando nele). Mesmo estado,
+        mesma decisão. {quer, brinquedos, nomes, ocasiao, motivo, vontade}."""
+        nada = {"quer": False, "brinquedos": [], "nomes": "", "ocasiao": None, "motivo": "", "vontade": 0.0}
+        if self.sessao_ativa() or self.tem_pendente() or self.entrega().get("status") in ("a_caminho", "portaria"):
+            return nada
+        espera = self._espera_proposta(now)
+        if espera:
+            return dict(nada, motivo=espera)
+        ocasiao = self._ocasiao(now, atividade)
+        if not ocasiao:
+            return nada
+        try:
+            f = feeling or _feeling(self.db, now)
+        except Exception:
+            f = None
+        desc = self._descoberta()
+        tesao = max(float(f.libido), float(f.excitation)) if f is not None else 0.5
+        nunca = not self.sessoes_recentes(now, dias=3650) and not int(self._json(SOZINHA_KEY).get("lush") or 0)
+        if tesao < (NOVIDADE_TESAO if nunca else PROPOR_TESAO):
+            return dict(nada, ocasiao=ocasiao, motivo="sem tesão pra propor")
+        bonus = OCASIOES[ocasiao]
+        if ocasiao == "antes_de_sair":            # vai estar no meio de gente: a ousadia já pesa agora
+            bonus += -0.2 * (1 - float(desc["fora"]["ousadia"])) + 0.05
+        dl = self.disposicao(now, ["lush"], atividade, feeling=f)
+        v_lush = dl["vontade"] + bonus
+        quer_lush = dl["topa"] and v_lush >= PROPOR
+        estagio = self.estagio_hush(desc)
+        dh = self.disposicao(now, ["hush"], atividade, feeling=f)
+        cur = CURIOSIDADE_HUSH.get(estagio, 0.0)
+        if estagio == "receio":
+            if tesao < CURIOSA_TESAO or self.confianca(now) < CURIOSA_CONFIANCA:
+                cur = 0.0
+        v_hush = dh["vontade"] + bonus + cur
+        # A descoberta do Hush começa em casa: fora (ou saindo), só quando ela já sabe que gosta.
+        fora = ocasiao in ("antes_de_sair", "fora_bolsa")
+        # No receio, o Hush só entra pela curiosidade (tesão alto e confiando nele) — não pela empolgação do dia.
+        quer_hush = (not dh["recusa"] and not dh["impossivel"] and v_hush >= PROPOR
+                     and not (fora and estagio in ("receio", "descobrindo"))
+                     and not (estagio == "receio" and not cur))
+        if quer_hush and quer_lush and estagio in ("gostando", "adora"):
+            brinquedos = ["lush", "hush"]
+        elif quer_hush and (estagio in ("receio", "descobrindo") or not quer_lush):
+            brinquedos = ["hush"]
+        elif quer_lush:
+            brinquedos = ["lush"]
+        else:
+            return dict(nada, ocasiao=ocasiao, vontade=round(max(v_lush, v_hush), 3))
+        if brinquedos == ["hush"] and cur:
+            motivo = ("curiosa pra experimentar o Hush, com tesão" if estagio == "receio"
+                      else "curiosa pra entender se gosta do Hush")
+        else:
+            motivo = (dh if brinquedos == ["hush"] else dl)["motivo"] or "com vontade"
+        return {"quer": True, "brinquedos": brinquedos, "nomes": " e ".join(_NOME[b] for b in brinquedos),
+                "ocasiao": ocasiao, "motivo": motivo, "vontade": round(v_hush if brinquedos == ["hush"] else v_lush, 3)}
+
+    def proposta(self, now: datetime, atividade: Optional[str] = None) -> Optional[dict]:
+        """A proposta de agora pra virar mensagem dela (proactivity): {detail, brinquedos, ocasiao}. Texto interno."""
+        v = self.vontade_de_propor(now, atividade)
+        if not v["quer"]:
+            return None
+        with self.db.get_connection() as conn:
+            estoque = self._brinquedos(conn)
+        na_bolsa = " e ".join(_NOME[b] for b in BRINQUEDOS if estoque[b]["onde"] == "bolsa")
+        oc = _OCASIAO_TEXTO[v["ocasiao"]].format(bolsa=na_bolsa or "o Lush")
+        detail = (f"Você está {oc} e com vontade de usar {v['nomes']} com o Patrick controlando pelo app dele "
+                  f"({v['motivo']}).")
+        if "hush" in v["brinquedos"] and self.estagio_hush(self._descoberta()) == "receio":
+            detail += " Você nunca usou o Hush: curiosa e com um pouco de medo."
+        if v["ocasiao"] == "antes_de_sair":
+            s = self._saida(now)
+            detail += (f" Pensou em sair{' pra ' + s['destino'] if s else ''} já com {v['nomes']} dentro, com ele "
+                       "controlando de longe.")
+        elif v["ocasiao"] == "fora_bolsa":
+            detail += " Se ele topar, você vai ao banheiro do lugar colocar."
+        return {"detail": detail, "brinquedos": v["brinquedos"], "ocasiao": v["ocasiao"]}
+
+    def marcar_proposta(self, now: datetime, proposta: dict) -> None:
+        self._marcar_proposta(now, "iniciativa", proposta.get("brinquedos") or (), proposta.get("ocasiao"))
+
+    # ---------------------------------------------------------------- o mundo dela (passo 5b, a cada minuto)
+
+    def rotina(self, now: datetime, atividade: Optional[str] = None) -> dict:
+        """A bolsa ao sair (e de volta em casa, pro carregador) e a curiosidade pelo Hush voltando com o tempo.
+        Devolve {"contar": detail} quando ela jogou o Lush na bolsa com vontade de contar."""
+        out: dict = {}
+        if self.sessao_ativa() or self.entrega().get("status") in ("a_caminho", "portaria"):
+            return out
+        with self.db.get_connection() as conn:
+            self._assentar(conn, now)
+            estoque = self._brinquedos(conn)
+            conn.commit()
+        if atividade in EM_CASA:                         # refeição e "não sei" podem ser fora: não guarda
+            for b in BRINQUEDOS:
+                if estoque[b]["onde"] == "bolsa":
+                    self.guardar(now, b)                 # de volta em casa: sai da bolsa pro carregador
+        s = self._saida(now)
+        bolsa = self._json(BOLSA_KEY)
+        if s and s["saindo"] and s["longa"] and bolsa.get("leg") != s["key"]:
+            out.update(self._decidir_bolsa(now, s))
+        self._curiosidade_com_o_tempo(now)
+        return out
+
+    def _decidir_bolsa(self, now: datetime, s: dict) -> dict:
+        """Saindo pra algo longo: joga o Lush na bolsa se "pode rolar" (a vontade de propor, com a ousadia de usar
+        fora); conta pra ele se a vontade já é de propor, senão leva calada."""
+        try:
+            f = _feeling(self.db, now)
+        except Exception:
+            f = None
+        desc = self._descoberta()
+        ousadia = float(desc["fora"]["ousadia"])
+        bonus = OCASIOES["antes_de_sair"] - 0.2 * (1 - ousadia) + 0.05
+        levou = []
+        with self.db.get_connection() as conn:
+            estoque = self._brinquedos(conn)
+        dl = self.disposicao(now, ["lush"], "GETTING_READY", feeling=f)
+        v = dl["vontade"] + bonus
+        if (not dl["recusa"] and not dl["impossivel"] and v >= LEVAR
+                and estoque["lush"]["onde"] in ("gaveta", "carregador") and float(estoque["lush"]["bateria"]) >= 0.3):
+            levou.append("lush")
+            if (self.estagio_hush(desc) in ("gostando", "adora") and ousadia >= 0.5
+                    and estoque["hush"]["onde"] in ("gaveta", "carregador")
+                    and float(estoque["hush"]["bateria"]) >= 0.3):
+                dh = self.disposicao(now, ["hush"], "GETTING_READY", feeling=f)
+                if not dh["recusa"] and dh["vontade"] + bonus >= LEVAR:
+                    levou.append("hush")
+        contar = bool(levou) and v >= PROPOR and not self._espera_proposta(now)
+        self.db.set_estado_relacional(BOLSA_KEY, json.dumps(
+            {"leg": s["key"], "destino": s["destino"], "em": now.isoformat(), "levou": levou,
+             "vontade": round(v, 3), "contou": None}))
+        if not levou:
+            return {}
+        for b in levou:
+            self.levar_na_bolsa(now, b)
+        nomes = " e ".join(_NOME[b] for b in levou)
+        self._registra(f"lovense:bolsa:{s['key']}", now,
+                       f"Saindo pra {s['destino']}, jogou {nomes} na bolsa, pensando que podia rolar com o Patrick "
+                       "controlando de longe.", importance=0.25, share=0.5)
+        logger.info("lovense.bolsa levou=%s contar=%s vontade=%.2f", ",".join(levou), contar, v)
+        if not contar:
+            return {}
+        return {"contar": (f"Você está saindo pra {s['destino']} e jogou {nomes} na bolsa, pensando que pode rolar "
+                           f"com ele controlando pelo app de onde estiver ({dl['motivo'] or 'com vontade'})."),
+                "brinquedos": levou}
+
+    def bolsa_contada(self, now: datetime) -> None:
+        bolsa = self._json(BOLSA_KEY)
+        if bolsa:
+            bolsa["contou"] = now.isoformat()
+            self.db.set_estado_relacional(BOLSA_KEY, json.dumps(bolsa))
+        self._marcar_proposta(now, "bolsa", bolsa.get("levou") or ("lush",), "fora_bolsa")
+
+    # ---------------------------------------------------------------- sozinha (passo 5b)
+
+    def sozinha(self, now: datetime, chama_ele: bool = False, *, feeling=None) -> list[str]:
+        """No tempo livre, se masturbando: com qual brinquedo (vazio = sem). As primeiras vezes por curiosidade,
+        depois com o tesão alto; o Hush pela curiosidade (no máximo a cada 3 dias, e se a última vez não foi ruim).
+        Com saudade dele (`chama_ele`), o Lush — pra chamar ele pro app."""
+        if self.sessao_ativa() or self.entrega().get("status") in ("a_caminho", "portaria"):
+            return []
+        with self.db.get_connection() as conn:
+            self._assentar(conn, now)
+            estoque = self._brinquedos(conn)
+            conn.commit()
+
+        def ok(b: str) -> bool:
+            return estoque[b]["onde"] in ("gaveta", "carregador") and float(estoque[b]["bateria"]) >= SOZINHA_BATERIA
+        try:
+            f = feeling or _feeling(self.db, now)
+            tesao = max(float(f.libido), float(f.excitation))
+        except Exception:
+            tesao = 0.5
+        s = self._json(SOZINHA_KEY)
+        out = []
+        if ok("lush") and (chama_ele or int(s.get("lush") or 0) < SOZINHA_NOVIDADE or tesao >= SOZINHA_TESAO):
+            out.append("lush")
+        if chama_ele or not ok("hush") or tesao < SOZINHA_TESAO:
+            return out
+        h = self._descoberta()["hush"]
+        ultima = _dt(s.get("hush_em"))
+        nota = h.get("ultima_nota")
+        if (self.estagio_hush(self._descoberta()) != "nao_e_pra_mim" and (nota is None or float(nota) >= 0)
+                and (not ultima or now - ultima >= HUSH_SOZINHA_DE_NOVO)):
+            out.append("hush")
+        return out
+
+    def usou_sozinha(self, inicio: datetime, fim: datetime, brinquedos: Iterable[str], chave: str,
+                     now: datetime) -> None:
+        """Usou sozinha, no controle dela: gasta a bateria (médio) e, no Hush, conta como uma vez na descoberta."""
+        brinquedos = [b for b in brinquedos if b in BRINQUEDOS]
+        if not brinquedos:
+            return
+        horas = max(0.0, (fim - inicio).total_seconds() / 3600)
+        with self.db.get_connection() as conn:
+            self._assentar(conn, now)
+            estoque = self._brinquedos(conn)
+            for b in brinquedos:
+                parado, cheio = GASTO_POR_HORA[b]
+                bat = max(0.0, float(estoque[b]["bateria"]) - (parado + cheio * SOZINHA_NIVEL) * horas)
+                conn.execute("UPDATE lovense_brinquedos SET bateria=?, bateria_em=? WHERE brinquedo=?",
+                             (round(bat, 4), now.isoformat(), b))
+            conn.commit()
+        s = self._json(SOZINHA_KEY)
+        if "lush" in brinquedos:
+            s["lush"] = int(s.get("lush") or 0) + 1
+        if "hush" in brinquedos:
+            s["hush_em"] = inicio.isoformat()
+            d = self._descoberta()
+            self._descobrir(d, "hush", SOZINHA_NOTA, f"sozinha:{chave}", now, sozinha=True)
+            self.db.set_estado_relacional(DESCOBERTA_KEY, json.dumps(d))
+        self.db.set_estado_relacional(SOZINHA_KEY, json.dumps(s))
+
+    # ---------------------------------------------------------------- a opinião do Hush (passo 5b)
+
+    def reabrir_hush(self, now: datetime, por: str) -> bool:
+        """"Não é pra mim" volta à curiosidade (descobrindo): a Bia conversando (2 dias depois), ele com carinho
+        (12 h depois) ou ela mesma com o tempo (3 semanas)."""
+        d = self._descoberta()
+        h = d["hush"]
+        if not h.get("nao_e_pra_mim"):
+            return False
+        desde = _dt(h.get("nao_desde")) or _dt(h.get("ultima"))
+        espera = {"bia": REABRIR_BIA, "ele": REABRIR_ELE, "tempo": REABRIR_TEMPO}[por]
+        if desde and now - desde < espera:
+            return False
+        h["nao_e_pra_mim"] = False
+        h["gosto"] = max(float(h["gosto"]), GOSTO_REABERTO)
+        h["reabriu_por"] = {"bia": "conversando com a Bia", "ele": "conversando com o Patrick",
+                            "tempo": "com o tempo"}[por]
+        h["reabriu_em"] = now.isoformat()
+        self.db.set_estado_relacional(DESCOBERTA_KEY, json.dumps(d))
+        summary = {
+            "bia": ("Conversando com a Bia, o assunto caiu no Hush: a Bia contou que nas primeiras vezes também não "
+                    "curtiu e que depois mudou de ideia. A Marina ficou curiosa de novo."),
+            "ele": "Conversou com o Patrick sobre o Hush, sem pressão, e ficou curiosa de novo.",
+            "tempo": ("Com o tempo, a curiosidade pelo Hush voltou: talvez as primeiras vezes não tenham sido do "
+                      "jeito certo."),
+        }[por]
+        self._registra(f"lovense:hush:reabriu:{now.isoformat(timespec='minutes')}", now, summary, importance=0.3,
+                       share=0.4)
+        logger.info("lovense.hush.reabriu por=%s", por)
+        return True
+
+    def _pressao_hush(self, now: datetime) -> bool:
+        """Ele insistiu no Hush depois do não: afasta (o gosto desce um pouco, o tempo recomeça) e ela fica chateada."""
+        d = self._descoberta()
+        h = d["hush"]
+        if not h.get("nao_e_pra_mim"):
+            return False
+        h["gosto"] = round(max(0.0, float(h["gosto"]) + PRESSAO_GOSTO), 4)
+        h["nao_desde"] = now.isoformat()
+        self.db.set_estado_relacional(DESCOBERTA_KEY, json.dumps(d))
+        self._sente("raiva", "chateacao", 0.25, "o Patrick insistiu no Hush depois que ela disse que não é pra ela",
+                    now, f"lovense:hush:pressao:{now.isoformat(timespec='minutes')}")
+        return True
+
+    def _curiosidade_com_o_tempo(self, now: datetime) -> None:
+        h = self._descoberta()["hush"]
+        if not h.get("nao_e_pra_mim"):
+            return
+        try:
+            tesao = float(_feeling(self.db, now).libido)
+        except Exception:
+            return
+        if tesao >= CURIOSA_TESAO:
+            self.reabrir_hush(now, "tempo")
+
+    def conversa_com_amiga(self, at: datetime, quem: str) -> str:
+        """Um contato do dia com uma amiga (social_day): com a Bia, o Hush pode voltar à curiosidade; a amiga que
+        percebeu o gozo zoa ela no contato seguinte. Devolve o que entra no resumo do contato ("" = nada)."""
+        extra = []
+        if quem == "bia_andrade" and self.reabrir_hush(at, "bia"):
+            extra.append("o assunto caiu no Hush e ela ficou curiosa de novo")
+        a = self._json(AMIGAS_KEY)
+        r = a.get(quem)
+        em = _dt(r.get("em")) if r else None
+        if r and not r.get("zoou") and em and timedelta(0) < at - em <= ZOA_DEPOIS:
+            r["zoou"] = at.isoformat()
+            self.db.set_estado_relacional(AMIGAS_KEY, json.dumps(a))
+            extra.append(f"{_quem(quem)} zoou ela pelo que percebeu"
+                         + (" (o brinquedo)" if r.get("contou") else ", desconfiada"))
+        return "; ".join(extra)
+
     # ---------------------------------------------------------------- o que ela fala no chat
 
     def observe_conversa(self, fala: str, msg_dele: str, now: datetime, *, atividade: Optional[str] = None,
@@ -1425,6 +1914,18 @@ class Lovense:
         quando = _dt(assunto.get("em"))
         antes = assunto.get("trecho", "") if quando and now - quando <= ASSUNTO_VALE else ""
         no_assunto = st["conectada"] or bool(antes)
+        if not st["conectada"] and BRINQUEDO_RE.search(fala):
+            # Passo 5b: com a vontade no prompt, falar do brinquedo é a proposta dela (a vontade espera de novo);
+            # com o Lush na bolsa calado, falar dele é contar.
+            vontade_em = _dt(self.db.get_estado_relacional(VONTADE_KEY))
+            if vontade_em and now - vontade_em <= VONTADE_VALE:
+                self._marcar_proposta(now, "conversa")
+                self.db.set_estado_relacional(VONTADE_KEY, "")
+                feito.append("propos")
+            bolsa = self._json(BOLSA_KEY)
+            if bolsa.get("levou") and not bolsa.get("contou"):
+                bolsa["contou"] = now.isoformat()
+                self.db.set_estado_relacional(BOLSA_KEY, json.dumps(bolsa))
         if BRINQUEDO_RE.search(junto) or (no_assunto and ACAO_RE.search(fala)):
             self.db.set_estado_relacional(ASSUNTO_KEY, json.dumps(
                 {"em": now.isoformat(), "trecho": f"Patrick: {(msg_dele or '')[:160]} / Marina: {fala[:160]}"},
@@ -1446,6 +1947,9 @@ class Lovense:
                   + (f", palavra combinada: {st['palavra']}" if st["palavra"] else ", sem palavra combinada")
                   + (", ela disse a palavra e ele tem que parar" if st["estado"] == "pausada" else "")
                   if st["conectada"] else "sem brinquedo agora")
+        # Passo 5b: ela concluiu que o Hush não é pra ela — ele falando disso com carinho reabre; insistir afasta.
+        hush_nao = self.estagio_hush(self._descoberta()) == "nao_e_pra_mim" and re.search(
+            r"\bhush\b|\bplug\b|\banal\b", f"{msg_dele} {fala}", re.IGNORECASE)
         prompt = (
             "Você lê um trecho de conversa entre a Marina e o namorado (Patrick) sobre os brinquedos Lovense dela "
             "(Lush: vibrador que vai dentro; Hush: plug anal vibratório), que ele controla pelo app. Diga o que a "
@@ -1455,7 +1959,8 @@ class Lovense:
             + f"Patrick: \"{(msg_dele or '')[:400]}\"\nMarina: \"{fala[:400]}\"\n\n"
             "Responda só JSON: {\"colocou\": [\"lush\"|\"hush\"], \"quando\": \"agora\"|\"daqui_a_pouco\", "
             "\"tirou\": [\"lush\"|\"hush\"], \"palavra\": \"a palavra de segurança combinada nesta troca\"|null, "
-            "\"liberou\": true|false, \"ideia\": \"dela\"|\"dele\", \"conversaram\": true|false}.\n"
+            "\"liberou\": true|false, \"ideia\": \"dela\"|\"dele\", \"conversaram\": true|false"
+            + (", \"hush\": \"carinho\"|\"pressao\"|null" if hush_nao else "") + "}.\n"
             "Regras: vale só o que está na ÚLTIMA fala da Marina; o \"pouco antes\" serve só pra entender do que "
             "estão falando (o que ela já fez antes não conta de novo). colocou = ela disse que colocou, está colocando ou vai colocar agora (\"coloquei\", \"pronto, tá "
             "dentro\", \"peraí que vou colocar\" → daqui_a_pouco); hipótese, provocação (\"imagina se eu "
@@ -1467,6 +1972,10 @@ class Lovense:
             + ("eles conversaram de verdade sobre a vez em que ele não respeitou a palavra de segurança (ele "
                "reconheceu, pediu desculpa ou explicou, e ela respondeu de verdade, não só \"tá\")."
                if pendencia else "sempre false.")
+            + (" hush = ela tinha concluído que o Hush não é pra ela; nesta troca o Patrick falou disso: "
+               "\"carinho\" se ele perguntou com cuidado, sem pressionar, aceitando a opinião dela (e ela respondeu "
+               "com abertura); \"pressao\" se ele insistiu pra ela usar de novo depois do não; null se não falaram "
+               "do Hush." if hush_nao else "")
         )
         raw = ""
         try:
@@ -1542,6 +2051,10 @@ class Lovense:
         if dec.get("conversaram") and self.pendencia(now):
             r = self.conversar(now)
             out.append("conversou" + (":fechou" if r and r.get("fechou") else ""))
+        if dec.get("hush") == "carinho" and self.reabrir_hush(now, "ele"):
+            out.append("hush_reabriu")
+        elif dec.get("hush") == "pressao" and self._pressao_hush(now):
+            out.append("hush_pressao")
         return out
 
     def _colocar_agora(self, now: datetime, brinquedos: list, origem: str, ctx: dict) -> list[str]:
