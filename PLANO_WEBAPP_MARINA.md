@@ -886,8 +886,11 @@ manda uma mensagem a cada mexida na barra: fala quando sente diferença.
   gastar repetindo quase a mesma pose). Regra: na mesma sessão, nada de repetir pose + expressão + gesto de mão.
   Texto aprovado do Lush no começo da `action` (PLANO_VOZ, "Fotos pelo Civitai"). **05/10, noite (frente de
   imagens):** aprovados o Hush preto de quatro (a aba achatada e curva do produto) e o Lush de quatro (a pose antes
-  do brinquedo); o Lush de frente segue o B4 de 04/10 (o Lush 4 fiel cai em "U" pra baixo). Pendente: os dois
-  juntos, banheiro de um lugar, brinquedo na mão — e o passo 6 lê o estado do `lovense.py` pra escolher o texto. A carteira: hoje só a foto adulta pede `currencies: ["yellow"]`
+  do brinquedo); o Lush de frente segue o B4 de 04/10 (o Lush 4 fiel cai em "U" pra baixo). **05/10, mais tarde (frente de
+  imagens):** aprovados os dois juntos (j1c, aceitável), o banheiro de um bar com a calcinha de lado (f4) e o Lush na
+  mão (m8) — PLANO_VOZ, "Lovense, o resto". Pro passo 6, que lê o estado do `lovense.py` pra escolher o texto: foto
+  na mão pela pilha adulta com roupa concreta; corpo canônico sem os peitos quando a roupa cobre em cima; LoRA
+  "Panties pulled down" (1.0) quando a cena desce a calcinha. A carteira: hoje só a foto adulta pede `currencies: ["yellow"]`
   (`civitai_images.py`), a normal vai sem — conferir que ela gasta o azul quando ele chegar.
 - **Bastidores:** Por fora "Com o Lush desde 14:10" e a bateria; Por dentro a confiança dela no brinquedo e se está
   chateada com o Patrick.

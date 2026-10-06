@@ -4,7 +4,7 @@ Uma conversa por frente. Pra começar, abra uma conversa nova e cole a frase de 
 Ao terminar (ou quando o Claude avisar que é hora), a skill `passagem-de-bastao` atualiza este painel.
 O detalhe de cada decisão está nos planos (PLANO_WEBAPP_MARINA.md, PLANO_VOZ_MARINA_V371.md) e na auditoria.
 
-_Atualizado em 05/10/2026, 21:10 (fotos do Lovense na frente de imagens, `049c991` no ar às 21:08 — seção 6; soak, dia 6 lido e corrigido, item 28; **o Patrick decidiu o soak contínuo** — seção 0;
+_Atualizado em 05/10/2026, 22:25 (fotos do Lovense na frente de imagens, `049c991` no ar às 21:08, e "o resto" à noite, só texto — seção 6; soak, dia 6 lido e corrigido, item 28; **o Patrick decidiu o soak contínuo** — seção 0;
 **"recalibrar a Marina" planejado** — seção 1, PLANO_VOZ "Recalibrar a Marina — plano"; **Lovense, passos 1–4
 feitos** na tarde de 05/10 e o **5a** à noite, **no ar desde 19:28**; a encomenda a caminho desde 19:46 — seção 2).
 **Mudança de 05/10, tarde (Patrick):** o Lovense e o redesenho dos Bastidores adiantam **pra hoje**, um depois do
@@ -13,7 +13,7 @@ ficar pronto e testado entra no ar hoje. **Corte no relatório:** a hora do depl
 formal (Marina de antes), depois = dia 0 da observação do Lovense e do redesenho. **Corte: seg 05/10, 19:28** (deploy do Lovense, passos 1–5a, `c2ab84a`; o redesenho entra depois no mesmo dia 0).
 **Encomenda do Lovense (19:46, `7d592e8`):** os dois estão "a caminho" na produção; chegam quando o Patrick escrever
 "chegou"/"desce pra pegar" (o Seu Jorge interfona em 3 min; com ela no banho ou fora, ficam na portaria) ou às 21:00;
-ela recebe com 60%, põe pra carregar e manda mensagem (`lovense_chegou`). No dia 7, conferir que isso aconteceu. **O Hush é preto** (o Lush rosa); o Patrick recarregou o Civitai (membro + ~5 mil Buzz amarelo) — **fotos feitas (05/10, noite, frente de imagens):** Hush preto e Lush de quatro aprovados, Lush de frente = B4; tripé sem a 3ª mão no ar (seção 6).
+ela recebe com 60%, põe pra carregar e manda mensagem (`lovense_chegou`). No dia 7, conferir que isso aconteceu. **O Hush é preto** (o Lush rosa); o Patrick recarregou o Civitai (membro + ~5 mil Buzz amarelo) — **fotos feitas (05/10, noite, frente de imagens):** Hush preto e Lush de quatro aprovados, Lush de frente = B4; tripé sem a 3ª mão no ar (seção 6). **O resto (mais tarde):** dois juntos, banheiro com a calcinha de lado e o Lush na mão aprovados, LoRA da calcinha aprovado; falta a calcinha descida (seção 6).
 Fila depois: consertos do dia 7 → recalibrar 1 (vínculo; adota a `trust` que o Lovense cria) → recalibrar 2 → 3 → 4
 (as barras novas entram no desenho novo) → Hoje com "Em casa" → banco dela e iFood da Ma.
 **Próximas conversas:** o **passo 5a do Lovense está feito e no ar desde 19:28**; a **encomenda** chega de verdade (a caminho até o Patrick avisar "chegou", ou 21:00; Auditoria, "a encomenda chega") (05/10, noite: ela coloca e tira pela fala, a palavra
@@ -835,10 +835,17 @@ O *quando* ela manda foto continua na frente da voz.
 **Lovense (05/10, noite):** textos aprovados do Hush preto de quatro (h4) e do Lush de quatro (l5); Lush de frente =
 B4; Krea 2 Edit com foto de produto e LoRA SFW descartados (PLANO_VOZ, "Fotos pelo Civitai"); `cama_tripe_duas_maos`
 sem "both hands free". Fotos aprovadas com brinquedo vão pra `references/lovense_teste/boas/` (plano B: LoRA com ~20).
+**Lovense, o resto (05/10, mais tarde, ~646 Buzz):** aprovados os dois juntos (j1c, aceitável), o banheiro de um bar
+com a calcinha de lado (f4), o Lush na mão pela pilha adulta de camisetão (m8, texto do Patrick) e o LoRA "Panties
+pulled down" em 1.0; `boas/` tem 6 (b4, h4, l5, j1c, f4, m8). Lições no PLANO_VOZ, "Lovense, o resto": texto aprovado
+se cola sem reescrever (conferir por diff); o corpo canônico puxa o que descreve (peito coberto pede o bloco sem os
+peitos); calcinha descida só com o LoRA; verbo de movimento estica a haste; "fully clothed" perde na pilha adulta.
 
 **Próximo:**
-00. **Lovense, o que falta:** os dois juntos, banheiro de um lugar (calcinha nas coxas), brinquedo na mão — "bora na
-    frente de imagens: Lovense, o resto". O passo 6 (o diretor lê o `lovense.py`) é da frente de apps, depois do 5b.
+00. **Lovense, o que falta:** a f5/f6 (banheiro com a calcinha descida pelo LoRA) — a haste cruza a faixa da calcinha;
+    próximo teste: o LoRA em 1.3 pra descer até os joelhos ("bora na frente de imagens: Lovense, calcinha descida").
+    O passo 6 (o diretor lê o `lovense.py`) é da frente de apps, depois do 5b — com o que a rodada ensinou (Auditoria,
+    "Lovense, o resto": na mão pela pilha adulta, corpo canônico sem os peitos, LoRA da calcinha de ocasião).
     O Patrick mandou o guia do Lovense Remote (https://www.lovense.com/how-to-use-lovense-remote-app, com chat
     interno) — resumo pra frente de apps no PLANO_WEBAPP, "Ideias do guia do Lovense Remote (05/10)"; ideia nova = um
     por vez, depois do 5b e do redesenho.

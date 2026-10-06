@@ -3130,3 +3130,18 @@ Textos, tentativas e lições em PLANO_VOZ, "Fotos pelo Civitai".
 - **Falta:** os dois juntos, banheiro de um lugar (calcinha nas coxas), brinquedo na mão; o passo 6 (diretor lê o
   `lovense.py`).
 - **Textos que eu decidi:** todos internos (prompts das fotos acima); nada visível.
+
+## Lovense, o resto: dois juntos, banheiro, na mão (05/10, noite, frente de imagens)
+
+Teste de texto, sem código. 17 gerações, ~646 Buzz (duas perdidas: a j1 barrada pelo filtro de ToS do Civitai depois de
+pronta e cobrada; a f7 recusa do Krea 2). Aprovadas em `references/lovense_teste/boas/`: **j1c** (os dois juntos,
+aceitável), **f4** (banheiro de um bar, calcinha de lado) e **m8** (o Lush na mão, pela pilha adulta, de camisetão).
+O **LoRA "Panties pulled down" (Krea 2) em 1.0** foi aprovado — o texto sozinho não desce a calcinha. Pendente a
+f5/f6 (calcinha descida, a haste cruza a faixa). Detalhe e lições em PLANO_VOZ, "Lovense, o resto".
+- **Erro meu (o Patrick: "presta bem atenção nos prompts"):** reescrevi o texto aprovado do Hush pra juntar com o Lush
+  e perdi as duas frases que o posicionavam; usei a "ervilha" que só estava aprovada no papel. Regra: cena nova cola os
+  textos aprovados como estão e eu confiro por diff antes de gastar; cada refeita muda uma coisa só.
+- **Pro passo 6 (frente de apps):** foto na mão vai pela pilha adulta com roupa concreta (o moderador da normal barra o
+  brinquedo às vezes, e "fully clothed" perde na adulta); roupa que cobre o peito precisa de um corpo canônico sem os
+  peitos; o LoRA da calcinha liga quando a cena diz "panties pulled down".
+- **Textos que eu decidi:** todos internos (prompts das fotos); nada visível.
