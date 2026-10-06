@@ -20,7 +20,7 @@ Fila depois: consertos do dia 7 → recalibrar 1 (vínculo; adota a `trust` que 
 para, goza pelo corpo, o Hush é descoberta dela, ousadia fora — PLANO_WEBAPP, "passo 5a feito"); o **5b está feito e no ar desde 23:43**
 (05/10, noite: ela propõe pela vontade — mensagem dela ou na conversa —, leva o Lush na bolsa, usa sozinha, o Hush
 volta à curiosidade com a Bia/ele/o tempo, a amiga percebe o gozo — PLANO_WEBAPP, "passo 5b feito"; pendente pro
-Patrick: ela topa o Hush no receio só pela empolgação, regra do 5a — **decidido e feito em 06/10**: só com tesão alto); **06/10, 00:22: conserto da estreia no ar** (seção 5, item 29; no dia 0, conferir a 1ª proposta dela, o "pronto" depois de colocar e o sono esperando o combinado); depois, **"bora na frente de apps: redesenho dos Bastidores, passo 1"**; **terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o
+Patrick: ela topa o Hush no receio só pela empolgação, regra do 5a — **decidido e feito em 06/10**: só com tesão alto); **06/10, 00:22: conserto da estreia no ar** (seção 5, item 29; no dia 0, conferir a 1ª proposta dela, o "pronto" depois de colocar e o sono esperando o combinado); **redesenho dos Bastidores, passo 1 (o histórico, só pra tela) no ar em 06/10, 00:57** (`6d28e79`; no dia 0, conferir que `bastidores_hist` cresce: vínculo por hora, peso por dia, gozos e excitação); depois, **"bora na frente de apps: redesenho dos Bastidores, passo 2"** (a moldura); **terça de manhã, "bora no soak, dia 7"** (relatório `soak/dia-2026-10-05.md`) — fecha o soak formal; depois dela o
 código novo volta, um por vez, na fila da seção 0. No lote do dia 7 (conserto, sem esperar): o extrato do Dinheiro
 com "Foi no Agência boutique da Lívia (fictícia)" (`extrato._lugar_do_uber` não tira o "(fictícia)" e erra o artigo);
 o "Rolando agora" do Mundo mostrando toda história aberta sem olhar se ela já contou (`social_news_shared`) nem se é
@@ -287,7 +287,8 @@ círculo, Onde ela foi no mês, Rolando agora sem fio de sistema).
    sentimentos por pessoa com força e tendência, Pensando em cartões por dia com a chance de ir, barras do casal com
    o tracinho de ontem, croqui da roupa, contagens do cabelo e das unhas, linha do peso); Mundo com Pessoas em
    órbita pela proximidade, Agenda sem fofoca não contada nem segredo, Lugares em mapa — PLANO_WEBAPP, "Redesenho dos Bastidores — plano" (10 passos). Código depois do soak: "bora na
-   frente de apps: redesenho dos Bastidores, passo 1". **É a próxima conversa da frente** (06/10).
+   frente de apps: redesenho dos Bastidores, passo 1". **Passo 1 (o histórico) no ar em 06/10, 00:57** (`6d28e79`);
+   próximo: "bora na frente de apps: redesenho dos Bastidores, passo 2" (a moldura).
 2c. **Lovense, o que falta:** passos 1–5b no ar (5b em 05/10, 23:43; conserto da estreia em 06/10, 00:22). Depois
    do redesenho: passo 6 (o diretor de fotos lê o `lovense.py`; áudio testado antes) e 7 (Bastidores + catálogo de
    textos, com a lista de textos do 5a/5b na Auditoria); ideias do guia do Lovense Remote, uma por vez. Observar no
